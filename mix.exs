@@ -1,13 +1,30 @@
 defmodule AshAuthentication.MixProject do
+  @moduledoc false
   use Mix.Project
+
+  @version "0.1.0"
 
   def project do
     [
       app: :ash_authentication,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package()
+    ]
+  end
+
+  def package do
+    [
+      maintainers: [
+        "James Harton <james.harton@alembic.com.au>"
+      ],
+      licenses: ["MIT"],
+      links: %{
+        "Source" => "https://github.com/team-alembic/ash_authentication"
+      },
+      source_url: "https://github.com/team-alembic/ash_authentication"
     ]
   end
 
@@ -22,8 +39,7 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false}
     ]
   end
 end
