@@ -26,3 +26,5 @@ ash_authentication-*.tar
 /tmp/
 
 .env*
+
+priv/plts

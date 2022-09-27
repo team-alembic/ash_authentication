@@ -11,7 +11,12 @@ defmodule AshAuthentication.MixProject do
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      package: package()
+      package: package(),
+      dialyzer: [
+        plt_add_apps: [:mix, :ex_unit],
+        plt_core_path: "priv/plts",
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ]
     ]
   end
 
@@ -42,7 +47,8 @@ defmodule AshAuthentication.MixProject do
       {:credo, "~> 1.6", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev, :test]},
-      {:doctor, "~> 0.18", only: [:dev, :test]}
+      {:doctor, "~> 0.18", only: [:dev, :test]},
+      {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false}
     ]
   end
 end
