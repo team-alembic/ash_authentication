@@ -10,6 +10,8 @@ defmodule AshAuthentication.MixProject do
       version: @version,
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
+      preferred_cli_env: [ci: :test],
+      aliases: aliases(),
       deps: deps(),
       package: package(),
       dialyzer: [
@@ -44,11 +46,24 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:credo, "~> 1.6", only: [:dev, :test]},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev, :test]},
       {:doctor, "~> 0.18", only: [:dev, :test]},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  defp aliases do
+    [
+      ci: [
+        "format --check-formatted",
+        "doctor --full",
+        "credo --strict",
+        "dialyzer",
+        "hex.audit",
+        "test"
+      ]
     ]
   end
 end

@@ -1,0 +1,10 @@
+version: 2
+updates:
+- package-ecosystem: docker
+  directory: "/.devcontainer"
+  schedule:
+    interval: "daily"
+- package-ecosystem: mix
+  directory: "/"
+  schedule:
+    interval: "daily"
