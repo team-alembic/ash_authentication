@@ -39,6 +39,7 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:credo, "~> 1.6", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false}
     ]
   end
