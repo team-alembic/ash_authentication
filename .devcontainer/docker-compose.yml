@@ -1,0 +1,56 @@
+version: "3.8"
+
+volumes:
+  apt-cache: {}
+  history: {}
+  db-data: {}
+  app-deps: {}
+  app-build: {}
+  app-elixir-ls: {}
+  app-asdf: {}
+  app-storage: {}
+
+services:
+  app:
+    environment:
+      LOGGER_LEVEL: 1
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: app
+      HISTFILE: /var/tmp/history/shell.history
+      GIT_AUTHOR_EMAIL:
+      GIT_COMMITTER_EMAIL:
+      GITHUB_TOKEN:
+      PORT: 400
+    build:
+      context: ../
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        HEX_API_KEY:
+        GITHUB_TOKEN:
+
+    volumes:
+      - ..:/workspace:cached
+      - "apt-cache:/var/cache/apt:rw"
+      - "history:/var/tmp/history:rw"
+      - "app-asdf:/home/vscode/.asdf:rw"
+      - "app-deps:/workspace/deps:rw"
+      - "app-build:/workspace/_build:rw"
+      - "app-elixir-ls:/workspace/.elixir_ls:rw"
+      - "app-storage:/storage:rw"
+    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
+    network_mode: service:db
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - 5432:5432
