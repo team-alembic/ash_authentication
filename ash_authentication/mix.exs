@@ -47,10 +47,10 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false}
+      {:ex_doc, ">= 0.0.0", only: [:dev, :test], runtime: false},
+      {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false}
     ]
   end
 

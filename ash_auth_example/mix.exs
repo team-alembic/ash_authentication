@@ -55,11 +55,11 @@ defmodule AshAuthExample.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
+      {:ash_authentication, path: "../ash_authentication"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:doctor, "~> 0.18", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
-      {:ash_authentication, path: "../ash_authentication"}
+      {:doctor, "~> 0.18", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
   end
 
