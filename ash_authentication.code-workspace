@@ -1,0 +1,17 @@
+{
+  "folders": [
+    {
+      "path": "ash_authentication",
+    },
+    {
+      "path": "ash_auth_example"
+    },
+    {
+      "path": ".",
+      "name": "root"
+    }
+  ],
+  "settings": {
+    "elixirLS.projectDir": "ash_auth_example"
+  }
+}

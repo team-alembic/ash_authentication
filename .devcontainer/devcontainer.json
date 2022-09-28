@@ -11,17 +11,17 @@
     "vscode": {
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
-		"jakebecker.elixir-ls",
-		"msaraiva.surface",
-		"ue.alphabetical-sorter",
-		"wmaurer.change-case",
-		"Rubymaniac.vscode-direnv",
-		"RoyalMist.vscode-eex-format",
-		"iampeterbanjo.elixirlinter",
-		"pgourlain.erlang",
-		"szTheory.erlang-formatter",
-		"bradlc.vscode-tailwindcss"
-	]
+        "jakebecker.elixir-ls",
+        "msaraiva.surface",
+        "ue.alphabetical-sorter",
+        "wmaurer.change-case",
+        "Rubymaniac.vscode-direnv",
+        "RoyalMist.vscode-eex-format",
+        "iampeterbanjo.elixirlinter",
+        "pgourlain.erlang",
+        "szTheory.erlang-formatter",
+        "bradlc.vscode-tailwindcss"
+      ]
     }
   },
   // Use 'forwardPorts' to make a list of ports inside the container available locally.

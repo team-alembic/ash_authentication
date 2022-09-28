@@ -3,11 +3,6 @@ name: ash_auth_example
 on:
   push:
 
-defaults:
-  run:
-    shell: bash
-    working-directory: ash_auth_example
-
 jobs:
   deps:
     name: mix deps.get
@@ -17,7 +12,7 @@ jobs:
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
 
   auditor:
     name: mix hex.audit
@@ -28,8 +23,9 @@ jobs:
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - run: mix hex.audit
+        working-directory: ${{ github.workspace }}/ash_auth_example
 
   build-test:
     name: MIX_ENV=test mix.compile
@@ -40,10 +36,10 @@ jobs:
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - uses: team-alembic/staple-actions/actions/mix-compile@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
           mix-env: test
 
   formatter:
@@ -57,12 +53,13 @@ jobs:
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - uses: team-alembic/staple-actions/actions/mix-compile@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
           mix-env: ${{ env.MIX_ENV }}
       - run: mix format --check-formatted
+        working-directory: ${{ github.workspace }}/ash_auth_example
 
   credo:
     name: mix credo --strict
@@ -73,16 +70,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - uses: team-alembic/staple-actions/actions/mix-compile@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
           mix-env: ${{ env.MIX_ENV }}
       - run: mix credo --strict
+        working-directory: ${{ github.workspace }}/ash_auth_example
 
   doctor:
     name: mix doctor --full --raise
@@ -95,18 +93,22 @@ jobs:
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - uses: team-alembic/staple-actions/actions/mix-compile@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
           mix-env: ${{ env.MIX_ENV }}
       - run: mix doctor --full --raise
+        working-directory: ${{ github.workspace }}/ash_auth_example
 
   test:
     name: mix test
     runs-on: ubuntu-latest
     env:
       MIX_ENV: test
+      PGUSER: postgres
+      PGPASS: postgres
+      PGHOST: postgres
     needs: build-test
     services:
       postgres:
@@ -125,17 +127,13 @@ jobs:
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - uses: team-alembic/staple-actions/actions/mix-compile@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
           mix-env: ${{ env.MIX_ENV }}
       - run: mix test
-        env:
-          MIX_ENV: test
-          PGUSER: postgres
-          PGPASS: postgres
-          PGHOST: postgres
+        working-directory: ${{ github.workspace }}/ash_auth_example
 
   dialyzer:
     name: mix dialyzer
@@ -148,13 +146,14 @@ jobs:
       - uses: team-alembic/staple-actions/actions/install-elixir@main
       - uses: team-alembic/staple-actions/actions/mix-deps-get@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
       - uses: team-alembic/staple-actions/actions/mix-compile@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
           mix-env: ${{ env.MIX_ENV }}
       - uses: team-alembic/staple-actions/actions/mix-dialyzer-plt@main
         with:
-          working-directory: ash_auth_example
+          working-directory: ${{ github.workspace }}/ash_auth_example
           mix-env: ${{ env.MIX_ENV }}
       - run: mix dialyzer --format github
+        working-directory: ${{ github.workspace }}/ash_auth_example

@@ -9,7 +9,7 @@ updates:
   schedule:
     interval: "weekly"
 - package-ecosystem: mix
-  directory: "/"
+  directory: "/ash_authentication"
   schedule:
     interval: "daily"
 - package-ecosystem: mix

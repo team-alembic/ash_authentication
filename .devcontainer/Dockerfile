@@ -47,7 +47,7 @@ RUN git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v${ASDF_VERSI
   echo '\nsource $HOME/.asdf/asdf.sh' >> ~/.zshrc
 
 WORKDIR /workspace/
-RUN mkdir _build deps .elixir_ls
+RUN mkdir -p .elixir_ls ash_authentication/deps ash_authentication/_build ash_auth_example/deps ash_auth_example/_build
 
 # Install all the tools specified in the tool versions file.
 COPY .tool-versions /workspace/
@@ -73,15 +73,18 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
 ENTRYPOINT [ "/entrypoint.sh" ]
 
 # Prodigious use of asterisk to allow for files which may not exist.
-COPY .env* .formatter.exs .tool-versions* bin* config* lib* priv* rel* test* CHANGELOG.md* mix.* /workspace/
+COPY .env* ash_authentication.code-workspace /workspace/
+COPY ash_authentication/* /workspace/ash_authentication/
+COPY ash_auth_example/* /workspace/ash_auth_example/
 
 RUN /bin/bash -c 'if [ -e .envrc ]; then /usr/bin/direnv allow; fi'
 
 # Run mix deps.get
 ARG GITHUB_TOKEN
-RUN /bin/bash -c 'source ~/.asdf/asdf.sh && \
-  mix deps.get && \
-  (cd ash_auth_example ; mix deps.get)'
+WORKDIR /workspace/ash_authentication
+RUN /bin/bash -c 'source ~/.asdf/asdf.sh && mix deps.get'
+WORKDIR /workspace/ash_auth_example
+RUN /bin/bash -c 'source ~/.asdf/asdf.sh && mix deps.get'
 
 CMD ["zsh"]
 

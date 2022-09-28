@@ -4,11 +4,13 @@ volumes:
   apt-cache: {}
   history: {}
   db-data: {}
-  app-deps: {}
-  app-build: {}
-  app-elixir-ls: {}
   app-asdf: {}
+  app-elixir-ls: {}
   app-storage: {}
+  ash-authentication-deps: {}
+  ash-authentication-build: {}
+  ash-auth-example-deps: {}
+  ash-auth-example-build: {}
 
 services:
   app:
@@ -35,10 +37,12 @@ services:
       - "apt-cache:/var/cache/apt:rw"
       - "history:/var/tmp/history:rw"
       - "app-asdf:/home/vscode/.asdf:rw"
-      - "app-deps:/workspace/deps:rw"
-      - "app-build:/workspace/_build:rw"
       - "app-elixir-ls:/workspace/.elixir_ls:rw"
       - "app-storage:/storage:rw"
+      - "ash-authentication-deps:/workspace/ash_authentication/deps:rw"
+      - "ash-authentication-build:/workspace/ash_authentication/_build:rw"
+      - "ash-auth-example-deps:/workspace/ash_auth_example/deps:rw"
+      - "ash-auth-example-build:/workspace/ash_auth_example/_build:rw"
     # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
     network_mode: service:db
 
