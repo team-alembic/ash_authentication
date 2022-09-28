@@ -1,8 +1,7 @@
-name: Elixir Library
+name: ash_authentication
 
 on:
   push:
-
 
 jobs:
   deps:

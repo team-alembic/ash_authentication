@@ -1,0 +1,160 @@
+name: ash_auth_example
+
+on:
+  push:
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ash_auth_example
+
+jobs:
+  deps:
+    name: mix deps.get
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+
+  auditor:
+    name: mix hex.audit
+    runs-on: ubuntu-latest
+    needs: deps
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+      - run: mix hex.audit
+
+  build-test:
+    name: MIX_ENV=test mix.compile
+    runs-on: ubuntu-latest
+    needs: deps
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+      - uses: team-alembic/staple-actions/actions/mix-compile@main
+        with:
+          working-directory: ash_auth_example
+          mix-env: test
+
+  formatter:
+    name: mix format --check-formatted
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+      - uses: team-alembic/staple-actions/actions/mix-compile@main
+        with:
+          working-directory: ash_auth_example
+          mix-env: ${{ env.MIX_ENV }}
+      - run: mix format --check-formatted
+
+  credo:
+    name: mix credo --strict
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          working-directory: ash_auth_example
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+      - uses: team-alembic/staple-actions/actions/mix-compile@main
+        with:
+          working-directory: ash_auth_example
+          mix-env: ${{ env.MIX_ENV }}
+      - run: mix credo --strict
+
+  doctor:
+    name: mix doctor --full --raise
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+      - uses: team-alembic/staple-actions/actions/mix-compile@main
+        with:
+          working-directory: ash_auth_example
+          mix-env: ${{ env.MIX_ENV }}
+      - run: mix doctor --full --raise
+
+  test:
+    name: mix test
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    needs: build-test
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+      - uses: team-alembic/staple-actions/actions/mix-compile@main
+        with:
+          working-directory: ash_auth_example
+          mix-env: ${{ env.MIX_ENV }}
+      - run: mix test
+        env:
+          MIX_ENV: test
+          PGUSER: postgres
+          PGPASS: postgres
+          PGHOST: postgres
+
+  dialyzer:
+    name: mix dialyzer
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/install-elixir@main
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+        with:
+          working-directory: ash_auth_example
+      - uses: team-alembic/staple-actions/actions/mix-compile@main
+        with:
+          working-directory: ash_auth_example
+          mix-env: ${{ env.MIX_ENV }}
+      - uses: team-alembic/staple-actions/actions/mix-dialyzer-plt@main
+        with:
+          working-directory: ash_auth_example
+          mix-env: ${{ env.MIX_ENV }}
+      - run: mix dialyzer --format github

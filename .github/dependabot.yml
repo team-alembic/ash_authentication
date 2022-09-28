@@ -4,7 +4,15 @@ updates:
   directory: "/.devcontainer"
   schedule:
     interval: "daily"
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
 - package-ecosystem: mix
   directory: "/"
+  schedule:
+    interval: "daily"
+- package-ecosystem: mix
+  directory: "/ash_auth_example"
   schedule:
     interval: "daily"

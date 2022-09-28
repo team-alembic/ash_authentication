@@ -80,7 +80,8 @@ RUN /bin/bash -c 'if [ -e .envrc ]; then /usr/bin/direnv allow; fi'
 # Run mix deps.get
 ARG GITHUB_TOKEN
 RUN /bin/bash -c 'source ~/.asdf/asdf.sh && \
-  mix deps.get'
+  mix deps.get && \
+  (cd ash_auth_example ; mix deps.get)'
 
 CMD ["zsh"]
 
