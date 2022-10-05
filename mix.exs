@@ -14,6 +14,7 @@ defmodule AshAuthentication.MixProject do
       aliases: aliases(),
       deps: deps(),
       package: package(),
+      elixirc_paths: elixirc_paths(Mix.env()),
       dialyzer: [
         plt_add_apps: [:mix, :ex_unit],
         plt_core_path: "priv/plts",
@@ -46,11 +47,21 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:ash, github: "ash-project/ash", override: true},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:jason, "~> 1.4"},
+      {:joken, "~> 2.5"},
+      {:plug, "~> 1.13"},
+      {:ueberauth, "~> 0.10.3"},
+      {:ash_postgres, github: "ash-project/ash_postgres", override: true, only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: [:dev, :test]},
+      {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
-      {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false}
+      {:elixir_sense, github: "elixir-lsp/elixir_sense", only: [:dev, :test]},
+      {:ex_doc, ">= 0.0.0", only: [:dev, :test]},
+      {:faker, "~> 0.17.0", only: [:dev, :test]},
+      {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
+      {:plug_cowboy, "~> 2.5", only: [:dev, :test]}
     ]
   end
 
@@ -63,7 +74,12 @@ defmodule AshAuthentication.MixProject do
         "dialyzer",
         "hex.audit",
         "test"
-      ]
+      ],
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:dev), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end
