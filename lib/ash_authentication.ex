@@ -86,7 +86,7 @@ defmodule AshAuthentication do
   def resource_to_subject(record) do
     subject_name =
       record.__struct__
-      |> AshAuthentication.Config.subject_name!()
+      |> AshAuthentication.Info.subject_name!()
 
     record.__struct__
     |> Resource.Info.primary_key()

@@ -2,7 +2,7 @@ defmodule AshAuthentication.Identity.ActionTest do
   @moduledoc false
   use AshAuthentication.DataCase, async: true
   alias Ash.{Changeset, Query}
-  alias AshAuthentication.Identity.Config
+  alias AshAuthentication.Identity.Info
 
   describe "register action" do
     @describetag resource: Example.UserWithUsername
@@ -159,7 +159,7 @@ defmodule AshAuthentication.Identity.ActionTest do
   defp resource_config(%{resource: resource}) do
     config =
       resource
-      |> Config.options()
+      |> Info.options()
 
     {:ok, config: config}
   end

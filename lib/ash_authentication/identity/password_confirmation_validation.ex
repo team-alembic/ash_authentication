@@ -7,7 +7,7 @@ defmodule AshAuthentication.Identity.PasswordConfirmationValidation do
 
   use Ash.Resource.Validation
   alias Ash.{Changeset, Error.Changes.InvalidArgument}
-  alias AshAuthentication.Identity.Config
+  alias AshAuthentication.Identity.Info
 
   @doc """
   Validates that the password and password confirmation fields contain
@@ -15,9 +15,9 @@ defmodule AshAuthentication.Identity.PasswordConfirmationValidation do
   """
   @spec validate(Changeset.t(), keyword) :: :ok | {:error, String.t() | Exception.t()}
   def validate(changeset, _) do
-    with {:ok, true} <- Config.confirmation_required?(changeset.resource),
-         {:ok, password_field} <- Config.password_field(changeset.resource),
-         {:ok, confirm_field} <- Config.password_confirmation_field(changeset.resource),
+    with {:ok, true} <- Info.confirmation_required?(changeset.resource),
+         {:ok, password_field} <- Info.password_field(changeset.resource),
+         {:ok, confirm_field} <- Info.password_confirmation_field(changeset.resource),
          password <- Changeset.get_argument(changeset, password_field),
          confirmation <- Changeset.get_argument(changeset, confirm_field),
          false <- password == confirmation do

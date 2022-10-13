@@ -6,7 +6,7 @@ defmodule AshAuthentication.Transformer do
   """
 
   use Spark.Dsl.Transformer
-  alias AshAuthentication.Config
+  alias AshAuthentication.Info
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
@@ -98,7 +98,7 @@ defmodule AshAuthentication.Transformer do
   end
 
   defp validate_read_action(dsl_state) do
-    action_name = Config.read_action_name(dsl_state)
+    action_name = Info.read_action_name(dsl_state)
 
     if has_valid_read_action?(dsl_state, action_name) || has_primary_read_action?(dsl_state),
       do: :ok,

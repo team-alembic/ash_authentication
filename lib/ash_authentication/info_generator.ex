@@ -1,4 +1,4 @@
-defmodule AshAuthentication.ConfigGenerator do
+defmodule AshAuthentication.InfoGenerator do
   @moduledoc """
   Used to dynamically generate configuration functions for Spark extensions
   based on their DSL.
@@ -7,7 +7,7 @@ defmodule AshAuthentication.ConfigGenerator do
 
   ```elixir
   defmodule MyConfig do
-    use AshAuthentication.ConfigGenerator, extension: MyDslExtension, section: :my_section
+    use AshAuthentication.InfoGenerator, extension: MyDslExtension, section: :my_section
   end
   ```
   """
@@ -21,12 +21,12 @@ defmodule AshAuthentication.ConfigGenerator do
     quote do
       require unquote(extension)
 
-      AshAuthentication.ConfigGenerator.generate_options_function(
+      AshAuthentication.InfoGenerator.generate_options_function(
         unquote(extension),
         unquote(section)
       )
 
-      AshAuthentication.ConfigGenerator.generate_config_functions(
+      AshAuthentication.InfoGenerator.generate_config_functions(
         unquote(extension),
         unquote(section)
       )

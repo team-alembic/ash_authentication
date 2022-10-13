@@ -7,7 +7,7 @@ defmodule AshAuthentication.Identity.HashPasswordChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.Identity.Config
+  alias AshAuthentication.Identity.Info
   alias Ash.{Changeset, Resource.Change}
 
   @impl true
@@ -15,9 +15,9 @@ defmodule AshAuthentication.Identity.HashPasswordChange do
   def change(changeset, _opts, _) do
     changeset
     |> Changeset.before_action(fn changeset ->
-      {:ok, password_field} = Config.password_field(changeset.resource)
-      {:ok, hash_field} = Config.hashed_password_field(changeset.resource)
-      {:ok, hasher} = Config.hash_provider(changeset.resource)
+      {:ok, password_field} = Info.password_field(changeset.resource)
+      {:ok, hash_field} = Info.hashed_password_field(changeset.resource)
+      {:ok, hasher} = Info.hash_provider(changeset.resource)
 
       with value when is_binary(value) <- Changeset.get_argument(changeset, password_field),
            {:ok, hash} <- hasher.hash(value) do

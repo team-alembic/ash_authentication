@@ -11,12 +11,12 @@ defmodule AshAuthentication.Identity.Transformer do
   """
 
   use Spark.Dsl.Transformer
-  alias Ash.Resource.Info
+  alias Ash.Resource
 
   alias AshAuthentication.Identity.{
-    Config,
     GenerateTokenChange,
     HashPasswordChange,
+    Info,
     PasswordConfirmationValidation,
     SignInPreparation
   }
@@ -70,7 +70,7 @@ defmodule AshAuthentication.Identity.Transformer do
   def before?(_), do: false
 
   defp maybe_build_action(dsl_state, action_name, builder) when is_function(builder, 1) do
-    with nil <- Info.action(dsl_state, action_name),
+    with nil <- Resource.Info.action(dsl_state, action_name),
          {:ok, action} <- builder.(dsl_state) do
       {:ok, Transformer.add_entity(dsl_state, [:actions], action)}
     else
@@ -80,10 +80,10 @@ defmodule AshAuthentication.Identity.Transformer do
   end
 
   defp build_register_action(dsl_state) do
-    with {:ok, identity_field} <- Config.identity_field(dsl_state),
-         {:ok, password_field} <- Config.password_field(dsl_state),
-         {:ok, confirm_field} <- Config.password_confirmation_field(dsl_state),
-         {:ok, confirmation_required?} <- Config.confirmation_required?(dsl_state) do
+    with {:ok, identity_field} <- Info.identity_field(dsl_state),
+         {:ok, password_field} <- Info.password_field(dsl_state),
+         {:ok, confirm_field} <- Info.password_confirmation_field(dsl_state),
+         {:ok, confirmation_required?} <- Info.confirmation_required?(dsl_state) do
       password_opts = [
         type: Ash.Type.String,
         allow_nil?: false,
@@ -137,8 +137,8 @@ defmodule AshAuthentication.Identity.Transformer do
   end
 
   def build_sign_in_action(dsl_state) do
-    with {:ok, identity_field} <- Config.identity_field(dsl_state),
-         {:ok, password_field} <- Config.password_field(dsl_state) do
+    with {:ok, identity_field} <- Info.identity_field(dsl_state),
+         {:ok, password_field} <- Info.password_field(dsl_state) do
       arguments = [
         Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :read], :argument,
           name: identity_field,

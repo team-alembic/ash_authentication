@@ -13,16 +13,16 @@ defmodule AshAuthentication.Identity.SignInPreparation do
   returns an empty result.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Identity.Config, JsonWebToken}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Identity.Info, JsonWebToken}
   alias Ash.{Query, Resource.Preparation}
   require Ash.Query
 
   @impl true
   @spec prepare(Query.t(), Keyword.t(), Preparation.context()) :: Query.t()
   def prepare(query, _opts, _) do
-    {:ok, identity_field} = Config.identity_field(query.resource)
-    {:ok, password_field} = Config.password_field(query.resource)
-    {:ok, hasher} = Config.hash_provider(query.resource)
+    {:ok, identity_field} = Info.identity_field(query.resource)
+    {:ok, password_field} = Info.password_field(query.resource)
+    {:ok, hasher} = Info.hash_provider(query.resource)
 
     identity = Query.get_argument(query, identity_field)
 

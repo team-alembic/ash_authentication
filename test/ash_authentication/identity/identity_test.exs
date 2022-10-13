@@ -2,7 +2,7 @@ defmodule AshAuthentication.IdentityTest do
   @moduledoc false
   use AshAuthentication.DataCase, async: true
   alias Ash.Error
-  alias AshAuthentication.{Identity, Identity.Config}
+  alias AshAuthentication.{Identity, Identity.Info}
 
   describe "sign_in_action/2" do
     @describetag resource: Example.UserWithUsername
@@ -42,7 +42,7 @@ defmodule AshAuthentication.IdentityTest do
   defp resource_config(%{resource: resource}) do
     config =
       resource
-      |> Config.options()
+      |> Info.options()
 
     {:ok, config: config}
   end

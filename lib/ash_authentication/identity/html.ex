@@ -90,7 +90,7 @@ defmodule AshAuthentication.Identity.HTML do
     @defaults
     |> Keyword.merge(options)
     |> Map.new()
-    |> Map.merge(Identity.Config.options(resource))
-    |> Map.merge(AshAuthentication.Config.options(resource))
+    |> Map.merge(Identity.Info.options(resource))
+    |> Map.merge(AshAuthentication.Info.options(resource))
   end
 end

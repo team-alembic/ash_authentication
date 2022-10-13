@@ -11,7 +11,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
   def store_in_session(conn, actor) do
-    subject_name = AshAuthentication.Config.subject_name!(actor.__struct__)
+    subject_name = AshAuthentication.Info.subject_name!(actor.__struct__)
     subject = AshAuthentication.resource_to_subject(actor)
 
     Conn.put_session(conn, subject_name, subject)
