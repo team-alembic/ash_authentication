@@ -126,7 +126,7 @@ defmodule AshAuthentication.Plug do
         forward "/auth", to: #{__MODULE__}
         ```
 
-        This router is generated using `AshAuthentication.Plug.Router.
+        This router is generated using `AshAuthentication.Plug.Router`.
         """
         use AshAuthentication.Plug.Router,
           otp_app: unquote(otp_app),

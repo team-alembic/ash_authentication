@@ -25,7 +25,7 @@ defmodule AshAuthentication.JsonWebToken do
 
   We strongly advise against storing the signing secret in your mix config.  We
   instead suggest you make use of
-  [`runtime.exs](https://elixir-lang.org/getting-started/mix-otp/config-and-releases.html#configuration)
+  [`runtime.exs`](https://elixir-lang.org/getting-started/mix-otp/config-and-releases.html#configuration)
   and read it from the system environment or other secret store.
 
   The default token lifetime is #{@default_lifetime_hrs} and should be specified
