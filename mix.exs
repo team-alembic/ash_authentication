@@ -39,20 +39,23 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: extra_applications(Mix.env()),
       mod: {AshAuthentication.Application, []}
     ]
   end
+
+  defp extra_applications(:dev), do: [:logger, :bcrypt_elixir]
+  defp extra_applications(:test), do: [:logger, :bcrypt_elixir]
+  defp extra_applications(_), do: [:logger]
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:ash, github: "ash-project/ash", override: true},
-      {:bcrypt_elixir, "~> 3.0"},
+      {:bcrypt_elixir, "~> 3.0", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
-      {:ueberauth, "~> 0.10.3"},
       {:ash_postgres, github: "ash-project/ash_postgres", override: true, only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
