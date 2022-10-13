@@ -1,6 +1,9 @@
 defmodule AshAuthentication.Identity.UserValidations do
   @moduledoc """
   Provides validations for the "user" resource.
+
+  See the module docs for `AshAuthentication.Identity.Transformer` for more
+  information.
   """
   alias Ash.Resource.Actions
   alias AshAuthentication.HashProvider
@@ -17,6 +20,10 @@ defmodule AshAuthentication.Identity.UserValidations do
   import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
 
+  @doc """
+  Validates at the `AshAuthentication` extension is also present on the resource.
+  """
+  @spec validate_authentication_extension(Dsl.t()) :: :ok | {:error, Exception.t()}
   def validate_authentication_extension(dsl_state) do
     extensions = Transformer.get_persisted(dsl_state, :extensions, [])
 
@@ -129,6 +136,7 @@ defmodule AshAuthentication.Identity.UserValidations do
     end
   end
 
+  @doc "Validate the hashed password field on the user resource"
   @spec validate_hashed_password_field(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_hashed_password_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),

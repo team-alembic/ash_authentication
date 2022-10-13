@@ -1,6 +1,17 @@
 defmodule AshAuthentication.Identity.Plug do
   @moduledoc """
-  FIXME
+  Handlers for incoming request and callback HTTP requests.
+
+  AshAuthentication is written with an eye towards OAuth which uses a two-phase
+  request/callback process which can be used to register and sign in an actor in
+  a single flow.  This doesn't really work that well with `Identity` which has
+  seperate "registration" and "sign-in" actions.
+
+  Here we simply ignore the request phase, which will cause an error to be
+  returned to the remote user if they somehow find themselves there.
+
+  We use the "callback" phase to handle both registration and sign in by passing
+  an "action" parameter along with the form data.
   """
   import Plug.Conn
   alias AshAuthentication.Identity

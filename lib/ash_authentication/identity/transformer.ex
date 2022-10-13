@@ -5,6 +5,41 @@ defmodule AshAuthentication.Identity.Transformer do
   Scans the resource and checks that all the fields and actions needed are
   present.
 
+  ## What it's looking for.
+
+  In order for identity to work we need a few basic things to be present on the
+  resource, but we _can_ generate almost everything we need, even if we do
+  generate some actions, etc, we still must validate them because we want to
+  allow the user to be able to overwrite as much as possible.
+
+  You can manually implement as much (or as little) of these as you wish.
+
+  Here's a (simplified) list of what it's validating:
+
+  * The main `AshAuthentication` extension is present on the resource.
+  * There is an identity field configured (either by the user or by default) and
+    that a writable attribute with the same name of the appropriate type exists.
+  * There is a hashed password field configured (either by the user or by
+    default) and that a writable attribute with the same name of the appropriate
+    type exists.
+  * That the configured hash provider actually implements the
+    `AshAuthentication.HashProvider` behaviour.
+  * That there is a read action called `sign_in` (or other name based on
+    configuration) and that it has the following properties:
+    - it takes an argument of the same name and type as the configured identity
+      field.
+    - it takes an argument of the same name and type as the configured password
+      field.
+    - it has the `Identity.SignInPreparation` preparation present.
+  * That there is a create action called `register` (or other name based on
+    configuration) and that it has the following properties:
+    - it takes an argument of the same name and type as the configured identity field.
+    - it takes an argument of the same name and type as the configured password field.
+    - it takes an argument of the same name and type as the configured password confirmation field if confirmation is enabled.
+    - it has the `Identity.HashPasswordChange` change present.
+    - it has the `Identity.GenerateTokenChange` change present.
+    - it has the `Identity.PasswordConfirmationValidation` validation present.
+
   ## Future improvements.
 
   * Allow default constraints on password fields to be configurable.

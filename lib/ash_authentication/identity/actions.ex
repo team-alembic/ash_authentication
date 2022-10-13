@@ -1,6 +1,9 @@
 defmodule AshAuthentication.Identity.Actions do
   @moduledoc """
   Code interface for identity.
+
+  Allows you to use the identity provider without needing to mess around with
+  changesets, apis, etc.
   """
 
   alias Ash.{Changeset, Query}
