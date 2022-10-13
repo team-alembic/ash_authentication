@@ -2,7 +2,7 @@ defmodule DevServer.Plug do
   @moduledoc false
   use Plug.Router
   alias DevServer
-  import Example.AuthPlug, only: [load_from_session: 2]
+  import Example.AuthPlug
 
   plug(Plug.Parsers, parsers: [:urlencoded, :multipart, :json], json_decoder: Jason)
   plug(Plug.Session, store: :ets, key: "_ash_authentication_session", table: DevServer.Session)
@@ -13,7 +13,7 @@ defmodule DevServer.Plug do
   plug(:match)
   plug(:dispatch)
 
-  forward("/auth", to: Example.AuthPlug)
+  forward("/auth", to: Example.AuthPlug.Router)
   get("/clear_session", to: DevServer.ClearSession)
   post("/token_check", to: DevServer.TokenCheck)
   get("/", to: DevServer.TestPage)
