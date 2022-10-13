@@ -1,7 +1,7 @@
-defmodule AshAuthentication.DevServer.Plug do
+defmodule DevServer.Plug do
   @moduledoc false
   use Plug.Router
-  alias AshAuthentication.DevServer
+  alias DevServer
   import Example.AuthPlug, only: [load_from_session: 2]
 
   plug(Plug.Parsers, parsers: [:urlencoded, :multipart, :json], json_decoder: Jason)

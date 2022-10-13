@@ -1,4 +1,4 @@
-defmodule AshAuthentication.DevServer.ClearSession do
+defmodule DevServer.ClearSession do
   @moduledoc """
   Resets the session storage, to 'log out" all actors.
   """

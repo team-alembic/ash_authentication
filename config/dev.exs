@@ -8,7 +8,7 @@ config :git_ops,
   manage_readme_version: "README.md",
   version_tag_prefix: "v"
 
-config :ash_authentication, AshAuthentication.DevServer, start?: true, port: 4000
+config :ash_authentication, DevServer, start?: true, port: 4000
 
 config :ash_authentication, ecto_repos: [Example.Repo], ash_apis: [Example]
 

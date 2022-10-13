@@ -1,11 +1,10 @@
-defmodule AshAuthentication.DevServer do
+defmodule DevServer do
   @moduledoc """
   This module provides an extremely simplified authentication UI, mainly for
   local development and testing.
   """
 
   use Supervisor
-  alias __MODULE__
 
   def start_link(init_arg), do: Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
 

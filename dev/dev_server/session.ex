@@ -1,4 +1,4 @@
-defmodule AshAuthentication.DevServer.Session do
+defmodule DevServer.Session do
   @moduledoc """
   Does nothing but own an ETS table for the session to be stored in.
   """

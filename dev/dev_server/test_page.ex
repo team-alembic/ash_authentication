@@ -1,4 +1,4 @@
-defmodule AshAuthentication.DevServer.TestPage do
+defmodule DevServer.TestPage do
   @moduledoc """
   Displays a very basic login form according to the currently configured
   Überauth providers.

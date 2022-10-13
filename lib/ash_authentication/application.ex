@@ -8,14 +8,14 @@ defmodule AshAuthentication.Application do
   @impl true
   def start(_type, _args) do
     []
-    |> maybe_append(start_dev_server?(), {AshAuthentication.DevServer, []})
+    |> maybe_append(start_dev_server?(), {DevServer, []})
     |> maybe_append(start_repo?(), {Example.Repo, []})
     |> Supervisor.start_link(strategy: :one_for_one, name: AshAuthentication.Supervisor)
   end
 
   defp start_dev_server? do
     :ash_authentication
-    |> Application.get_env(AshAuthentication.DevServer, [])
+    |> Application.get_env(DevServer, [])
     |> Keyword.get(:start?, false)
   end
 

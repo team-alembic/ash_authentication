@@ -1,4 +1,4 @@
-defmodule AshAuthentication.DevServer.TokenCheck do
+defmodule DevServer.TokenCheck do
   @moduledoc """
   Verifies a submitted token and reports the contents.
   """
