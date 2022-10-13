@@ -8,6 +8,7 @@ defmodule AshAuthentication.Transformer do
   use Spark.Dsl.Transformer
   alias AshAuthentication.Info
   alias Spark.{Dsl.Transformer, Error.DslError}
+  import AshAuthentication.Utils
   import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
 
@@ -30,7 +31,14 @@ defmodule AshAuthentication.Transformer do
   def transform(dsl_state) do
     with {:ok, api} <- validate_api_presence(dsl_state),
          :ok <- validate_at_least_one_authentication_provider(dsl_state),
-         :ok <- validate_read_action(dsl_state),
+         {:ok, get_by_subject_action_name} <- Info.get_by_subject_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             get_by_subject_action_name,
+             &build_get_by_subject_action/1
+           ),
+         :ok <- validate_read_action(dsl_state, get_by_subject_action_name),
          subject_name <- find_or_generate_subject_name(dsl_state) do
       authentication =
         dsl_state
@@ -44,6 +52,15 @@ defmodule AshAuthentication.Transformer do
         |> Transformer.set_option([:authentication], :subject_name, subject_name)
 
       {:ok, dsl_state}
+    end
+  end
+
+  defp build_get_by_subject_action(dsl_state) do
+    with {:ok, get_by_subject_action_name} <- Info.get_by_subject_action_name(dsl_state) do
+      Transformer.build_entity(Ash.Resource.Dsl, [:actions], :read,
+        name: get_by_subject_action_name,
+        get?: true
+      )
     end
   end
 
@@ -91,34 +108,17 @@ defmodule AshAuthentication.Transformer do
          )}
   end
 
-  defp validate_read_action(dsl_state) do
-    action_name = Info.read_action_name(dsl_state)
-
-    if has_valid_read_action?(dsl_state, action_name) || has_primary_read_action?(dsl_state),
-      do: :ok,
-      else:
+  defp validate_read_action(dsl_state, action_name) do
+    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+         :ok <- validate_field_in_values(action, :type, [:read]) do
+      :ok
+    else
+      _ ->
         {:error,
          DslError.exception(
            path: [:actions],
-           message:
-             "Expected resource to have either a configured read action, or a default, primary read action"
+           message: "Expected resource to have either read action named `#{action_name}`"
          )}
-  end
-
-  defp has_valid_read_action?(_dsl_state, :error), do: false
-
-  defp has_valid_read_action?(dsl_state, {:ok, action_name}) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
-         :ok <- validate_field_in_values(action, :type, [:read]) do
-      true
-    else
-      _ -> false
     end
-  end
-
-  defp has_primary_read_action?(dsl_state) do
-    dsl_state
-    |> Transformer.get_entities([:actions])
-    |> Enum.any?(&(&1.type == :read && &1.primary?))
   end
 end

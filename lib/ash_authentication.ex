@@ -15,11 +15,12 @@ defmodule AshAuthentication do
         The name of the Ash API to use to access this resource when registering/authenticating.
         """
       ],
-      read_action_name: [
+      get_by_subject_action_name: [
         type: :atom,
         doc: """
-        The name of the read action used to access this resource.  Defaults to the primary action if not set.
-        """
+        The name of the read action used to retrieve the access when calling `AshAuthentication.subject_to_resource/2`.
+        """,
+        default: :get_by_subject
       ]
     ]
   }
@@ -41,7 +42,8 @@ defmodule AshAuthentication do
 
   #{Spark.Dsl.Extension.doc([@authentication])}
   """
-  alias Ash.{Api, Resource}
+  alias Ash.{Api, Query, Resource}
+  alias AshAuthentication.Info
   alias Spark.Dsl.Extension
 
   use Spark.Dsl.Extension,
@@ -104,11 +106,16 @@ defmodule AshAuthentication do
   def subject_to_resource(subject, config) when is_map(config) do
     %{path: subject_name, query: primary_key} = URI.parse(subject)
 
-    if subject_name == to_string(config.subject_name) do
-      primary_key = URI.decode_query(primary_key)
-      config.api.get(config.resource, primary_key)
-    else
-      {:error, "Invalid subject"}
+    with ^subject_name <- to_string(config.subject_name),
+         primary_key <- URI.decode_query(primary_key),
+         {:ok, action_name} <- Info.get_by_subject_action_name(config.resource) do
+      config.resource
+      |> Query.for_read(action_name, primary_key)
+      |> config.api.read()
+      |> case do
+        {:ok, [actor]} -> {:ok, actor}
+        _ -> {:error, "Invalid subject"}
+      end
     end
   end
 end

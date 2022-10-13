@@ -46,7 +46,6 @@ defmodule AshAuthentication.Identity.Transformer do
   """
 
   use Spark.Dsl.Transformer
-  alias Ash.Resource
 
   alias AshAuthentication.Identity.{
     GenerateTokenChange,
@@ -58,7 +57,7 @@ defmodule AshAuthentication.Identity.Transformer do
 
   alias Spark.Dsl.Transformer
   import AshAuthentication.Identity.UserValidations
-  import AshAuthentication.Utils, only: [maybe_append: 3]
+  import AshAuthentication.Utils
 
   @doc false
   @impl true
@@ -103,16 +102,6 @@ defmodule AshAuthentication.Identity.Transformer do
   @impl true
   @spec before?(module) :: boolean
   def before?(_), do: false
-
-  defp maybe_build_action(dsl_state, action_name, builder) when is_function(builder, 1) do
-    with nil <- Resource.Info.action(dsl_state, action_name),
-         {:ok, action} <- builder.(dsl_state) do
-      {:ok, Transformer.add_entity(dsl_state, [:actions], action)}
-    else
-      action when is_map(action) -> {:ok, dsl_state}
-      {:error, reason} -> {:error, reason}
-    end
-  end
 
   defp build_register_action(dsl_state) do
     with {:ok, identity_field} <- Info.identity_field(dsl_state),

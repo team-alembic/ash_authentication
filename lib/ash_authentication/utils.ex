@@ -1,5 +1,7 @@
 defmodule AshAuthentication.Utils do
   @moduledoc false
+  alias Ash.Resource
+  alias Spark.Dsl.Transformer
 
   @spec to_sentence(Enum.t(), [
           {:separator, String.t()} | {:final, String.t()} | {:whitespace, boolean}
@@ -60,5 +62,19 @@ defmodule AshAuthentication.Utils do
       end
 
     {result_type, [], Elixir}
+  end
+
+  @doc """
+  Used within transformers to optionally build actions as needed.
+  """
+  @spec maybe_build_action(map, atom, (map -> map)) :: {:ok, atom | map} | {:error, any}
+  def maybe_build_action(dsl_state, action_name, builder) when is_function(builder, 1) do
+    with nil <- Resource.Info.action(dsl_state, action_name),
+         {:ok, action} <- builder.(dsl_state) do
+      {:ok, Transformer.add_entity(dsl_state, [:actions], action)}
+    else
+      action when is_map(action) -> {:ok, dsl_state}
+      {:error, reason} -> {:error, reason}
+    end
   end
 end

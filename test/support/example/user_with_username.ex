@@ -12,12 +12,6 @@ defmodule Example.UserWithUsername do
           updated_at: DateTime.t()
         }
 
-  actions do
-    read :read do
-      primary?(true)
-    end
-  end
-
   attributes do
     uuid_primary_key(:id)
 
