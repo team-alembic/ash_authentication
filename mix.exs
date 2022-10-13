@@ -18,8 +18,61 @@ defmodule AshAuthentication.MixProject do
         plt_add_apps: [:mix, :ex_unit],
         plt_core_path: "priv/plts",
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ],
+      docs: [
+        main: "AshAuthentication",
+        source_ref: "v#{@version}",
+        logo: "logos/small-logo.png",
+        extras: extras(),
+        extra_section: "Guides",
+        groups_for_extras: groups_for_extras(),
+        groups_for_modules: [
+          Plugs: ~r/^AshAuthentication.Plug/,
+          Identity: ~r/^AshAuthentication.Identity/
+        ],
+        filter_modules: "AshAuthentication"
       ]
     ]
+  end
+
+  defp extras() do
+    "documentation/**/*.md"
+    |> Path.wildcard()
+    |> Enum.map(fn path ->
+      title =
+        path
+        |> Path.basename(".md")
+        |> String.split(~r/[-_]/)
+        |> Enum.map(&String.capitalize/1)
+        |> Enum.join(" ")
+        |> case do
+          "F A Q" ->
+            "FAQ"
+
+          other ->
+            other
+        end
+
+      {String.to_atom(path),
+       [
+         title: title
+       ]}
+    end)
+  end
+
+  defp groups_for_extras do
+    "documentation/*"
+    |> Path.wildcard()
+    |> Enum.map(fn folder ->
+      name =
+        folder
+        |> Path.basename()
+        |> String.split(~r/[-_]/)
+        |> Enum.map(&String.capitalize/1)
+        |> Enum.join(" ")
+
+      {name, folder |> Path.join("**") |> Path.wildcard()}
+    end)
   end
 
   def package do
