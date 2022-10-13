@@ -25,4 +25,22 @@ defmodule AshAuthentication.Validations do
         {:error, "Expected `#{inspect(field)}` to be one of #{values}"}
     end
   end
+
+  def validate_unique_subject_names(otp_app) do
+    otp_app
+    |> AshAuthentication.authenticated_resources()
+    |> Enum.group_by(& &1.subject_name)
+    |> Enum.each(fn
+      {subject_name, configs} when length(configs) > 1 ->
+        resources =
+          configs
+          |> Enum.map(&"`#{inspect(&1.resource)}`")
+          |> AshAuthentication.Utils.to_sentence()
+
+        raise "Error: multiple resources use the `#{subject_name}` subject name: #{resources}"
+
+      _ ->
+        nil
+    end)
+  end
 end

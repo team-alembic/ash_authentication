@@ -27,6 +27,8 @@ defmodule AshAuthentication.Plug do
       |> Keyword.fetch!(:otp_app)
       |> Macro.expand_literal(__ENV__)
 
+    AshAuthentication.Validations.validate_unique_subject_names(otp_app)
+
     routes =
       otp_app
       |> AshAuthentication.authenticated_resources()
