@@ -78,13 +78,7 @@ defmodule AshAuthentication.Transformer do
     ok? =
       dsl_state
       |> Transformer.get_persisted(:extensions, [])
-      |> Enum.any?(fn mod ->
-        behaviours =
-          mod.__info__(:attributes)
-          |> Keyword.get(:behaviour, [])
-
-        AshAuthentication.Provider in behaviours
-      end)
+      |> Enum.any?(&Spark.implements_behaviour?(&1, AshAuthentication.Provider))
 
     if ok?,
       do: :ok,

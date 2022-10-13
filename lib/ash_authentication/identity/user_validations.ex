@@ -176,12 +176,7 @@ defmodule AshAuthentication.Identity.UserValidations do
   end
 
   defp validate_module_implements_behaviour(module, behaviour) do
-    behaviours =
-      :attributes
-      |> module.__info__()
-      |> Keyword.get(:behaviour, [])
-
-    if behaviour in behaviours,
+    if Spark.implements_behaviour?(module, behaviour),
       do: :ok,
       else:
         {:error,
