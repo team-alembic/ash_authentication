@@ -2,7 +2,7 @@ defmodule AshAuthentication.Transformer do
   @moduledoc """
   The Authentication transformer
 
-  Sets the authentication API and subject_name for the resoruce.
+  Sets the authentication API and subject_name for the resource.
   """
 
   use Spark.Dsl.Transformer
