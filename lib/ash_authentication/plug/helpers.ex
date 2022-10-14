@@ -18,6 +18,30 @@ defmodule AshAuthentication.Plug.Helpers do
   end
 
   @doc """
+  Given a list of subjects, turn as many as possible into actors.
+  """
+  @spec load_subjects([AshAuthentication.subject()], module) :: map
+  def load_subjects(subjects, otp_app) when is_list(subjects) do
+    configurations =
+      otp_app
+      |> AshAuthentication.authenticated_resources()
+      |> Stream.map(&{to_string(&1.subject_name), &1})
+
+    subjects
+    |> Enum.reduce(%{}, fn subject, result ->
+      subject = URI.parse(subject)
+
+      with {:ok, config} <- Map.fetch(configurations, subject.path),
+           {:ok, actor} <- AshAuthentication.subject_to_resource(subject, config) do
+        current_subject_name = current_subject_name(config.subject_name)
+        Map.put(result, current_subject_name, actor)
+      else
+        _ -> result
+      end
+    end)
+  end
+
+  @doc """
   Attempt to retrieve all actors from the connections' session.
 
   Iterates through all configured authentication resources for `otp_app` and

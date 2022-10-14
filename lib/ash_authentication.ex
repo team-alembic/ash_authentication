@@ -103,11 +103,17 @@ defmodule AshAuthentication do
   @doc """
   Given a subject string, attempt to retrieve a resource.
   """
-  @spec subject_to_resource(subject, %{api: module, resource: module, subject_name: atom}) ::
+  @spec subject_to_resource(subject | URI.t(), %{
+          api: module,
+          resource: module,
+          subject_name: atom
+        }) ::
           {:ok, Resource.record()} | {:error, any}
-  def subject_to_resource(subject, config) when is_map(config) do
-    %{path: subject_name, query: primary_key} = URI.parse(subject)
+  def subject_to_resource(subject, config) when is_binary(subject),
+    do: subject |> URI.parse() |> subject_to_resource(config)
 
+  def subject_to_resource(%URI{path: subject_name, query: primary_key} = _subject, config)
+      when is_map(config) do
     with ^subject_name <- to_string(config.subject_name),
          {:ok, action_name} <- Info.get_by_subject_action_name(config.resource) do
       primary_key =
