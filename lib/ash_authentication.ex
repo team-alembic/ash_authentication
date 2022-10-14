@@ -50,6 +50,8 @@ defmodule AshAuthentication do
     sections: [@authentication],
     transformers: [AshAuthentication.Transformer]
 
+  require Ash.Query
+
   @type resource_config :: %{
           api: module,
           providers: [module],
@@ -107,10 +109,15 @@ defmodule AshAuthentication do
     %{path: subject_name, query: primary_key} = URI.parse(subject)
 
     with ^subject_name <- to_string(config.subject_name),
-         primary_key <- URI.decode_query(primary_key),
          {:ok, action_name} <- Info.get_by_subject_action_name(config.resource) do
+      primary_key =
+        primary_key
+        |> URI.decode_query()
+        |> Enum.to_list()
+
       config.resource
-      |> Query.for_read(action_name, primary_key)
+      |> Query.for_read(action_name, %{})
+      |> Query.filter(^primary_key)
       |> config.api.read()
       |> case do
         {:ok, [actor]} -> {:ok, actor}
