@@ -55,6 +55,7 @@ defmodule AshAuthentication.Identity.Transformer do
     SignInPreparation
   }
 
+  alias Ash.{Resource, Type}
   alias Spark.Dsl.Transformer
   import AshAuthentication.Identity.UserValidations
   import AshAuthentication.Utils
@@ -109,7 +110,7 @@ defmodule AshAuthentication.Identity.Transformer do
          {:ok, confirm_field} <- Info.password_confirmation_field(dsl_state),
          {:ok, confirmation_required?} <- Info.confirmation_required?(dsl_state) do
       password_opts = [
-        type: Ash.Type.String,
+        type: Type.String,
         allow_nil?: false,
         constraints: [min_length: 8],
         sensitive?: true
@@ -118,7 +119,7 @@ defmodule AshAuthentication.Identity.Transformer do
       arguments =
         [
           Transformer.build_entity!(
-            Ash.Resource.Dsl,
+            Resource.Dsl,
             [:actions, :create],
             :argument,
             Keyword.put(password_opts, :name, password_field)
@@ -127,7 +128,7 @@ defmodule AshAuthentication.Identity.Transformer do
         |> maybe_append(
           confirmation_required?,
           Transformer.build_entity!(
-            Ash.Resource.Dsl,
+            Resource.Dsl,
             [:actions, :create],
             :argument,
             Keyword.put(password_opts, :name, confirm_field)
@@ -138,20 +139,20 @@ defmodule AshAuthentication.Identity.Transformer do
         []
         |> maybe_append(
           confirmation_required?,
-          Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :create], :validate,
+          Transformer.build_entity!(Resource.Dsl, [:actions, :create], :validate,
             validation: PasswordConfirmationValidation
           )
         )
         |> Enum.concat([
-          Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :create], :change,
+          Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
             change: HashPasswordChange
           ),
-          Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :create], :change,
+          Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
             change: GenerateTokenChange
           )
         ])
 
-      Transformer.build_entity(Ash.Resource.Dsl, [:actions], :create,
+      Transformer.build_entity(Resource.Dsl, [:actions], :create,
         name: :register,
         accept: [identity_field],
         arguments: arguments,
@@ -163,27 +164,29 @@ defmodule AshAuthentication.Identity.Transformer do
   def build_sign_in_action(dsl_state) do
     with {:ok, identity_field} <- Info.identity_field(dsl_state),
          {:ok, password_field} <- Info.password_field(dsl_state) do
+      identity_attribute = Resource.Info.attribute(dsl_state, identity_field)
+
       arguments = [
-        Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :read], :argument,
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
           name: identity_field,
-          type: Ash.Type.String,
+          type: identity_attribute.type,
           allow_nil?: false
         ),
-        Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :read], :argument,
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
           name: password_field,
-          type: Ash.Type.String,
+          type: Type.String,
           allow_nil?: false,
           sensitive?: true
         )
       ]
 
       preparations = [
-        Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :read], :prepare,
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
           preparation: SignInPreparation
         )
       ]
 
-      Transformer.build_entity(Ash.Resource.Dsl, [:actions], :read,
+      Transformer.build_entity(Resource.Dsl, [:actions], :read,
         name: :sign_in,
         arguments: arguments,
         preparations: preparations,

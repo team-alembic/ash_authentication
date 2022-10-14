@@ -60,7 +60,7 @@ defmodule AshAuthentication.Identity.UserValidations do
     with {:ok, identity_field} <- Info.identity_field(dsl_state),
          {:ok, password_field} <- Info.password_field(dsl_state),
          {:ok, action} <- validate_action_exists(dsl_state, :sign_in),
-         :ok <- validate_identity_argument(action, identity_field),
+         :ok <- validate_identity_argument(dsl_state, action, identity_field),
          :ok <- validate_password_argument(action, password_field),
          :ok <- validate_action_has_preparation(action, SignInPreparation) do
       {:ok, dsl_state}
@@ -102,9 +102,11 @@ defmodule AshAuthentication.Identity.UserValidations do
     do: validate_action_has_validation(action, validation)
 
   @doc "Validate the identity argument"
-  @spec validate_identity_argument(Actions.action(), atom) :: :ok | {:error, Exception.t()}
-  def validate_identity_argument(action, identity_field) do
-    validate_action_argument_option(action, identity_field, :type, [Ash.Type.String])
+  @spec validate_identity_argument(Dsl.t(), Actions.action(), atom) ::
+          :ok | {:error, Exception.t()}
+  def validate_identity_argument(dsl_state, action, identity_field) do
+    identity_attribute = Ash.Resource.Info.attribute(dsl_state, identity_field)
+    validate_action_argument_option(action, identity_field, :type, [identity_attribute.type])
   end
 
   @doc "Validate the password argument"
