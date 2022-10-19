@@ -72,8 +72,10 @@ defmodule AshAuthentication.Identity.UserValidations do
   def validate_register_action(dsl_state) do
     with {:ok, password_field} <- Info.password_field(dsl_state),
          {:ok, password_confirmation_field} <- Info.password_confirmation_field(dsl_state),
+         {:ok, hashed_password_field} <- Info.hashed_password_field(dsl_state),
          {:ok, confirmation_required?} <- Info.confirmation_required?(dsl_state),
          {:ok, action} <- validate_action_exists(dsl_state, :register),
+         :ok <- validate_allow_nil_input(action, hashed_password_field),
          :ok <- validate_password_argument(action, password_field),
          :ok <-
            validate_password_confirmation_argument(
@@ -90,6 +92,23 @@ defmodule AshAuthentication.Identity.UserValidations do
              confirmation_required?
            ) do
       {:ok, dsl_state}
+    end
+  end
+
+  @doc "Validate that the action allows nil input for the provided field"
+  @spec validate_allow_nil_input(Actions.action(), atom) :: :ok | {:error, Exception.t()}
+  def validate_allow_nil_input(action, field) do
+    allowed_nil_fields = Map.get(action, :allow_nil_input, [])
+
+    if field in allowed_nil_fields do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:actions, :allow_nil_input],
+         message:
+           "Expected the action `#{inspect(action.name)}` to allow nil input for the field `#{inspect(field)}`"
+       )}
     end
   end
 

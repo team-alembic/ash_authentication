@@ -8,22 +8,42 @@ defmodule AshAuthentication.Validations do
   @doc """
   Given a map validate that the provided field is one of the values provided.
   """
-  def validate_field_in_values(map, field, values) when is_map(map) and is_list(values) do
-    with {:ok, value} <- Map.fetch(map, field),
-         true <- value in values do
+  def validate_field_in_values(map, field, []) when is_map(map) when is_map_key(map, field),
+    do: {:error, "Expected `#{inspect(field)}` to not be present."}
+
+  def validate_field_in_values(map, _field, []) when is_map(map), do: :ok
+
+  def validate_field_in_values(map, field, [value])
+      when is_map(map) and is_map_key(map, field) and :erlang.map_get(field, map) == value,
+      do: :ok
+
+  def validate_field_in_values(map, field, [value]) when is_map(map) and is_map_key(map, field),
+    do: {:error, "Expected `#{inspect(field)}` to contain `#{inspect(value)}`"}
+
+  def validate_field_in_values(map, field, values)
+      when is_map(map) and is_list(values) and is_map_key(map, field) do
+    if Map.get(map, field) in values do
       :ok
     else
-      :error ->
-        {:error, "Expected map to have a field named `#{inspect(field)}`"}
+      values =
+        values
+        |> Enum.map(&"`#{inspect(&1)}`")
+        |> to_sentence(final: "or")
 
-      false ->
-        values =
-          values
-          |> Enum.map(&"`#{inspect(&1)}`")
-          |> to_sentence(final: "or")
-
-        {:error, "Expected `#{inspect(field)}` to be one of #{values}"}
+      {:error, "Expected `#{inspect(field)}` to be one of #{values}"}
     end
+  end
+
+  def validate_field_in_values(map, field, [value]) when is_map(map),
+    do: {:error, "Expected `#{inspect(field)}` to be present and contain `#{inspect(value)}`"}
+
+  def validate_field_in_values(map, field, values) when is_map(map) and is_list(values) do
+    values =
+      values
+      |> Enum.map(&"`#{inspect(&1)}`")
+      |> to_sentence(final: "or")
+
+    {:error, "Expected `#{inspect(field)}` to be present and contain one of #{values}"}
   end
 
   def validate_unique_subject_names(otp_app) do

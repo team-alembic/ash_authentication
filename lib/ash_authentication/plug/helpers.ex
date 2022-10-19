@@ -47,19 +47,22 @@ defmodule AshAuthentication.Plug.Helpers do
   Iterates through all configured authentication resources for `otp_app` and
   retrieves any actors stored in the session, loads them and stores them in the
   assigns under their subject name (with the prefix `current_`).
+
+  If there is no actor present for a resource then the assign is set to `nil`.
   """
   @spec retrieve_from_session(Conn.t(), module) :: Conn.t()
   def retrieve_from_session(conn, otp_app) do
     otp_app
     |> AshAuthentication.authenticated_resources()
     |> Enum.reduce(conn, fn config, conn ->
+      current_subject_name = current_subject_name(config.subject_name)
+
       with subject when is_binary(subject) <- Conn.get_session(conn, config.subject_name),
-           {:ok, actor} <- AshAuthentication.subject_to_resource(subject, config),
-           current_subject_name <- current_subject_name(config.subject_name) do
+           {:ok, actor} <- AshAuthentication.subject_to_resource(subject, config) do
         Conn.assign(conn, current_subject_name, actor)
       else
         _ ->
-          conn
+          Conn.assign(conn, current_subject_name, nil)
       end
     end)
   end

@@ -102,10 +102,11 @@ defmodule AshAuthentication.Identity.Transformer do
   @doc false
   @impl true
   @spec before?(module) :: boolean
+  def before?(Resource.Transformers.DefaultAccept), do: true
   def before?(_), do: false
 
   defp build_register_action(dsl_state) do
-    with {:ok, identity_field} <- Info.identity_field(dsl_state),
+    with {:ok, hashed_password_field} <- Info.hashed_password_field(dsl_state),
          {:ok, password_field} <- Info.password_field(dsl_state),
          {:ok, confirm_field} <- Info.password_confirmation_field(dsl_state),
          {:ok, confirmation_required?} <- Info.confirmation_required?(dsl_state) do
@@ -154,9 +155,9 @@ defmodule AshAuthentication.Identity.Transformer do
 
       Transformer.build_entity(Resource.Dsl, [:actions], :create,
         name: :register,
-        accept: [identity_field],
         arguments: arguments,
-        changes: changes
+        changes: changes,
+        allow_nil_input: [hashed_password_field]
       )
     end
   end
