@@ -14,7 +14,7 @@ defmodule Example.AuthPlug do
   end
 
   @impl true
-  def handle_failure(conn) do
+  def handle_failure(conn, _) do
     conn
     |> send_resp(401, "Sorry mate")
   end

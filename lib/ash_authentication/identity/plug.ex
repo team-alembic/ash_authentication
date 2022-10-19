@@ -13,7 +13,7 @@ defmodule AshAuthentication.Identity.Plug do
   We use the "callback" phase to handle both registration and sign in by passing
   an "action" parameter along with the form data.
   """
-  import Plug.Conn
+  import AshAuthentication.Plug.Helpers, only: [private_store: 2]
   alias AshAuthentication.Identity
   alias Plug.Conn
 
@@ -38,10 +38,10 @@ defmodule AshAuthentication.Identity.Plug do
     |> do_action(config.resource)
     |> case do
       {:ok, actor} when is_struct(actor, config.resource) ->
-        put_private(conn, :authentication_result, {:success, actor})
+        private_store(conn, {:success, actor})
 
-      _ ->
-        conn
+      {:error, changeset} ->
+        private_store(conn, {:failure, changeset})
     end
   end
 

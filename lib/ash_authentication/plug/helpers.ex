@@ -2,7 +2,7 @@ defmodule AshAuthentication.Plug.Helpers do
   @moduledoc """
   Authentication helpers for use in your router, etc.
   """
-  alias Ash.Resource
+  alias Ash.{Changeset, Error, Resource}
   alias AshAuthentication.JsonWebToken
   alias Plug.Conn
 
@@ -97,4 +97,23 @@ defmodule AshAuthentication.Plug.Helpers do
   # the `subject_name` is a statically configured atom, so should be fine.
   defp current_subject_name(subject_name) when is_atom(subject_name),
     do: String.to_atom("current_#{subject_name}")
+
+  @doc """
+  Store result in private.
+
+  This is used by authentication plug handlers to store their result for passing
+  back to the dispatcher.
+  """
+  @spec private_store(
+          Conn.t(),
+          {:success, Resource.record()} | {:failure, nil | Changeset.t() | Error.t()}
+        ) ::
+          Conn.t()
+  def private_store(conn, {:success, record})
+      when is_struct(record, conn.private.authenticator.resource),
+      do: Conn.put_private(conn, :authentication_result, {:success, record})
+
+  def private_store(conn, {:failure, reason})
+      when is_nil(reason) or is_map(reason),
+      do: Conn.put_private(conn, :authentication_result, {:failure, reason})
 end

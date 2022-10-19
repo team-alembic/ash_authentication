@@ -69,7 +69,7 @@ defmodule AshAuthentication.Plug do
   do useful things like session and query param fetching.
   """
 
-  alias Ash.Resource
+  alias Ash.{Changeset, Resource}
   alias AshAuthentication.Plug.Helpers
   alias Plug.Conn
 
@@ -102,7 +102,7 @@ defmodule AshAuthentication.Plug do
   The default implementation simply returns a 401 status with the message
   "Access denied".  You almost definitely want to override this.
   """
-  @callback handle_failure(Conn.t()) :: Conn.t()
+  @callback handle_failure(Conn.t(), nil | Changeset.t()) :: Conn.t()
 
   defmacro __using__(opts) do
     otp_app =
@@ -156,13 +156,13 @@ defmodule AshAuthentication.Plug do
 
       Sends a very basic 401 response.
       """
-      @spec handle_failure(Conn.t()) :: Conn.t()
-      def handle_failure(conn) do
+      @spec handle_failure(Conn.t(), nil | Changeset.t()) :: Conn.t()
+      def handle_failure(conn, _) do
         conn
         |> send_resp(401, "Access denied")
       end
 
-      defoverridable handle_success: 3, handle_failure: 1
+      defoverridable handle_success: 3, handle_failure: 2
 
       @doc """
       Store an actor in the session.
