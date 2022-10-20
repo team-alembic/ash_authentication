@@ -109,7 +109,7 @@ defmodule AshAuthentication.Identity.Transformer do
     with {:ok, hashed_password_field} <- Info.hashed_password_field(dsl_state),
          {:ok, password_field} <- Info.password_field(dsl_state),
          {:ok, confirm_field} <- Info.password_confirmation_field(dsl_state),
-         {:ok, confirmation_required?} <- Info.confirmation_required?(dsl_state) do
+         confirmation_required? <- Info.confirmation_required?(dsl_state) do
       password_opts = [
         type: Type.String,
         allow_nil?: false,

@@ -19,5 +19,5 @@ config :bcrypt_elixir, :log_rounds, 4
 
 config :ash, :disable_async?, true
 
-config :ash_authentication, AshAuthentication.JsonWebToken,
+config :ash_authentication, AshAuthentication.Jwt,
   signing_secret: "Marty McFly in the past with the Delorean"

@@ -5,5 +5,5 @@ defmodule AshAuthentication.Identity.Info do
 
   use AshAuthentication.InfoGenerator,
     extension: AshAuthentication.Identity,
-    section: :identity_authentication
+    sections: [:identity_authentication]
 end

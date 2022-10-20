@@ -5,5 +5,6 @@ defmodule AshAuthentication.Info do
 
   use AshAuthentication.InfoGenerator,
     extension: AshAuthentication,
-    section: :authentication
+    sections: [:authentication, :tokens],
+    prefix?: true
 end

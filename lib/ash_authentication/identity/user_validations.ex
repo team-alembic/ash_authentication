@@ -17,6 +17,7 @@ defmodule AshAuthentication.Identity.UserValidations do
   }
 
   alias Spark.{Dsl, Dsl.Transformer, Error.DslError}
+  import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
 
@@ -73,7 +74,7 @@ defmodule AshAuthentication.Identity.UserValidations do
     with {:ok, password_field} <- Info.password_field(dsl_state),
          {:ok, password_confirmation_field} <- Info.password_confirmation_field(dsl_state),
          {:ok, hashed_password_field} <- Info.hashed_password_field(dsl_state),
-         {:ok, confirmation_required?} <- Info.confirmation_required?(dsl_state),
+         confirmation_required? <- Info.confirmation_required?(dsl_state),
          {:ok, action} <- validate_action_exists(dsl_state, :register),
          :ok <- validate_allow_nil_input(action, hashed_password_field),
          :ok <- validate_password_argument(action, password_field),
@@ -174,33 +175,6 @@ defmodule AshAuthentication.Identity.UserValidations do
     case Transformer.get_option(dsl_state, [:identity_authentication], option) do
       nil -> {:error, {:unknown_option, option}}
       value -> {:ok, value}
-    end
-  end
-
-  def persisted_option(dsl_state, option) do
-    case Transformer.get_persisted(dsl_state, option) do
-      nil -> {:error, {:unknown_persisted, option}}
-      value -> {:ok, value}
-    end
-  end
-
-  defp find_attribute(dsl_state, attribute_name) do
-    dsl_state
-    |> Transformer.get_entities([:attributes])
-    |> Enum.find(&(&1.name == attribute_name))
-    |> case do
-      nil ->
-        resource = Transformer.get_persisted(dsl_state, :module)
-
-        {:error,
-         DslError.exception(
-           path: [:attributes, :attribute],
-           message:
-             "The resource `#{inspect(resource)}` does not define an attribute named `#{inspect(attribute_name)}`"
-         )}
-
-      attribute ->
-        {:ok, attribute}
     end
   end
 

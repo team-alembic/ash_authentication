@@ -52,16 +52,16 @@ defmodule AshAuthentication.Utils do
   """
   @spec spec_for_option(keyword) :: Macro.t()
   def spec_for_option(options) do
-    result_type =
-      case Keyword.get(options, :type, :term) do
-        {:behaviour, _module} ->
-          :module
+    case Keyword.get(options, :type, :term) do
+      {:behaviour, _module} ->
+        {:module, [], Elixir}
 
-        terminal ->
-          terminal
-      end
+      :string ->
+        {{:., [], [{:__aliases__, [alias: false], [:String]}, :t]}, [], []}
 
-    {result_type, [], Elixir}
+      terminal ->
+        {terminal, [], Elixir}
+    end
   end
 
   @doc """

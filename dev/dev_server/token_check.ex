@@ -4,7 +4,7 @@ defmodule DevServer.TokenCheck do
   """
 
   @behaviour Plug
-  alias AshAuthentication.JsonWebToken
+  alias AshAuthentication.Jwt
   alias Plug.Conn
 
   @doc false
@@ -16,8 +16,7 @@ defmodule DevServer.TokenCheck do
   @impl true
   @spec call(Conn.t(), any) :: Conn.t()
   def call(%{params: %{"token" => token}} = conn, _opts) do
-    signer = JsonWebToken.token_signer()
-    result = JsonWebToken.verify_and_validate(token, signer)
+    result = Jwt.verify(token, :ash_authentication)
 
     conn
     |> Conn.send_resp(200, inspect(result))

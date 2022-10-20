@@ -86,6 +86,9 @@ defmodule AshAuthentication.Identity do
       hashed_password_field :hashed_password
       hash_provider AshAuthentication.BcryptProvider
       confirmation_required? true
+    end
+
+    authentication do
       api MyApp.Accounts
     end
   end

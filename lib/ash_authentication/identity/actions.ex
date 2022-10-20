@@ -20,7 +20,7 @@ defmodule AshAuthentication.Identity.Actions do
   @spec sign_in(module, map) :: {:ok, struct} | {:error, term}
   def sign_in(resource, attributes) do
     {:ok, action} = Identity.Info.sign_in_action_name(resource)
-    {:ok, api} = AshAuthentication.Info.api(resource)
+    {:ok, api} = AshAuthentication.Info.authentication_api(resource)
 
     resource
     |> Query.for_read(action, attributes)
@@ -43,7 +43,7 @@ defmodule AshAuthentication.Identity.Actions do
   @spec register(module, map) :: {:ok, struct} | {:error, term}
   def register(resource, attributes) do
     {:ok, action} = Identity.Info.register_action_name(resource)
-    {:ok, api} = AshAuthentication.Info.api(resource)
+    {:ok, api} = AshAuthentication.Info.authentication_api(resource)
 
     resource
     |> Changeset.for_create(action, attributes)

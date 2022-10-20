@@ -22,6 +22,12 @@ defmodule Example.UserWithUsername do
     update_timestamp(:updated_at)
   end
 
+  actions do
+    destroy :destroy do
+      primary? true
+    end
+  end
+
   code_interface do
     define_for(Example)
   end
@@ -42,5 +48,10 @@ defmodule Example.UserWithUsername do
 
   identities do
     identity(:username, [:username])
+  end
+
+  tokens do
+    enabled?(true)
+    revocation_resource(Example.TokenRevocation)
   end
 end

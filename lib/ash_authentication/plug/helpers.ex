@@ -3,7 +3,7 @@ defmodule AshAuthentication.Plug.Helpers do
   Authentication helpers for use in your router, etc.
   """
   alias Ash.{Changeset, Error, Resource}
-  alias AshAuthentication.JsonWebToken
+  alias AshAuthentication.Jwt
   alias Plug.Conn
 
   @doc """
@@ -11,7 +11,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
   def store_in_session(conn, actor) do
-    subject_name = AshAuthentication.Info.subject_name!(actor.__struct__)
+    subject_name = AshAuthentication.Info.authentication_subject_name!(actor.__struct__)
     subject = AshAuthentication.resource_to_subject(actor)
 
     Conn.put_session(conn, subject_name, subject)
@@ -76,17 +76,11 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec retrieve_from_bearer(Conn.t(), module) :: Conn.t()
   def retrieve_from_bearer(conn, otp_app) do
-    signer = JsonWebToken.token_signer()
-    configurations = AshAuthentication.authenticated_resources(otp_app)
-
     conn
     |> Conn.get_req_header("authorization")
     |> Stream.filter(&String.starts_with?("Bearer ", &1))
     |> Enum.reduce(conn, fn "Bearer " <> token, conn ->
-      with {:ok, %{"sub" => subject}} <- JsonWebToken.verify_and_validate(token, signer),
-           %{path: subject_name} <- URI.parse(subject),
-           config when is_map(config) <-
-             Enum.find(configurations, &(to_string(&1.subject_name) == subject_name)),
+      with {:ok, %{"sub" => subject}, config} <- Jwt.verify(token, otp_app),
            {:ok, actor} <- AshAuthentication.subject_to_resource(subject, config),
            current_subject_name <- current_subject_name(config.subject_name) do
         Conn.assign(conn, current_subject_name, actor)

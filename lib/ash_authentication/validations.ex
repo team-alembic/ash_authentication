@@ -4,10 +4,13 @@ defmodule AshAuthentication.Validations do
   """
 
   import AshAuthentication.Utils
+  alias Ash.Resource.Attribute
+  alias Spark.{Dsl, Dsl.Transformer, Error.DslError}
 
   @doc """
   Given a map validate that the provided field is one of the values provided.
   """
+  @spec validate_field_in_values(map, any, [any]) :: :ok | {:error, String.t()}
   def validate_field_in_values(map, field, []) when is_map(map) when is_map_key(map, field),
     do: {:error, "Expected `#{inspect(field)}` to not be present."}
 
@@ -46,6 +49,10 @@ defmodule AshAuthentication.Validations do
     {:error, "Expected `#{inspect(field)}` to be present and contain one of #{values}"}
   end
 
+  @doc """
+  Validates the uniqueness of all subject names per otp app.
+  """
+  @spec validate_unique_subject_names(module) :: :ok | no_return
   def validate_unique_subject_names(otp_app) do
     otp_app
     |> AshAuthentication.authenticated_resources()
@@ -60,7 +67,43 @@ defmodule AshAuthentication.Validations do
         raise "Error: multiple resources use the `#{subject_name}` subject name: #{resources}"
 
       _ ->
-        nil
+        :ok
     end)
+  end
+
+  @doc """
+  Find and return a named attribute in the DSL state.
+  """
+  @spec find_attribute(Dsl.t(), atom) ::
+          {:ok, Attribute.t()} | {:error, Exception.t()}
+  def find_attribute(dsl_state, attribute_name) do
+    dsl_state
+    |> Transformer.get_entities([:attributes])
+    |> Enum.find(&(&1.name == attribute_name))
+    |> case do
+      nil ->
+        resource = Transformer.get_persisted(dsl_state, :module)
+
+        {:error,
+         DslError.exception(
+           path: [:attributes, :attribute],
+           message:
+             "The resource `#{inspect(resource)}` does not define an attribute named `#{inspect(attribute_name)}`"
+         )}
+
+      attribute ->
+        {:ok, attribute}
+    end
+  end
+
+  @doc """
+  Find and return a persisted option in the DSL state.
+  """
+  @spec persisted_option(Dsl.t(), atom) :: {:ok, any} | {:error, {:unknown_persisted, atom}}
+  def persisted_option(dsl_state, option) do
+    case Transformer.get_persisted(dsl_state, option) do
+      nil -> {:error, {:unknown_persisted, option}}
+      value -> {:ok, value}
+    end
   end
 end

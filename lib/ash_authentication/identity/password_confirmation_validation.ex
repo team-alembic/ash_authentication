@@ -15,7 +15,7 @@ defmodule AshAuthentication.Identity.PasswordConfirmationValidation do
   """
   @spec validate(Changeset.t(), keyword) :: :ok | {:error, String.t() | Exception.t()}
   def validate(changeset, _) do
-    with {:ok, true} <- Info.confirmation_required?(changeset.resource),
+    with true <- Info.confirmation_required?(changeset.resource),
          {:ok, password_field} <- Info.password_field(changeset.resource),
          {:ok, confirm_field} <- Info.password_confirmation_field(changeset.resource),
          password <- Changeset.get_argument(changeset, password_field),

@@ -10,8 +10,9 @@ defmodule AshAuthentication.Identity.HashPasswordChange do
   alias AshAuthentication.Identity.Info
   alias Ash.{Changeset, Resource.Change}
 
+  @doc false
   @impl true
-  @spec change(Changeset.t(), Keyword.t(), Change.context()) :: Changeset.t()
+  @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
   def change(changeset, _opts, _) do
     changeset
     |> Changeset.before_action(fn changeset ->

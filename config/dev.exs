@@ -26,5 +26,5 @@ config :ash_authentication, Example,
     registry: Example.Registry
   ]
 
-config :ash_authentication, AshAuthentication.JsonWebToken,
+config :ash_authentication, AshAuthentication.Jwt,
   signing_secret: "Marty McFly in the past with the Delorean"

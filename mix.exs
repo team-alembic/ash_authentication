@@ -64,7 +64,8 @@ defmodule AshAuthentication.MixProject do
       {:ex_doc, ">= 0.0.0", only: [:dev, :test]},
       {:faker, "~> 0.17.0", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
-      {:plug_cowboy, "~> 2.5", only: [:dev, :test]}
+      {:plug_cowboy, "~> 2.5", only: [:dev, :test]},
+      {:mimic, "~> 1.7", only: [:dev, :test]}
     ]
   end
 
@@ -72,7 +73,7 @@ defmodule AshAuthentication.MixProject do
     [
       ci: [
         "format --check-formatted",
-        "doctor --full",
+        "doctor --full --raise",
         "credo --strict",
         "dialyzer",
         "hex.audit",

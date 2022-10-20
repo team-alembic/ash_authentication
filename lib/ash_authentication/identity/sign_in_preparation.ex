@@ -9,16 +9,16 @@ defmodule AshAuthentication.Identity.SignInPreparation do
   identity argument passed to the action.
 
   Secondly, it validates the supplied password using the configured hash
-  provider, and if correct allows the user record to be returned, otherwise
+  provider, and if correct allows the record to be returned, otherwise
   returns an empty result.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Identity.Info, JsonWebToken}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Identity.Info, Jwt}
   alias Ash.{Query, Resource.Preparation}
   require Ash.Query
 
   @impl true
-  @spec prepare(Query.t(), Keyword.t(), Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, _opts, _) do
     {:ok, identity_field} = Info.identity_field(query.resource)
     {:ok, password_field} = Info.password_field(query.resource)
@@ -29,11 +29,11 @@ defmodule AshAuthentication.Identity.SignInPreparation do
     query
     |> Query.filter(ref(^identity_field) == ^identity)
     |> Query.after_action(fn
-      query, [user] ->
+      query, [record] ->
         password = Query.get_argument(query, password_field)
 
-        if hasher.valid?(password, user.hashed_password),
-          do: {:ok, [sign_in(user)]},
+        if hasher.valid?(password, record.hashed_password),
+          do: {:ok, [maybe_generate_token(record)]},
           else: auth_failed(query)
 
       _, _ ->
@@ -44,9 +44,12 @@ defmodule AshAuthentication.Identity.SignInPreparation do
 
   defp auth_failed(query), do: {:error, AuthenticationFailed.exception(query: query)}
 
-  defp sign_in(user) do
-    {:ok, token, _claims} = JsonWebToken.token_for_record(user)
-
-    %{user | __metadata__: Map.put(user.__metadata__, :token, token)}
+  defp maybe_generate_token(record) do
+    if AshAuthentication.Info.tokens_enabled?(record.__struct__) do
+      {:ok, token, _claims} = Jwt.token_for_record(record)
+      %{record | __metadata__: Map.put(record.__metadata__, :token, token)}
+    else
+      record
+    end
   end
 end

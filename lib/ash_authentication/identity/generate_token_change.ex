@@ -5,7 +5,7 @@ defmodule AshAuthentication.Identity.GenerateTokenChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Resource.Change}
-  alias AshAuthentication.JsonWebToken
+  alias AshAuthentication.{Info, Jwt}
 
   @doc false
   @impl true
@@ -13,8 +13,12 @@ defmodule AshAuthentication.Identity.GenerateTokenChange do
   def change(changeset, _opts, _) do
     changeset
     |> Changeset.after_action(fn _changeset, result ->
-      {:ok, token, _claims} = JsonWebToken.token_for_record(result)
-      {:ok, %{result | __metadata__: Map.put(result.__metadata__, :token, token)}}
+      if Info.tokens_enabled?(result.__struct__) do
+        {:ok, token, _claims} = Jwt.token_for_record(result)
+        {:ok, %{result | __metadata__: Map.put(result.__metadata__, :token, token)}}
+      else
+        {:ok, result}
+      end
     end)
   end
 end
