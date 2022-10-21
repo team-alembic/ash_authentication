@@ -8,7 +8,7 @@ defmodule AshAuthenticationTest do
       assert [
                %{
                  api: Example,
-                 providers: [AshAuthentication.Identity],
+                 providers: [AshAuthentication.PasswordAuthentication],
                  resource: Example.UserWithUsername,
                  subject_name: :user_with_username
                }

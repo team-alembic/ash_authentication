@@ -1,13 +1,13 @@
-defmodule AshAuthentication.Identity.Actions do
+defmodule AshAuthentication.PasswordAuthentication.Actions do
   @moduledoc """
-  Code interface for identity.
+  Code interface for password authentication.
 
-  Allows you to use the identity provider without needing to mess around with
+  Allows you to use the password authentication provider without needing to mess around with
   changesets, apis, etc.
   """
 
   alias Ash.{Changeset, Query}
-  alias AshAuthentication.Identity
+  alias AshAuthentication.PasswordAuthentication
 
   @doc """
   Attempt to sign in an actor of the provided resource type.
@@ -19,7 +19,7 @@ defmodule AshAuthentication.Identity.Actions do
   """
   @spec sign_in(module, map) :: {:ok, struct} | {:error, term}
   def sign_in(resource, attributes) do
-    {:ok, action} = Identity.Info.sign_in_action_name(resource)
+    {:ok, action} = PasswordAuthentication.Info.sign_in_action_name(resource)
     {:ok, api} = AshAuthentication.Info.authentication_api(resource)
 
     resource
@@ -42,7 +42,7 @@ defmodule AshAuthentication.Identity.Actions do
   """
   @spec register(module, map) :: {:ok, struct} | {:error, term}
   def register(resource, attributes) do
-    {:ok, action} = Identity.Info.register_action_name(resource)
+    {:ok, action} = PasswordAuthentication.Info.register_action_name(resource)
     {:ok, api} = AshAuthentication.Info.authentication_api(resource)
 
     resource

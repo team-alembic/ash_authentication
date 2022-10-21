@@ -1,13 +1,13 @@
-defmodule AshAuthentication.Identity.Transformer do
+defmodule AshAuthentication.PasswordAuthentication.Transformer do
   @moduledoc """
-  The Identity Authentication transformer
+  The PasswordAuthentication Authentication transformer
 
   Scans the resource and checks that all the fields and actions needed are
   present.
 
   ## What it's looking for.
 
-  In order for identity to work we need a few basic things to be present on the
+  In order for password authentication to work we need a few basic things to be present on the
   resource, but we _can_ generate almost everything we need, even if we do
   generate some actions, etc, we still must validate them because we want to
   allow the user to be able to overwrite as much as possible.
@@ -30,15 +30,15 @@ defmodule AshAuthentication.Identity.Transformer do
       field.
     - it takes an argument of the same name and type as the configured password
       field.
-    - it has the `Identity.SignInPreparation` preparation present.
+    - it has the `PasswordAuthentication.SignInPreparation` preparation present.
   * That there is a create action called `register` (or other name based on
     configuration) and that it has the following properties:
     - it takes an argument of the same name and type as the configured identity field.
     - it takes an argument of the same name and type as the configured password field.
     - it takes an argument of the same name and type as the configured password confirmation field if confirmation is enabled.
-    - it has the `Identity.HashPasswordChange` change present.
-    - it has the `Identity.GenerateTokenChange` change present.
-    - it has the `Identity.PasswordConfirmationValidation` validation present.
+    - it has the `PasswordAuthentication.HashPasswordChange` change present.
+    - it has the `PasswordAuthentication.GenerateTokenChange` change present.
+    - it has the `PasswordAuthentication.PasswordConfirmationValidation` validation present.
 
   ## Future improvements.
 
@@ -47,7 +47,7 @@ defmodule AshAuthentication.Identity.Transformer do
 
   use Spark.Dsl.Transformer
 
-  alias AshAuthentication.Identity.{
+  alias AshAuthentication.PasswordAuthentication.{
     GenerateTokenChange,
     HashPasswordChange,
     Info,
@@ -57,7 +57,7 @@ defmodule AshAuthentication.Identity.Transformer do
 
   alias Ash.{Resource, Type}
   alias Spark.Dsl.Transformer
-  import AshAuthentication.Identity.UserValidations
+  import AshAuthentication.PasswordAuthentication.UserValidations
   import AshAuthentication.Utils
 
   @doc false
@@ -81,8 +81,8 @@ defmodule AshAuthentication.Identity.Transformer do
         Transformer.get_persisted(dsl_state, :authentication)
         |> Map.update(
           :providers,
-          [AshAuthentication.Identity],
-          &[AshAuthentication.Identity | &1]
+          [AshAuthentication.PasswordAuthentication],
+          &[AshAuthentication.PasswordAuthentication | &1]
         )
 
       dsl_state =

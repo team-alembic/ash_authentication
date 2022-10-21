@@ -1,4 +1,4 @@
-defmodule AshAuthentication.Identity.HashPasswordChange do
+defmodule AshAuthentication.PasswordAuthentication.HashPasswordChange do
   @moduledoc """
   Set the hash based on the password input.
 
@@ -7,7 +7,7 @@ defmodule AshAuthentication.Identity.HashPasswordChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.Identity.Info
+  alias AshAuthentication.PasswordAuthentication.Info
   alias Ash.{Changeset, Resource.Change}
 
   @doc false

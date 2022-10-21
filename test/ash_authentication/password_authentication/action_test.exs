@@ -1,8 +1,8 @@
-defmodule AshAuthentication.Identity.ActionTest do
+defmodule AshAuthentication.PasswordAuthentication.ActionTest do
   @moduledoc false
   use AshAuthentication.DataCase, async: true
   alias Ash.{Changeset, Query}
-  alias AshAuthentication.Identity.Info
+  alias AshAuthentication.PasswordAuthentication.Info
 
   describe "register action" do
     @describetag resource: Example.UserWithUsername

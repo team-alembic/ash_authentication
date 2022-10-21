@@ -1,4 +1,4 @@
-defmodule AshAuthentication.Identity.SignInPreparation do
+defmodule AshAuthentication.PasswordAuthentication.SignInPreparation do
   @moduledoc """
   Prepare a query for sign in
 
@@ -13,7 +13,7 @@ defmodule AshAuthentication.Identity.SignInPreparation do
   returns an empty result.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Identity.Info, Jwt}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Jwt, PasswordAuthentication.Info}
   alias Ash.{Query, Resource.Preparation}
   require Ash.Query
 

@@ -1,4 +1,4 @@
-defmodule AshAuthentication.Identity.PasswordConfirmationValidation do
+defmodule AshAuthentication.PasswordAuthentication.PasswordConfirmationValidation do
   @moduledoc """
   Validate that the password and password confirmation match.
 
@@ -7,7 +7,7 @@ defmodule AshAuthentication.Identity.PasswordConfirmationValidation do
 
   use Ash.Resource.Validation
   alias Ash.{Changeset, Error.Changes.InvalidArgument}
-  alias AshAuthentication.Identity.Info
+  alias AshAuthentication.PasswordAuthentication.Info
 
   @doc """
   Validates that the password and password confirmation fields contain

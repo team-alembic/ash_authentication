@@ -2,7 +2,7 @@ defmodule Example.UserWithUsername do
   @moduledoc false
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication, AshAuthentication.Identity]
+    extensions: [AshAuthentication, AshAuthentication.PasswordAuthentication]
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
@@ -41,7 +41,7 @@ defmodule Example.UserWithUsername do
     api(Example)
   end
 
-  identity_authentication do
+  password_authentication do
     identity_field(:username)
     hashed_password_field(:hashed_password)
   end

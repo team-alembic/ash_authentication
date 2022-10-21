@@ -1,8 +1,8 @@
-defmodule AshAuthentication.Identity do
-  @identity_authentication %Spark.Dsl.Section{
-    name: :identity_authentication,
+defmodule AshAuthentication.PasswordAuthentication do
+  @password_authentication %Spark.Dsl.Section{
+    name: :password_authentication,
     describe: """
-    Configure identity authentication for this resource.
+    Configure password authentication authentication for this resource.
     """,
     schema: [
       identity_field: [
@@ -71,7 +71,7 @@ defmodule AshAuthentication.Identity do
 
   ```elixir
   defmodule MyApp.Accounts.Users do
-    use Ash.Resource, extensions: [AshAuthentication.Identity]
+    use Ash.Resource, extensions: [AshAuthentication.PasswordAuthentication]
 
     attributes do
       uuid_primary_key :id
@@ -79,7 +79,7 @@ defmodule AshAuthentication.Identity do
       attribute :hashed_password, :string, allow_nil?: false
     end
 
-    identity_authentication do
+    password_authentication do
       identity_field :username
       password_field :password
       password_confirmation_field :password_confirmation
@@ -98,20 +98,20 @@ defmodule AshAuthentication.Identity do
 
   ### Index
 
-  #{Spark.Dsl.Extension.doc_index([@identity_authentication])}
+  #{Spark.Dsl.Extension.doc_index([@password_authentication])}
 
   ### Docs
 
-  #{Spark.Dsl.Extension.doc([@identity_authentication])}
+  #{Spark.Dsl.Extension.doc([@password_authentication])}
   """
 
   @behaviour AshAuthentication.Provider
 
   use Spark.Dsl.Extension,
-    sections: [@identity_authentication],
-    transformers: [AshAuthentication.Identity.Transformer]
+    sections: [@password_authentication],
+    transformers: [AshAuthentication.PasswordAuthentication.Transformer]
 
-  alias AshAuthentication.Identity
+  alias AshAuthentication.PasswordAuthentication
   alias Plug.Conn
 
   @doc """
@@ -124,7 +124,9 @@ defmodule AshAuthentication.Identity do
   """
   @impl true
   @spec sign_in_action(module, map) :: {:ok, struct} | {:error, term}
-  defdelegate sign_in_action(resource, attributes), to: Identity.Actions, as: :sign_in
+  defdelegate sign_in_action(resource, attributes),
+    to: PasswordAuthentication.Actions,
+    as: :sign_in
 
   @doc """
   Attempt to register an actor of the provided resource type.
@@ -136,17 +138,19 @@ defmodule AshAuthentication.Identity do
   """
   @impl true
   @spec register_action(module, map) :: {:ok, struct} | {:error, term}
-  defdelegate register_action(resource, attributes), to: Identity.Actions, as: :register
+  defdelegate register_action(resource, attributes),
+    to: PasswordAuthentication.Actions,
+    as: :register
 
   @doc """
   Handle the request phase.
 
-  The identity provider does nothing with the request phase, and just returns
+  The password authentication provider does nothing with the request phase, and just returns
   the `conn` unmodified.
   """
   @impl true
   @spec request_plug(Conn.t(), any) :: Conn.t()
-  defdelegate request_plug(conn, config), to: Identity.Plug, as: :request
+  defdelegate request_plug(conn, config), to: PasswordAuthentication.Plug, as: :request
 
   @doc """
   Handle the callback phase.
@@ -155,14 +159,14 @@ defmodule AshAuthentication.Identity do
   """
   @impl true
   @spec callback_plug(Conn.t(), any) :: Conn.t()
-  defdelegate callback_plug(conn, config), to: Identity.Plug, as: :callback
+  defdelegate callback_plug(conn, config), to: PasswordAuthentication.Plug, as: :callback
 
   @doc """
   Returns the name of the associated provider.
   """
   @impl true
   @spec provides :: String.t()
-  def provides, do: "identity"
+  def provides, do: "password"
 
   @doc false
   @impl true

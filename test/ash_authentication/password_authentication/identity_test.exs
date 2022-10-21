@@ -2,7 +2,7 @@ defmodule AshAuthentication.IdentityTest do
   @moduledoc false
   use AshAuthentication.DataCase, async: true
   alias Ash.Error
-  alias AshAuthentication.{Identity, Identity.Info}
+  alias AshAuthentication.{PasswordAuthentication, PasswordAuthentication.Info}
 
   describe "sign_in_action/2" do
     @describetag resource: Example.UserWithUsername
@@ -10,7 +10,7 @@ defmodule AshAuthentication.IdentityTest do
 
     test "when provided invalid credentials", %{resource: resource, config: config} do
       assert {:error, error} =
-               Identity.sign_in_action(resource, %{
+               PasswordAuthentication.sign_in_action(resource, %{
                  config.identity_field => username(),
                  config.password_field => password()
                })
@@ -23,14 +23,14 @@ defmodule AshAuthentication.IdentityTest do
       password = password()
 
       {:ok, expected} =
-        Identity.register_action(resource, %{
+        PasswordAuthentication.register_action(resource, %{
           config.identity_field => username,
           config.password_field => password,
           config.password_confirmation_field => password
         })
 
       assert {:ok, actual} =
-               Identity.sign_in_action(resource, %{
+               PasswordAuthentication.sign_in_action(resource, %{
                  config.identity_field => username,
                  config.password_field => password
                })

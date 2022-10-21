@@ -19,7 +19,7 @@ defmodule AshAuthentication.Provider do
   @doc """
   Given some information about a potential user of the system attempt to create the record.
 
-  Only used by the "identity" provider at this time.
+  Only used by the "password authentication" provider at this time.
   """
   @callback register_action(Resource.t(), map) :: {:ok, Resource.record()} | {:error, any}
 

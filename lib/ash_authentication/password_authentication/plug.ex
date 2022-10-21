@@ -1,10 +1,10 @@
-defmodule AshAuthentication.Identity.Plug do
+defmodule AshAuthentication.PasswordAuthentication.Plug do
   @moduledoc """
   Handlers for incoming request and callback HTTP requests.
 
   AshAuthentication is written with an eye towards OAuth which uses a two-phase
   request/callback process which can be used to register and sign in an actor in
-  a single flow.  This doesn't really work that well with `Identity` which has
+  a single flow.  This doesn't really work that well with `PasswordAuthentication` which has
   seperate "registration" and "sign-in" actions.
 
   Here we simply ignore the request phase, which will cause an error to be
@@ -14,13 +14,13 @@ defmodule AshAuthentication.Identity.Plug do
   an "action" parameter along with the form data.
   """
   import AshAuthentication.Plug.Helpers, only: [private_store: 2]
-  alias AshAuthentication.Identity
+  alias AshAuthentication.PasswordAuthentication
   alias Plug.Conn
 
   @doc """
   Handle the request phase.
 
-  The identity provider does nothing with the request phase, and just returns
+  The password authentication provider does nothing with the request phase, and just returns
   the `conn` unmodified.
   """
   @spec request(Conn.t(), any) :: Conn.t()
@@ -48,8 +48,8 @@ defmodule AshAuthentication.Identity.Plug do
   def callback(conn, _opts), do: conn
 
   defp do_action(%{"action" => "sign_in"} = attrs, resource),
-    do: Identity.sign_in_action(resource, attrs)
+    do: PasswordAuthentication.sign_in_action(resource, attrs)
 
   defp do_action(%{"action" => "register"} = attrs, resource),
-    do: Identity.register_action(resource, attrs)
+    do: PasswordAuthentication.register_action(resource, attrs)
 end

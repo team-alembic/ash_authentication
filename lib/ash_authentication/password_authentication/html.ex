@@ -1,12 +1,12 @@
-defmodule AshAuthentication.Identity.HTML do
+defmodule AshAuthentication.PasswordAuthentication.HTML do
   @moduledoc """
-  Renders a very basic forms for using identity authentication.
+  Renders a very basic forms for using password authentication.
 
   These are mainly used for testing.
   """
 
   require EEx
-  alias AshAuthentication.Identity
+  alias AshAuthentication.PasswordAuthentication
 
   EEx.function_from_string(
     :defp,
@@ -90,7 +90,7 @@ defmodule AshAuthentication.Identity.HTML do
     @defaults
     |> Keyword.merge(options)
     |> Map.new()
-    |> Map.merge(Identity.Info.options(resource))
+    |> Map.merge(PasswordAuthentication.Info.options(resource))
     |> Map.merge(AshAuthentication.Info.authentication_options(resource))
   end
 end

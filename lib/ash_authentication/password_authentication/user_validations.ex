@@ -1,14 +1,14 @@
-defmodule AshAuthentication.Identity.UserValidations do
+defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   @moduledoc """
   Provides validations for the "user" resource.
 
-  See the module docs for `AshAuthentication.Identity.Transformer` for more
+  See the module docs for `AshAuthentication.PasswordAuthentication.Transformer` for more
   information.
   """
   alias Ash.Resource.Actions
   alias AshAuthentication.HashProvider
 
-  alias AshAuthentication.Identity.{
+  alias AshAuthentication.PasswordAuthentication.{
     GenerateTokenChange,
     HashPasswordChange,
     Info,
@@ -35,7 +35,7 @@ defmodule AshAuthentication.Identity.UserValidations do
          DslError.exception(
            path: [:extensions],
            message:
-             "The `AshAuthentication` extension must also be present on this resource for identity to work."
+             "The `AshAuthentication` extension must also be present on this resource for password authentication to work."
          )}
   end
 
@@ -49,8 +49,8 @@ defmodule AshAuthentication.Identity.UserValidations do
       :error ->
         {:error,
          DslError.exception(
-           path: [:identity_authentication, :hash_provider],
-           message: "A hash provider must be set in your identity resource"
+           path: [:password_authentication, :hash_provider],
+           message: "A hash provider must be set in your password authentication resource"
          )}
     end
   end
@@ -172,7 +172,7 @@ defmodule AshAuthentication.Identity.UserValidations do
   end
 
   defp identity_option(dsl_state, option) do
-    case Transformer.get_option(dsl_state, [:identity_authentication], option) do
+    case Transformer.get_option(dsl_state, [:password_authentication], option) do
       nil -> {:error, {:unknown_option, option}}
       value -> {:ok, value}
     end
