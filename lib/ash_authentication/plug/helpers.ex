@@ -3,7 +3,7 @@ defmodule AshAuthentication.Plug.Helpers do
   Authentication helpers for use in your router, etc.
   """
   alias Ash.{Changeset, Error, Resource}
-  alias AshAuthentication.Jwt
+  alias AshAuthentication.{Info, Jwt, TokenRevocation}
   alias Plug.Conn
 
   @doc """
@@ -78,12 +78,35 @@ defmodule AshAuthentication.Plug.Helpers do
   def retrieve_from_bearer(conn, otp_app) do
     conn
     |> Conn.get_req_header("authorization")
-    |> Stream.filter(&String.starts_with?("Bearer ", &1))
-    |> Enum.reduce(conn, fn "Bearer " <> token, conn ->
+    |> Stream.filter(&String.starts_with?(&1, "Bearer "))
+    |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
+    |> Enum.reduce(conn, fn token, conn ->
       with {:ok, %{"sub" => subject}, config} <- Jwt.verify(token, otp_app),
            {:ok, actor} <- AshAuthentication.subject_to_resource(subject, config),
            current_subject_name <- current_subject_name(config.subject_name) do
         Conn.assign(conn, current_subject_name, actor)
+      else
+        _ -> conn
+      end
+    end)
+  end
+
+  @doc """
+  Revoke all authorization header(s).
+
+  Any bearer-style authorization headers will have their tokens revoked.
+  """
+  @spec revoke_bearer_tokens(Conn.t(), module) :: Conn.t()
+  def revoke_bearer_tokens(conn, otp_app) do
+    conn
+    |> Conn.get_req_header("authorization")
+    |> Stream.filter(&String.starts_with?(&1, "Bearer "))
+    |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
+    |> Enum.reduce(conn, fn token, conn ->
+      with {:ok, config} <- Jwt.token_to_resource(token, otp_app),
+           {:ok, revocation_resource} <- Info.tokens_revocation_resource(config.resource),
+           :ok <- TokenRevocation.revoke(revocation_resource, token) do
+        conn
       else
         _ -> conn
       end

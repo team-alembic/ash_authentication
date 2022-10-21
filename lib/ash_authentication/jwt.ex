@@ -92,14 +92,30 @@ defmodule AshAuthentication.Jwt do
   @spec verify(token, module) ::
           {:ok, claims, AshAuthentication.resource_config()} | :error
   def verify(token, otp_app) do
-    with {:ok, %{"sub" => subject}} <- Joken.peek_claims(token),
-         %URI{path: subject_name} <- URI.parse(subject),
-         {:ok, config} <- config_for_subject_name(subject_name, otp_app),
+    with {:ok, config} <- token_to_resource(token, otp_app),
          signer <- Config.token_signer(config.resource),
          {:ok, claims} <- Joken.verify(token, signer),
          defaults <- Config.default_claims(config.resource),
          {:ok, claims} <- Joken.validate(defaults, claims, config) do
       {:ok, claims, config}
+    else
+      _ -> :error
+    end
+  end
+
+  @doc """
+  Given a token, find a matching resource configuration.
+
+  ## Warning
+
+  This function *does not* validate the token, so don't rely on it for
+  authentication or authorisation.
+  """
+  @spec token_to_resource(token, module) :: {:ok, AshAuthentication.resource_config()} | :error
+  def token_to_resource(token, otp_app) do
+    with {:ok, %{"sub" => subject}} <- Joken.peek_claims(token),
+         %URI{path: subject_name} <- URI.parse(subject) do
+      config_for_subject_name(subject_name, otp_app)
     else
       _ -> :error
     end

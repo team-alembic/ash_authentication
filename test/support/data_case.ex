@@ -59,4 +59,18 @@ defmodule AshAuthentication.DataCase do
 
   def username, do: Faker.Internet.user_name()
   def password, do: Faker.Lorem.words(4) |> Enum.join(" ")
+
+  def build_user(attrs \\ %{}) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.put_new(:username, username())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    Example.UserWithUsername
+    |> Ash.Changeset.for_create(:register, attrs)
+    |> Example.create!()
+  end
 end

@@ -74,18 +74,4 @@ defmodule AshAuthentication.JwtTest do
       assert :error = Jwt.verify(token, :ash_authentication)
     end
   end
-
-  defp build_user(attrs \\ %{}) do
-    password = Ecto.UUID.generate()
-
-    attrs =
-      attrs
-      |> Map.put_new(:username, Faker.Internet.user_name())
-      |> Map.put_new(:password, password)
-      |> Map.put_new(:password_confirmation, password)
-
-    Example.UserWithUsername
-    |> Ash.Changeset.for_create(:register, attrs)
-    |> Example.create!()
-  end
 end

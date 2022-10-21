@@ -74,13 +74,17 @@ defmodule AshAuthentication.TokenRevocation do
   @doc """
   Revoke a token.
   """
-  @spec revoke(Resource.t(), token :: String.t()) ::
-          {:ok, Resource.record()} | {:error, any}
+  @spec revoke(Resource.t(), token :: String.t()) :: :ok | {:error, any}
   def revoke(resource, token) do
     with {:ok, api} <- Info.api(resource) do
       resource
       |> Changeset.for_create(:revoke_token, %{token: token})
       |> api.create(upsert?: true)
+      |> case do
+        {:ok, _} -> :ok
+        {:ok, _, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
