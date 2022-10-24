@@ -51,12 +51,12 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, github: "ash-project/ash", override: true},
+      {:ash, "~> 2.2"},
       {:bcrypt_elixir, "~> 3.0", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
-      {:ash_postgres, github: "ash-project/ash_postgres", override: true, only: [:dev, :test]},
+      {:ash_postgres, "~> 1.1", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
