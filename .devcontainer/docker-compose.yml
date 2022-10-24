@@ -1,4 +1,5 @@
 version: "3.8"
+name: ash_authentication
 
 volumes:
   apt-cache: {}

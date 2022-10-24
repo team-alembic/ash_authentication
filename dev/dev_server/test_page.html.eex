@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Ash Authentication</title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <h1>Ash Authentication</h1>
+    <%= if Enum.any?(@resources) do %>
+      <h2>Resources:</h2>
+
+      <%= for config <- @resources do %>
+        <h2><%= inspect(config.subject_name) %> - <%= Ash.Api.Info.short_name(config.api) %> / <%= Ash.Resource.Info.short_name(config.resource) %></h2>
+
+        <%= for provider <- config.providers do %>
+          <%= Module.concat(provider, HTML).register(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides()}/callback", legend: "Register") %>
+          <%= Module.concat(provider, HTML).sign_in(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides()}/callback", legend: "Sign in") %>
+        <% end %>
+      <% end %>
+
+      <h2>Validate token</h2>
+      <form method="post" action="/token_check">
+        <textarea name="token"></textarea>
+        <br />
+        <input type="submit" value="Check token" />
+      </form>
+    <% else %>
+      <p>
+        <strong>No resources configured</strong>
+        <br />
+        Please see <a href="https://hexdocs.pm/ash_authentication">the documentation</a> for more information.
+      </p>
+    <% end %>
+
+    <%= if Enum.any?(@current_actors) do %>
+      <h2>Current actors:</h2>
+      <a href="/clear_session">Clear session</a>
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Value</th>
+        </tr>
+        <%= for {name, actor} <- @current_actors do %>
+          <tr>
+            <td><code><pre>@<%= name %></pre></code></td>
+            <td><code><pre><%= inspect actor, pretty: true %></pre></code></td>
+          </tr>
+        <% end %>
+      </table>
+    <% end %>
+  </body>
+</html>
+

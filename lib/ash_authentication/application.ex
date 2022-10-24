@@ -1,20 +1,26 @@
 defmodule AshAuthentication.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
+  import AshAuthentication.Utils, only: [maybe_append: 3]
 
+  @doc false
   @impl true
   def start(_type, _args) do
-    children = [
-      # Starts a worker by calling: AshAuthentication.Worker.start_link(arg)
-      # {AshAuthentication.Worker, arg}
-    ]
+    [AshAuthentication.TokenRevocation.Expunger]
+    |> maybe_append(start_dev_server?(), {DevServer, []})
+    |> maybe_append(start_repo?(), {Example.Repo, []})
+    |> Supervisor.start_link(strategy: :one_for_one, name: AshAuthentication.Supervisor)
+  end
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: AshAuthentication.Supervisor]
-    Supervisor.start_link(children, opts)
+  defp start_dev_server? do
+    :ash_authentication
+    |> Application.get_env(DevServer, [])
+    |> Keyword.get(:start?, false)
+  end
+
+  defp start_repo? do
+    repos = Application.get_env(:ash_authentication, :ecto_repos, [])
+    Example.Repo in repos
   end
 end
