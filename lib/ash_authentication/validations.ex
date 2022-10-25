@@ -50,28 +50,6 @@ defmodule AshAuthentication.Validations do
   end
 
   @doc """
-  Validates the uniqueness of all subject names per otp app.
-  """
-  @spec validate_unique_subject_names(module) :: :ok | no_return
-  def validate_unique_subject_names(otp_app) do
-    otp_app
-    |> AshAuthentication.authenticated_resources()
-    |> Enum.group_by(& &1.subject_name)
-    |> Enum.each(fn
-      {subject_name, configs} when length(configs) > 1 ->
-        resources =
-          configs
-          |> Enum.map(&"`#{inspect(&1.resource)}`")
-          |> AshAuthentication.Utils.to_sentence()
-
-        raise "Error: multiple resources use the `#{subject_name}` subject name: #{resources}"
-
-      _ ->
-        :ok
-    end)
-  end
-
-  @doc """
   Find and return a named attribute in the DSL state.
   """
   @spec find_attribute(Dsl.t(), atom) ::

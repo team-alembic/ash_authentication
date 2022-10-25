@@ -69,9 +69,10 @@ defmodule AshAuthentication.Plug do
   do useful things like session and query param fetching.
   """
 
-  alias Ash.{Changeset, Resource}
+  alias Ash.{Api, Changeset, Resource}
   alias AshAuthentication.Plug.Helpers
   alias Plug.Conn
+  alias Spark.Dsl.Extension
 
   @type authenticator_config :: %{
           api: module,
@@ -110,9 +111,44 @@ defmodule AshAuthentication.Plug do
       |> Keyword.fetch!(:otp_app)
       |> Macro.expand_once(__CALLER__)
 
-    AshAuthentication.Validations.validate_unique_subject_names(otp_app)
-
     quote do
+      require Ash.Api.Info
+
+      unquote(otp_app)
+      |> Application.compile_env(:ash_apis, [])
+      |> Stream.flat_map(&Api.Info.depend_on_resources(&1))
+      |> Stream.map(&{&1, Extension.get_persisted(&1, :authentication)})
+      |> Stream.reject(&(elem(&1, 1) == nil))
+      |> Stream.map(&{elem(&1, 0), elem(&1, 1).subject_name})
+      |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+      |> Enum.reject(&(length(elem(&1, 1)) < 2))
+      |> case do
+        [] ->
+          nil
+
+        duplicates ->
+          import AshAuthentication.Utils, only: [to_sentence: 2]
+
+          duplicates =
+            duplicates
+            |> Enum.map(fn {subject_name, resources} ->
+              resources =
+                resources
+                |> Enum.map(&"`#{inspect(&1)}`")
+                |> to_sentence(final: "and")
+
+              "  `#{subject_name}`: #{resources}\n"
+            end)
+
+          raise """
+          Error: There are multiple resources configured with the same subject name.
+
+          This is bad because we will be unable to correctly convert between subjects and resources.
+
+          #{duplicates}
+          """
+      end
+
       @behaviour AshAuthentication.Plug
       import Plug.Conn
 
