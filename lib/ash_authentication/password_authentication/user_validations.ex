@@ -2,8 +2,8 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   @moduledoc """
   Provides validations for the "user" resource.
 
-  See the module docs for `AshAuthentication.PasswordAuthentication.Transformer` for more
-  information.
+  See the module docs for `AshAuthentication.PasswordAuthentication.Transformer`
+  for more information.
   """
   alias Ash.Resource.Actions
   alias AshAuthentication.HashProvider
@@ -22,7 +22,8 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   import AshAuthentication.Validations.Attribute
 
   @doc """
-  Validates at the `AshAuthentication` extension is also present on the resource.
+  Validates at the `AshAuthentication` extension is also present on the
+  resource.
   """
   @spec validate_authentication_extension(Dsl.t()) :: :ok | {:error, Exception.t()}
   def validate_authentication_extension(dsl_state) do
@@ -39,7 +40,10 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
          )}
   end
 
-  @doc "Validate that the configured hash provider implements the `HashProvider` behaviour"
+  @doc """
+  Validate that the configured hash provider implements the `HashProvider`
+  behaviour.
+  """
   @spec validate_hash_provider(Dsl.t()) :: :ok | {:error, Exception.t()}
   def validate_hash_provider(dsl_state) do
     case Info.hash_provider(dsl_state) do
@@ -55,7 +59,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
     end
   end
 
-  @doc "Validates information about the sign in action"
+  @doc """
+  Validates information about the sign in action.
+  """
   @spec validate_sign_in_action(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_sign_in_action(dsl_state) do
     with {:ok, identity_field} <- Info.identity_field(dsl_state),
@@ -68,7 +74,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
     end
   end
 
-  @doc "Validates information about the register action"
+  @doc """
+  Validates information about the register action.
+  """
   @spec validate_register_action(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_register_action(dsl_state) do
     with {:ok, password_field} <- Info.password_field(dsl_state),
@@ -96,7 +104,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
     end
   end
 
-  @doc "Validate that the action allows nil input for the provided field"
+  @doc """
+  Validate that the action allows nil input for the provided field.
+  """
   @spec validate_allow_nil_input(Actions.action(), atom) :: :ok | {:error, Exception.t()}
   def validate_allow_nil_input(action, field) do
     allowed_nil_fields = Map.get(action, :allow_nil_input, [])
@@ -113,7 +123,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
     end
   end
 
-  @doc "Optionally validates that the action has a validation"
+  @doc """
+  Optionally validates that the action has a validation.
+  """
   @spec validate_action_has_validation(Actions.action(), module, really? :: boolean) ::
           :ok | {:error, Exception.t()}
   def validate_action_has_validation(_, _, false), do: :ok
@@ -121,7 +133,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   def validate_action_has_validation(action, validation, _),
     do: validate_action_has_validation(action, validation)
 
-  @doc "Validate the identity argument"
+  @doc """
+  Validate the identity argument.
+  """
   @spec validate_identity_argument(Dsl.t(), Actions.action(), atom) ::
           :ok | {:error, Exception.t()}
   def validate_identity_argument(dsl_state, action, identity_field) do
@@ -129,7 +143,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
     validate_action_argument_option(action, identity_field, :type, [identity_attribute.type])
   end
 
-  @doc "Validate the password argument"
+  @doc """
+  Validate the password argument.
+  """
   @spec validate_password_argument(Actions.action(), atom) :: :ok | {:error, Exception.t()}
   def validate_password_argument(action, password_field) do
     with :ok <- validate_action_argument_option(action, password_field, :type, [Ash.Type.String]) do
@@ -137,7 +153,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
     end
   end
 
-  @doc "Optionally validates the password confirmation argument"
+  @doc """
+  Optionally validates the password confirmation argument.
+  """
   @spec validate_password_confirmation_argument(Actions.action(), atom, really? :: boolean) ::
           :ok | {:error, Exception.t()}
   def validate_password_confirmation_argument(_, _, false), do: :ok
@@ -145,7 +163,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   def validate_password_confirmation_argument(action, confirm_field, _),
     do: validate_password_argument(action, confirm_field)
 
-  @doc "Validate the identity field in the user resource"
+  @doc """
+  Validate the identity field in the user resource.
+  """
   @spec validate_identity_field(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_identity_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
@@ -158,7 +178,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
     end
   end
 
-  @doc "Validate the hashed password field on the user resource"
+  @doc """
+  Validate the hashed password field on the user resource.
+  """
   @spec validate_hashed_password_field(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_hashed_password_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),

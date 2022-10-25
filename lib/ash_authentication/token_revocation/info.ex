@@ -1,6 +1,7 @@
 defmodule AshAuthentication.TokenRevocation.Info do
   @moduledoc """
-  Generated configuration functions based on a resource's DSL configuration
+  Generated configuration functions based on a resource's token DSL
+  configuration.
   """
 
   use AshAuthentication.InfoGenerator,

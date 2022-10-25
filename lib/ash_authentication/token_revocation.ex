@@ -40,12 +40,12 @@ defmodule AshAuthentication.TokenRevocation do
       extensions: [AshAuthentication.TokenRevocation]
 
     revocation do
-      api(MyApp.Api)
+      api MyApp.Api
     end
 
     postgres do
-      table("token_revocations")
-      repo(MyApp.Repo)
+      table "token_revocations"
+      repo MyApp.Repo
     end
   end
   ```

@@ -5,18 +5,19 @@ defmodule AshAuthentication.PasswordAuthentication.SignInPreparation do
   This preparation performs two jobs, one before the query executes and one
   after.
 
-  Firstly, it constrains the query to match the identity field pased on the
-  identity argument passed to the action.
+  Firstly, it constrains the query to match the identity field passed to the
+  action.
 
   Secondly, it validates the supplied password using the configured hash
-  provider, and if correct allows the record to be returned, otherwise
-  returns an empty result.
+  provider, and if correct allows the record to be returned, otherwise returns
+  an empty result.
   """
   use Ash.Resource.Preparation
   alias AshAuthentication.{Errors.AuthenticationFailed, Jwt, PasswordAuthentication.Info}
   alias Ash.{Query, Resource.Preparation}
   require Ash.Query
 
+  @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, _opts, _) do

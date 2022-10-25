@@ -133,7 +133,7 @@ defmodule AshAuthentication.PasswordAuthentication do
 
   ## Example
 
-      iex> register(MyApp.User, %{username: "marty", password: "its_1985", password_confirmation: "its_1985})
+      iex> register(MyApp.User, %{username: "marty", password: "its_1985", password_confirmation: "its_1985"})
       {:ok, #MyApp.User<>}
   """
   @impl true

@@ -2,7 +2,7 @@ defmodule AshAuthentication.Transformer do
   @moduledoc """
   The Authentication transformer
 
-  Sets up non-provider-specific confiration for authenticated resources.
+  Sets up non-provider-specific configuration for authenticated resources.
   """
 
   use Spark.Dsl.Transformer

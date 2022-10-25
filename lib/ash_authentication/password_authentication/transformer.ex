@@ -162,7 +162,7 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
     end
   end
 
-  def build_sign_in_action(dsl_state) do
+  defp build_sign_in_action(dsl_state) do
     with {:ok, identity_field} <- Info.identity_field(dsl_state),
          {:ok, password_field} <- Info.password_field(dsl_state) do
       identity_attribute = Resource.Info.attribute(dsl_state, identity_field)

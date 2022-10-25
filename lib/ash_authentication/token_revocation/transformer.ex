@@ -1,6 +1,6 @@
 defmodule AshAuthentication.TokenRevocation.Transformer do
   @moduledoc """
-  The token revocation transformer
+  The token revocation transformer.
 
   Sets up the default schema and actions for the token revocation resource.
   """

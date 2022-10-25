@@ -19,6 +19,31 @@ defmodule AshAuthentication.MixProject do
         plt_add_apps: [:mix, :ex_unit],
         plt_core_path: "priv/plts",
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ],
+      docs: [
+        main: "readme",
+        extras: ["README.md"],
+        formatters: ["html"],
+        filter_modules: ~r/^Elixir.AshAuthentication/,
+        source_url_pattern:
+          "https://github.com/team-alembic/ash_authentication/blob/main/%{path}#L%{line}",
+        groups_for_modules: [
+          Extensions: [
+            AshAuthentication,
+            AshAuthentication.PasswordAuthentication,
+            AshAuthentication.TokenRevocation
+          ],
+          Cryptography: [
+            AshAuthentication.HashProvider,
+            AshAuthentication.BcryptProvider,
+            AshAuthentication.Jwt,
+            AshAuthentication.Jwt.Config
+          ],
+          "Password Authentication": ~r/^AshAuthentication\.PasswordAuthentication.*/,
+          Plug: ~r/^AshAuthentication\.Plug.*/,
+          "Token Revocation": ~r/^AshAuthentication\.TokenRevocation.*/,
+          Internals: ~r/^AshAuthentication.*/
+        ]
       ]
     ]
   end

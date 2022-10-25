@@ -1,6 +1,6 @@
 defmodule AshAuthentication.PasswordAuthentication.GenerateTokenChange do
   @moduledoc """
-  Given a successful registration, generate a token.
+  Given a successful registration or sign-in, generate a token.
   """
 
   use Ash.Resource.Change

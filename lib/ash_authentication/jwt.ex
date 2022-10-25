@@ -22,7 +22,7 @@ defmodule AshAuthentication.Jwt do
 
   ```elixir
   config :ash_authentication, #{inspect(__MODULE__)},
-    signing_algorithm: #{@default_algorithm}
+    signing_algorithm: #{inspect(@default_algorithm)}
     signing_secret: "I finally invent something that works!",
     token_lifetime: #{@default_lifetime_hrs} # #{@default_lifetime_hrs / 24.0} days
   ```
