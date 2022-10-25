@@ -24,7 +24,7 @@ defmodule AshAuthentication.TokenRevocation do
 
   Token revocations are ephemeral, but their lifetime directly correlates to the
   lifetime of your tokens - ie if you have a long expiry time on your tokens you
-  have to keep the revation records for longer.  Therefore we suggest a (semi)
+  have to keep the revocation records for longer.  Therefore we suggest a (semi)
   permanent data layer, such as Postgres.
 
   ## Usage

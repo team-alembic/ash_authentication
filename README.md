@@ -61,7 +61,7 @@ callbacks for you to manipulate the conn after success or failure.
 
 If you're using AshAuthentication with Phoenix, then check out
 [`ash_authentication_phoenix`](https://github.com/team-alembic/ash_authentication_phoenix)
-which provides route helpers, a controller abstraction and live-view components
+which provides route helpers, a controller abstraction and LiveView components
 for easy set up.
 
 ## Authentication Providers
