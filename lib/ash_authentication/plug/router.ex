@@ -12,12 +12,12 @@ defmodule AshAuthentication.Plug.Router do
     otp_app =
       opts
       |> Keyword.fetch!(:otp_app)
-      |> Macro.expand_literal(__ENV__)
+      |> Macro.expand_once(__CALLER__)
 
     return_to =
       opts
       |> Keyword.fetch!(:return_to)
-      |> Macro.expand_literal(__ENV__)
+      |> Macro.expand_once(__CALLER__)
 
     routes =
       otp_app

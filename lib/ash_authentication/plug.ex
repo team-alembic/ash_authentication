@@ -108,7 +108,7 @@ defmodule AshAuthentication.Plug do
     otp_app =
       opts
       |> Keyword.fetch!(:otp_app)
-      |> Macro.expand_literal(__ENV__)
+      |> Macro.expand_once(__CALLER__)
 
     AshAuthentication.Validations.validate_unique_subject_names(otp_app)
 

@@ -47,7 +47,7 @@ defmodule AshAuthentication.InfoGenerator do
   defmacro generate_config_functions(extension, section, prefix?) do
     options =
       extension
-      |> Macro.expand_literal(__ENV__)
+      |> Macro.expand_once(__CALLER__)
       |> apply(:sections, [])
       |> Enum.find(&(&1.name == section))
       |> Map.get(:schema, [])
@@ -139,7 +139,7 @@ defmodule AshAuthentication.InfoGenerator do
   defmacro generate_options_function(extension, section, prefix?) do
     options =
       extension
-      |> Macro.expand_literal(__ENV__)
+      |> Macro.expand_once(__CALLER__)
       |> apply(:sections, [])
       |> Enum.find(&(&1.name == section))
       |> Map.get(:schema, [])
