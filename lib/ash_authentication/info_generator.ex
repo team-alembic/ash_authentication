@@ -61,7 +61,7 @@ defmodule AshAuthentication.InfoGenerator do
       else
         spec = AshAuthentication.Utils.spec_for_option(opts)
 
-        quote generated: true do
+        quote do
           unquote(
             generate_config_function(
               function_name,
@@ -87,7 +87,7 @@ defmodule AshAuthentication.InfoGenerator do
   end
 
   defp generate_predicate_function(function_name, section, name, doc) do
-    quote generated: true do
+    quote do
       @doc unquote(doc)
       @spec unquote(function_name)(dsl_or_resource :: module | map) :: boolean
       def unquote(function_name)(dsl_or_resource) do
@@ -98,7 +98,7 @@ defmodule AshAuthentication.InfoGenerator do
   end
 
   defp generate_config_function(function_name, section, name, doc, spec) do
-    quote generated: true do
+    quote do
       @doc unquote(doc)
       @spec unquote(function_name)(dsl_or_resource :: module | map) ::
               {:ok, unquote(spec)} | :error
@@ -115,7 +115,7 @@ defmodule AshAuthentication.InfoGenerator do
   end
 
   defp generate_config_bang_function(function_name, section, name, doc, spec) do
-    quote generated: true do
+    quote do
       @doc unquote(doc)
       @spec unquote(:"#{function_name}!")(dsl_or_resource :: module | map) ::
               unquote(spec) | no_return
@@ -146,7 +146,7 @@ defmodule AshAuthentication.InfoGenerator do
 
     function_name = if prefix?, do: :"#{section}_options", else: :options
 
-    quote generated: true do
+    quote do
       @doc """
       The DSL options
 

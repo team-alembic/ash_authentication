@@ -112,7 +112,7 @@ defmodule AshAuthentication.Plug do
 
     AshAuthentication.Validations.validate_unique_subject_names(otp_app)
 
-    quote generated: true do
+    quote do
       @behaviour AshAuthentication.Plug
       import Plug.Conn
 

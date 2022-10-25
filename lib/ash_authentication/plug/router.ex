@@ -41,7 +41,7 @@ defmodule AshAuthentication.Plug.Router do
       |> Map.new()
       |> Macro.escape()
 
-    quote generated: true do
+    quote do
       use Plug.Router
       plug(:match)
       plug(:dispatch)
