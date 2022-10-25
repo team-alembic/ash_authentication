@@ -59,6 +59,11 @@ which builds a [`Plug.Router`](https://hexdocs.pm/plug/Plug.Router.html) which
 routes incoming authentication requests to the correct provider and provides
 callbacks for you to manipulate the conn after success or failure.
 
+If you're using AshAuthentication with Phoenix, then check out
+[`ash_authentication_phoenix`](https://github.com/team-alembic/ash_authentication_phoenix)
+which provides route helpers, a controller abstraction and live-view components
+for easy set up.
+
 ## Authentication Providers
 
 Currently the only supported authentication provider is

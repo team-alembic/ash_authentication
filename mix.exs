@@ -55,7 +55,8 @@ defmodule AshAuthentication.MixProject do
       ],
       licenses: ["MIT"],
       links: %{
-        "Source" => "https://github.com/team-alembic/ash_authentication"
+        "Source" => "https://github.com/team-alembic/ash_authentication",
+        "Phoenix Support" => "https://github.com/team-alembic/ash_authentication_phoenix"
       },
       source_url: "https://github.com/team-alembic/ash_authentication"
     ]
