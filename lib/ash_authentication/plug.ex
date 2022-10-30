@@ -32,7 +32,7 @@ defmodule AshAuthentication.Plug do
   end
   ```
 
-  In order to load any authenticated actors for either web or API users you can add the following to your router:
+  In order to load any authenticated users for either web or API users you can add the following to your router:
 
   ```elixir
   import MyAppWeb.AuthPlug
@@ -181,9 +181,9 @@ defmodule AshAuthentication.Plug do
       """
       @spec handle_success(Conn.t(), Resource.record(), token :: String.t()) ::
               Conn.t()
-      def handle_success(conn, actor, _token) do
+      def handle_success(conn, user, _token) do
         conn
-        |> store_in_session(actor)
+        |> store_in_session(user)
         |> send_resp(200, "Access granted")
       end
 
@@ -201,14 +201,14 @@ defmodule AshAuthentication.Plug do
       defoverridable handle_success: 3, handle_failure: 2
 
       @doc """
-      Store an actor in the session.
+      Store an user in the session.
       """
       @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
-      def store_in_session(conn, actor),
-        do: Helpers.store_in_session(conn, actor)
+      def store_in_session(conn, user),
+        do: Helpers.store_in_session(conn, user)
 
       @doc """
-      Attempt to retrieve all actors from the connections' session.
+      Attempt to retrieve all users from the connections' session.
 
       A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_session/2`
       with the `otp_app` already present.
@@ -218,7 +218,7 @@ defmodule AshAuthentication.Plug do
         do: Helpers.retrieve_from_session(conn, unquote(otp_app))
 
       @doc """
-      Attempt to retrieve actors from the `Authorization` header(s).
+      Attempt to retrieve users from the `Authorization` header(s).
 
       A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_bearer/2` with the `otp_app` already present.
       """

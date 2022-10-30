@@ -235,7 +235,7 @@ defmodule AshAuthentication do
       |> Query.filter(^primary_key)
       |> config.api.read()
       |> case do
-        {:ok, [actor]} -> {:ok, actor}
+        {:ok, [user]} -> {:ok, user}
         _ -> {:error, "Invalid subject"}
       end
     end

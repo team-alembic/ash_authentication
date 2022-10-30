@@ -22,7 +22,7 @@ defmodule DevServer.TestPage do
   def call(conn, _opts) do
     resources = AshAuthentication.authenticated_resources(:ash_authentication)
 
-    current_actors =
+    current_users =
       conn.assigns
       |> Stream.filter(fn {key, _value} ->
         key
@@ -31,7 +31,7 @@ defmodule DevServer.TestPage do
       end)
       |> Map.new()
 
-    payload = render(resources: resources, current_actors: current_actors)
+    payload = render(resources: resources, current_users: current_users)
     Conn.send_resp(conn, 200, payload)
   end
 end

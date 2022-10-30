@@ -41,8 +41,8 @@ defmodule AshAuthentication.Plug.Dispatcher do
       %{state: :sent} ->
         conn
 
-      %{private: %{authentication_result: {:success, actor}}} ->
-        return_to.handle_success(conn, actor, Map.get(actor.__metadata__, :token))
+      %{private: %{authentication_result: {:success, user}}} ->
+        return_to.handle_success(conn, user, Map.get(user.__metadata__, :token))
 
       %{private: %{authentication_result: {:failure, reason}}} ->
         return_to.handle_failure(conn, reason)

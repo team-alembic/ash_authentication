@@ -3,13 +3,13 @@ defmodule Example.AuthPlug do
   use AshAuthentication.Plug, otp_app: :ash_authentication
 
   @impl true
-  def handle_success(conn, actor, token) do
+  def handle_success(conn, user, token) do
     conn
-    |> store_in_session(actor)
+    |> store_in_session(user)
     |> send_resp(200, """
     Token: #{token}
 
-    Actor: #{inspect(actor)}
+    User: #{inspect(user)}
     """)
   end
 

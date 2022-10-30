@@ -8,14 +8,14 @@ defmodule AshAuthentication.PasswordAuthentication do
       identity_field: [
         type: :atom,
         doc: """
-        The name of the attribute which uniquely identifies the actor.  Usually something like `username` or `email_address`.
+        The name of the attribute which uniquely identifies the user.  Usually something like `username` or `email_address`.
         """,
         default: :username
       ],
       hashed_password_field: [
         type: :atom,
         doc: """
-        The name of the attribute within which to store the actor's password once it has been hashed.
+        The name of the attribute within which to store the user's password once it has been hashed.
         """,
         default: :hashed_password
       ],
@@ -115,7 +115,7 @@ defmodule AshAuthentication.PasswordAuthentication do
   alias Plug.Conn
 
   @doc """
-  Attempt to sign in an actor of the provided resource type.
+  Attempt to sign in an user of the provided resource type.
 
   ## Example
 
@@ -129,7 +129,7 @@ defmodule AshAuthentication.PasswordAuthentication do
     as: :sign_in
 
   @doc """
-  Attempt to register an actor of the provided resource type.
+  Attempt to register an user of the provided resource type.
 
   ## Example
 
