@@ -27,6 +27,7 @@ defmodule AshAuthentication.Plug.Helpers do
       otp_app
       |> AshAuthentication.authenticated_resources()
       |> Stream.map(&{to_string(&1.subject_name), &1})
+      |> Map.new()
 
     subjects
     |> Enum.reduce(%{}, fn subject, result ->
@@ -35,6 +36,7 @@ defmodule AshAuthentication.Plug.Helpers do
       with {:ok, config} <- Map.fetch(configurations, subject.path),
            {:ok, user} <- AshAuthentication.subject_to_resource(subject, config) do
         current_subject_name = current_subject_name(config.subject_name)
+
         Map.put(result, current_subject_name, user)
       else
         _ -> result
@@ -117,10 +119,47 @@ defmodule AshAuthentication.Plug.Helpers do
     end)
   end
 
-  # Dyanamically generated atoms are generally frowned upon, but in this case
-  # the `subject_name` is a statically configured atom, so should be fine.
-  defp current_subject_name(subject_name) when is_atom(subject_name),
-    do: String.to_atom("current_#{subject_name}")
+  @doc """
+  Set a subject as the request actor.
+
+  Presumes that you have already loaded your user resource(s) into the
+  connection's assigns.
+
+  Uses `Ash.PlugHelpers` to streamline integration with `AshGraphql` and
+  `AshJsonApi`.
+
+  ## Examples
+
+  Setting the actor for a AshGraphql API using `Plug.Router`.
+
+  ```elixir
+  defmodule MyApp.ApiRouter do
+    use Plug.Router
+    import MyApp.AuthPlug
+
+    plug :retrieve_from_bearer
+    plug :set_actor, :user
+
+    forward "/gql",
+      to: Absinthe.Plug,
+      init_opts: [schema: MyApp.Schema]
+  end
+  ```
+  """
+  @spec set_actor(Conn.t(), subject_name :: atom) :: Conn.t()
+  def set_actor(conn, subject_name) do
+    current_subject_name =
+      subject_name
+      |> current_subject_name()
+
+    actor =
+      conn
+      |> Map.get(:assigns, %{})
+      |> Map.get(current_subject_name)
+
+    conn
+    |> PlugHelpers.set_actor(actor)
+  end
 
   @doc """
   Store result in private.
@@ -140,4 +179,9 @@ defmodule AshAuthentication.Plug.Helpers do
   def private_store(conn, {:failure, reason})
       when is_nil(reason) or is_map(reason),
       do: Conn.put_private(conn, :authentication_result, {:failure, reason})
+
+  # Dyanamically generated atoms are generally frowned upon, but in this case
+  # the `subject_name` is a statically configured atom, so should be fine.
+  defp current_subject_name(subject_name) when is_atom(subject_name),
+    do: String.to_atom("current_#{subject_name}")
 end

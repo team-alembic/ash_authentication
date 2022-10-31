@@ -77,11 +77,15 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, "~> 2.2"},
+      {:ash, "~> 2.3"},
       {:bcrypt_elixir, "~> 3.0", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
+      {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
+      # These two can be changed back to hex once the next release goes out.
+      {:ash_graphql, github: "ash-project/ash_graphql", only: [:dev, :test]},
+      {:ash_json_api, github: "ash-project/ash_json_api", only: [:dev, :test]},
       {:ash_postgres, "~> 1.1", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},

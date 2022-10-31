@@ -17,7 +17,7 @@ defmodule DevServer do
 
     [
       {DevServer.Session, []},
-      {Plug.Cowboy, scheme: :http, plug: DevServer.Plug, options: opts}
+      {Plug.Cowboy, scheme: :http, plug: DevServer.Router, options: opts}
     ]
     |> Supervisor.init(strategy: :one_for_all)
   end

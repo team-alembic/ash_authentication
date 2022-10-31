@@ -1,5 +1,10 @@
 %Doctor.Config{
-  ignore_modules: [~r/^Inspect\./, ~r/.Plug$/, AshAuthentication.InfoGenerator],
+  ignore_modules: [
+    ~r/^Inspect\./,
+    ~r/.Plug$/,
+    AshAuthentication.InfoGenerator,
+    AshAuthentication.Plug.Macros
+  ],
   ignore_paths: [],
   min_module_doc_coverage: 40,
   min_module_spec_coverage: 0,

@@ -69,10 +69,10 @@ defmodule AshAuthentication.Plug do
   do useful things like session and query param fetching.
   """
 
-  alias Ash.{Api, Changeset, Resource}
-  alias AshAuthentication.Plug.Helpers
+  alias Ash.{Changeset, Error, Resource}
+  alias AshAuthentication.Plug.{Defaults, Helpers, Macros}
   alias Plug.Conn
-  alias Spark.Dsl.Extension
+  require Macros
 
   @type authenticator_config :: %{
           api: module,
@@ -103,7 +103,7 @@ defmodule AshAuthentication.Plug do
   The default implementation simply returns a 401 status with the message
   "Access denied".  You almost definitely want to override this.
   """
-  @callback handle_failure(Conn.t(), nil | Changeset.t()) :: Conn.t()
+  @callback handle_failure(Conn.t(), nil | Changeset.t() | Error.t()) :: Conn.t()
 
   defmacro __using__(opts) do
     otp_app =
@@ -112,58 +112,15 @@ defmodule AshAuthentication.Plug do
       |> Macro.expand_once(__CALLER__)
 
     quote do
-      require Ash.Api.Info
-
-      unquote(otp_app)
-      |> Application.compile_env(:ash_apis, [])
-      |> Stream.flat_map(&Api.Info.depend_on_resources(&1))
-      |> Stream.map(&{&1, Extension.get_persisted(&1, :authentication)})
-      |> Stream.reject(&(elem(&1, 1) == nil))
-      |> Stream.map(&{elem(&1, 0), elem(&1, 1).subject_name})
-      |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
-      |> Enum.reject(&(length(elem(&1, 1)) < 2))
-      |> case do
-        [] ->
-          nil
-
-        duplicates ->
-          import AshAuthentication.Utils, only: [to_sentence: 2]
-
-          duplicates =
-            duplicates
-            |> Enum.map(fn {subject_name, resources} ->
-              resources =
-                resources
-                |> Enum.map(&"`#{inspect(&1)}`")
-                |> to_sentence(final: "and")
-
-              "  `#{subject_name}`: #{resources}\n"
-            end)
-
-          raise """
-          Error: There are multiple resources configured with the same subject name.
-
-          This is bad because we will be unable to correctly convert between subjects and resources.
-
-          #{duplicates}
-          """
-      end
+      require Macros
+      Macros.validate_subject_name_uniqueness(unquote(otp_app))
 
       @behaviour AshAuthentication.Plug
+      @behaviour Plug
       import Plug.Conn
 
       defmodule Router do
-        @moduledoc """
-        The Authentication Router.
-
-        Plug this into your app's router using:
-
-        ```elixir
-        forward "/auth", to: #{__MODULE__}
-        ```
-
-        This router is generated using `AshAuthentication.Plug.Router`.
-        """
+        @moduledoc false
         use AshAuthentication.Plug.Router,
           otp_app: unquote(otp_app),
           return_to:
@@ -173,58 +130,26 @@ defmodule AshAuthentication.Plug do
             |> Module.concat()
       end
 
-      @doc """
-      The default implementation of `handle_success/3`.
+      Macros.define_load_from_session(unquote(otp_app))
+      Macros.define_load_from_bearer(unquote(otp_app))
+      Macros.define_revoke_bearer_tokens(unquote(otp_app))
 
-      Calls `AshAuthentication.Plug.Helpers.store_in_session/2` then sends a
-      basic 200 response.
-      """
-      @spec handle_success(Conn.t(), Resource.record(), token :: String.t()) ::
-              Conn.t()
-      def handle_success(conn, user, _token) do
-        conn
-        |> store_in_session(user)
-        |> send_resp(200, "Access granted")
-      end
+      @impl true
+      defdelegate handle_success(conn, user, token), to: Defaults
 
-      @doc """
-      The default implementation of `handle_failure/1`.
-
-      Sends a very basic 401 response.
-      """
-      @spec handle_failure(Conn.t(), nil | Changeset.t()) :: Conn.t()
-      def handle_failure(conn, _) do
-        conn
-        |> send_resp(401, "Access denied")
-      end
+      @impl true
+      defdelegate handle_failure(conn, error), to: Defaults
 
       defoverridable handle_success: 3, handle_failure: 2
 
-      @doc """
-      Store an user in the session.
-      """
-      @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
-      def store_in_session(conn, user),
-        do: Helpers.store_in_session(conn, user)
+      @impl true
+      defdelegate init(opts), to: Router
 
-      @doc """
-      Attempt to retrieve all users from the connections' session.
+      @impl true
+      defdelegate call(conn, opts), to: Router
 
-      A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_session/2`
-      with the `otp_app` already present.
-      """
-      @spec load_from_session(Conn.t(), any) :: Conn.t()
-      def load_from_session(conn, _opts),
-        do: Helpers.retrieve_from_session(conn, unquote(otp_app))
-
-      @doc """
-      Attempt to retrieve users from the `Authorization` header(s).
-
-      A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_bearer/2` with the `otp_app` already present.
-      """
-      @spec load_from_bearer(Conn.t(), any) :: Conn.t()
-      def load_from_bearer(conn, _opts),
-        do: Helpers.retrieve_from_bearer(conn, unquote(otp_app))
+      defdelegate set_actor(conn, subject_name), to: Helpers
+      defdelegate store_in_session(conn, user), to: Helpers
     end
   end
 end
