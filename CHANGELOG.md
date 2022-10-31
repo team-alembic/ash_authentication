@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.3.0](https://github.com/team-alembic/ash_authentication/compare/v0.2.1...v0.3.0) (2022-10-31)
+
+
+
+
+### Features:
+
+* Ash.PlugHelpers: Support standard actor configuration. (#16)
+
+* Ash.PlugHelpers: Support standard actor configuration.
+
+### Improvements:
+
+* docs: change all references to `actor` to `user`.
+
 ## [v0.2.1](https://github.com/team-alembic/ash_authentication/compare/v0.2.0...v0.2.1) (2022-10-26)
 
 
