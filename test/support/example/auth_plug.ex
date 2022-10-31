@@ -3,19 +3,32 @@ defmodule Example.AuthPlug do
   use AshAuthentication.Plug, otp_app: :ash_authentication
 
   @impl true
-  def handle_success(conn, actor, token) do
+  def handle_success(conn, user, token) do
     conn
-    |> store_in_session(actor)
-    |> send_resp(200, """
-    Token: #{token}
-
-    Actor: #{inspect(actor)}
-    """)
+    |> store_in_session(user)
+    |> put_resp_header("content-type", "application/json")
+    |> send_resp(
+      200,
+      Jason.encode!(%{
+        token: token,
+        user: %{
+          id: user.id,
+          username: user.username
+        }
+      })
+    )
   end
 
   @impl true
-  def handle_failure(conn, _) do
+  def handle_failure(conn, reason) do
     conn
-    |> send_resp(401, "Sorry mate")
+    |> put_resp_header("content-type", "application/json")
+    |> send_resp(
+      401,
+      Jason.encode!(%{
+        status: "failed",
+        reason: inspect(reason)
+      })
+    )
   end
 end

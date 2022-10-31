@@ -3,7 +3,7 @@ defmodule AshAuthentication.PasswordAuthentication.Plug do
   Handlers for incoming request and callback HTTP requests.
 
   AshAuthentication is written with an eye towards OAuth which uses a two-phase
-  request/callback process which can be used to register and sign in an actor in
+  request/callback process which can be used to register and sign in an user in
   a single flow.  This doesn't really work that well with `PasswordAuthentication` which has
   seperate "registration" and "sign-in" actions.
 
@@ -37,8 +37,8 @@ defmodule AshAuthentication.PasswordAuthentication.Plug do
     |> Map.get(to_string(config.subject_name), %{})
     |> do_action(config.resource)
     |> case do
-      {:ok, actor} when is_struct(actor, config.resource) ->
-        private_store(conn, {:success, actor})
+      {:ok, user} when is_struct(user, config.resource) ->
+        private_store(conn, {:success, user})
 
       {:error, changeset} ->
         private_store(conn, {:failure, changeset})

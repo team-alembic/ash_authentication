@@ -11,7 +11,7 @@ defmodule AshAuthentication.PasswordAuthentication.Actions do
   alias AshAuthentication.PasswordAuthentication
 
   @doc """
-  Attempt to sign in an actor of the provided resource type.
+  Attempt to sign in an user of the provided resource type.
 
   ## Example
 
@@ -27,14 +27,14 @@ defmodule AshAuthentication.PasswordAuthentication.Actions do
     |> Query.for_read(action, attributes)
     |> api.read()
     |> case do
-      {:ok, [actor]} -> {:ok, actor}
+      {:ok, [user]} -> {:ok, user}
       {:ok, []} -> {:error, "Invalid username or password"}
       {:error, reason} -> {:error, reason}
     end
   end
 
   @doc """
-  Attempt to register an actor of the provided resource type.
+  Attempt to register an user of the provided resource type.
 
   ## Example
 

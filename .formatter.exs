@@ -16,7 +16,7 @@ spark_locals_without_parens = [
   import_deps: [:ash, :spark],
   inputs: [
     "*.{ex,exs}",
-    "{config,lib,test}/**/*.{ex,exs}"
+    "{dev,config,lib,test}/**/*.{ex,exs}"
   ],
   plugins: [Spark.Formatter],
   export: [

@@ -32,18 +32,18 @@
       </p>
     <% end %>
 
-    <%= if Enum.any?(@current_actors) do %>
-      <h2>Current actors:</h2>
+    <%= if Enum.any?(@current_users) do %>
+      <h2>Current users:</h2>
       <a href="/clear_session">Clear session</a>
       <table>
         <tr>
           <th>Name</th>
           <th>Value</th>
         </tr>
-        <%= for {name, actor} <- @current_actors do %>
+        <%= for {name, user} <- @current_users do %>
           <tr>
             <td><code><pre>@<%= name %></pre></code></td>
-            <td><code><pre><%= inspect actor, pretty: true %></pre></code></td>
+            <td><code><pre><%= inspect user, pretty: true %></pre></code></td>
           </tr>
         <% end %>
       </table>

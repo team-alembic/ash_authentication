@@ -1,6 +1,6 @@
 defmodule DevServer.ClearSession do
   @moduledoc """
-  Resets the session storage, to 'log out" all actors.
+  Resets the session storage, to 'log out" all users.
   """
 
   @behaviour Plug
