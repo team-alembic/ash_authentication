@@ -112,6 +112,30 @@ defmodule AshAuthentication.Validations.Action do
   end
 
   @doc """
+  Validate the presence of the named manual module on an action.
+  """
+  @spec validate_action_has_manual(Actions.action(), module) ::
+          :ok | {:error, Exception.t()}
+  def validate_action_has_manual(action, manual_module) do
+    has_manual? =
+      action
+      |> Map.get(:manual)
+      |> then(fn {module, _args} ->
+        module == manual_module
+      end)
+
+    if has_manual?,
+      do: :ok,
+      else:
+        {:error,
+         DslError.exception(
+           path: [:actions, :manual],
+           message:
+             "The action `#{inspect(action.name)}` should have the `#{inspect(manual_module)}` manual present."
+         )}
+  end
+
+  @doc """
   Validate the presence of the named validation module on an action.
   """
   @spec validate_action_has_validation(Actions.action(), module) ::

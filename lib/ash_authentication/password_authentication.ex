@@ -1,65 +1,71 @@
 defmodule AshAuthentication.PasswordAuthentication do
-  @password_authentication %Spark.Dsl.Section{
-    name: :password_authentication,
-    describe: """
-    Configure password authentication authentication for this resource.
-    """,
-    schema: [
-      identity_field: [
-        type: :atom,
-        doc: """
-        The name of the attribute which uniquely identifies the user.  Usually something like `username` or `email_address`.
-        """,
-        default: :username
-      ],
-      hashed_password_field: [
-        type: :atom,
-        doc: """
-        The name of the attribute within which to store the user's password once it has been hashed.
-        """,
-        default: :hashed_password
-      ],
-      hash_provider: [
-        type: {:behaviour, AshAuthentication.HashProvider},
-        doc: """
-        A module which implements the `AshAuthentication.HashProvider` behaviour - which is used to provide cryptographic hashing of passwords.
-        """,
-        default: AshAuthentication.BcryptProvider
-      ],
-      confirmation_required?: [
-        type: :boolean,
-        required: false,
-        doc: """
-        Whether a password confirmation field is required when registering or changing passwords.
-        """,
-        default: true
-      ],
-      password_field: [
-        type: :atom,
-        doc: """
-        The name of the argument used to collect the user's password in plaintext when registering, checking or changing passwords.
-        """,
-        default: :password
-      ],
-      password_confirmation_field: [
-        type: :atom,
-        doc: """
-        The name of the argument used to confirm the user's password in plaintext when registering or changing passwords.
-        """,
-        default: :password_confirmation
-      ],
-      register_action_name: [
-        type: :atom,
-        doc: "The name to use for the register action",
-        default: :register
-      ],
-      sign_in_action_name: [
-        type: :atom,
-        doc: "The name to use for the sign in action",
-        default: :sign_in
+  @dsl [
+    %Spark.Dsl.Section{
+      name: :password_authentication,
+      describe: """
+      Configure password authentication authentication for this resource.
+      """,
+      schema: [
+        identity_field: [
+          type: :atom,
+          doc: """
+          The name of the attribute which uniquely identifies the actor.
+
+          Usually something like `username` or `email_address`.
+          """,
+          default: :username
+        ],
+        hashed_password_field: [
+          type: :atom,
+          doc: """
+          The name of the attribute within which to store the user's password once it has been hashed.
+          """,
+          default: :hashed_password
+        ],
+        hash_provider: [
+          type: {:behaviour, AshAuthentication.HashProvider},
+          doc: """
+          A module which implements the `AshAuthentication.HashProvider` behaviour.
+
+          Used to provide cryptographic hashing of passwords.
+          """,
+          default: AshAuthentication.BcryptProvider
+        ],
+        confirmation_required?: [
+          type: :boolean,
+          required: false,
+          doc: """
+          Whether a password confirmation field is required when registering or changing passwords.
+          """,
+          default: true
+        ],
+        password_field: [
+          type: :atom,
+          doc: """
+          The name of the argument used to collect the user's password in plaintext when registering, checking or changing passwords.
+          """,
+          default: :password
+        ],
+        password_confirmation_field: [
+          type: :atom,
+          doc: """
+          The name of the argument used to confirm the user's password in plaintext when registering or changing passwords.
+          """,
+          default: :password_confirmation
+        ],
+        register_action_name: [
+          type: :atom,
+          doc: "The name to use for the register action",
+          default: :register
+        ],
+        sign_in_action_name: [
+          type: :atom,
+          doc: "The name to use for the sign in action",
+          default: :sign_in
+        ]
       ]
-    ]
-  }
+    }
+  ]
 
   @moduledoc """
   Authentication using your application as the source of truth.
@@ -98,19 +104,20 @@ defmodule AshAuthentication.PasswordAuthentication do
 
   ### Index
 
-  #{Spark.Dsl.Extension.doc_index([@password_authentication])}
+  #{Spark.Dsl.Extension.doc_index(@dsl)}
 
   ### Docs
 
-  #{Spark.Dsl.Extension.doc([@password_authentication])}
+  #{Spark.Dsl.Extension.doc(@dsl)}
   """
 
   @behaviour AshAuthentication.Provider
 
   use Spark.Dsl.Extension,
-    sections: [@password_authentication],
+    sections: @dsl,
     transformers: [AshAuthentication.PasswordAuthentication.Transformer]
 
+  alias Ash.Resource
   alias AshAuthentication.PasswordAuthentication
   alias Plug.Conn
 
@@ -123,7 +130,7 @@ defmodule AshAuthentication.PasswordAuthentication do
       {:ok, #MyApp.User<>}
   """
   @impl true
-  @spec sign_in_action(module, map) :: {:ok, struct} | {:error, term}
+  @spec sign_in_action(Resource.t(), map) :: {:ok, struct} | {:error, term}
   defdelegate sign_in_action(resource, attributes),
     to: PasswordAuthentication.Actions,
     as: :sign_in
@@ -137,7 +144,7 @@ defmodule AshAuthentication.PasswordAuthentication do
       {:ok, #MyApp.User<>}
   """
   @impl true
-  @spec register_action(module, map) :: {:ok, struct} | {:error, term}
+  @spec register_action(Resource.t(), map) :: {:ok, struct} | {:error, term}
   defdelegate register_action(resource, attributes),
     to: PasswordAuthentication.Actions,
     as: :register
@@ -172,4 +179,10 @@ defmodule AshAuthentication.PasswordAuthentication do
   @impl true
   @spec has_register_step?(any) :: boolean
   def has_register_step?(_), do: true
+
+  @doc """
+  Returns whether password authentication is enabled for the resource
+  """
+  @spec enabled?(Resource.t()) :: boolean
+  def enabled?(resource), do: __MODULE__ in Spark.extensions(resource)
 end

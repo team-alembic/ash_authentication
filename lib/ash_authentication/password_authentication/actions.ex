@@ -20,7 +20,9 @@ defmodule AshAuthentication.PasswordAuthentication.Actions do
   """
   @spec sign_in(module, map) :: {:ok, struct} | {:error, term}
   def sign_in(resource, attributes) do
-    {:ok, action} = PasswordAuthentication.Info.sign_in_action_name(resource)
+    {:ok, action} =
+      PasswordAuthentication.Info.password_authentication_sign_in_action_name(resource)
+
     {:ok, api} = AshAuthentication.Info.authentication_api(resource)
 
     resource
@@ -43,7 +45,9 @@ defmodule AshAuthentication.PasswordAuthentication.Actions do
   """
   @spec register(module, map) :: {:ok, struct} | {:error, term}
   def register(resource, attributes) do
-    {:ok, action} = PasswordAuthentication.Info.register_action_name(resource)
+    {:ok, action} =
+      PasswordAuthentication.Info.password_authentication_register_action_name(resource)
+
     {:ok, api} = AshAuthentication.Info.authentication_api(resource)
 
     resource

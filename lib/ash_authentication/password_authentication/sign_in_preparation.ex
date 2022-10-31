@@ -21,9 +21,9 @@ defmodule AshAuthentication.PasswordAuthentication.SignInPreparation do
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, _opts, _) do
-    {:ok, identity_field} = Info.identity_field(query.resource)
-    {:ok, password_field} = Info.password_field(query.resource)
-    {:ok, hasher} = Info.hash_provider(query.resource)
+    {:ok, identity_field} = Info.password_authentication_identity_field(query.resource)
+    {:ok, password_field} = Info.password_authentication_password_field(query.resource)
+    {:ok, hasher} = Info.password_authentication_hash_provider(query.resource)
 
     identity = Query.get_argument(query, identity_field)
 

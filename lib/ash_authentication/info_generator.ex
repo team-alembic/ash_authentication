@@ -17,115 +17,157 @@ defmodule AshAuthentication.InfoGenerator do
   @doc false
   @spec __using__(options) :: Macro.t()
   defmacro __using__(opts) do
-    extension = Keyword.fetch!(opts, :extension)
+    extension = Keyword.fetch!(opts, :extension) |> Macro.expand(__CALLER__)
     sections = Keyword.get(opts, :sections, [])
     prefix? = Keyword.get(opts, :prefix?, false)
 
     quote do
+      require AshAuthentication.InfoGenerator
       require unquote(extension)
-    end
 
-    for section <- sections do
-      quote do
-        AshAuthentication.InfoGenerator.generate_options_function(
-          unquote(extension),
-          unquote(section),
-          unquote(prefix?)
-        )
+      AshAuthentication.InfoGenerator.generate_config_functions(
+        unquote(extension),
+        unquote(sections),
+        unquote(prefix?)
+      )
 
-        AshAuthentication.InfoGenerator.generate_config_functions(
-          unquote(extension),
-          unquote(section),
-          unquote(prefix?)
-        )
-      end
+      AshAuthentication.InfoGenerator.generate_options_functions(
+        unquote(extension),
+        unquote(sections),
+        unquote(prefix?)
+      )
     end
   end
 
-  @doc false
-  @spec generate_config_functions(module, atom, boolean) :: Macro.t()
-  defmacro generate_config_functions(extension, section, prefix?) do
-    options =
-      extension
-      |> Macro.expand_once(__CALLER__)
-      |> apply(:sections, [])
-      |> Enum.find(&(&1.name == section))
-      |> Map.get(:schema, [])
+  @doc """
+  Given an extension and a list of DSL sections, generate an options function
+  which returns a map of all configured options for a resource (including
+  defaults).
+  """
+  @spec generate_options_functions(module, [atom], boolean) :: Macro.t()
+  defmacro generate_options_functions(_extension, sections, false) when length(sections) > 1,
+    do: raise("Cannot generate options functions for more than one section without prefixes.")
 
-    for {name, opts} <- options do
-      pred? = name |> to_string() |> String.ends_with?("?")
-      function_name = if prefix?, do: :"#{section}_#{name}", else: name
+  defmacro generate_options_functions(extension, sections, prefix?) do
+    for {section, options} <- extension_sections_to_list(extension, sections) do
+      function_name = if prefix?, do: :"#{section}_options", else: :options
 
-      if pred? do
-        generate_predicate_function(function_name, section, name, Keyword.get(opts, :doc, false))
-      else
-        spec = AshAuthentication.Utils.spec_for_option(opts)
+      quote location: :keep do
+        @doc """
+        #{unquote(section)} DSL options
 
-        quote do
-          unquote(
-            generate_config_function(
-              function_name,
-              section,
-              name,
-              Keyword.get(opts, :doc, false),
-              spec
-            )
-          )
+        Returns a map containing the and any configured or default values.
+        """
+        @spec unquote(function_name)(dsl_or_resource :: module | map) :: %{required(atom) => any}
+        def unquote(function_name)(dsl_or_resource) do
+          import Spark.Dsl.Extension, only: [get_opt: 4]
 
-          unquote(
-            generate_config_bang_function(
-              function_name,
-              section,
-              name,
-              Keyword.get(opts, :doc, false),
-              spec
-            )
-          )
+          unquote(Macro.escape(options))
+          |> Stream.map(fn option ->
+            value =
+              dsl_or_resource
+              |> get_opt([option.section], option.name, Map.get(option, :default))
+
+            {option.name, value}
+          end)
+          |> Stream.reject(&is_nil(elem(&1, 1)))
+          |> Map.new()
         end
       end
     end
   end
 
-  defp generate_predicate_function(function_name, section, name, doc) do
-    quote do
-      @doc unquote(doc)
-      @spec unquote(function_name)(dsl_or_resource :: module | map) :: boolean
-      def unquote(function_name)(dsl_or_resource) do
-        import Spark.Dsl.Extension, only: [get_opt: 4]
-        get_opt(dsl_or_resource, [unquote(section)], unquote(name), false)
+  @doc """
+  Given an extension and a list of DSL sections generate individual config
+  functions for each option.
+  """
+  @spec generate_config_functions(module, [atom], boolean) :: Macro.t()
+  defmacro generate_config_functions(extension, sections, prefix?) do
+    for {_, options} <- extension_sections_to_list(extension, sections) do
+      for option <- options do
+        function_name = if prefix?, do: :"#{option.section}_#{option.name}", else: option.name
+
+        option
+        |> Map.put(:function_name, function_name)
+        |> generate_config_function()
       end
     end
   end
 
-  defp generate_config_function(function_name, section, name, doc, spec) do
-    quote do
-      @doc unquote(doc)
-      @spec unquote(function_name)(dsl_or_resource :: module | map) ::
-              {:ok, unquote(spec)} | :error
+  defp extension_sections_to_list(extension, sections) do
+    extension.sections()
+    |> Stream.map(fn section ->
+      schema =
+        section.schema
+        |> Enum.map(fn {name, opts} ->
+          opts
+          |> Map.new()
+          |> Map.take(~w[type doc default]a)
+          |> Map.update!(:type, &spec_for_type/1)
+          |> Map.put(:pred?, name |> to_string() |> String.ends_with?("?"))
+          |> Map.put(:name, name)
+          |> Map.put(:section, section.name)
+        end)
 
-      def unquote(function_name)(dsl_or_resource) do
+      {section.name, schema}
+    end)
+    |> Map.new()
+    |> Map.take(sections)
+  end
+
+  defp generate_config_function(%{pred?: true} = option) do
+    quote location: :keep do
+      @doc unquote(option.doc)
+      @spec unquote(option.function_name)(dsl_or_resource :: module | map) ::
+              unquote(option.type)
+      def unquote(option.function_name)(dsl_or_resource) do
         import Spark.Dsl.Extension, only: [get_opt: 4]
 
-        case get_opt(dsl_or_resource, [unquote(section)], unquote(name), :error) do
+        get_opt(
+          dsl_or_resource,
+          [unquote(option.section)],
+          unquote(option.name),
+          unquote(option.default)
+        )
+      end
+    end
+  end
+
+  defp generate_config_function(option) do
+    quote location: :keep do
+      @doc unquote(Map.get(option, :doc, false))
+      @spec unquote(option.function_name)(dsl_or_resource :: module | map) ::
+              {:ok, unquote(option.type)} | :error
+
+      def unquote(option.function_name)(dsl_or_resource) do
+        import Spark.Dsl.Extension, only: [get_opt: 4]
+
+        case get_opt(
+               dsl_or_resource,
+               [unquote(option.section)],
+               unquote(option.name),
+               unquote(Map.get(option, :default, :error))
+             ) do
           :error -> :error
           value -> {:ok, value}
         end
       end
-    end
-  end
 
-  defp generate_config_bang_function(function_name, section, name, doc, spec) do
-    quote do
-      @doc unquote(doc)
-      @spec unquote(:"#{function_name}!")(dsl_or_resource :: module | map) ::
-              unquote(spec) | no_return
+      @doc unquote(Map.get(option, :doc, false))
+      @spec unquote(:"#{option.function_name}!")(dsl_or_resource :: module | map) ::
+              unquote(option.type) | no_return
 
-      def unquote(:"#{function_name}!")(dsl_or_resource) do
+      def unquote(:"#{option.function_name}!")(dsl_or_resource) do
         import Spark.Dsl.Extension, only: [get_opt: 4]
 
-        case get_opt(dsl_or_resource, [unquote(section)], unquote(name), :error) do
+        case get_opt(
+               dsl_or_resource,
+               [unquote(option.section)],
+               unquote(option.name),
+               unquote(Map.get(option, :default, :error))
+             ) do
           :error ->
-            raise "No configuration for `#{unquote(name)}` present on `#{inspect(dsl_or_resource)}`."
+            raise "No configuration for `#{unquote(option.name)}` present on `#{inspect(dsl_or_resource)}`."
 
           value ->
             value
@@ -134,37 +176,25 @@ defmodule AshAuthentication.InfoGenerator do
     end
   end
 
-  @doc false
-  @spec generate_options_function(module, atom, boolean) :: Macro.t()
-  defmacro generate_options_function(extension, section, prefix?) do
-    options =
-      extension
-      |> Macro.expand_once(__CALLER__)
-      |> apply(:sections, [])
-      |> Enum.find(&(&1.name == section))
-      |> Map.get(:schema, [])
+  defp spec_for_type({:behaviour, _module}), do: {:module, [], Elixir}
 
-    function_name = if prefix?, do: :"#{section}_options", else: :options
+  defp spec_for_type({:spark_function_behaviour, behaviour, _}),
+    do: {spec_for_type({:behaviour, behaviour}), {:list, [], Elixir}}
 
-    quote do
-      @doc """
-      The DSL options
+  defp spec_for_type({:fun, arity}) do
+    args =
+      0..(arity - 1)
+      |> Enum.map(fn _ -> {:any, [], Elixir} end)
 
-      Returns a map containing the schema and any configured or default values.
-      """
-      @spec unquote(function_name)(dsl_or_resource :: module | map) :: %{required(atom) => any}
-      def unquote(function_name)(dsl_or_resource) do
-        import Spark.Dsl.Extension, only: [get_opt: 3]
-
-        Enum.reduce(unquote(options), %{}, fn {name, opts}, result ->
-          with nil <- get_opt(dsl_or_resource, [unquote(section)], name),
-               nil <- Keyword.get(opts, :default) do
-            result
-          else
-            value -> Map.put(result, name, value)
-          end
-        end)
-      end
-    end
+    [{:->, [], [args, {:any, [], Elixir}]}]
   end
+
+  defp spec_for_type({:or, choices}) do
+    {:|, [], Enum.map(choices, &spec_for_type/1)}
+  end
+
+  defp spec_for_type(:string),
+    do: {{:., [], [{:__aliases__, [alias: false], [:String]}, :t]}, [], []}
+
+  defp spec_for_type(terminal), do: {terminal, [], Elixir}
 end

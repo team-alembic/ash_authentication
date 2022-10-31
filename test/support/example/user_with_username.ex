@@ -5,9 +5,12 @@ defmodule Example.UserWithUsername do
     extensions: [
       AshAuthentication,
       AshAuthentication.PasswordAuthentication,
+      AshAuthentication.PasswordReset,
       AshGraphql.Resource,
       AshJsonApi.Resource
     ]
+
+  require Logger
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
@@ -84,6 +87,12 @@ defmodule Example.UserWithUsername do
   password_authentication do
     identity_field(:username)
     hashed_password_field(:hashed_password)
+  end
+
+  password_reset do
+    sender(fn user, token ->
+      Logger.debug("Password reset request for user #{user.username}, token #{inspect(token)}")
+    end)
   end
 
   identities do

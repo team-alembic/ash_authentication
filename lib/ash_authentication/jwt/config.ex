@@ -14,11 +14,12 @@ defmodule AshAuthentication.Jwt.Config do
   @doc """
   Generate the default claims for a specified resource.
   """
-  @spec default_claims(Resource.t()) :: Joken.token_config()
-  def default_claims(resource) do
+  @spec default_claims(Resource.t(), keyword) :: Joken.token_config()
+  def default_claims(resource, opts \\ []) do
     config =
       resource
       |> config()
+      |> Keyword.merge(opts)
 
     {:ok, vsn} = :application.get_key(:ash_authentication, :vsn)
 
@@ -108,9 +109,12 @@ defmodule AshAuthentication.Jwt.Config do
   @doc """
   The signer used to sign the token on a per-resource basis.
   """
-  @spec token_signer(Resource.t()) :: Signer.t()
-  def token_signer(resource) do
-    config = config(resource)
+  @spec token_signer(Resource.t(), keyword) :: Signer.t()
+  def token_signer(resource, opts \\ []) do
+    config =
+      resource
+      |> config()
+      |> Keyword.merge(opts)
 
     algorithm = Keyword.get_lazy(config, :signing_algorithm, &Jwt.default_algorithm/0)
 

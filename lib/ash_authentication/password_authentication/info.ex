@@ -5,5 +5,6 @@ defmodule AshAuthentication.PasswordAuthentication.Info do
 
   use AshAuthentication.InfoGenerator,
     extension: AshAuthentication.PasswordAuthentication,
-    sections: [:password_authentication]
+    sections: [:password_authentication],
+    prefix?: true
 end
