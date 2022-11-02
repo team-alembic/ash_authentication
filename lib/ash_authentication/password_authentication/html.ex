@@ -90,7 +90,7 @@ defmodule AshAuthentication.PasswordAuthentication.HTML do
     @defaults
     |> Keyword.merge(options)
     |> Map.new()
-    |> Map.merge(PasswordAuthentication.Info.options(resource))
+    |> Map.merge(PasswordAuthentication.Info.password_authentication_options(resource))
     |> Map.merge(AshAuthentication.Info.authentication_options(resource))
   end
 end

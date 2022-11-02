@@ -16,9 +16,9 @@ defmodule AshAuthentication.PasswordAuthentication.HashPasswordChange do
   def change(changeset, _opts, _) do
     changeset
     |> Changeset.before_action(fn changeset ->
-      {:ok, password_field} = Info.password_field(changeset.resource)
-      {:ok, hash_field} = Info.hashed_password_field(changeset.resource)
-      {:ok, hasher} = Info.hash_provider(changeset.resource)
+      {:ok, password_field} = Info.password_authentication_password_field(changeset.resource)
+      {:ok, hash_field} = Info.password_authentication_hashed_password_field(changeset.resource)
+      {:ok, hasher} = Info.password_authentication_hash_provider(changeset.resource)
 
       with value when is_binary(value) <- Changeset.get_argument(changeset, password_field),
            {:ok, hash} <- hasher.hash(value) do

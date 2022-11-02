@@ -46,7 +46,7 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   """
   @spec validate_hash_provider(Dsl.t()) :: :ok | {:error, Exception.t()}
   def validate_hash_provider(dsl_state) do
-    case Info.hash_provider(dsl_state) do
+    case Info.password_authentication_hash_provider(dsl_state) do
       {:ok, hash_provider} ->
         validate_module_implements_behaviour(hash_provider, HashProvider)
 
@@ -64,9 +64,10 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   """
   @spec validate_sign_in_action(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_sign_in_action(dsl_state) do
-    with {:ok, identity_field} <- Info.identity_field(dsl_state),
-         {:ok, password_field} <- Info.password_field(dsl_state),
-         {:ok, action} <- validate_action_exists(dsl_state, :sign_in),
+    with {:ok, identity_field} <- Info.password_authentication_identity_field(dsl_state),
+         {:ok, password_field} <- Info.password_authentication_password_field(dsl_state),
+         {:ok, action_name} <- Info.password_authentication_sign_in_action_name(dsl_state),
+         {:ok, action} <- validate_action_exists(dsl_state, action_name),
          :ok <- validate_identity_argument(dsl_state, action, identity_field),
          :ok <- validate_password_argument(action, password_field),
          :ok <- validate_action_has_preparation(action, SignInPreparation) do
@@ -79,11 +80,14 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   """
   @spec validate_register_action(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_register_action(dsl_state) do
-    with {:ok, password_field} <- Info.password_field(dsl_state),
-         {:ok, password_confirmation_field} <- Info.password_confirmation_field(dsl_state),
-         {:ok, hashed_password_field} <- Info.hashed_password_field(dsl_state),
-         confirmation_required? <- Info.confirmation_required?(dsl_state),
-         {:ok, action} <- validate_action_exists(dsl_state, :register),
+    with {:ok, password_field} <- Info.password_authentication_password_field(dsl_state),
+         {:ok, password_confirmation_field} <-
+           Info.password_authentication_password_confirmation_field(dsl_state),
+         {:ok, hashed_password_field} <-
+           Info.password_authentication_hashed_password_field(dsl_state),
+         confirmation_required? <- Info.password_authentication_confirmation_required?(dsl_state),
+         {:ok, action_name} <- Info.password_authentication_register_action_name(dsl_state),
+         {:ok, action} <- validate_action_exists(dsl_state, action_name),
          :ok <- validate_allow_nil_input(action, hashed_password_field),
          :ok <- validate_password_argument(action, password_field),
          :ok <-
@@ -169,7 +173,7 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   @spec validate_identity_field(Dsl.t()) :: {:ok, Dsl.t()} | {:error, Exception.t()}
   def validate_identity_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
-         {:ok, identity_field} <- Info.identity_field(dsl_state),
+         {:ok, identity_field} <- Info.password_authentication_identity_field(dsl_state),
          {:ok, attribute} <- find_attribute(dsl_state, identity_field),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
          :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),

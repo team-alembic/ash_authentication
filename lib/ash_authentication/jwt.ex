@@ -68,14 +68,17 @@ defmodule AshAuthentication.Jwt do
   Given a record, generate a signed JWT for use while authenticating.
   """
   @spec token_for_record(Resource.record()) :: {:ok, token, claims} | :error
-  def token_for_record(record) do
+  def token_for_record(record, extra_claims \\ %{}, opts \\ []) do
     resource = record.__struct__
 
-    default_claims = Config.default_claims(resource)
-    signer = Config.token_signer(resource)
+    default_claims = Config.default_claims(resource, opts)
+    signer = Config.token_signer(resource, opts)
 
     subject = AshAuthentication.resource_to_subject(record)
-    extra_claims = %{"sub" => subject}
+
+    extra_claims =
+      extra_claims
+      |> Map.put("sub", subject)
 
     extra_claims =
       case Map.fetch(record.__metadata__, :tenant) do
@@ -89,9 +92,30 @@ defmodule AshAuthentication.Jwt do
   @doc """
   Given a token, verify it's signature and validate it's claims.
   """
-  @spec verify(token, module) ::
+  @spec verify(token, Ash.Resource.t() | module) ::
           {:ok, claims, AshAuthentication.resource_config()} | :error
-  def verify(token, otp_app) do
+  def verify(token, otp_app_or_resource) do
+    if function_exported?(otp_app_or_resource, :spark_is, 0) &&
+         otp_app_or_resource.spark_is() == Ash.Resource do
+      verify_for_resource(token, otp_app_or_resource)
+    else
+      verify_for_otp_app(token, otp_app_or_resource)
+    end
+  end
+
+  defp verify_for_resource(token, resource) do
+    with config <- AshAuthentication.resource_config(resource),
+         signer <- Config.token_signer(resource),
+         {:ok, claims} <- Joken.verify(token, signer),
+         defaults <- Config.default_claims(resource),
+         {:ok, claims} <- Joken.validate(defaults, claims, config) do
+      {:ok, claims, config}
+    else
+      _ -> :error
+    end
+  end
+
+  defp verify_for_otp_app(token, otp_app) do
     with {:ok, config} <- token_to_resource(token, otp_app),
          signer <- Config.token_signer(config.resource),
          {:ok, claims} <- Joken.verify(token, signer),

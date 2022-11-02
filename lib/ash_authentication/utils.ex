@@ -46,25 +46,6 @@ defmodule AshAuthentication.Utils do
   def maybe_append(collection, _test, element), do: Enum.concat(collection, [element])
 
   @doc """
-  Generate the AST for an options function spec.
-
-  Not something you should ever need.
-  """
-  @spec spec_for_option(keyword) :: Macro.t()
-  def spec_for_option(options) do
-    case Keyword.get(options, :type, :term) do
-      {:behaviour, _module} ->
-        {:module, [], Elixir}
-
-      :string ->
-        {{:., [], [{:__aliases__, [alias: false], [:String]}, :t]}, [], []}
-
-      terminal ->
-        {terminal, [], Elixir}
-    end
-  end
-
-  @doc """
   Used within transformers to optionally build actions as needed.
   """
   @spec maybe_build_action(map, atom, (map -> map)) :: {:ok, atom | map} | {:error, any}

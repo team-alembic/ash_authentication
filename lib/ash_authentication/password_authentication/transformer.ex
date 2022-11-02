@@ -72,9 +72,23 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
     with :ok <- validate_authentication_extension(dsl_state),
          {:ok, dsl_state} <- validate_identity_field(dsl_state),
          {:ok, dsl_state} <- validate_hashed_password_field(dsl_state),
-         {:ok, dsl_state} <- maybe_build_action(dsl_state, :register, &build_register_action/1),
+         {:ok, register_action_name} <-
+           Info.password_authentication_register_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             register_action_name,
+             &build_register_action(&1, register_action_name)
+           ),
          {:ok, dsl_state} <- validate_register_action(dsl_state),
-         {:ok, dsl_state} <- maybe_build_action(dsl_state, :sign_in, &build_sign_in_action/1),
+         {:ok, sign_in_action_name} <-
+           Info.password_authentication_sign_in_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             sign_in_action_name,
+             &build_sign_in_action(&1, sign_in_action_name)
+           ),
          {:ok, dsl_state} <- validate_sign_in_action(dsl_state),
          :ok <- validate_hash_provider(dsl_state) do
       authentication =
@@ -105,11 +119,13 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
   def before?(Resource.Transformers.DefaultAccept), do: true
   def before?(_), do: false
 
-  defp build_register_action(dsl_state) do
-    with {:ok, hashed_password_field} <- Info.hashed_password_field(dsl_state),
-         {:ok, password_field} <- Info.password_field(dsl_state),
-         {:ok, confirm_field} <- Info.password_confirmation_field(dsl_state),
-         confirmation_required? <- Info.confirmation_required?(dsl_state) do
+  defp build_register_action(dsl_state, action_name) do
+    with {:ok, hashed_password_field} <-
+           Info.password_authentication_hashed_password_field(dsl_state),
+         {:ok, password_field} <- Info.password_authentication_password_field(dsl_state),
+         {:ok, confirm_field} <-
+           Info.password_authentication_password_confirmation_field(dsl_state),
+         confirmation_required? <- Info.password_authentication_confirmation_required?(dsl_state) do
       password_opts = [
         type: Type.String,
         allow_nil?: false,
@@ -154,7 +170,7 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
         ])
 
       Transformer.build_entity(Resource.Dsl, [:actions], :create,
-        name: :register,
+        name: action_name,
         arguments: arguments,
         changes: changes,
         allow_nil_input: [hashed_password_field]
@@ -162,9 +178,9 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
     end
   end
 
-  defp build_sign_in_action(dsl_state) do
-    with {:ok, identity_field} <- Info.identity_field(dsl_state),
-         {:ok, password_field} <- Info.password_field(dsl_state) do
+  defp build_sign_in_action(dsl_state, action_name) do
+    with {:ok, identity_field} <- Info.password_authentication_identity_field(dsl_state),
+         {:ok, password_field} <- Info.password_authentication_password_field(dsl_state) do
       identity_attribute = Resource.Info.attribute(dsl_state, identity_field)
 
       arguments = [
@@ -188,7 +204,7 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
       ]
 
       Transformer.build_entity(Resource.Dsl, [:actions], :read,
-        name: :sign_in,
+        name: action_name,
         arguments: arguments,
         preparations: preparations,
         get?: true

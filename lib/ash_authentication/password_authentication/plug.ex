@@ -14,7 +14,7 @@ defmodule AshAuthentication.PasswordAuthentication.Plug do
   an "action" parameter along with the form data.
   """
   import AshAuthentication.Plug.Helpers, only: [private_store: 2]
-  alias AshAuthentication.PasswordAuthentication
+  alias AshAuthentication.{PasswordAuthentication, PasswordReset}
   alias Plug.Conn
 
   @doc """
@@ -52,4 +52,9 @@ defmodule AshAuthentication.PasswordAuthentication.Plug do
 
   defp do_action(%{"action" => "register"} = attrs, resource),
     do: PasswordAuthentication.register_action(resource, attrs)
+
+  defp do_action(%{"action" => "reset_password"} = attrs, resource),
+    do: PasswordReset.reset_password(resource, attrs)
+
+  defp do_action(_attrs, _resource), do: {:error, "No action provided"}
 end

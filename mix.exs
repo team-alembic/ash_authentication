@@ -77,7 +77,7 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, "~> 2.3"},
+      {:ash, "~> 2.4"},
       {:bcrypt_elixir, "~> 3.0", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},

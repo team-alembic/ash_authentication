@@ -42,7 +42,7 @@ defmodule AshAuthentication.IdentityTest do
   defp resource_config(%{resource: resource}) do
     config =
       resource
-      |> Info.options()
+      |> Info.password_authentication_options()
 
     {:ok, config: config}
   end

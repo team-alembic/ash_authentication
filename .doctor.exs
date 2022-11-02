@@ -2,6 +2,7 @@
   ignore_modules: [
     ~r/^Inspect\./,
     ~r/.Plug$/,
+    ~r/^Example/,
     AshAuthentication.InfoGenerator,
     AshAuthentication.Plug.Macros
   ],
