@@ -106,14 +106,10 @@ defmodule AshAuthentication.PasswordReset do
     sections: @dsl,
     transformers: [AshAuthentication.PasswordReset.Transformer]
 
+  use AshAuthentication.Provider
+
   alias Ash.{Changeset, Query, Resource}
   alias AshAuthentication.{Jwt, PasswordReset}
-
-  @doc """
-  Returns whether password reset is enabled for the resource
-  """
-  @spec enabled?(Resource.t()) :: boolean
-  def enabled?(resource), do: __MODULE__ in Spark.extensions(resource)
 
   @doc """
   Request a password reset for a user.
@@ -185,4 +181,7 @@ defmodule AshAuthentication.PasswordReset do
       _ -> :error
     end
   end
+
+  defdelegate request_plug(conn, any), to: PasswordReset.Plug, as: :request
+  defdelegate callback_plug(conn, any), to: PasswordReset.Plug, as: :callback
 end

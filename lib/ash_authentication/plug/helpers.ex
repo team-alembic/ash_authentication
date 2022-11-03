@@ -11,12 +11,15 @@ defmodule AshAuthentication.Plug.Helpers do
   Store the user in the connections' session.
   """
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
-  def store_in_session(conn, user) do
+
+  def store_in_session(conn, user) when is_struct(user) do
     subject_name = AshAuthentication.Info.authentication_subject_name!(user.__struct__)
     subject = AshAuthentication.resource_to_subject(user)
 
     Conn.put_session(conn, subject_name, subject)
   end
+
+  def store_in_session(conn, _), do: conn
 
   @doc """
   Given a list of subjects, turn as many as possible into users.
@@ -169,15 +172,19 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec private_store(
           Conn.t(),
-          {:success, Resource.record()} | {:failure, nil | Changeset.t() | Error.t()}
+          {:success, nil | Resource.record()} | {:failure, nil | Changeset.t() | Error.t()}
         ) ::
           Conn.t()
+
+  def private_store(conn, {:success, nil}),
+    do: Conn.put_private(conn, :authentication_result, {:success, nil})
+
   def private_store(conn, {:success, record})
       when is_struct(record, conn.private.authenticator.resource),
       do: Conn.put_private(conn, :authentication_result, {:success, record})
 
   def private_store(conn, {:failure, reason})
-      when is_nil(reason) or is_map(reason),
+      when is_nil(reason) or is_binary(reason) or is_map(reason),
       do: Conn.put_private(conn, :authentication_result, {:failure, reason})
 
   # Dyanamically generated atoms are generally frowned upon, but in this case

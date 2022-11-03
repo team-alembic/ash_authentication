@@ -1,8 +1,9 @@
-defmodule AshAuthentication.PasswordAuthentication.HTML do
+defmodule AshAuthentication.PasswordAuthentication.Html do
   @moduledoc """
-  Renders a very basic forms for using password authentication.
+  Renders a very basic form for using password authentication.
 
-  These are mainly used for testing.
+  These are mainly used for testing, and you should instead write your own or
+  use the widgets in `ash_authentication_phoenix`.
   """
 
   require EEx
@@ -35,13 +36,13 @@ defmodule AshAuthentication.PasswordAuthentication.HTML do
         <input type="hidden" name="<%= @subject_name %>[action]" value="<%= @register_action_name %>" />
         <fieldset>
           <%= if @legend do %><legend><%= @legend %></legend><% end %>
-          <input type="text" name="<%= @subject_name %>[<%= @identity_field %>]" placeholder="register" />
+          <input type="text" name="<%= @subject_name %>[<%= @identity_field %>]" placeholder="<%= @identity_field %>" />
           <br />
           <input type="password" name="<%= @subject_name %>[<%= @password_field %>]" placeholder="Password" />
           <br />
           <%= if @confirmation_required? do %>
             <input type="password" name="<%= @subject_name %>[<%= @password_confirmation_field %>]" placeholder="Password confirmation" />
-          <br />
+            <br />
           <% end %>
           <input type="submit" value="Register" />
         </fieldset>
@@ -69,8 +70,12 @@ defmodule AshAuthentication.PasswordAuthentication.HTML do
   @doc """
   Render a basic HTML sign-in form.
   """
-  @spec sign_in(module, options) :: String.t()
-  def sign_in(resource, options) do
+  @spec callback(module, options) :: String.t()
+  def callback(resource, options) do
+    options =
+      options
+      |> Keyword.put_new(:legend, "Sign in")
+
     resource
     |> build_assigns(options)
     |> render_sign_in()
@@ -79,8 +84,12 @@ defmodule AshAuthentication.PasswordAuthentication.HTML do
   @doc """
   Render a basic HTML registration form.
   """
-  @spec register(module, options) :: String.t()
-  def register(resource, options) do
+  @spec request(module, options) :: String.t()
+  def request(resource, options) do
+    options =
+      options
+      |> Keyword.put_new(:legend, "Register")
+
     resource
     |> build_assigns(options)
     |> render_register()

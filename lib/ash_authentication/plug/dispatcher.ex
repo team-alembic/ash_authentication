@@ -19,38 +19,54 @@ defmodule AshAuthentication.Plug.Dispatcher do
   """
   @impl true
   @spec call(Conn.t(), config | any) :: Conn.t()
-  def call(
-        %{params: %{"subject_name" => subject_name, "provider" => provider}} = conn,
-        {phase, routes, return_to}
-      ) do
-    conn =
-      case Map.get(routes, {subject_name, provider}) do
-        config when is_map(config) ->
-          conn = Conn.put_private(conn, :authenticator, config)
-
-          case phase do
-            :request -> config.provider.request_plug(conn, [])
-            :callback -> config.provider.callback_plug(conn, [])
-          end
-
-        _ ->
-          conn
-      end
-
-    case conn do
-      %{state: :sent} ->
-        conn
-
-      %{private: %{authentication_result: {:success, user}}} ->
-        return_to.handle_success(conn, user, Map.get(user.__metadata__, :token))
-
-      %{private: %{authentication_result: {:failure, reason}}} ->
-        return_to.handle_failure(conn, reason)
-
-      _ ->
-        return_to.handle_failure(conn, nil)
-    end
+  def call(conn, {phase, routes, return_to}) do
+    conn
+    |> dispatch(phase, routes)
+    |> return(return_to)
   end
 
   def call(conn, {_phase, _routes, return_to}), do: return_to.handle_failure(conn)
+
+  defp dispatch(
+         %{params: %{"subject_name" => subject_name, "provider" => provider}} = conn,
+         phase,
+         routes
+       ) do
+    case Map.get(routes, {subject_name, provider}) do
+      config when is_map(config) ->
+        conn = Conn.put_private(conn, :authenticator, config)
+
+        case phase do
+          :request -> config.provider.request_plug(conn, [])
+          :callback -> config.provider.callback_plug(conn, [])
+        end
+
+      _ ->
+        conn
+    end
+  end
+
+  defp dispatch(conn, _phase, _routes), do: conn
+
+  defp return(%{state: :sent} = conn, _return_to), do: conn
+
+  defp return(
+         %{
+           private: %{
+             authentication_result: {:success, user},
+             authenticator: %{resource: resource}
+           }
+         } = conn,
+         return_to
+       )
+       when is_struct(user, resource),
+       do: return_to.handle_success(conn, user, Map.get(user.__metadata__, :token))
+
+  defp return(%{private: %{authentication_result: {:success, nil}}} = conn, return_to),
+    do: return_to.handle_success(conn, nil, nil)
+
+  defp return(%{private: %{authentication_result: {:failure, reason}}} = conn, return_to),
+    do: return_to.handle_failure(conn, reason)
+
+  defp return(conn, return_to), do: return_to.handle_failure(conn, nil)
 end

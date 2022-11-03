@@ -111,15 +111,14 @@ defmodule AshAuthentication.PasswordAuthentication do
   #{Spark.Dsl.Extension.doc(@dsl)}
   """
 
-  @behaviour AshAuthentication.Provider
-
   use Spark.Dsl.Extension,
     sections: @dsl,
     transformers: [AshAuthentication.PasswordAuthentication.Transformer]
 
+  use AshAuthentication.Provider
+
   alias Ash.Resource
   alias AshAuthentication.PasswordAuthentication
-  alias Plug.Conn
 
   @doc """
   Attempt to sign in an user of the provided resource type.
@@ -150,39 +149,23 @@ defmodule AshAuthentication.PasswordAuthentication do
     as: :register
 
   @doc """
-  Handle the request phase.
-
-  The password authentication provider does nothing with the request phase, and just returns
-  the `conn` unmodified.
-  """
-  @impl true
-  @spec request_plug(Conn.t(), any) :: Conn.t()
-  defdelegate request_plug(conn, config), to: PasswordAuthentication.Plug, as: :request
-
-  @doc """
   Handle the callback phase.
 
   Handles both sign-in and registration actions via the same endpoint.
   """
   @impl true
-  @spec callback_plug(Conn.t(), any) :: Conn.t()
-  defdelegate callback_plug(conn, config), to: PasswordAuthentication.Plug, as: :callback
+  defdelegate callback_plug(conn, config), to: PasswordAuthentication.Plug, as: :handle
 
   @doc """
-  Returns the name of the associated provider.
+  Handle the request phase.
+
+  Handles both sign-in and registration actions via the same endpoint.
   """
   @impl true
-  @spec provides :: String.t()
-  def provides, do: "password"
+  defdelegate request_plug(conn, config), to: PasswordAuthentication.Plug, as: :handle
 
   @doc false
   @impl true
-  @spec has_register_step?(any) :: boolean
-  def has_register_step?(_), do: true
-
-  @doc """
-  Returns whether password authentication is enabled for the resource
-  """
-  @spec enabled?(Resource.t()) :: boolean
-  def enabled?(resource), do: __MODULE__ in Spark.extensions(resource)
+  @spec has_register_step?(Resource.t()) :: boolean
+  def has_register_step?(_resource), do: true
 end
