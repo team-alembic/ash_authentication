@@ -13,8 +13,8 @@
         <h2><%= inspect(config.subject_name) %> - <%= Ash.Api.Info.short_name(config.api) %> / <%= Ash.Resource.Info.short_name(config.resource) %></h2>
 
         <%= for provider <- config.providers do %>
-          <%= Module.concat(provider, HTML).register(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides()}/callback", legend: "Register") %>
-          <%= Module.concat(provider, HTML).sign_in(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides()}/callback", legend: "Sign in") %>
+          <%= Module.concat(provider, Html).request(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides(config.resource)}") %>
+          <%= Module.concat(provider, Html).callback(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides(config.resource)}/callback") %>
         <% end %>
       <% end %>
 

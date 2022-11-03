@@ -52,6 +52,18 @@ defmodule AshAuthentication.PasswordReset.Transformer do
              &build_change_action(&1, change_action_name)
            ),
          :ok <- validate_change_action(dsl_state, change_action_name) do
+      authentication =
+        Transformer.get_persisted(dsl_state, :authentication)
+        |> Map.update(
+          :providers,
+          [AshAuthentication.PasswordReset],
+          &[AshAuthentication.PasswordReset | &1]
+        )
+
+      dsl_state =
+        dsl_state
+        |> Transformer.persist(:authentication, authentication)
+
       {:ok, dsl_state}
     else
       :error -> {:error, "Configuration error"}

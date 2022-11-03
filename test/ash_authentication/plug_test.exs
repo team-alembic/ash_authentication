@@ -53,7 +53,7 @@ defmodule AshAuthentication.PlugTest do
       resp = Jason.decode!(resp)
 
       assert status == 401
-      assert resp["status"] == "failed"
+      assert resp["status"] == "failure"
       assert resp["reason"] =~ ~r/Forbidden/
     end
   end

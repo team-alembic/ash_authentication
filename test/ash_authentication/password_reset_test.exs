@@ -87,4 +87,20 @@ defmodule AshAuthentication.PasswordResetTest do
       assert reloaded_user.hashed_password == user.hashed_password
     end
   end
+
+  describe "reset_token_for/1" do
+    test "when given a resource which supports password resets, it generates a token" do
+      assert {:ok, token} =
+               build_user()
+               |> PasswordReset.reset_token_for()
+
+      assert token =~ ~r/^[\w\.-]+$/
+    end
+
+    test "when given a resource which doesn't support password resets, it returns an error" do
+      assert :error =
+               build_token_revocation()
+               |> PasswordReset.reset_token_for()
+    end
+  end
 end
