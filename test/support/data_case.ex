@@ -36,6 +36,7 @@ defmodule AshAuthentication.DataCase do
   @doc """
   Sets up the sandbox based on the test tags.
   """
+  @spec setup_sandbox(any) :: :ok
   def setup_sandbox(tags) do
     pid = Sandbox.start_owner!(Example.Repo, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
@@ -49,6 +50,7 @@ defmodule AshAuthentication.DataCase do
       assert %{password: ["password is too short"]} = errors_on(changeset)
 
   """
+  @spec errors_on(Ecto.Changeset.t()) :: %{atom => [any]}
   def errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
       Regex.replace(~r"%{(\w+)}", message, fn _, key ->
@@ -57,9 +59,16 @@ defmodule AshAuthentication.DataCase do
     end)
   end
 
+  @doc "Generate a random username using Faker"
+  @spec username :: String.t()
   def username, do: Faker.Internet.user_name()
+
+  @doc "Generate a random password using Faker"
+  @spec password :: String.t()
   def password, do: Faker.Lorem.words(4) |> Enum.join(" ")
 
+  @doc "User factory"
+  @spec build_user(keyword) :: Example.UserWithUsername.t() | no_return
   def build_user(attrs \\ []) do
     password = password()
 
@@ -72,6 +81,18 @@ defmodule AshAuthentication.DataCase do
 
     Example.UserWithUsername
     |> Ash.Changeset.for_create(:register, attrs)
+    |> Example.create!()
+  end
+
+  @doc "Token revocation factory"
+  @spec build_token_revocation :: Example.TokenRevocation.t() | no_return
+  def build_token_revocation do
+    {:ok, token, _claims} =
+      build_user()
+      |> AshAuthentication.Jwt.token_for_record()
+
+    Example.TokenRevocation
+    |> Ash.Changeset.for_create(:revoke_token, %{token: token})
     |> Example.create!()
   end
 end

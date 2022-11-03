@@ -67,7 +67,8 @@ defmodule AshAuthentication.Jwt do
   @doc """
   Given a record, generate a signed JWT for use while authenticating.
   """
-  @spec token_for_record(Resource.record()) :: {:ok, token, claims} | :error
+  @spec token_for_record(Resource.record(), extra_claims :: %{}, options :: keyword) ::
+          {:ok, token, claims} | :error
   def token_for_record(record, extra_claims \\ %{}, opts \\ []) do
     resource = record.__struct__
 

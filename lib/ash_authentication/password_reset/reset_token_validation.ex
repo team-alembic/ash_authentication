@@ -13,7 +13,7 @@ defmodule AshAuthentication.PasswordReset.ResetTokenValidation do
   def validate(changeset, _) do
     with token when is_binary(token) <- Changeset.get_argument(changeset, :reset_token),
          {:ok, %{"act" => token_action}, _} <- Jwt.verify(token, changeset.resource),
-         {:ok, resource_action} <- Info.request_password_reset_action_name(changeset.resource),
+         {:ok, resource_action} <- Info.password_reset_action_name(changeset.resource),
          true <- to_string(resource_action) == token_action do
       :ok
     else

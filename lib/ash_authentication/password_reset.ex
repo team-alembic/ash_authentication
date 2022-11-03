@@ -177,7 +177,7 @@ defmodule AshAuthentication.PasswordReset do
 
     with true <- enabled?(resource),
          {:ok, lifetime} <- PasswordReset.Info.token_lifetime(resource),
-         {:ok, action} <- PasswordReset.Info.request_password_reset_action_name(resource),
+         {:ok, action} <- PasswordReset.Info.password_reset_action_name(resource),
          {:ok, token, _claims} <-
            Jwt.token_for_record(user, %{"act" => action}, token_lifetime: lifetime) do
       {:ok, token}
