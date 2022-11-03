@@ -58,22 +58,30 @@ defmodule AshAuthentication.Validations.Attribute do
   @doc """
   Validate than an attribute has a unique identity applied.
   """
-  @spec validate_attribute_unique_constraint(map, atom, module) :: :ok | {:error, Exception.t()}
-  def validate_attribute_unique_constraint(dsl_state, field, resource) do
+  @spec validate_attribute_unique_constraint(map, [atom], module) :: :ok | {:error, Exception.t()}
+  def validate_attribute_unique_constraint(dsl_state, fields, resource) do
+    message =
+      case fields do
+        [field] ->
+          "The `#{inspect(field)}` attribute on the resource `#{inspect(resource)}` should be uniquely constrained"
+
+        [_ | _] = fields ->
+          fields =
+            fields
+            |> Enum.map(&"`#{&1}`")
+            |> to_sentence(final: "and")
+
+          "The #{fields} attributes on the resource `#{inspect(resource)}` should be uniquely constrained"
+      end
+
+    fields = MapSet.new(fields)
+
     dsl_state
     |> Info.identities()
-    |> Enum.find(&(&1.keys == [field]))
+    |> Enum.find(&MapSet.equal?(MapSet.new(&1.keys), fields))
     |> case do
-      nil ->
-        {:error,
-         DslError.exception(
-           path: [:identities, :identity],
-           message:
-             "The `#{inspect(field)}` attribute on the resource `#{inspect(resource)}` should be uniquely constrained"
-         )}
-
-      _ ->
-        :ok
+      nil -> {:error, DslError.exception(path: [:identities, :identity], message: message)}
+      _ -> :ok
     end
   end
 end

@@ -7,6 +7,7 @@ defmodule Example.UserWithUsername do
       AshAuthentication.Confirmation,
       AshAuthentication.PasswordAuthentication,
       AshAuthentication.PasswordReset,
+      AshAuthentication.OAuth2Authentication,
       AshGraphql.Resource,
       AshJsonApi.Resource
     ]
@@ -25,7 +26,7 @@ defmodule Example.UserWithUsername do
     uuid_primary_key(:id)
 
     attribute(:username, :ci_string, allow_nil?: false)
-    attribute(:hashed_password, :string, allow_nil?: false, sensitive?: true, private?: true)
+    attribute(:hashed_password, :string, allow_nil?: true, sensitive?: true, private?: true)
 
     create_timestamp(:created_at)
     update_timestamp(:updated_at)
@@ -47,6 +48,25 @@ defmodule Example.UserWithUsername do
 
     update :update do
       primary? true
+    end
+
+    create :register_with_oauth2 do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.OAuth2Authentication.IdentityChange
+    end
+
+    read :sign_in_with_oauth2 do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      prepare AshAuthentication.OAuth2Authentication.SignInPreparation
+
+      filter expr(username == get_path(^arg(:user_info), [:nickname]))
     end
   end
 
@@ -87,6 +107,16 @@ defmodule Example.UserWithUsername do
       index(:read)
       post(:register)
     end
+  end
+
+  oauth2_authentication do
+    client_id(fn _, _, _ -> {:ok, "made up"} end)
+    redirect_uri(fn _, _, _ -> {:ok, "http://localhost:4000/auth"} end)
+    client_secret(fn _, _, _ -> {:ok, "also made up"} end)
+    site("https://example.com")
+    authorization_params(scope: "openid profile email")
+    auth_method(:client_secret_post)
+    identity_resource(Example.UserIdentity)
   end
 
   postgres do

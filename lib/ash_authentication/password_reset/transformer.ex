@@ -16,7 +16,7 @@ defmodule AshAuthentication.PasswordReset.Transformer do
 
   alias Ash.{Resource, Type}
   alias AshAuthentication.PasswordAuthentication, as: PA
-  alias AshAuthentication.Sender
+  alias AshAuthentication.{GenerateTokenChange, Sender}
   alias Spark.Dsl.Transformer
 
   import AshAuthentication.Utils
@@ -168,7 +168,7 @@ defmodule AshAuthentication.PasswordReset.Transformer do
             change: PA.HashPasswordChange
           ),
           Transformer.build_entity!(Resource.Dsl, [:actions, :update], :change,
-            change: PA.GenerateTokenChange
+            change: GenerateTokenChange
           )
         ])
 
@@ -211,7 +211,7 @@ defmodule AshAuthentication.PasswordReset.Transformer do
              PA.PasswordConfirmationValidation,
              confirmation_required?
            ) do
-      validate_action_has_change(action, PA.GenerateTokenChange)
+      validate_action_has_change(action, GenerateTokenChange)
     end
   end
 end

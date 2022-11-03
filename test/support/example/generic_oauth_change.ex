@@ -1,0 +1,15 @@
+defmodule Example.GenericOAuth2Change do
+  @moduledoc false
+  use Ash.Resource.Change
+  alias Ash.{Changeset, Resource.Change}
+
+  @doc false
+  @impl true
+  @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
+  def change(changeset, _opts, _context) do
+    user_info = Changeset.get_argument(changeset, :user_info)
+
+    changeset
+    |> Changeset.change_attribute(:username, user_info["nickname"])
+  end
+end

@@ -1,6 +1,6 @@
 defmodule AshAuthentication.PasswordAuthentication.Transformer do
   @moduledoc """
-  The PasswordAuthentication Authentication transformer
+  The PasswordAuthentication Authentication transformer.
 
   Scans the resource and checks that all the fields and actions needed are
   present.
@@ -37,7 +37,7 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
     - it takes an argument of the same name and type as the configured password field.
     - it takes an argument of the same name and type as the configured password confirmation field if confirmation is enabled.
     - it has the `PasswordAuthentication.HashPasswordChange` change present.
-    - it has the `PasswordAuthentication.GenerateTokenChange` change present.
+    - it has the `GenerateTokenChange` change present.
     - it has the `PasswordAuthentication.PasswordConfirmationValidation` validation present.
 
   ## Future improvements.
@@ -48,7 +48,6 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
   use Spark.Dsl.Transformer
 
   alias AshAuthentication.PasswordAuthentication.{
-    GenerateTokenChange,
     HashPasswordChange,
     Info,
     PasswordConfirmationValidation,
@@ -56,6 +55,7 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
   }
 
   alias Ash.{Resource, Type}
+  alias AshAuthentication.GenerateTokenChange
   alias Spark.Dsl.Transformer
   import AshAuthentication.PasswordAuthentication.UserValidations
   import AshAuthentication.Utils

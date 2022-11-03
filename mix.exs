@@ -78,10 +78,13 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:ash, "~> 2.4"},
-      {:bcrypt_elixir, "~> 3.0", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
+      {:assent, "~> 0.2"},
+      {:mint, "~> 1.4"},
+      {:castore, "~> 0.1"},
+      {:bcrypt_elixir, "~> 3.0"},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       # These two can be changed back to hex once the next release goes out.
       {:ash_graphql, github: "ash-project/ash_graphql", only: [:dev, :test]},
@@ -94,8 +97,8 @@ defmodule AshAuthentication.MixProject do
       {:ex_doc, ">= 0.0.0", only: [:dev, :test]},
       {:faker, "~> 0.17.0", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
-      {:plug_cowboy, "~> 2.5", only: [:dev, :test]},
-      {:mimic, "~> 1.7", only: [:dev, :test]}
+      {:mimic, "~> 1.7", only: [:dev, :test]},
+      {:plug_cowboy, "~> 2.5", only: [:dev, :test]}
     ]
   end
 

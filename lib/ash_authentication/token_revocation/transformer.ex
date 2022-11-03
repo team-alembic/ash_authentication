@@ -35,7 +35,7 @@ defmodule AshAuthentication.TokenRevocation.Transformer do
   def transform(dsl_state) do
     with {:ok, _api} <- validate_api_presence(dsl_state),
          {:ok, dsl_state} <-
-           maybe_add_field(dsl_state, :jti, :string,
+           maybe_build_attribute(dsl_state, :jti, :string,
              primary_key?: true,
              allow_nil?: false,
              sensitive?: true,
@@ -43,7 +43,7 @@ defmodule AshAuthentication.TokenRevocation.Transformer do
            ),
          :ok <- validate_jti_field(dsl_state),
          {:ok, dsl_state} <-
-           maybe_add_field(dsl_state, :expires_at, :utc_datetime,
+           maybe_build_attribute(dsl_state, :expires_at, :utc_datetime,
              allow_nil?: false,
              writable?: true
            ),
@@ -153,21 +153,6 @@ defmodule AshAuthentication.TokenRevocation.Transformer do
   defp validate_destroy_expire_action(dsl_state) do
     with {:ok, _} <- validate_action_exists(dsl_state, :expire) do
       :ok
-    end
-  end
-
-  defp maybe_add_field(dsl_state, name, type, options) do
-    if Resource.Info.attribute(dsl_state, name) do
-      {:ok, dsl_state}
-    else
-      options =
-        options
-        |> Keyword.put(:name, name)
-        |> Keyword.put(:type, type)
-
-      attribute = Transformer.build_entity!(Resource.Dsl, [:attributes], :attribute, options)
-
-      {:ok, Transformer.add_entity(dsl_state, [:attributes], attribute)}
     end
   end
 

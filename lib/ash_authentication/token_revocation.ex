@@ -1,17 +1,19 @@
 defmodule AshAuthentication.TokenRevocation do
-  @revocation %Spark.Dsl.Section{
-    name: :revocation,
-    describe: "Configure revocation options for this resource",
-    schema: [
-      api: [
-        type: {:behaviour, Ash.Api},
-        doc: """
-        The Ash API to use to access this resource.
-        """,
-        required: true
+  @dsl [
+    %Spark.Dsl.Section{
+      name: :revocation,
+      describe: "Configure revocation options for this resource",
+      schema: [
+        api: [
+          type: {:behaviour, Ash.Api},
+          doc: """
+          The Ash API to use to access this resource.
+          """,
+          required: true
+        ]
       ]
-    ]
-  }
+    }
+  ]
 
   @moduledoc """
   An Ash extension which generates the defaults for a token revocation resource.
@@ -40,7 +42,7 @@ defmodule AshAuthentication.TokenRevocation do
       extensions: [AshAuthentication.TokenRevocation]
 
     revocation do
-      api MyApp.Api
+      api MyApp.Accounts
     end
 
     postgres do
@@ -57,15 +59,15 @@ defmodule AshAuthentication.TokenRevocation do
 
   ### Index
 
-  #{Spark.Dsl.Extension.doc_index([@revocation])}
+  #{Spark.Dsl.Extension.doc_index(@dsl)}
 
   ### Docs
 
-  #{Spark.Dsl.Extension.doc([@revocation])}
+  #{Spark.Dsl.Extension.doc(@dsl)}
   """
 
   use Spark.Dsl.Extension,
-    sections: [@revocation],
+    sections: @dsl,
     transformers: [AshAuthentication.TokenRevocation.Transformer]
 
   alias AshAuthentication.TokenRevocation.Info
