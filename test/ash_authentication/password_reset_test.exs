@@ -15,33 +15,52 @@ defmodule AshAuthentication.PasswordResetTest do
   end
 
   describe "reset_password_request/1" do
-    test "it generates a password reset token" do
-      {:ok, user} =
-        build_user()
-        |> PasswordReset.request_password_reset()
+    test "when the user is found, it returns an empty list" do
+      user = build_user()
 
-      assert user.__metadata__.reset_token =~ ~r/[\w.]/i
+      assert {:ok, []} =
+               PasswordReset.request_password_reset(Example.UserWithUsername, %{
+                 "username" => user.username
+               })
     end
 
-    test "it sends the reset instructions" do
-      assert capture_log(fn ->
-               {:ok, _} =
-                 build_user()
-                 |> PasswordReset.request_password_reset()
+    test "when the user is not found, it returns an empty list" do
+      assert {:ok, []} =
+               PasswordReset.request_password_reset(Example.UserWithUsername, %{
+                 "username" => username()
+               })
+    end
+
+    test "when the user is found it sends the reset instructions" do
+      user = build_user()
+
+      log =
+        capture_log(fn ->
+          PasswordReset.request_password_reset(Example.UserWithUsername, %{
+            "username" => user.username
+          })
+        end)
+
+      assert log =~ ~r/Password reset request/i
+    end
+
+    test "when the user is not found, it doesn't send reset instructions" do
+      refute capture_log(fn ->
+               PasswordReset.request_password_reset(Example.UserWithUsername, %{
+                 "username" => username()
+               })
              end) =~ ~r/Password reset request/i
     end
   end
 
   describe "reset_password/2" do
     test "when the reset token is valid, it can change the password" do
-      {:ok, user} =
-        build_user()
-        |> PasswordReset.request_password_reset()
-
+      user = build_user()
+      {:ok, token} = PasswordReset.reset_token_for(user)
       password = password()
 
       attrs = %{
-        "reset_token" => user.__metadata__.reset_token,
+        "reset_token" => token,
         "password" => password,
         "password_confirmation" => password
       }

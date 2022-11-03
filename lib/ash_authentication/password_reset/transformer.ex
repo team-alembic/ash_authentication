@@ -10,8 +10,7 @@ defmodule AshAuthentication.PasswordReset.Transformer do
 
   alias AshAuthentication.PasswordReset.{
     Info,
-    Notifier,
-    RequestPasswordResetAction,
+    RequestPasswordResetPreparation,
     ResetTokenValidation,
     Sender
   }
@@ -52,8 +51,7 @@ defmodule AshAuthentication.PasswordReset.Transformer do
              change_action_name,
              &build_change_action(&1, change_action_name)
            ),
-         :ok <- validate_change_action(dsl_state, change_action_name),
-         {:ok, dsl_state} <- maybe_add_notifier(dsl_state, Notifier) do
+         :ok <- validate_change_action(dsl_state, change_action_name) do
       {:ok, dsl_state}
     else
       :error -> {:error, "Configuration error"}
@@ -128,12 +126,30 @@ defmodule AshAuthentication.PasswordReset.Transformer do
     end
   end
 
-  defp build_request_action(_dsl_state, action_name) do
-    Transformer.build_entity(Resource.Dsl, [:actions], :update,
-      name: action_name,
-      manual: RequestPasswordResetAction,
-      accept: []
-    )
+  defp build_request_action(dsl_state, action_name) do
+    with {:ok, identity_field} <- PA.Info.password_authentication_identity_field(dsl_state) do
+      identity_attribute = Resource.Info.attribute(dsl_state, identity_field)
+
+      arguments = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+          name: identity_field,
+          type: identity_attribute.type,
+          allow_nil?: false
+        )
+      ]
+
+      preparations = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+          preparation: RequestPasswordResetPreparation
+        )
+      ]
+
+      Transformer.build_entity(Resource.Dsl, [:actions], :read,
+        name: action_name,
+        arguments: arguments,
+        preparations: preparations
+      )
+    end
   end
 
   defp build_change_action(dsl_state, action_name) do
@@ -204,8 +220,10 @@ defmodule AshAuthentication.PasswordReset.Transformer do
   end
 
   defp validate_request_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name) do
-      validate_action_has_manual(action, RequestPasswordResetAction)
+    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+         {:ok, identity_field} <- PA.Info.password_authentication_identity_field(dsl_state),
+         :ok <- PA.UserValidations.validate_identity_argument(dsl_state, action, identity_field) do
+      validate_action_has_preparation(action, RequestPasswordResetPreparation)
     end
   end
 
@@ -231,16 +249,5 @@ defmodule AshAuthentication.PasswordReset.Transformer do
         confirmation_required?
       )
     end
-  end
-
-  defp maybe_add_notifier(dsl_state, notifier) do
-    notifiers =
-      dsl_state
-      |> Transformer.get_persisted(:notifiers, [])
-      |> MapSet.new()
-      |> MapSet.put(notifier)
-      |> Enum.to_list()
-
-    {:ok, Transformer.persist(dsl_state, :notifiers, notifiers)}
   end
 end

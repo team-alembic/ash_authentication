@@ -106,7 +106,7 @@ defmodule AshAuthentication.PasswordReset do
     sections: @dsl,
     transformers: [AshAuthentication.PasswordReset.Transformer]
 
-  alias Ash.{Changeset, Resource}
+  alias Ash.{Changeset, Query, Resource}
   alias AshAuthentication.{Jwt, PasswordReset}
 
   @doc """
@@ -122,19 +122,16 @@ defmodule AshAuthentication.PasswordReset do
 
   ## Example
 
-      iex> user = MyApp.Accounts.get(MyApp.Accounts.User, email: "marty@mcfly.me")
-      ...> request_password_reset(user)
+      iex> request_password_reset(MyApp.Accounts.User, %{"email" => "marty@mcfly.me"})
       :ok
   """
-  def request_password_reset(user) do
-    resource = user.__struct__
-
+  def request_password_reset(resource, params) do
     with true <- enabled?(resource),
          {:ok, action} <- PasswordReset.Info.request_password_reset_action_name(resource),
          {:ok, api} <- AshAuthentication.Info.authentication_api(resource) do
-      user
-      |> Changeset.for_update(action, %{})
-      |> api.update()
+      resource
+      |> Query.for_read(action, params)
+      |> api.read()
     else
       {:error, reason} -> {:error, reason}
       _ -> {:error, "Password resets not supported by resource `#{inspect(resource)}`"}
@@ -146,11 +143,17 @@ defmodule AshAuthentication.PasswordReset do
 
   Given a reset token, password and _maybe_ password confirmation, validate and
   change the user's password.
+
+  ## Example
+
+      iex> reset_password(MyApp.Accounts.User, params)
+      {:ok, %MyApp.Accounts.User{}}
   """
   @spec reset_password(Resource.t(), params) :: {:ok, Resource.record()} | {:error, Changeset.t()}
         when params: %{required(String.t()) => String.t()}
   def reset_password(resource, params) do
-    with {:ok, token} <- Map.fetch(params, "reset_token"),
+    with true <- enabled?(resource),
+         {:ok, token} <- Map.fetch(params, "reset_token"),
          {:ok, %{"sub" => subject}, config} <- Jwt.verify(token, resource),
          {:ok, user} <- AshAuthentication.subject_to_resource(subject, config),
          {:ok, action} <- PasswordReset.Info.password_reset_action_name(config.resource),
@@ -159,8 +162,27 @@ defmodule AshAuthentication.PasswordReset do
       |> Changeset.for_update(action, params)
       |> api.update()
     else
+      false -> {:error, "Password resets not supported by resource `#{inspect(resource)}`"}
       :error -> {:error, "Invalid reset token"}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Generate a reset token for a user.
+  """
+  @spec reset_token_for(Resource.record()) :: {:ok, String.t()} | :error
+  def reset_token_for(user) do
+    resource = user.__struct__
+
+    with true <- enabled?(resource),
+         {:ok, lifetime} <- PasswordReset.Info.token_lifetime(resource),
+         {:ok, action} <- PasswordReset.Info.request_password_reset_action_name(resource),
+         {:ok, token, _claims} <-
+           Jwt.token_for_record(user, %{"act" => action}, token_lifetime: lifetime) do
+      {:ok, token}
+    else
+      _ -> :error
     end
   end
 end
