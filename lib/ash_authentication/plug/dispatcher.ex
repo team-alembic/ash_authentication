@@ -25,8 +25,6 @@ defmodule AshAuthentication.Plug.Dispatcher do
     |> return(return_to)
   end
 
-  def call(conn, {_phase, _routes, return_to}), do: return_to.handle_failure(conn)
-
   defp dispatch(
          %{params: %{"subject_name" => subject_name, "provider" => provider}} = conn,
          phase,

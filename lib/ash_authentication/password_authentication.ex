@@ -100,6 +100,36 @@ defmodule AshAuthentication.PasswordAuthentication do
   end
   ```
 
+  ## Endpoints
+
+  This provider routes requests to both the `request` and `callback` endpoints
+  to the same handler, so either can be used.  Requests are differentiated by
+  the presence of an `action` parameter in the request body.
+
+  ### Examples
+
+  When attempting to register a new user
+
+  ```
+  %{"user" => %{
+    "action" => "register",
+    "email" => "marty@mcfly.me",
+    "password" => "back to 1985",
+    "password_confirmation" => "back to 1985"
+    # any additional user fields you wish to accept on creation.
+  }}
+  ```
+
+  When attempting to sign-in a user
+
+  ```
+  %{"user" => %{
+    "action" => "sign_in",
+    "email" => "marty@mcfly.me",
+    "password" => "back to 1985"
+  }}
+  ```
+
   ## DSL Documentation
 
   ### Index

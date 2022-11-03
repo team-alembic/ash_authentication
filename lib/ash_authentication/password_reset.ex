@@ -86,10 +86,19 @@ defmodule AshAuthentication.PasswordReset do
   end
   ```
 
-  Because you often want to submit the password reset token via the web, you can
-  also use the password authentication callback endpoint with an action of
-  "reset_password" and the reset password action will be called with the
-  included params.
+  ## Endpoints
+
+  * `request` - send the identity field nested below the subject name (eg
+    `%{"user" => %{"email" => "marty@mcfly.me"}}`).  If the resource supports
+    password resets then the success callback will be called with a `nil` user
+    and token regardless of whether the user could be found.  If the user is
+    found then the `sender` will be called.
+  * `callback` - attempt to perform a password reset.  Should be called with the
+    reset token, password and password confirmation if confirmation is enabled,
+    nested below the subject name (eg `%{"user" => %{"reset_token" => "abc123",
+    "password" => "back to 1985", "password_confirmation" => "back to 1975"}}`).
+    If the password was successfully changed then the relevant user will be
+    returned to the `success` callback.
 
   ## DSL Documentation
 

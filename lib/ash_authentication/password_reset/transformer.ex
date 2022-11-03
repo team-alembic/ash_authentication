@@ -219,6 +219,9 @@ defmodule AshAuthentication.PasswordReset.Transformer do
         |> Enum.concat([
           Transformer.build_entity!(Resource.Dsl, [:actions, :update], :change,
             change: PA.HashPasswordChange
+          ),
+          Transformer.build_entity!(Resource.Dsl, [:actions, :update], :change,
+            change: PA.GenerateTokenChange
           )
         ])
 
@@ -254,12 +257,14 @@ defmodule AshAuthentication.PasswordReset.Transformer do
              action,
              password_confirmation_field,
              confirmation_required?
+           ),
+         :ok <-
+           PA.UserValidations.validate_action_has_validation(
+             action,
+             PA.PasswordConfirmationValidation,
+             confirmation_required?
            ) do
-      PA.UserValidations.validate_action_has_validation(
-        action,
-        PA.PasswordConfirmationValidation,
-        confirmation_required?
-      )
+      validate_action_has_change(action, PA.GenerateTokenChange)
     end
   end
 end
