@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.2](https://github.com/team-alembic/ash_authentication/compare/v0.4.1...v0.4.2) (2022-11-03)
+
+
+
+
+### Bug Fixes:
+
+* PasswordReset: Generate the reset token using the target action, not the source action. (#25)
+
+* PasswordReset: Generate the reset token using the target action, not the source action.
+
+### Improvements:
+
+* PasswordReset: rework PasswordReset to be a provider in it's own right - this means it has it's own routes, etc.
+
 ## [v0.4.1](https://github.com/team-alembic/ash_authentication/compare/v0.4.0...v0.4.1) (2022-11-03)
 
 
