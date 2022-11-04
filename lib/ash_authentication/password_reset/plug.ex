@@ -17,7 +17,7 @@ defmodule AshAuthentication.PasswordReset.Plug do
       |> Map.get(to_string(config.subject_name), %{})
 
     case PasswordReset.request_password_reset(config.resource, params) do
-      {:ok, _} ->
+      :ok ->
         private_store(conn, {:success, nil})
 
       {:error, reason} ->

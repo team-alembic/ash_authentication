@@ -59,6 +59,7 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
   alias Spark.Dsl.Transformer
   import AshAuthentication.PasswordAuthentication.UserValidations
   import AshAuthentication.Utils
+  import AshAuthentication.Validations
 
   @doc false
   @impl true
@@ -69,7 +70,7 @@ defmodule AshAuthentication.PasswordAuthentication.Transformer do
           | {:warn, map(), String.t() | [String.t()]}
           | :halt
   def transform(dsl_state) do
-    with :ok <- validate_authentication_extension(dsl_state),
+    with :ok <- validate_extension(dsl_state, AshAuthentication),
          {:ok, dsl_state} <- validate_identity_field(dsl_state),
          {:ok, dsl_state} <- validate_hashed_password_field(dsl_state),
          {:ok, register_action_name} <-

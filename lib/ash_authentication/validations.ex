@@ -3,7 +3,7 @@ defmodule AshAuthentication.Validations do
   Common validations shared by several transformers.
   """
 
-  import AshAuthentication.Utils
+  import AshAuthentication.{Sender, Utils}
   alias Ash.Resource.Attribute
   alias Spark.{Dsl, Dsl.Transformer, Error.DslError}
 
@@ -83,5 +83,54 @@ defmodule AshAuthentication.Validations do
       nil -> {:error, {:unknown_persisted, option}}
       value -> {:ok, value}
     end
+  end
+
+  @doc """
+  Ensure that token generation is enabled for the resource.
+  """
+  @spec validate_token_generation_enabled(Dsl.t()) :: :ok | {:error, Exception.t()}
+  def validate_token_generation_enabled(dsl_state) do
+    if AshAuthentication.Info.tokens_enabled?(dsl_state),
+      do: :ok,
+      else:
+        {:error,
+         DslError.exception(
+           path: [:tokens],
+           message: "Token generation must be enabled for password resets to work."
+         )}
+  end
+
+  @doc """
+  Ensure that the named module implements a specific behaviour.
+  """
+  @spec validate_behaviour(module, module) :: :ok | {:error, Exception.t()}
+  def validate_behaviour(module, behaviour) do
+    if Spark.implements_behaviour?(module, behaviour) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:password_reset],
+         message: "`#{inspect(module)}` must implement the `#{inspect(behaviour)}` behaviour."
+       )}
+    end
+  end
+
+  @doc """
+  Validates that `extension` is present on the resource.
+  """
+  @spec validate_extension(Dsl.t(), module) :: :ok | {:error, Exception.t()}
+  def validate_extension(dsl_state, extension) do
+    extensions = Transformer.get_persisted(dsl_state, :extensions, [])
+
+    if extension in extensions,
+      do: :ok,
+      else:
+        {:error,
+         DslError.exception(
+           path: [:extensions],
+           message:
+             "The `#{inspect(extension)}` extension must also be present on this resource for password authentication to work."
+         )}
   end
 end

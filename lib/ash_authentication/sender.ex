@@ -1,8 +1,8 @@
-defmodule AshAuthentication.PasswordReset.Sender do
+defmodule AshAuthentication.Sender do
   @moduledoc ~S"""
-  A module to implement sending of the password reset token to a user.
+  A module to implement sending of a token to a user.
 
-  Allows you to glue sending of reset instructions to
+  Allows you to glue sending of instructions to
   [swoosh](https://hex.pm/packages/swoosh),
   [ex_twilio](https://hex.pm/packages/ex_twilio) or whatever notification system
   is appropriate for your application.
@@ -74,7 +74,7 @@ defmodule AshAuthentication.PasswordReset.Sender do
   @spec __using__(any) :: Macro.t()
   defmacro __using__(_) do
     quote do
-      @behaviour AshAuthentication.PasswordReset.Sender
+      @behaviour AshAuthentication.Sender
     end
   end
 end

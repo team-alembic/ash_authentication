@@ -15,17 +15,17 @@ defmodule AshAuthentication.PasswordResetTest do
   end
 
   describe "reset_password_request/1" do
-    test "when the user is found, it returns an empty list" do
+    test "when the user is found, it returns ok" do
       user = build_user()
 
-      assert {:ok, []} =
+      assert :ok =
                PasswordReset.request_password_reset(Example.UserWithUsername, %{
                  "username" => user.username
                })
     end
 
-    test "when the user is not found, it returns an empty list" do
-      assert {:ok, []} =
+    test "when the user is not found, it returns ok" do
+      assert :ok =
                PasswordReset.request_password_reset(Example.UserWithUsername, %{
                  "username" => username()
                })

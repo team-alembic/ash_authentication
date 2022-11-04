@@ -1,7 +1,7 @@
 defmodule AshAuthentication.Plug.HelpersTest do
   @moduledoc false
   use AshAuthentication.DataCase, async: true
-  alias AshAuthentication.{Plug.Helpers, SessionPipeline}
+  alias AshAuthentication.{Jwt, Plug.Helpers, SessionPipeline}
   import Plug.Test, only: [conn: 3]
   alias Plug.Conn
 
@@ -71,7 +71,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       {:ok, %{"jti" => jti}} =
         user.__metadata__.token
-        |> Joken.peek_claims()
+        |> Jwt.peek()
 
       conn
       |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")

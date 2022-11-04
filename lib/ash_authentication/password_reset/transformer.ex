@@ -11,16 +11,16 @@ defmodule AshAuthentication.PasswordReset.Transformer do
   alias AshAuthentication.PasswordReset.{
     Info,
     RequestPasswordResetPreparation,
-    ResetTokenValidation,
-    Sender
+    ResetTokenValidation
   }
 
   alias Ash.{Resource, Type}
   alias AshAuthentication.PasswordAuthentication, as: PA
-
-  alias Spark.{Dsl.Transformer, Error.DslError}
+  alias AshAuthentication.Sender
+  alias Spark.Dsl.Transformer
 
   import AshAuthentication.Utils
+  import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
 
   @doc false
@@ -32,10 +32,11 @@ defmodule AshAuthentication.PasswordReset.Transformer do
           | {:warn, map(), String.t() | [String.t()]}
           | :halt
   def transform(dsl_state) do
-    with :ok <- validate_authentication_extension(dsl_state),
-         :ok <- validate_password_authentication_extension(dsl_state),
+    with :ok <- validate_extension(dsl_state, AshAuthentication),
+         :ok <- validate_extension(dsl_state, PA),
          :ok <- validate_token_generation_enabled(dsl_state),
-         :ok <- validate_sender(dsl_state),
+         {:ok, {sender, _opts}} <- Info.sender(dsl_state),
+         :ok <- validate_behaviour(sender, Sender),
          {:ok, request_action_name} <- Info.request_password_reset_action_name(dsl_state),
          {:ok, dsl_state} <-
            maybe_build_action(
@@ -83,60 +84,6 @@ defmodule AshAuthentication.PasswordReset.Transformer do
   @spec before?(module) :: boolean
   def before?(Resource.Transformers.DefaultAccept), do: true
   def before?(_), do: false
-
-  defp validate_authentication_extension(dsl_state) do
-    extensions = Transformer.get_persisted(dsl_state, :extensions, [])
-
-    if AshAuthentication in extensions,
-      do: :ok,
-      else:
-        {:error,
-         DslError.exception(
-           path: [:extensions],
-           message:
-             "The `AshAuthentication` extension must also be present on this resource in order to generate reset tokens."
-         )}
-  end
-
-  defp validate_password_authentication_extension(dsl_state) do
-    extensions = Transformer.get_persisted(dsl_state, :extensions, [])
-
-    if PA in extensions,
-      do: :ok,
-      else:
-        {:error,
-         DslError.exception(
-           path: [:extensions],
-           message:
-             "The `AshAuthentication.PasswordAuthentication` extension must also be present on this resource in order to be able to change the user's password."
-         )}
-  end
-
-  defp validate_token_generation_enabled(dsl_state) do
-    if AshAuthentication.Info.tokens_enabled?(dsl_state),
-      do: :ok,
-      else:
-        {:error,
-         DslError.exception(
-           path: [:tokens],
-           message: "Token generation must be enabled for password resets to work."
-         )}
-  end
-
-  defp validate_sender(dsl_state) do
-    with {:ok, {sender, _opts}} <- Info.sender(dsl_state),
-         true <- Spark.implements_behaviour?(sender, Sender) do
-      :ok
-    else
-      _ ->
-        {:error,
-         DslError.exception(
-           path: [:password_reset],
-           message:
-             "`sender` must be a module that implements the `AshAuthentication.PasswordReset.Sender` behaviour."
-         )}
-    end
-  end
 
   defp build_request_action(dsl_state, action_name) do
     with {:ok, identity_field} <- PA.Info.password_authentication_identity_field(dsl_state) do

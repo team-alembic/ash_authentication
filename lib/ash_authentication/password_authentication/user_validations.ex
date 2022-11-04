@@ -22,25 +22,6 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   import AshAuthentication.Validations.Attribute
 
   @doc """
-  Validates at the `AshAuthentication` extension is also present on the
-  resource.
-  """
-  @spec validate_authentication_extension(Dsl.t()) :: :ok | {:error, Exception.t()}
-  def validate_authentication_extension(dsl_state) do
-    extensions = Transformer.get_persisted(dsl_state, :extensions, [])
-
-    if AshAuthentication in extensions,
-      do: :ok,
-      else:
-        {:error,
-         DslError.exception(
-           path: [:extensions],
-           message:
-             "The `AshAuthentication` extension must also be present on this resource for password authentication to work."
-         )}
-  end
-
-  @doc """
   Validate that the configured hash provider implements the `HashProvider`
   behaviour.
   """

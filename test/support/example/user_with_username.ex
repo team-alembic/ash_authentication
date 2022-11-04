@@ -4,6 +4,7 @@ defmodule Example.UserWithUsername do
     data_layer: AshPostgres.DataLayer,
     extensions: [
       AshAuthentication,
+      AshAuthentication.Confirmation,
       AshAuthentication.PasswordAuthentication,
       AshAuthentication.PasswordReset,
       AshGraphql.Resource,
@@ -43,10 +44,23 @@ defmodule Example.UserWithUsername do
       get? true
       manual Example.CurrentUserRead
     end
+
+    update :update do
+      primary? true
+    end
   end
 
   code_interface do
     define_for(Example)
+  end
+
+  confirmation do
+    monitor_fields([:username])
+    inhibit_updates?(true)
+
+    sender(fn user, token ->
+      Logger.debug("Confirmation request for user #{user.username}, token #{inspect(token)}")
+    end)
   end
 
   graphql do
@@ -96,7 +110,7 @@ defmodule Example.UserWithUsername do
   end
 
   identities do
-    identity(:username, [:username])
+    identity(:username, [:username], eager_check_with: Example)
   end
 
   tokens do

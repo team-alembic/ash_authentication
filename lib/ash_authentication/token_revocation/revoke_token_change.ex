@@ -5,6 +5,7 @@ defmodule AshAuthentication.TokenRevocation.RevokeTokenChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Error.Changes.InvalidArgument, Resource.Change}
+  alias AshAuthentication.Jwt
 
   @doc false
   @impl true
@@ -14,7 +15,7 @@ defmodule AshAuthentication.TokenRevocation.RevokeTokenChange do
     |> Changeset.before_action(fn changeset ->
       changeset
       |> Changeset.get_argument(:token)
-      |> Joken.peek_claims()
+      |> Jwt.peek()
       |> case do
         {:ok, %{"jti" => jti, "exp" => exp}} ->
           expires_at =
@@ -23,6 +24,9 @@ defmodule AshAuthentication.TokenRevocation.RevokeTokenChange do
 
           changeset
           |> Changeset.change_attributes(jti: jti, expires_at: expires_at)
+
+        {:ok, _} ->
+          {:error, "Invalid token"}
 
         {:error, reason} ->
           {:error, InvalidArgument.exception(field: :token, message: to_string(reason))}
