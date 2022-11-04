@@ -193,6 +193,8 @@ defmodule AshAuthentication.InfoGenerator do
     {:|, [], Enum.map(choices, &spec_for_type/1)}
   end
 
+  defp spec_for_type({:list, subtype}), do: [spec_for_type(subtype)]
+
   defp spec_for_type(:string),
     do: {{:., [], [{:__aliases__, [alias: false], [:String]}, :t]}, [], []}
 

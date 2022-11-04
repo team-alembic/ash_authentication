@@ -11,6 +11,10 @@ defmodule Example.TokenRevocation do
 
   actions do
     destroy :expire
+
+    update :update do
+      primary? true
+    end
   end
 
   postgres do

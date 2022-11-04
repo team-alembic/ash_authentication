@@ -1,10 +1,10 @@
-defmodule AshAuthentication.PasswordReset.SenderFunction do
+defmodule AshAuthentication.SenderFunction do
   @moduledoc """
-  Implements `AshAuthentication.PasswordReset.Sender` for functions that are
-  provided to the DSL instead of modules.
+  Implements `AshAuthentication.Sender` for functions that are provided to the
+  DSL instead of modules.
   """
 
-  use AshAuthentication.PasswordReset.Sender
+  use AshAuthentication.Sender
   alias Ash.Resource
 
   @doc false

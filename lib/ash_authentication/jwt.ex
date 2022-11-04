@@ -50,7 +50,7 @@ defmodule AshAuthentication.Jwt do
   "claims" are the decoded contents of a JWT.  A map of (short) string keys to
   string values.
   """
-  @type claims :: %{required(String.t()) => String.t()}
+  @type claims :: %{required(String.t()) => String.t() | number | boolean | claims}
 
   @doc "The default signing algorithm"
   @spec default_algorithm :: String.t()
@@ -89,6 +89,12 @@ defmodule AshAuthentication.Jwt do
 
     Joken.generate_and_sign(default_claims, extra_claims, signer)
   end
+
+  @doc """
+  Given a token, read it's claims without validating.
+  """
+  @spec peek(token) :: {:ok, claims} | {:error, any}
+  def peek(token), do: Joken.peek_claims(token)
 
   @doc """
   Given a token, verify it's signature and validate it's claims.
@@ -138,7 +144,7 @@ defmodule AshAuthentication.Jwt do
   """
   @spec token_to_resource(token, module) :: {:ok, AshAuthentication.resource_config()} | :error
   def token_to_resource(token, otp_app) do
-    with {:ok, %{"sub" => subject}} <- Joken.peek_claims(token),
+    with {:ok, %{"sub" => subject}} <- peek(token),
          %URI{path: subject_name} <- URI.parse(subject) do
       config_for_subject_name(subject_name, otp_app)
     else

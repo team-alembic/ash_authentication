@@ -31,8 +31,8 @@ defmodule AshAuthentication.PasswordReset do
         ],
         sender: [
           type:
-            {:spark_function_behaviour, AshAuthentication.PasswordReset.Sender,
-             {AshAuthentication.PasswordReset.SenderFunction, 2}},
+            {:spark_function_behaviour, AshAuthentication.Sender,
+             {AshAuthentication.SenderFunction, 2}},
           doc: """
           How to send the password reset instructions to the user.
 
@@ -40,7 +40,7 @@ defmodule AshAuthentication.PasswordReset do
 
           Accepts a module, module and opts, or a function that takes a record, reset token and options.
 
-          See `AshAuthentication.PasswordReset.Sender` for more information.
+          See `AshAuthentication.Sender` for more information.
           """,
           required: true
         ]
@@ -59,10 +59,11 @@ defmodule AshAuthentication.PasswordReset do
 
   ## Senders
 
-  You can set the DSL's `sender` key to be either a two-arity anonymous function
-  or a module which implements the `AshAuthentication.PasswordReset.Sender`
+  You can set the DSL's `sender` key to be either a three-arity anonymous
+  function or a module which implements the `AshAuthentication.Sender`
   behaviour.  This callback can be used to send password reset instructions to
-  the user via the system of your choice.
+  the user via the system of your choice. See `AshAuthentication.Sender` for
+  more information.
 
   ## Usage
 
@@ -130,13 +131,15 @@ defmodule AshAuthentication.PasswordReset do
       iex> request_password_reset(MyApp.Accounts.User, %{"email" => "marty@mcfly.me"})
       :ok
   """
+  @spec request_password_reset(Resource.t(), params) :: :ok | {:error, any}
+        when params: %{required(String.t()) => String.t()}
   def request_password_reset(resource, params) do
     with true <- enabled?(resource),
          {:ok, action} <- PasswordReset.Info.request_password_reset_action_name(resource),
-         {:ok, api} <- AshAuthentication.Info.authentication_api(resource) do
-      resource
-      |> Query.for_read(action, params)
-      |> api.read()
+         {:ok, api} <- AshAuthentication.Info.authentication_api(resource),
+         query <- Query.for_read(resource, action, params),
+         {:ok, _} <- api.read(query) do
+      :ok
     else
       {:error, reason} -> {:error, reason}
       _ -> {:error, "Password resets not supported by resource `#{inspect(resource)}`"}
@@ -191,6 +194,19 @@ defmodule AshAuthentication.PasswordReset do
     end
   end
 
+  @doc """
+  Handle the request phase.
+
+  Handles a HTTP request for a password reset.
+  """
+  @impl true
   defdelegate request_plug(conn, any), to: PasswordReset.Plug, as: :request
+
+  @doc """
+  Handle the callback phase.
+
+  Handles a HTTP password change request.
+  """
+  @impl true
   defdelegate callback_plug(conn, any), to: PasswordReset.Plug, as: :callback
 end

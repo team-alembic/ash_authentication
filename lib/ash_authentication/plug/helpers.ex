@@ -172,7 +172,8 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec private_store(
           Conn.t(),
-          {:success, nil | Resource.record()} | {:failure, nil | Changeset.t() | Error.t()}
+          {:success, nil | Resource.record()}
+          | {:failure, nil | String.t() | Changeset.t() | Error.t()}
         ) ::
           Conn.t()
 
