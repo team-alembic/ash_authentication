@@ -13,8 +13,7 @@ defmodule AshAuthentication.Confirmation.Transformer do
   }
 
   alias Ash.{Resource, Type}
-  alias AshAuthentication.PasswordAuthentication.GenerateTokenChange
-  alias AshAuthentication.Sender
+  alias AshAuthentication.{GenerateTokenChange, Sender}
   alias Spark.{Dsl.Transformer, Error.DslError}
 
   import AshAuthentication.Utils

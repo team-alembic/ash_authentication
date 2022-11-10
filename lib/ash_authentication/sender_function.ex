@@ -9,20 +9,20 @@ defmodule AshAuthentication.SenderFunction do
 
   @doc false
   @impl true
-  @spec send(Resource.record(), String.t(), list()) :: :ok
-  def send(user, token, fun: {m, f, a}) do
-    apply(m, f, [user, token | a])
-    :ok
-  end
+  @spec send(Resource.record(), String.t(), keyword) :: :ok
+  def send(user, token, opts) do
+    case Keyword.pop(opts, :fun) do
+      {fun, _opts} when is_function(fun, 2) ->
+        fun.(user, token)
 
-  def send(user, token, fun: fun) when is_function(fun, 2) do
-    fun.(user, token)
-    :ok
-  end
+      {fun, opts} when is_function(fun, 3) ->
+        fun.(user, token, opts)
 
-  def send(user, token, [fun: fun] = opts) when is_function(fun, 3) do
-    opts = Keyword.delete(opts, :fun)
-    fun.(user, token, opts)
-    :ok
+      {{m, f, a}, _opts} ->
+        apply(m, f, [user, token | a])
+
+      {nil, opts} ->
+        raise "Invalid options given to `send/3` callback: `#{inspect(opts)}`."
+    end
   end
 end

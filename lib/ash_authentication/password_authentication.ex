@@ -73,10 +73,10 @@ defmodule AshAuthentication.PasswordAuthentication do
   This extension provides an authentication mechanism for authenticating with a
   username (or other unique identifier) and password.
 
-  ## Usage do
+  ## Usage
 
   ```elixir
-  defmodule MyApp.Accounts.Users do
+  defmodule MyApp.Accounts.User do
     use Ash.Resource, extensions: [AshAuthentication.PasswordAuthentication]
 
     attributes do

@@ -178,8 +178,16 @@ defmodule AshAuthentication.InfoGenerator do
 
   defp spec_for_type({:behaviour, _module}), do: {:module, [], Elixir}
 
-  defp spec_for_type({:spark_function_behaviour, behaviour, _}),
-    do: {spec_for_type({:behaviour, behaviour}), {:list, [], Elixir}}
+  defp spec_for_type({:spark_function_behaviour, behaviour, {_, arity}}),
+    do:
+      spec_for_type(
+        {:or,
+         [
+           {:behaviour, behaviour},
+           {{:behaviour, behaviour}, {:keyword, [], Elixir}},
+           {:fun, arity}
+         ]}
+      )
 
   defp spec_for_type({:fun, arity}) do
     args =
@@ -189,14 +197,52 @@ defmodule AshAuthentication.InfoGenerator do
     [{:->, [], [args, {:any, [], Elixir}]}]
   end
 
-  defp spec_for_type({:or, choices}) do
-    {:|, [], Enum.map(choices, &spec_for_type/1)}
-  end
+  defp spec_for_type({:or, [type]}), do: spec_for_type(type)
+
+  defp spec_for_type({:or, [next | remaining]}),
+    do: {:|, [], [spec_for_type(next), spec_for_type({:or, remaining})]}
+
+  defp spec_for_type({:in, %Range{first: first, last: last}})
+       when is_integer(first) and is_integer(last),
+       do: {:.., [], [first, last]}
+
+  defp spec_for_type({:in, %Range{first: first, last: last}}),
+    do:
+      {{:., [], [{:__aliases__, [], [:Range]}, :t]}, [],
+       [spec_for_type(first), spec_for_type(last)]}
+
+  defp spec_for_type({:in, [type]}), do: spec_for_type(type)
+
+  defp spec_for_type({:in, [next | remaining]}),
+    do: {:|, [], [spec_for_type(next), spec_for_type({:in, remaining})]}
 
   defp spec_for_type({:list, subtype}), do: [spec_for_type(subtype)]
+
+  defp spec_for_type({:custom, _, _, _}), do: spec_for_type(:any)
+
+  defp spec_for_type({:tuple, subtypes}) do
+    subtypes
+    |> Enum.map(&spec_for_type/1)
+    |> List.to_tuple()
+  end
 
   defp spec_for_type(:string),
     do: {{:., [], [{:__aliases__, [alias: false], [:String]}, :t]}, [], []}
 
-  defp spec_for_type(terminal), do: {terminal, [], Elixir}
+  defp spec_for_type(terminal)
+       when terminal in ~w[any map atom string boolean integer non_neg_integer pos_integer float timeout pid reference mfa]a,
+       do: {terminal, [], Elixir}
+
+  defp spec_for_type(atom) when is_atom(atom), do: atom
+  defp spec_for_type(number) when is_number(number), do: number
+  defp spec_for_type(string) when is_binary(string), do: spec_for_type(:string)
+
+  defp spec_for_type({mod, arg}) when is_atom(mod) and is_list(arg),
+    do: {{:module, [], Elixir}, {:list, [], Elixir}}
+
+  defp spec_for_type(tuple) when is_tuple(tuple),
+    do: tuple |> Tuple.to_list() |> Enum.map(&spec_for_type/1) |> List.to_tuple()
+
+  defp spec_for_type([]), do: []
+  defp spec_for_type([type]), do: [spec_for_type(type)]
 end

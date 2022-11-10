@@ -88,6 +88,22 @@ defmodule AshAuthentication.Validations.Action do
   end
 
   @doc """
+  Validate the presence of an argument on an action.
+  """
+  @spec validate_action_has_argument(Actions.action(), atom) :: :ok | {:error, Exception.t()}
+  def validate_action_has_argument(action, argument_name) do
+    if Enum.any?(action.arguments, &(&1.name == argument_name)),
+      do: :ok,
+      else:
+        {:error,
+         DslError.exception(
+           path: [:actions, :argument],
+           message:
+             "Expected the action `#{inspect(action.name)}` to have an argument named `#{inspect(argument_name)}`."
+         )}
+  end
+
+  @doc """
   Validate the presence of the named change module on an action.
   """
   @spec validate_action_has_change(Actions.action(), module) ::

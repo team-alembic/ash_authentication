@@ -1,4 +1,4 @@
-defmodule AshAuthentication.PasswordAuthentication.GenerateTokenChange do
+defmodule AshAuthentication.GenerateTokenChange do
   @moduledoc """
   Given a successful registration or sign-in, generate a token.
   """

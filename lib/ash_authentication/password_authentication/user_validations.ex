@@ -6,10 +6,9 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
   for more information.
   """
   alias Ash.Resource.Actions
-  alias AshAuthentication.HashProvider
+  alias AshAuthentication.{GenerateTokenChange, HashProvider}
 
   alias AshAuthentication.PasswordAuthentication.{
-    GenerateTokenChange,
     HashPasswordChange,
     Info,
     PasswordConfirmationValidation,
@@ -158,7 +157,7 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
          {:ok, attribute} <- find_attribute(dsl_state, identity_field),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
          :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
-         :ok <- validate_attribute_unique_constraint(dsl_state, identity_field, resource) do
+         :ok <- validate_attribute_unique_constraint(dsl_state, [identity_field], resource) do
       {:ok, dsl_state}
     end
   end
@@ -172,7 +171,6 @@ defmodule AshAuthentication.PasswordAuthentication.UserValidations do
          {:ok, hashed_password_field} <- identity_option(dsl_state, :hashed_password_field),
          {:ok, attribute} <- find_attribute(dsl_state, hashed_password_field),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
          :ok <- validate_attribute_option(attribute, resource, :sensitive?, [true]) do
       {:ok, dsl_state}
     end

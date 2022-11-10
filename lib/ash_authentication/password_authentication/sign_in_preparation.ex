@@ -10,7 +10,7 @@ defmodule AshAuthentication.PasswordAuthentication.SignInPreparation do
 
   Secondly, it validates the supplied password using the configured hash
   provider, and if correct allows the record to be returned, otherwise returns
-  an empty result.
+  an authentication failed error.
   """
   use Ash.Resource.Preparation
   alias AshAuthentication.{Errors.AuthenticationFailed, Jwt, PasswordAuthentication.Info}

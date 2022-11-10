@@ -21,7 +21,7 @@ defmodule AshAuthentication.Validations do
       do: :ok
 
   def validate_field_in_values(map, field, [value]) when is_map(map) and is_map_key(map, field),
-    do: {:error, "Expected `#{inspect(field)}` to contain `#{inspect(value)}`"}
+    do: {:error, "Expected `#{inspect(field)}` to equal `#{inspect(value)}`"}
 
   def validate_field_in_values(map, field, values)
       when is_map(map) and is_list(values) and is_map_key(map, field) do
@@ -38,7 +38,7 @@ defmodule AshAuthentication.Validations do
   end
 
   def validate_field_in_values(map, field, [value]) when is_map(map),
-    do: {:error, "Expected `#{inspect(field)}` to be present and contain `#{inspect(value)}`"}
+    do: {:error, "Expected `#{inspect(field)}` to be present and equal `#{inspect(value)}`"}
 
   def validate_field_in_values(map, field, values) when is_map(map) and is_list(values) do
     values =
@@ -47,6 +47,29 @@ defmodule AshAuthentication.Validations do
       |> to_sentence(final: "or")
 
     {:error, "Expected `#{inspect(field)}` to be present and contain one of #{values}"}
+  end
+
+  @doc """
+  Given a map, validate that the provided field predicate returns true for the value.
+  """
+  @spec validate_field_with(map, field, (any -> boolean), message) :: :ok | {:error, message}
+        when field: any, message: any
+  def validate_field_with(map, field, predicate, message \\ nil) do
+    okay? =
+      map
+      |> Map.get(field)
+      |> predicate.()
+
+    cond do
+      okay? ->
+        :ok
+
+      message ->
+        {:error, message}
+
+      true ->
+        {:error, "Field `#{inspect(field)}` in map `#{inspect(map)}` failed validation."}
+    end
   end
 
   @doc """

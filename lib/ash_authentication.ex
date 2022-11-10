@@ -9,7 +9,8 @@ defmodule AshAuthentication do
         subject_name: [
           type: :atom,
           doc: """
-          The subject name is used in generating token claims and in generating authentication routes.
+          The subject name is used in generating token claims and in generating
+          authentication routes.
 
           This needs to be unique system-wide and if not set will be inferred
           from the resource name (ie `MyApp.Accounts.User` will have a subject
@@ -19,7 +20,8 @@ defmodule AshAuthentication do
         api: [
           type: {:behaviour, Ash.Api},
           doc: """
-          The name of the Ash API to use to access this resource when registering/authenticating.
+          The name of the Ash API to use to access this resource when
+          registering/authenticating.
           """,
           required: true
         ],
@@ -53,7 +55,8 @@ defmodule AshAuthentication do
 
           Available signing algorithms are;
           #{to_sentence(Joken.Signer.algorithms(), final: "and")}.
-          """
+          """,
+          default: hd(Joken.Signer.algorithms())
         ],
         token_lifetime: [
           type: :pos_integer,
@@ -134,7 +137,6 @@ defmodule AshAuthentication do
   * OAuth 1.0
   * OAuth 2.0
   * OpenID Connect
-
 
   ## DSL Documentation
 
