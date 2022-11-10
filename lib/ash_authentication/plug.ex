@@ -14,7 +14,7 @@ defmodule AshAuthentication.Plug do
       |> send_resp(200, "Welcome back #{user.name}")
     end
 
-    def handle_failure(conn) do
+    def handle_failure(conn, reason) do
       conn
       |> send_resp(401, "Better luck next time")
     end
