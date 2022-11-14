@@ -93,3 +93,6 @@ branch](https://team-alembic.github.io/ash_authentication).
   * Feel free to ask any questions on out [GitHub discussions
     page](https://github.com/team-alembic/ash_authentication/discussions).
 
+## Licence
+
+MIT
