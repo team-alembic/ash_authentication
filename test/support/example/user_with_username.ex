@@ -113,7 +113,7 @@ defmodule Example.UserWithUsername do
     client_id(fn _, _, _ -> {:ok, "made up"} end)
     redirect_uri(fn _, _, _ -> {:ok, "http://localhost:4000/auth"} end)
     client_secret(fn _, _, _ -> {:ok, "also made up"} end)
-    site("https://example.com")
+    site(fn _, _, _ -> {:ok, "https://example.com"} end)
     authorization_params(scope: "openid profile email")
     auth_method(:client_secret_post)
     identity_resource(Example.UserIdentity)

@@ -23,7 +23,7 @@ defmodule AshAuthentication.OAuth2Authentication.Info do
            AshAuthentication.Info.tokens_signing_algorithm(resource),
          {:ok, authorization_params} <- authorization_params(resource),
          {:ok, redirect_uri} <- fetch_secret(resource, :redirect_uri),
-         {:ok, site} <- site(resource),
+         {:ok, site} <- fetch_secret(resource, :site),
          {:ok, authorize_path} <- authorize_path(resource),
          {:ok, token_path} <- token_path(resource),
          {:ok, user_path} <- user_path(resource) do
