@@ -5,6 +5,13 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.0.0](https://github.com/team-alembic/ash_authentication/compare/v0.6.1...v1.0.0) (2022-11-15)
+### Breaking Changes:
+
+* OAuth2Authentication: Make the `site` option runtime configurable. (#31)
+
+
+
 ## [v0.6.1](https://github.com/team-alembic/ash_authentication/compare/v0.6.0...v0.6.1) (2022-11-15)
 
 
