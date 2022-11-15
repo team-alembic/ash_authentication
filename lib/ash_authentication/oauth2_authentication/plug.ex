@@ -4,7 +4,6 @@ defmodule AshAuthentication.OAuth2Authentication.Plug do
   """
 
   import AshAuthentication.Plug.Helpers, only: [private_store: 2]
-  alias Ash.Changeset
   alias AshAuthentication.Errors.AuthenticationFailed
   alias AshAuthentication.OAuth2Authentication, as: OAuth2
   alias Assent.Strategy.OAuth2, as: Strategy
@@ -67,11 +66,8 @@ defmodule AshAuthentication.OAuth2Authentication.Plug do
          {:ok, user} <- register_or_sign_in_user(config, %{user_info: user, oauth_tokens: token}) do
       private_store(conn, {:success, user})
     else
-      {:error, %Changeset{} = changeset} ->
-        private_store(conn, {:failure, changeset})
-
-      _ ->
-        conn
+      {:error, reason} -> private_store(conn, {:failure, reason})
+      _ -> conn
     end
   end
 

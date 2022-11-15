@@ -3,7 +3,7 @@ defmodule AshAuthentication.Plug.Helpers do
   Authentication helpers for use in your router, etc.
   """
 
-  alias Ash.{Changeset, Error, PlugHelpers, Resource}
+  alias Ash.{PlugHelpers, Resource}
   alias AshAuthentication.{Info, Jwt, TokenRevocation}
   alias Plug.Conn
 
@@ -170,12 +170,7 @@ defmodule AshAuthentication.Plug.Helpers do
   This is used by authentication plug handlers to store their result for passing
   back to the dispatcher.
   """
-  @spec private_store(
-          Conn.t(),
-          {:success, nil | Resource.record()}
-          | {:failure, nil | String.t() | Changeset.t() | Error.t()}
-        ) ::
-          Conn.t()
+  @spec private_store(Conn.t(), {:success, nil | Resource.record()} | {:failure, any}) :: Conn.t()
 
   def private_store(conn, {:success, nil}),
     do: Conn.put_private(conn, :authentication_result, {:success, nil})
@@ -184,9 +179,8 @@ defmodule AshAuthentication.Plug.Helpers do
       when is_struct(record, conn.private.authenticator.resource),
       do: Conn.put_private(conn, :authentication_result, {:success, record})
 
-  def private_store(conn, {:failure, reason})
-      when is_nil(reason) or is_binary(reason) or is_map(reason),
-      do: Conn.put_private(conn, :authentication_result, {:failure, reason})
+  def private_store(conn, {:failure, reason}),
+    do: Conn.put_private(conn, :authentication_result, {:failure, reason})
 
   # Dyanamically generated atoms are generally frowned upon, but in this case
   # the `subject_name` is a statically configured atom, so should be fine.
