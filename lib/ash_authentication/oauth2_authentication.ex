@@ -31,8 +31,18 @@ defmodule AshAuthentication.OAuth2Authentication do
           required: true
         ],
         site: [
-          type: :string,
-          doc: "The base URL of the OAuth2 server.",
+          type:
+            {:spark_function_behaviour, AshAuthentication.Secret,
+             {AshAuthentication.SecretFunction, 3}},
+          doc: """
+          The base URL of the OAuth2 server.
+
+          Takes either a 2..3 arity anonymous function, or a module which
+          implements the `AshAuthentication.Secret` behaviour.
+
+          See the module documentation for `AshAuthentication.Secret` for more
+          information.
+          """,
           required: true
         ],
         auth_method: [
@@ -243,10 +253,12 @@ defmodule AshAuthentication.OAuth2Authentication do
         Application.fetch_env(:my_app, :oauth2_client_secret)
       end
 
-      site "https://auth.example.com"
+      site fn _, _, _ ->
+        {:ok, "https://auth.example.com"}
+      end)
 
       redirect_uri fn _, _, _ ->
-        "https://localhost:4000/auth"
+        {:ok, "https://localhost:4000/auth"}
       end
     end
 
