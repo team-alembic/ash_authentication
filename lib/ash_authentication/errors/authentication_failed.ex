@@ -5,6 +5,8 @@ defmodule AshAuthentication.Errors.AuthenticationFailed do
   use Ash.Error.Exception
   def_ash_error([], class: :forbidden)
 
+  @type t :: Exception.t()
+
   defimpl Ash.ErrorKind do
     @moduledoc false
     def id(_), do: Ecto.UUID.generate()

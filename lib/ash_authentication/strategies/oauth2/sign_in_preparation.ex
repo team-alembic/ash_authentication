@@ -1,0 +1,70 @@
+defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
+  @moduledoc """
+  Prepare a query for sign in
+
+  Performs three main tasks:
+
+    1. Ensures that there is only one matching user record returned, otherwise
+       returns an authentication failed error.
+    2. Generates an access token if token generation is enabled.
+    3. Updates the user identity resource, if one is enabled.
+  """
+  use Ash.Resource.Preparation
+  alias Ash.{Error.Framework.AssumptionFailed, Query, Resource.Preparation}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Jwt, UserIdentity}
+  require Ash.Query
+  import AshAuthentication.Utils, only: [is_falsy: 1]
+
+  @doc false
+  @impl true
+  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  def prepare(query, _opts, _context) do
+    case Map.fetch(query.context, :strategy) do
+      :error ->
+        {:error,
+         AssumptionFailed.exception(message: "Strategy is missing from the changeset context.")}
+
+      {:ok, strategy} ->
+        query
+        |> Query.after_action(fn
+          query, [user] ->
+            with {:ok, user} <- maybe_update_identity(user, query, strategy) do
+              {:ok, [maybe_generate_token(user)]}
+            end
+
+          _, _ ->
+            {:error, AuthenticationFailed.exception(query: query)}
+        end)
+    end
+  end
+
+  defp maybe_update_identity(user, _query, strategy) when is_falsy(strategy.identity_resource),
+    do: user
+
+  defp maybe_update_identity(user, query, strategy) do
+    strategy.identity_resource
+    |> UserIdentity.Actions.upsert(%{
+      user_info: Query.get_argument(query, :user_info),
+      oauth_tokens: Query.get_argument(query, :oauth_tokens),
+      strategy: strategy.name,
+      user_id: user.id
+    })
+    |> case do
+      {:ok, _identity} ->
+        user
+        |> query.api.load(strategy.identity_relationship_name)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp maybe_generate_token(user) do
+    if AshAuthentication.Info.authentication_tokens_enabled?(user.__struct__) do
+      {:ok, token, _claims} = Jwt.token_for_user(user)
+      %{user | __metadata__: Map.put(user.__metadata__, :token, token)}
+    else
+      user
+    end
+  end
+end

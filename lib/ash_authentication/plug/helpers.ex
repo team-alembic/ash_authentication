@@ -13,8 +13,8 @@ defmodule AshAuthentication.Plug.Helpers do
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
 
   def store_in_session(conn, user) when is_struct(user) do
-    subject_name = AshAuthentication.Info.authentication_subject_name!(user.__struct__)
-    subject = AshAuthentication.resource_to_subject(user)
+    subject_name = Info.authentication_subject_name!(user.__struct__)
+    subject = AshAuthentication.user_to_subject(user)
 
     Conn.put_session(conn, subject_name, subject)
   end
@@ -26,19 +26,20 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec load_subjects([AshAuthentication.subject()], module) :: map
   def load_subjects(subjects, otp_app) when is_list(subjects) do
-    configurations =
+    resources =
       otp_app
       |> AshAuthentication.authenticated_resources()
-      |> Stream.map(&{to_string(&1.subject_name), &1})
+      |> Stream.map(&{to_string(Info.authentication_subject_name!(&1)), &1})
       |> Map.new()
 
     subjects
     |> Enum.reduce(%{}, fn subject, result ->
       subject = URI.parse(subject)
 
-      with {:ok, config} <- Map.fetch(configurations, subject.path),
-           {:ok, user} <- AshAuthentication.subject_to_resource(subject, config) do
-        current_subject_name = current_subject_name(config.subject_name)
+      with {:ok, resource} <- Map.fetch(resources, subject.path),
+           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource),
+           {:ok, subject_name} <- Info.authentication_subject_name(resource) do
+        current_subject_name = current_subject_name(subject_name)
 
         Map.put(result, current_subject_name, user)
       else
@@ -60,11 +61,12 @@ defmodule AshAuthentication.Plug.Helpers do
   def retrieve_from_session(conn, otp_app) do
     otp_app
     |> AshAuthentication.authenticated_resources()
-    |> Enum.reduce(conn, fn config, conn ->
-      current_subject_name = current_subject_name(config.subject_name)
+    |> Stream.map(&{&1, Info.authentication_options(&1)})
+    |> Enum.reduce(conn, fn {resource, options}, conn ->
+      current_subject_name = current_subject_name(options.subject_name)
 
-      with subject when is_binary(subject) <- Conn.get_session(conn, config.subject_name),
-           {:ok, user} <- AshAuthentication.subject_to_resource(subject, config) do
+      with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
+           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
         Conn.assign(conn, current_subject_name, user)
       else
         _ ->
@@ -89,9 +91,10 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, %{"sub" => subject}, config} <- Jwt.verify(token, otp_app),
-           {:ok, user} <- AshAuthentication.subject_to_resource(subject, config),
-           current_subject_name <- current_subject_name(config.subject_name) do
+      with {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, otp_app),
+           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource),
+           {:ok, subject_name} <- Info.authentication_subject_name(resource),
+           current_subject_name <- current_subject_name(subject_name) do
         conn
         |> Conn.assign(current_subject_name, user)
       else
@@ -112,8 +115,8 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, config} <- Jwt.token_to_resource(token, otp_app),
-           {:ok, revocation_resource} <- Info.tokens_revocation_resource(config.resource),
+      with {:ok, resource} <- Jwt.token_to_resource(token, otp_app),
+           {:ok, revocation_resource} <- Info.authentication_tokens_revocation_resource(resource),
            :ok <- TokenRevocation.revoke(revocation_resource, token) do
         conn
       else
@@ -170,17 +173,28 @@ defmodule AshAuthentication.Plug.Helpers do
   This is used by authentication plug handlers to store their result for passing
   back to the dispatcher.
   """
-  @spec private_store(Conn.t(), {:success, nil | Resource.record()} | {:failure, any}) :: Conn.t()
+  @spec store_authentication_result(
+          Conn.t(),
+          :ok | {:ok, Resource.record()} | :error | {:error, any}
+        ) ::
+          Conn.t()
 
-  def private_store(conn, {:success, nil}),
-    do: Conn.put_private(conn, :authentication_result, {:success, nil})
+  def store_authentication_result(conn, :ok),
+    do: Conn.put_private(conn, :authentication_result, {:ok, nil})
 
-  def private_store(conn, {:success, record})
-      when is_struct(record, conn.private.authenticator.resource),
-      do: Conn.put_private(conn, :authentication_result, {:success, record})
+  def store_authentication_result(conn, {:ok, record}),
+    do: Conn.put_private(conn, :authentication_result, {:ok, record})
 
-  def private_store(conn, {:failure, reason}),
-    do: Conn.put_private(conn, :authentication_result, {:failure, reason})
+  def store_authentication_result(conn, :error),
+    do: Conn.put_private(conn, :authentication_result, :error)
+
+  def store_authentication_result(conn, {:error, reason}),
+    do: Conn.put_private(conn, :authentication_result, {:error, reason})
+
+  def get_authentication_result(%{private: %{authentication_result: result}} = conn),
+    do: {conn, result}
+
+  def get_authentication_result(conn), do: conn
 
   # Dyanamically generated atoms are generally frowned upon, but in this case
   # the `subject_name` is a statically configured atom, so should be fine.

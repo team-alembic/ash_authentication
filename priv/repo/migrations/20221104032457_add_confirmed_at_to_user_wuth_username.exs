@@ -8,13 +8,13 @@ defmodule Example.Repo.Migrations.AddConfirmedAtToUserWuthUsername do
   use Ecto.Migration
 
   def up do
-    alter table(:user_with_username) do
+    alter table(:user) do
       add :confirmed_at, :utc_datetime_usec
     end
   end
 
   def down do
-    alter table(:user_with_username) do
+    alter table(:user) do
       remove :confirmed_at
     end
   end

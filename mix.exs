@@ -30,8 +30,13 @@ defmodule AshAuthentication.MixProject do
         groups_for_modules: [
           Extensions: [
             AshAuthentication,
-            AshAuthentication.PasswordAuthentication,
-            AshAuthentication.TokenRevocation
+            AshAuthentication.TokenRevocation,
+            AshAuthentication.UserIdentity
+          ],
+          Strategies: [
+            AshAuthentication.Strategy,
+            AshAuthentication.Strategy.Password,
+            AshAuthentication.Strategy.OAuth2
           ],
           Cryptography: [
             AshAuthentication.HashProvider,
@@ -39,9 +44,7 @@ defmodule AshAuthentication.MixProject do
             AshAuthentication.Jwt,
             AshAuthentication.Jwt.Config
           ],
-          "Password Authentication": ~r/^AshAuthentication\.PasswordAuthentication.*/,
           Plug: ~r/^AshAuthentication\.Plug.*/,
-          "Token Revocation": ~r/^AshAuthentication\.TokenRevocation.*/,
           Internals: ~r/^AshAuthentication.*/
         ]
       ]
@@ -51,7 +54,8 @@ defmodule AshAuthentication.MixProject do
   def package do
     [
       maintainers: [
-        "James Harton <james.harton@alembic.com.au>"
+        "James Harton <james.harton@alembic.com.au>",
+        "Zach Daniel <zach@zachdaniel.dev>"
       ],
       licenses: ["MIT"],
       links: %{
@@ -78,6 +82,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:ash, "~> 2.4"},
+      {:spark, "~> 0.2.12"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
@@ -86,9 +91,8 @@ defmodule AshAuthentication.MixProject do
       {:castore, "~> 0.1"},
       {:bcrypt_elixir, "~> 3.0"},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
-      # These two can be changed back to hex once the next release goes out.
-      {:ash_graphql, github: "ash-project/ash_graphql", only: [:dev, :test]},
-      {:ash_json_api, github: "ash-project/ash_json_api", only: [:dev, :test]},
+      {:ash_graphql, "~> 0.21", only: [:dev, :test]},
+      {:ash_json_api, "~> 0.30", only: [:dev, :test]},
       {:ash_postgres, "~> 1.1", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},

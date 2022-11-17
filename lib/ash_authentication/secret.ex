@@ -10,16 +10,22 @@ defmodule AshAuthentication.Secret do
   defmodule MyApp.GetSecret do
     use AshAuthentication.Secret
 
-    def secret_for([:oauth2_authentication, :client_id], MyApp.User, _opts), do: Application.fetch_env(:my_app, :oauth_client_id)
-    def secret_for([:oauth2_authentication, :client_secret], MyApp.User, _opts), do: Application.fetch_env(:my_app, :oauth_client_secret)
+    def secret_for([:authentication, :strategies, :oauth2, :client_id], MyApp.User, _opts), do: Application.fetch_env(:my_app, :oauth_client_id)
+    def secret_for([:authentication, :strategies, :oauth2, :client_secret], MyApp.User, _opts), do: Application.fetch_env(:my_app, :oauth_client_secret)
   end
 
-  defmodule MyApp.User do
-    use Ash.Resource, extensions: [AshAuthentication, AshAuthentication.OAuth2Authentication]
+  defmodule MyApp.Accounts.User do
+    use Ash.Resource, extensions: [AshAuthentication]
 
-    oauth2_authentication do
-      client_id MyApp.GetSecret
-      client_secret MyApp.GetSecret
+    authentication do
+      api MyApp.Accounts
+
+      strategies do
+        oauth2 do
+          client_id MyApp.GetSecret
+          client_secret MyApp.GetSecret
+        end
+      end
     end
   end
   ```
@@ -28,11 +34,17 @@ defmodule AshAuthentication.Secret do
 
   ```elixir
   defmodule MyApp.User do
-    use Ash.Resource, extensions: [AshAuthentication, AshAuthentication.OAuth2Authentication]
+     use Ash.Resource, extensions: [AshAuthentication]
 
-    oauth2_authentication do
-      client_id fn _secret, _resource, _opts ->
-        Application.fetch_env(:my_app, :oauth_client_id)
+    authentication do
+      api MyApp.Accounts
+
+      strategies do
+        oauth2 do
+          client_id fn _secret, _resource, _opts ->
+            Application.fetch_env(:my_app, :oauth_client_id)
+          end
+        end
       end
     end
   end
@@ -43,8 +55,7 @@ defmodule AshAuthentication.Secret do
   Because you may wish to reuse this module for a number of different providers
   and resources, the first argument passed to the callback is the "secret name",
   it contains the "path" to the option being set.  The path is made up of a list
-  containing the DSL section name (`oauth2_authentication` etc) as an atom and
-  the property name as an atom.
+  containing the DSL path to the secret.
   """
 
   alias Ash.Resource

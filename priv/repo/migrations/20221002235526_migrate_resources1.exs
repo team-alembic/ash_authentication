@@ -8,7 +8,7 @@ defmodule Example.Repo.Migrations.MigrateResources1 do
   use Ecto.Migration
 
   def up do
-    create table(:user_with_username, primary_key: false) do
+    create table(:user, primary_key: false) do
       add :id, :uuid, null: false, default: fragment("uuid_generate_v4()"), primary_key: true
       add :username, :citext, null: false
       add :hashed_password, :text, null: false
@@ -18,6 +18,6 @@ defmodule Example.Repo.Migrations.MigrateResources1 do
   end
 
   def down do
-    drop table(:user_with_username)
+    drop table(:user)
   end
 end

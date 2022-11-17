@@ -8,13 +8,13 @@ defmodule Example.Repo.Migrations.RemoveNonNullFromHashedPassword do
   use Ecto.Migration
 
   def up do
-    alter table(:user_with_username) do
+    alter table(:user) do
       modify :hashed_password, :text, null: true
     end
   end
 
   def down do
-    alter table(:user_with_username) do
+    alter table(:user) do
       modify :hashed_password, :text, null: false
     end
   end

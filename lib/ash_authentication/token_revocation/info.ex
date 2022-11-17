@@ -1,7 +1,7 @@
 defmodule AshAuthentication.TokenRevocation.Info do
   @moduledoc """
-  Generated configuration functions based on a resource's token DSL
-  configuration.
+  Introspection functions for the `AshAuthentication.TokenRevocation` Ash
+  extension.
   """
 
   use AshAuthentication.InfoGenerator,

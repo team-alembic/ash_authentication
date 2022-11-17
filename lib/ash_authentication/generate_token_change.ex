@@ -13,8 +13,8 @@ defmodule AshAuthentication.GenerateTokenChange do
   def change(changeset, _opts, _) do
     changeset
     |> Changeset.after_action(fn _changeset, result ->
-      if Info.tokens_enabled?(result.__struct__) do
-        {:ok, token, _claims} = Jwt.token_for_record(result)
+      if Info.authentication_tokens_enabled?(result.__struct__) do
+        {:ok, token, _claims} = Jwt.token_for_user(result)
         {:ok, %{result | __metadata__: Map.put(result.__metadata__, :token, token)}}
       else
         {:ok, result}

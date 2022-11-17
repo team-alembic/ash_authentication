@@ -1,7 +1,7 @@
 defmodule AshAuthentication.Plug.DefaultsTest do
   @moduledoc false
-  use AshAuthentication.DataCase, async: true
-  alias AshAuthentication.{Plug.Defaults, SessionPipeline}
+  use DataCase, async: true
+  alias AshAuthentication.{Plug.Defaults}
   import Plug.Test, only: [conn: 3]
 
   setup do
@@ -19,7 +19,7 @@ defmodule AshAuthentication.Plug.DefaultsTest do
 
       conn =
         conn
-        |> Defaults.handle_success(user, user.__metadata__.token)
+        |> Defaults.handle_success({nil, nil}, user, user.__metadata__.token)
 
       assert conn.status == 200
       assert conn.resp_body =~ ~r/access granted/i
@@ -30,7 +30,7 @@ defmodule AshAuthentication.Plug.DefaultsTest do
     test "it returns 401 and a basic message", %{conn: conn} do
       conn =
         conn
-        |> Defaults.handle_failure(:arbitrary_reason)
+        |> Defaults.handle_failure({nil, nil}, :arbitrary_reason)
 
       assert conn.status == 401
       assert conn.resp_body =~ ~r/access denied/i

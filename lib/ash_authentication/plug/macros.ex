@@ -1,6 +1,6 @@
 defmodule AshAuthentication.Plug.Macros do
   @moduledoc """
-  Generators used within `AshAuthentication.Plug.__using_/1`.
+  Generators used within `use AshAuthentication.Plug`.
   """
 
   alias Ash.Api

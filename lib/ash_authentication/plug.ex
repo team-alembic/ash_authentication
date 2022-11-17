@@ -8,13 +8,13 @@ defmodule AshAuthentication.Plug do
   defmodule MyAppWeb.AuthPlug do
     use AshAuthentication.Plug, otp_app: :my_app
 
-    def handle_success(conn, user, _token) do
+    def handle_success(conn, _activity, user, _token) do
       conn
       |> store_in_session(user)
       |> send_resp(200, "Welcome back #{user.name}")
     end
 
-    def handle_failure(conn, reason) do
+    def handle_failure(conn, _activity, reason) do
       conn
       |> send_resp(401, "Better luck next time")
     end
@@ -69,21 +69,17 @@ defmodule AshAuthentication.Plug do
   do useful things like session and query param fetching.
   """
 
-  alias Ash.{Changeset, Error, Resource}
+  alias Ash.Resource
   alias AshAuthentication.Plug.{Defaults, Helpers, Macros}
   alias Plug.Conn
   require Macros
 
-  @type authenticator_config :: %{
-          api: module,
-          provider: module,
-          resource: module,
-          subject: atom
-        }
+  @type activity :: {atom, atom}
+  @type token :: String.t()
 
   @doc """
   When authentication has been succesful, this callback will be called with the
-  conn, the authenticated resource and a token.
+  conn, the successful activity, the authenticated resource and a token.
 
   This allows you to choose what action to take as appropriate for your
   application.
@@ -92,19 +88,21 @@ defmodule AshAuthentication.Plug do
   "Access granted" message to the user.  You almost definitely want to override
   this behaviour.
   """
-  @callback handle_success(Conn.t(), Resource.record(), token :: String.t()) :: Conn.t()
+  @callback handle_success(Conn.t(), activity, Resource.record() | nil, token | nil) :: Conn.t()
 
   @doc """
   When there is any failure during authentication this callback is called.
 
-  Note that this includes not just authentication failures, but even simple
-  404s.
+  Note that this includes not just authentication failures but potentially
+  route-not-found errors also.
 
   The default implementation simply returns a 401 status with the message
   "Access denied".  You almost definitely want to override this.
   """
-  @callback handle_failure(Conn.t(), nil | Changeset.t() | Error.t()) :: Conn.t()
+  @callback handle_failure(Conn.t(), activity, any) :: Conn.t()
 
+  @doc false
+  @spec __using__(keyword) :: Macro.t()
   defmacro __using__(opts) do
     otp_app =
       opts
@@ -135,12 +133,12 @@ defmodule AshAuthentication.Plug do
       Macros.define_revoke_bearer_tokens(unquote(otp_app))
 
       @impl true
-      defdelegate handle_success(conn, user, token), to: Defaults
+      defdelegate handle_success(conn, activity, user, token), to: Defaults
 
       @impl true
-      defdelegate handle_failure(conn, error), to: Defaults
+      defdelegate handle_failure(conn, activity, error), to: Defaults
 
-      defoverridable handle_success: 3, handle_failure: 2
+      defoverridable handle_success: 4, handle_failure: 3
 
       @impl true
       defdelegate init(opts), to: Router

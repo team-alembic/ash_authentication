@@ -93,9 +93,9 @@ defmodule AshAuthentication.Jwt.Config do
   resource.  Requires that the subject's resource configuration be passed as the
   validation context.  This is automatically done by calling `Jwt.verify/2`.
   """
-  @spec validate_jti(String.t(), any, %{resource: module} | any) :: boolean
-  def validate_jti(jti, _claims, %{resource: resource}) do
-    case Info.tokens_revocation_resource(resource) do
+  @spec validate_jti(String.t(), any, Resource.t() | any) :: boolean
+  def validate_jti(jti, _claims, resource) when is_atom(resource) do
+    case Info.authentication_tokens_revocation_resource(resource) do
       {:ok, revocation_resource} ->
         TokenRevocation.valid?(revocation_resource, jti)
 
@@ -138,7 +138,7 @@ defmodule AshAuthentication.Jwt.Config do
   defp config(resource) do
     config =
       resource
-      |> Info.tokens_options()
+      |> Info.authentication_tokens_options()
       |> Enum.reject(&is_nil(elem(&1, 1)))
 
     :ash_authentication

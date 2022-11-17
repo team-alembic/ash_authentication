@@ -1,4 +1,4 @@
-defmodule AshAuthentication.DataCase do
+defmodule DataCase do
   @moduledoc """
   This module defines the setup for tests requiring
   access to the application's data layer.
@@ -10,7 +10,7 @@ defmodule AshAuthentication.DataCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use AshAuthentication.DataCase, async: true`, although
+  by setting `use DataCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -24,12 +24,12 @@ defmodule AshAuthentication.DataCase do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
-      import AshAuthentication.DataCase
+      import DataCase
     end
   end
 
   setup tags do
-    AshAuthentication.DataCase.setup_sandbox(tags)
+    DataCase.setup_sandbox(tags)
     :ok
   end
 
@@ -68,7 +68,7 @@ defmodule AshAuthentication.DataCase do
   def password, do: Faker.Lorem.words(4) |> Enum.join(" ")
 
   @doc "User factory"
-  @spec build_user(keyword) :: Example.UserWithUsername.t() | no_return
+  @spec build_user(keyword) :: Example.User.t() | no_return
   def build_user(attrs \\ []) do
     password = password()
 
@@ -79,9 +79,19 @@ defmodule AshAuthentication.DataCase do
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
-    Example.UserWithUsername
-    |> Ash.Changeset.for_create(:register, attrs)
-    |> Example.create!()
+    {:ok, strategy} = AshAuthentication.Info.strategy(Example.User, :password)
+
+    user =
+      Example.User
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.set_context(%{strategy: strategy})
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Example.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
   end
 
   @doc "Token revocation factory"
@@ -89,7 +99,7 @@ defmodule AshAuthentication.DataCase do
   def build_token_revocation do
     {:ok, token, _claims} =
       build_user()
-      |> AshAuthentication.Jwt.token_for_record()
+      |> AshAuthentication.Jwt.token_for_user()
 
     Example.TokenRevocation
     |> Ash.Changeset.for_create(:revoke_token, %{token: token})

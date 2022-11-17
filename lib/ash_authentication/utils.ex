@@ -130,4 +130,22 @@ defmodule AshAuthentication.Utils do
       relationship -> {:ok, relationship}
     end
   end
+
+  @doc """
+  Optionally set a field in a map.
+
+  Like `Map.put_new/3` except that it overwrites fields if their contents are
+  falsy.
+  """
+  @spec maybe_set_field(map, any, any) :: map
+  def maybe_set_field(map, field, value) when is_falsy(:erlang.map_get(field, map)),
+    do: Map.put(map, field, value)
+
+  def maybe_set_field(map, _field, _value), do: map
+
+  def maybe_set_field_lazy(map, field, generator)
+      when is_falsy(:erlang.map_get(field, map)) and is_function(generator, 1),
+      do: Map.put(map, field, generator.(map))
+
+  def maybe_set_field_lazy(map, _field, _generator), do: map
 end

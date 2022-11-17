@@ -65,5 +65,5 @@
   },
   "repo": "Elixir.Example.Repo",
   "schema": null,
-  "table": "user_with_username"
+  "table": "user"
 }

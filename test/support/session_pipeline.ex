@@ -1,4 +1,4 @@
-defmodule AshAuthentication.SessionPipeline do
+defmodule SessionPipeline do
   @moduledoc """
   A simple plug pipeline that ensures that the session is set up ready to be consumed.
   """

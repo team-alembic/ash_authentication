@@ -6,6 +6,8 @@ defmodule AshAuthentication.Plug.Router do
   Used internally by `AshAuthentication.Plug`.
   """
 
+  alias AshAuthentication.{Info, Strategy}
+
   @doc false
   @spec __using__(keyword) :: Macro.t()
   defmacro __using__(opts) do
@@ -19,47 +21,30 @@ defmodule AshAuthentication.Plug.Router do
       |> Keyword.fetch!(:return_to)
       |> Macro.expand_once(__CALLER__)
 
-    routes =
-      otp_app
-      |> AshAuthentication.authenticated_resources()
-      |> Stream.flat_map(fn config ->
-        subject_name =
-          config.subject_name
-          |> to_string()
-
-        config
-        |> Map.get(:providers, [])
-        |> Stream.map(fn provider ->
-          config =
-            config
-            |> Map.delete(:providers)
-            |> Map.put(:provider, provider)
-
-          {{subject_name, provider.provides(config.resource)}, config}
-        end)
-      end)
-      |> Map.new()
-      |> Macro.escape()
-
     quote do
+      require Ash.Api.Info
       use Plug.Router
       plug(:match)
       plug(:dispatch)
 
-      match("/:subject_name/:provider",
-        to: AshAuthentication.Plug.Dispatcher,
-        init_opts: [{:request, unquote(routes), unquote(return_to)}]
-      )
+      routes =
+        unquote(otp_app)
+        |> Application.compile_env(:ash_apis, [])
+        |> Stream.flat_map(&Ash.Api.Info.depend_on_resources(&1))
+        |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
+        |> Stream.flat_map(&Info.authentication_strategies/1)
+        |> Stream.flat_map(fn strategy ->
+          strategy
+          |> Strategy.routes()
+          |> Stream.map(fn {path, phase} -> {path, {phase, strategy, unquote(return_to)}} end)
+        end)
+        |> Map.new()
 
-      match("/:subject_name/:provider/callback",
-        to: AshAuthentication.Plug.Dispatcher,
-        init_opts: [{:callback, unquote(routes), unquote(return_to)}]
-      )
+      for {path, config} <- routes do
+        match(path, to: AshAuthentication.Plug.Dispatcher, init_opts: [config])
+      end
 
-      match(_,
-        to: AshAuthentication.Plug.Dispatcher,
-        init_opts: [{:noop, [], unquote(return_to)}]
-      )
+      match(_, to: AshAuthentication.Plug.Dispatcher, init_opts: [unquote(return_to)])
     end
   end
 end

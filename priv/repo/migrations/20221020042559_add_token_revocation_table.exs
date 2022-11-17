@@ -8,7 +8,7 @@ defmodule Example.Repo.Migrations.AddTokenRevocationTable do
   use Ecto.Migration
 
   def up do
-    create unique_index(:user_with_username, [:username],
+    create unique_index(:user, [:username],
              name: "user_with_username_username_index"
            )
 
@@ -21,7 +21,7 @@ defmodule Example.Repo.Migrations.AddTokenRevocationTable do
   def down do
     drop table(:token_revocations)
 
-    drop_if_exists unique_index(:user_with_username, [:username],
+    drop_if_exists unique_index(:user, [:username],
                      name: "user_with_username_username_index"
                    )
   end

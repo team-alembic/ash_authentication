@@ -19,7 +19,7 @@ defmodule AshAuthentication.SecretFunction do
         fun.(secret_name, resource, opts)
 
       {{m, f, a}, _opts} when is_atom(m) and is_atom(f) and is_list(a) ->
-        apply(m, f, [secret_name, resource, a])
+        apply(m, f, [secret_name, resource | a])
 
       {nil, opts} ->
         raise "Invalid options given to `secret_for/3` callback: `#{inspect(opts)}`."

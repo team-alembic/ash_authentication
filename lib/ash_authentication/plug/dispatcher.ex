@@ -4,9 +4,13 @@ defmodule AshAuthentication.Plug.Dispatcher do
   """
 
   @behaviour Plug
+  alias AshAuthentication.Strategy
   alias Plug.Conn
+  import AshAuthentication.Plug.Helpers, only: [get_authentication_result: 1]
 
-  @type config :: {:request | :callback, [AshAuthentication.Plug.authenticator_config()], module}
+  @type config :: {atom, Strategy.t(), module} | module
+
+  @unsent ~w[unset set set_chunked set_file]a
 
   @doc false
   @impl true
@@ -14,57 +18,44 @@ defmodule AshAuthentication.Plug.Dispatcher do
   def init([config]), do: config
 
   @doc """
-  Match the `subject_name` and `provider` of the incoming request to a provider and
-  call the appropriate plug with the configuration.
+  Send the request to the correct strategy and then return the result.
   """
   @impl true
   @spec call(Conn.t(), config | any) :: Conn.t()
-  def call(conn, {phase, routes, return_to}) do
-    conn
-    |> dispatch(phase, routes)
-    |> return(return_to)
-  end
+  def call(conn, {phase, strategy, return_to}) do
+    activity = {strategy.name, phase}
 
-  defp dispatch(
-         %{params: %{"subject_name" => subject_name, "provider" => provider}} = conn,
-         phase,
-         routes
-       ) do
-    case Map.get(routes, {subject_name, provider}) do
-      config when is_map(config) ->
-        conn = Conn.put_private(conn, :authenticator, config)
-
-        case phase do
-          :request -> config.provider.request_plug(conn, [])
-          :callback -> config.provider.callback_plug(conn, [])
-        end
-
-      _ ->
+    strategy
+    |> Strategy.plug(phase, conn)
+    |> get_authentication_result()
+    |> case do
+      {conn, _} when conn.state not in @unsent ->
         conn
+
+      {conn, :ok} ->
+        return_to.handle_success(conn, activity, nil, nil)
+
+      {conn, {:ok, user}} when is_binary(user.__metadata__.token) ->
+        return_to.handle_success(conn, activity, user, user.__metadata__.token)
+
+      {conn, {:ok, user}} ->
+        return_to.handle_success(conn, activity, user, nil)
+
+      {conn, :error} ->
+        return_to.handle_failure(conn, activity, nil)
+
+      {conn, {:error, reason}} ->
+        return_to.handle_failure(conn, activity, reason)
+
+      conn when conn.state not in @unsent ->
+        conn
+
+      conn ->
+        return_to.handle_failure(conn, activity, :no_authentication_result)
     end
   end
 
-  defp dispatch(conn, _phase, _routes), do: conn
-
-  defp return(%{state: :sent} = conn, _return_to), do: conn
-
-  defp return(
-         %{
-           private: %{
-             authentication_result: {:success, user},
-             authenticator: %{resource: resource}
-           }
-         } = conn,
-         return_to
-       )
-       when is_struct(user, resource),
-       do: return_to.handle_success(conn, user, Map.get(user.__metadata__, :token))
-
-  defp return(%{private: %{authentication_result: {:success, nil}}} = conn, return_to),
-    do: return_to.handle_success(conn, nil, nil)
-
-  defp return(%{private: %{authentication_result: {:failure, reason}}} = conn, return_to),
-    do: return_to.handle_failure(conn, reason)
-
-  defp return(conn, return_to), do: return_to.handle_failure(conn, nil)
+  def call(conn, return_to) do
+    return_to.handle_failure(conn, {nil, nil}, :not_found)
+  end
 end
