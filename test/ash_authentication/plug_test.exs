@@ -1,9 +1,9 @@
 defmodule AshAuthentication.PlugTest do
   @moduledoc false
-  use AshAuthentication.DataCase, async: true
+  use DataCase, async: true
   use Mimic
   alias AshAuthentication.Plug.{Defaults, Helpers}
-  alias AshAuthentication.SessionPipeline
+
   alias Example.AuthPlug
   import Plug.Test, only: [conn: 3]
 
@@ -16,11 +16,10 @@ defmodule AshAuthentication.PlugTest do
 
       %{status: status, resp_body: resp} =
         :post
-        |> conn("/user_with_username/password/callback", %{
-          "user_with_username" => %{
+        |> conn("/user/password/sign_in", %{
+          "user" => %{
             "username" => to_string(user.username),
-            "password" => password,
-            "action" => "sign_in"
+            "password" => password
           }
         })
         |> SessionPipeline.call([])
@@ -40,11 +39,10 @@ defmodule AshAuthentication.PlugTest do
 
       %{status: status, resp_body: resp} =
         :post
-        |> conn("/user_with_username/password/callback", %{
-          "user_with_username" => %{
+        |> conn("/user/password/sign_in", %{
+          "user" => %{
             "username" => username(),
-            "password" => password(),
-            "action" => "sign_in"
+            "password" => password()
           }
         })
         |> SessionPipeline.call([])
@@ -54,7 +52,7 @@ defmodule AshAuthentication.PlugTest do
 
       assert status == 401
       assert resp["status"] == "failure"
-      assert resp["reason"] =~ ~r/Forbidden/
+      assert resp["reason"] =~ ~r/Forbidden/i
     end
   end
 
@@ -109,12 +107,12 @@ defmodule AshAuthentication.PlugTest do
 
       Helpers
       |> expect(:set_actor, fn rx_conn, subject_name ->
-        assert subject_name == :user_with_username
+        assert subject_name == :user
         assert conn == rx_conn
       end)
 
       conn
-      |> AuthPlug.set_actor(:user_with_username)
+      |> AuthPlug.set_actor(:user)
     end
   end
 
@@ -147,14 +145,14 @@ defmodule AshAuthentication.PlugTest do
       token = Ecto.UUID.generate()
 
       Defaults
-      |> expect(:handle_success, fn rx_conn, rx_user, rx_token ->
+      |> expect(:handle_success, fn rx_conn, {nil, nil}, rx_user, rx_token ->
         assert rx_conn == conn
         assert rx_user == user
         assert rx_token == token
       end)
 
       conn
-      |> WithDefaults.handle_success(user, token)
+      |> WithDefaults.handle_success({nil, nil}, user, token)
     end
 
     test "it uses the default handle_failure/2" do
@@ -162,13 +160,13 @@ defmodule AshAuthentication.PlugTest do
       reason = Ecto.UUID.generate()
 
       Defaults
-      |> expect(:handle_failure, fn rx_conn, rx_reason ->
+      |> expect(:handle_failure, fn rx_conn, {nil, nil}, rx_reason ->
         assert rx_conn == conn
         assert rx_reason == reason
       end)
 
       conn
-      |> WithDefaults.handle_failure(reason)
+      |> WithDefaults.handle_failure({nil, nil}, reason)
     end
   end
 end

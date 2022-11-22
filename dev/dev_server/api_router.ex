@@ -6,7 +6,7 @@ defmodule DevServer.ApiRouter do
   import Example.AuthPlug
 
   plug(:load_from_bearer)
-  plug(:set_actor, :user_with_username)
+  plug(:set_actor, :user)
   plug(:match)
   plug(:dispatch)
 

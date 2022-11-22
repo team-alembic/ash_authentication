@@ -2,7 +2,7 @@ defmodule AshAuthentication.TokenRevocation.Expunger do
   @default_period_hrs 12
 
   @moduledoc """
-  A genserver which periodically removes expired token revocations.
+  A `GenServer` which periodically removes expired token revocations.
 
   Scans all token revocation resources every #{@default_period_hrs} hours and removes
   any expired token revocations.

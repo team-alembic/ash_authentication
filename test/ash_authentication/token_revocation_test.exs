@@ -1,7 +1,9 @@
 defmodule AshAuthentication.TokenRevocationTest do
   @moduledoc false
-  use AshAuthentication.DataCase, async: true
+  use DataCase, async: true
+  import AshAuthentication.TokenRevocation
   alias AshAuthentication.{Jwt, TokenRevocation}
+  doctest AshAuthentication.TokenRevocation
 
   describe "revoke/2" do
     test "it revokes tokens" do
@@ -14,10 +16,10 @@ defmodule AshAuthentication.TokenRevocationTest do
     end
   end
 
-  defp build_token do
+  def build_token do
     {:ok, token, claims} =
       build_user()
-      |> Jwt.token_for_record()
+      |> Jwt.token_for_user()
 
     {token, claims}
   end

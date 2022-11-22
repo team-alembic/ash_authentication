@@ -19,17 +19,16 @@ end
 
 ## Usage
 
-This package assumes that you have [Phoenix](https://phoenixframework.org/) and
-[Ash](https://ash-hq.org/) installed and configured.  See their individual
-documentation for details.
+This package assumes that you have [Ash](https://ash-hq.org/) installed and
+configured.  See the Ash documentation for details.
 
-Once installed you can easily add support for authentication by configuring one
-or more extensions onto your Ash resource:
+Once installed you can easily add support for authentication by adding the
+`AshAuthentication` extension to your resource:
 
 ```elixir
 defmodule MyApp.Accounts.User do
   use Ash.Resource,
-    extensions: [AshAuthentication, AshAuthentication.PasswordAuthentication]
+    extensions: [AshAuthentication]
 
   attributes do
     uuid_primary_key :id
@@ -39,11 +38,13 @@ defmodule MyApp.Accounts.User do
 
   authentication do
     api MyApp.Accounts
-  end
 
-  password_authentication do
-    identity_field :email
-    hashed_password_field :hashed_password
+    strategies do
+      password do
+        identity_field :email
+        hashed_password_field :hashed_password
+      end
+    end
   end
 
   identities do
@@ -55,7 +56,7 @@ end
 If you plan on providing authentication via the web, then you will need to
 define a plug using
 [`AshAuthentication.Plug`](https://team-alembic.github.io/ash_authentication/AshAuthentication.Plug.html)
-which builds a [`Plug.Router`](https://hexdocs.pm/plug/Plug.Router.html) which
+which builds a [`Plug.Router`](https://hexdocs.pm/plug/Plug.Router.html) that
 routes incoming authentication requests to the correct provider and provides
 callbacks for you to manipulate the conn after success or failure.
 
@@ -64,24 +65,26 @@ If you're using AshAuthentication with Phoenix, then check out
 which provides route helpers, a controller abstraction and LiveView components
 for easy set up.
 
-## Authentication Providers
+## Authentication Strategies
 
-Currently the only supported authentication provider is
-[`AshAuthentication.PasswordAuthentication`](https://team-alembic.github.io/ash_authentication/AshAuthentication.PasswordAuthentication.html)
-which provides actions for registering and signing in users using an identifier
-and a password.
+Currently supported strategies:
 
-Planned future providers include:
-
-  * OAuth 1.0
-  * OAuth 2.0
-  * OpenID Connect
+  1. [`AshAuthentication.Strategy.Password`](https://team-alembic.github.io/ash_authentication/AshAuthentication.Strategy.Password.html)
+     - authenticate users against your local database using a unique identity
+     (such as username or email address) and a password.
+  2. [`AshAuthentication.Strategy.OAuth2`](https://team-alembic.github.io/ash_authentication/AshAuthentication.Strategy.OAuth2.html)
+     - authenticate using local or remote [OAuth 2.0](https://oauth.net/2/)
+     compatible services.
 
 ## Documentation
 
 Documentation for the latest release will be [available on
 hexdocs](https://hexdocs.pm/ash_authentication) and for the [`main`
 branch](https://team-alembic.github.io/ash_authentication).
+
+Additional support can be found on the [GitHub discussions
+page](https://github.com/team-alembic/ash_authentication/discussions) and the
+[Ash Discord](https://discord.gg/D7FNG2q).
 
 ## Contributing
 
@@ -95,4 +98,7 @@ branch](https://team-alembic.github.io/ash_authentication).
 
 ## Licence
 
-MIT
+`AshAuthentication` is licensed under the terms of the [MIT
+license](https://opensource.org/licenses/MIT).  See the [`LICENSE` file in this
+repository](https://github.com/team-alembic/ash_authentication/blob/main/LICENSE)
+for details.

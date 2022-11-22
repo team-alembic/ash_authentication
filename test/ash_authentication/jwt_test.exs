@@ -1,6 +1,6 @@
 defmodule AshAuthentication.JwtTest do
   @moduledoc false
-  use AshAuthentication.DataCase, async: true
+  use DataCase, async: true
   alias AshAuthentication.Jwt
 
   describe "default_algorithm/0" do
@@ -29,10 +29,10 @@ defmodule AshAuthentication.JwtTest do
     end
   end
 
-  describe "token_for_record/1" do
+  describe "token_for_user/1" do
     test "correctly generates and signs tokens" do
       user = build_user()
-      assert {:ok, token, claims} = Jwt.token_for_record(user)
+      assert {:ok, token, claims} = Jwt.token_for_user(user)
 
       now = DateTime.utc_now() |> DateTime.to_unix()
 
@@ -43,21 +43,21 @@ defmodule AshAuthentication.JwtTest do
       assert claims["iss"] =~ ~r/^AshAuthentication v\d\.\d\.\d$/
       assert claims["jti"] =~ ~r/^[0-9a-z]+$/
       assert_in_delta(claims["nbf"], now, 1.5)
-      assert claims["sub"] == "user_with_username?id=#{user.id}"
+      assert claims["sub"] == "user?id=#{user.id}"
     end
   end
 
   describe "verify/2" do
     test "it is successful when given a valid token and the correct otp app" do
-      {:ok, token, actual_claims} = build_user() |> Jwt.token_for_record()
+      {:ok, token, actual_claims} = build_user() |> Jwt.token_for_user()
 
-      assert {:ok, validated_claims, config} = Jwt.verify(token, :ash_authentication)
+      assert {:ok, validated_claims, resource} = Jwt.verify(token, :ash_authentication)
       assert validated_claims == actual_claims
-      assert config.resource == Example.UserWithUsername
+      assert resource == Example.User
     end
 
     test "it is unsuccessful when the token signature isn't correct" do
-      {:ok, token, _} = build_user() |> Jwt.token_for_record()
+      {:ok, token, _} = build_user() |> Jwt.token_for_user()
 
       # mangle the token.
       [header, payload, signature] = String.split(token, ".")
@@ -67,7 +67,7 @@ defmodule AshAuthentication.JwtTest do
     end
 
     test "it is unsuccessful when the token has been revoked" do
-      {:ok, token, _} = build_user() |> Jwt.token_for_record()
+      {:ok, token, _} = build_user() |> Jwt.token_for_user()
 
       AshAuthentication.TokenRevocation.revoke(Example.TokenRevocation, token)
 

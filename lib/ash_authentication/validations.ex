@@ -113,7 +113,7 @@ defmodule AshAuthentication.Validations do
   """
   @spec validate_token_generation_enabled(Dsl.t()) :: :ok | {:error, Exception.t()}
   def validate_token_generation_enabled(dsl_state) do
-    if AshAuthentication.Info.tokens_enabled?(dsl_state),
+    if AshAuthentication.Info.authentication_tokens_enabled?(dsl_state),
       do: :ok,
       else:
         {:error,
@@ -155,5 +155,19 @@ defmodule AshAuthentication.Validations do
            message:
              "The `#{inspect(extension)}` extension must also be present on this resource for password authentication to work."
          )}
+  end
+
+  @doc """
+  Build an attribute if not present.
+  """
+  @spec maybe_build_attribute(Dsl.t(), atom, (Dsl.t() -> {:ok, Attribute.t()})) :: {:ok, Dsl.t()}
+  def maybe_build_attribute(dsl_state, attribute_name, builder) do
+    with {:error, _} <- find_attribute(dsl_state, attribute_name),
+         {:ok, attribute} <- builder.(dsl_state) do
+      {:ok, Transformer.add_entity(dsl_state, [:attributes], attribute)}
+    else
+      {:ok, attribute} when is_struct(attribute, Attribute) -> {:ok, dsl_state}
+      {:error, reason} -> {:error, reason}
+    end
   end
 end

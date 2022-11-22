@@ -21,3 +21,18 @@ config :ash, :disable_async?, true
 
 config :ash_authentication, AshAuthentication.Jwt,
   signing_secret: "Marty McFly in the past with the Delorean"
+
+config :ash_authentication,
+  authentication: [
+    strategies: [
+      oauth2: [
+        client_id: "pretend client id",
+        redirect_uri: "http://localhost:4000/auth",
+        client_secret: "pretend client secret",
+        site: "https://example.com/",
+        authorize_path: "/authorize",
+        token_path: "/oauth/token",
+        user_path: "/userinfo"
+      ]
+    ]
+  ]

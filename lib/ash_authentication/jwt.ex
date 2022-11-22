@@ -1,6 +1,6 @@
 defmodule AshAuthentication.Jwt do
   @default_algorithm "HS256"
-  @default_lifetime_hrs 7 * 24
+  @default_lifetime_days 7
   @supported_algorithms Joken.Signer.algorithms()
   import AshAuthentication.Utils, only: [to_sentence: 2]
 
@@ -24,7 +24,7 @@ defmodule AshAuthentication.Jwt do
   config :ash_authentication, #{inspect(__MODULE__)},
     signing_algorithm: #{inspect(@default_algorithm)}
     signing_secret: "I finally invent something that works!",
-    token_lifetime: #{@default_lifetime_hrs} # #{@default_lifetime_hrs / 24.0} days
+    token_lifetime: #{@default_lifetime_days * 24} # #{@default_lifetime_days} days
   ```
 
   Available signing algorithms are #{to_sentence(@supported_algorithms, final: "or")}.  Defaults to #{@default_algorithm}.
@@ -34,12 +34,12 @@ defmodule AshAuthentication.Jwt do
   [`runtime.exs`](https://elixir-lang.org/getting-started/mix-otp/config-and-releases.html#configuration)
   and read it from the system environment or other secret store.
 
-  The default token lifetime is #{@default_lifetime_hrs} and should be specified
+  The default token lifetime is #{@default_lifetime_days * 24} and should be specified
   in integer positive hours.
   """
 
   alias Ash.Resource
-  alias AshAuthentication.Jwt.Config
+  alias AshAuthentication.{Info, Jwt.Config}
 
   @typedoc """
   A string likely to contain a valid JWT.
@@ -62,32 +62,35 @@ defmodule AshAuthentication.Jwt do
 
   @doc "The default token lifetime"
   @spec default_lifetime_hrs :: pos_integer
-  def default_lifetime_hrs, do: @default_lifetime_hrs
+  def default_lifetime_hrs, do: @default_lifetime_days * 24
 
   @doc """
-  Given a record, generate a signed JWT for use while authenticating.
+  Given a user, generate a signed JWT for use while authenticating.
   """
-  @spec token_for_record(Resource.record(), extra_claims :: %{}, options :: keyword) ::
+  @spec token_for_user(Resource.record(), extra_claims :: %{}, options :: keyword) ::
           {:ok, token, claims} | :error
-  def token_for_record(record, extra_claims \\ %{}, opts \\ []) do
-    resource = record.__struct__
+  def token_for_user(user, extra_claims \\ %{}, opts \\ []) do
+    resource = user.__struct__
 
     default_claims = Config.default_claims(resource, opts)
     signer = Config.token_signer(resource, opts)
 
-    subject = AshAuthentication.resource_to_subject(record)
+    subject = AshAuthentication.user_to_subject(user)
 
     extra_claims =
       extra_claims
       |> Map.put("sub", subject)
 
     extra_claims =
-      case Map.fetch(record.__metadata__, :tenant) do
+      case Map.fetch(user.__metadata__, :tenant) do
         {:ok, tenant} -> Map.put(extra_claims, "tenant", to_string(tenant))
         :error -> extra_claims
       end
 
-    Joken.generate_and_sign(default_claims, extra_claims, signer)
+    case Joken.generate_and_sign(default_claims, extra_claims, signer) do
+      {:ok, token, claims} -> {:ok, token, claims}
+      {:error, _reason} -> :error
+    end
   end
 
   @doc """
@@ -99,11 +102,10 @@ defmodule AshAuthentication.Jwt do
   @doc """
   Given a token, verify it's signature and validate it's claims.
   """
-  @spec verify(token, Ash.Resource.t() | module) ::
-          {:ok, claims, AshAuthentication.resource_config()} | :error
+  @spec verify(token, Resource.t() | atom) :: {:ok, claims, Resource.t()} | :error
   def verify(token, otp_app_or_resource) do
     if function_exported?(otp_app_or_resource, :spark_is, 0) &&
-         otp_app_or_resource.spark_is() == Ash.Resource do
+         otp_app_or_resource.spark_is() == Resource do
       verify_for_resource(token, otp_app_or_resource)
     else
       verify_for_otp_app(token, otp_app_or_resource)
@@ -111,24 +113,23 @@ defmodule AshAuthentication.Jwt do
   end
 
   defp verify_for_resource(token, resource) do
-    with config <- AshAuthentication.resource_config(resource),
-         signer <- Config.token_signer(resource),
+    with signer <- Config.token_signer(resource),
          {:ok, claims} <- Joken.verify(token, signer),
          defaults <- Config.default_claims(resource),
-         {:ok, claims} <- Joken.validate(defaults, claims, config) do
-      {:ok, claims, config}
+         {:ok, claims} <- Joken.validate(defaults, claims, resource) do
+      {:ok, claims, resource}
     else
       _ -> :error
     end
   end
 
   defp verify_for_otp_app(token, otp_app) do
-    with {:ok, config} <- token_to_resource(token, otp_app),
-         signer <- Config.token_signer(config.resource),
+    with {:ok, resource} <- token_to_resource(token, otp_app),
+         signer <- Config.token_signer(resource),
          {:ok, claims} <- Joken.verify(token, signer),
-         defaults <- Config.default_claims(config.resource),
-         {:ok, claims} <- Joken.validate(defaults, claims, config) do
-      {:ok, claims, config}
+         defaults <- Config.default_claims(resource),
+         {:ok, claims} <- Joken.validate(defaults, claims, resource) do
+      {:ok, claims, resource}
     else
       _ -> :error
     end
@@ -142,21 +143,23 @@ defmodule AshAuthentication.Jwt do
   This function *does not* validate the token, so don't rely on it for
   authentication or authorisation.
   """
-  @spec token_to_resource(token, module) :: {:ok, AshAuthentication.resource_config()} | :error
+  @spec token_to_resource(token, module) :: {:ok, Resource.t()} | :error
   def token_to_resource(token, otp_app) do
     with {:ok, %{"sub" => subject}} <- peek(token),
          %URI{path: subject_name} <- URI.parse(subject) do
-      config_for_subject_name(subject_name, otp_app)
+      resource_for_subject_name(subject_name, otp_app)
     else
       _ -> :error
     end
   end
 
-  defp config_for_subject_name(subject_name, otp_app) do
+  defp resource_for_subject_name(subject_name, otp_app) do
     otp_app
     |> AshAuthentication.authenticated_resources()
-    |> Enum.find_value(:error, fn config ->
-      if to_string(config.subject_name) == subject_name, do: {:ok, config}
+    |> Enum.find_value(:error, fn resource ->
+      with {:ok, resource_subject_name} <- Info.authentication_subject_name(resource),
+           true <- subject_name == to_string(resource_subject_name),
+           do: {:ok, resource}
     end)
   end
 end

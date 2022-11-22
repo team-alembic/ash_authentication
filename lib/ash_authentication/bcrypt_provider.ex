@@ -6,6 +6,12 @@ defmodule AshAuthentication.BcryptProvider do
 
   @doc """
   Given some user input as a string, convert it into it's hashed form using `Bcrypt`.
+
+  ## Example
+
+      iex> {:ok, hashed} = hash("Marty McFly")
+      ...> String.starts_with?(hashed, "$2b$04$")
+      true
   """
   @impl true
   @spec hash(String.t()) :: {:ok, String.t()} | :error
@@ -14,6 +20,12 @@ defmodule AshAuthentication.BcryptProvider do
 
   @doc """
   Check if the user input matches the hash.
+
+  ## Example
+
+      iex> valid?("Marty McFly", "$2b$04$qgacrnrAJz8aPwaVQiGJn.PvryldV.NfOSYYvF/CZAGgMvvzhIE7S")
+      true
+
   """
   @impl true
   @spec valid?(input :: String.t(), hash :: String.t()) :: boolean
@@ -22,6 +34,11 @@ defmodule AshAuthentication.BcryptProvider do
 
   @doc """
   Simulate a password check to help avoid timing attacks.
+
+  ## Example
+
+      iex> simulate()
+      false
   """
   @impl true
   @spec simulate :: false

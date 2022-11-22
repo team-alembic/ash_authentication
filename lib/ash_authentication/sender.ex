@@ -18,7 +18,6 @@ defmodule AshAuthentication.Sender do
   defmodule MyApp.PasswordResetSender do
     use AshAuthentication.PasswordReset.Sender
     import Swoosh.Email
-    alias MyAppWeb.Router.Helpers, as: Routes
 
     def send(user, reset_token, _opts) do
       new()
@@ -33,7 +32,7 @@ defmodule AshAuthentication.Sender do
           Someone (maybe you) has requested a password reset for your account.
           If you did not initiate this request then please ignore this email.
         </p>
-        <a href="#{Routes.auth_url(MyAppWeb.Endpoint, :reset_password, token: reset_token)}">
+        <a href="#{"https://example.com/user/password/reset?#{URI.encode_query(reset_token: reset_token)}}">
           Click here to reset
         </a>
       ")
@@ -42,24 +41,39 @@ defmodule AshAuthentication.Sender do
   end
 
   defmodule MyApp.Accounts.User do
-    use Ash.Resource, extensions: [AshAuthentication, AshAuthentication.PasswordAuthentication, AshAuthentication.PasswordRest]
+    use Ash.Resource, extensions: [AshAuthentication]
 
-    password_reset do
-      sender MyApp.PasswordResetSender
+    authentication do
+      api MyApp.Accounts
+
+      strategies do
+        password :password do
+          resettable do
+            sender MyApp.PasswordResetSender
+          end
+        end
+      end
     end
   end
   ```
 
   You can also implment it directly as a function:
 
-
   ```elixir
   defmodule MyApp.Accounts.User do
-    use Ash.Resource, extensions: [AshAuthentication, AshAuthentication.PasswordAuthentication, AshAuthentication.PasswordRest]
+    use Ash.Resource, extensions: [AshAuthentication]
 
-    password_reset do
-      sender fn user, token, _opt ->
-        MyApp.Mailer.send_password_reset_email(user, token)
+    authentication do
+      api MyApp.Accounts
+
+      strategies do
+        password :password do
+          resettable do
+            sender fn user, token ->
+              MyApp.Mailer.send_password_reset_email(user, token)
+            end
+          end
+        end
       end
     end
   end

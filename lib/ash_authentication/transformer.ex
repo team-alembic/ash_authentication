@@ -29,8 +29,8 @@ defmodule AshAuthentication.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with {:ok, api} <- validate_api_presence(dsl_state),
-         :ok <- validate_at_least_one_authentication_provider(dsl_state),
+    with {:ok, _api} <- validate_api_presence(dsl_state),
+         :ok <- validate_at_least_one_strategy(dsl_state),
          {:ok, get_by_subject_action_name} <-
            Info.authentication_get_by_subject_action_name(dsl_state),
          {:ok, dsl_state} <-
@@ -42,15 +42,8 @@ defmodule AshAuthentication.Transformer do
          :ok <- validate_read_action(dsl_state, get_by_subject_action_name),
          :ok <- validate_token_revocation_resource(dsl_state),
          subject_name <- find_or_generate_subject_name(dsl_state) do
-      authentication =
-        dsl_state
-        |> Transformer.get_persisted(:authentication, %{providers: []})
-        |> Map.put(:subject_name, subject_name)
-        |> Map.put(:api, api)
-
       dsl_state =
         dsl_state
-        |> Transformer.persist(:authentication, authentication)
         |> Transformer.set_option([:authentication], :subject_name, subject_name)
 
       {:ok, dsl_state}
@@ -109,7 +102,11 @@ defmodule AshAuthentication.Transformer do
   end
 
   defp validate_api_presence(dsl_state) do
-    case Transformer.get_option(dsl_state, [:authentication], :api) do
+    with api when not is_nil(api) <- Transformer.get_option(dsl_state, [:authentication], :api),
+         true <- function_exported?(api, :spark_is, 0),
+         Ash.Api <- api.spark_is() do
+      {:ok, api}
+    else
       nil ->
         {:error,
          DslError.exception(
@@ -117,25 +114,28 @@ defmodule AshAuthentication.Transformer do
            message: "An API module must be present"
          )}
 
-      api ->
-        {:ok, api}
+      _ ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :api],
+           message: "Module is not an Ash.Api."
+         )}
     end
   end
 
-  defp validate_at_least_one_authentication_provider(dsl_state) do
+  defp validate_at_least_one_strategy(dsl_state) do
     ok? =
       dsl_state
-      |> Transformer.get_persisted(:extensions, [])
-      |> Enum.any?(&Spark.implements_behaviour?(&1, AshAuthentication.Provider))
+      |> Transformer.get_entities([:authentication, :strategies])
+      |> Enum.any?()
 
     if ok?,
       do: :ok,
       else:
         {:error,
          DslError.exception(
-           path: [:extensions],
-           message:
-             "At least one authentication provider extension must also be present.  See the documentation for more information."
+           path: [:authentication, :strategies],
+           message: "Expected at least one authentication strategy"
          )}
   end
 

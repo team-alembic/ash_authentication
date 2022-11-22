@@ -78,7 +78,7 @@
         "on_delete": null,
         "on_update": null,
         "schema": "public",
-        "table": "user_with_username"
+        "table": "user"
       },
       "size": null,
       "source": "user_id",

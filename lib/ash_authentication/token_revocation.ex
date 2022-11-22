@@ -18,9 +18,10 @@ defmodule AshAuthentication.TokenRevocation do
   @moduledoc """
   An Ash extension which generates the defaults for a token revocation resource.
 
-  The token revocation resource is used to store the Json Web Token ID an expiry
-  times of any tokens which have been revoked.  These will be removed once the
-  expiry date has passed, so should only ever be a fairly small number of rows.
+  The token revocation resource is used to store the Json Web Token ID (jti) and
+  expiry times of any tokens which have been revoked.  These will be removed
+  once the expiry date has passed, so should only ever be a fairly small number
+  of rows.
 
   ## Storage
 
@@ -75,10 +76,17 @@ defmodule AshAuthentication.TokenRevocation do
 
   @doc """
   Revoke a token.
+
+  ## Example
+
+      iex> {token, _} = build_token()
+      ...> revoke(Example.TokenRevocation, token)
+      :ok
+
   """
   @spec revoke(Resource.t(), token :: String.t()) :: :ok | {:error, any}
   def revoke(resource, token) do
-    with {:ok, api} <- Info.api(resource) do
+    with {:ok, api} <- Info.revocation_api(resource) do
       resource
       |> Changeset.for_create(:revoke_token, %{token: token})
       |> api.create(upsert?: true)
@@ -92,10 +100,19 @@ defmodule AshAuthentication.TokenRevocation do
 
   @doc """
   Find out if (via it's JTI) a token has been revoked?
+
+  ## Example
+
+      iex> {token, %{"jti" => jti}} = build_token()
+      ...> revoked?(Example.TokenRevocation, jti)
+      false
+      ...> revoke(Example.TokenRevocation, token)
+      ...> revoked?(Example.TokenRevocation, jti)
+      true
   """
   @spec revoked?(Resource.t(), jti :: String.t()) :: boolean
   def revoked?(resource, jti) do
-    with {:ok, api} <- Info.api(resource) do
+    with {:ok, api} <- Info.revocation_api(resource) do
       resource
       |> Query.for_read(:revoked, %{jti: jti})
       |> api.read()
@@ -117,7 +134,7 @@ defmodule AshAuthentication.TokenRevocation do
 
   ## Note
 
-  Sadly this function iterates over all expired revocations and delete them
+  Sadly this function iterates over all expired revocations and deletes them
   individually because Ash (as of v2.1.0) does not yet support bulk actions and
   we can't just drop down to Ecto because we can't assume that the user's
   resource uses an Ecto-backed data layer.
@@ -130,7 +147,7 @@ defmodule AshAuthentication.TokenRevocation do
     DataLayer.transaction(
       resource,
       fn ->
-        with {:ok, api} <- Info.api(resource),
+        with {:ok, api} <- Info.revocation_api(resource),
              query <- Query.for_read(resource, :expired),
              {:ok, expired} <- api.read(query) do
           expired
@@ -159,7 +176,7 @@ defmodule AshAuthentication.TokenRevocation do
   """
   @spec remove_revocation(Resource.record()) :: :ok | {:error, any}
   def remove_revocation(revocation) do
-    with {:ok, api} <- Info.api(revocation.__struct__) do
+    with {:ok, api} <- Info.revocation_api(revocation.__struct__) do
       revocation
       |> Changeset.for_destroy(:expire)
       |> api.destroy()

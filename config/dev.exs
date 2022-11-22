@@ -28,3 +28,18 @@ config :ash_authentication, Example,
 
 config :ash_authentication, AshAuthentication.Jwt,
   signing_secret: "Marty McFly in the past with the Delorean"
+
+config :ash_authentication,
+  authentication: [
+    strategies: [
+      oauth2: [
+        client_id: System.get_env("OAUTH2_CLIENT_ID"),
+        redirect_uri: "http://localhost:4000/auth",
+        client_secret: System.get_env("OAUTH2_CLIENT_SECRET"),
+        site: System.get_env("OAUTH2_SITE"),
+        authorize_path: "/authorize",
+        token_path: "/oauth/token",
+        user_path: "/userinfo"
+      ]
+    ]
+  ]

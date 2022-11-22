@@ -4,7 +4,7 @@ defmodule AshAuthentication.Plug.Defaults do
   `handle_failure/2` used in generated authentication plugs.
   """
 
-  alias Ash.{Changeset, Error, Resource}
+  alias Ash.Resource
   alias Plug.Conn
   import AshAuthentication.Plug.Helpers
   import Plug.Conn
@@ -15,9 +15,9 @@ defmodule AshAuthentication.Plug.Defaults do
   Calls `AshAuthentication.Plug.Helpers.store_in_session/2` then sends a
   basic 200 response.
   """
-  @spec handle_success(Conn.t(), Resource.record(), token :: String.t()) ::
+  @spec handle_success(Conn.t(), {atom, atom}, Resource.record() | nil, String.t() | nil) ::
           Conn.t()
-  def handle_success(conn, user, _token) do
+  def handle_success(conn, _activity, user, _token) do
     conn
     |> store_in_session(user)
     |> send_resp(200, "Access granted")
@@ -28,8 +28,8 @@ defmodule AshAuthentication.Plug.Defaults do
 
   Sends a very basic 401 response.
   """
-  @spec handle_failure(Conn.t(), nil | Changeset.t() | Error.t()) :: Conn.t()
-  def handle_failure(conn, _) do
+  @spec handle_failure(Conn.t(), {atom, atom}, any) :: Conn.t()
+  def handle_failure(conn, _, _) do
     conn
     |> send_resp(401, "Access denied")
   end

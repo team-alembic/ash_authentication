@@ -9,12 +9,14 @@
     <%= if Enum.any?(@resources) do %>
       <h2>Resources:</h2>
 
-      <%= for config <- @resources do %>
-        <h2><%= inspect(config.subject_name) %> - <%= Ash.Api.Info.short_name(config.api) %> / <%= Ash.Resource.Info.short_name(config.resource) %></h2>
+      <%= for {resource, options, strategies} <- @resources do %>
+        <h2><%= inspect(options.subject_name) %> - <%= Ash.Api.Info.short_name(options.api) %> / <%= Ash.Resource.Info.short_name(resource) %></h2>
 
-        <%= for provider <- config.providers do %>
-          <%= Module.concat(provider, Html).request(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides(config.resource)}") %>
-          <%= Module.concat(provider, Html).callback(config.resource, action: "/auth/#{config.subject_name}/#{provider.provides(config.resource)}/callback") %>
+
+        <%= for strategy <- strategies do %>
+          <%= for phase <- Strategy.phases(strategy) do %>
+            <%= render_strategy(strategy, phase, options) %>
+          <% end %>
         <% end %>
       <% end %>
 

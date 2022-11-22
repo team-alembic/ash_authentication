@@ -6,7 +6,7 @@ defmodule AshAuthentication.Jwt.ConfigTest do
 
   describe "default_claims/1" do
     test "it is a token config" do
-      claims = Config.default_claims(Example.UserWithUsername)
+      claims = Config.default_claims(Example.User)
       assert is_map(claims)
 
       assert Enum.all?(claims, fn {name, config} ->
@@ -54,20 +54,20 @@ defmodule AshAuthentication.Jwt.ConfigTest do
       TokenRevocation
       |> stub(:revoked?, fn _, _ -> false end)
 
-      assert Config.validate_jti("fake jti", nil, %{resource: Example.UserWithUsername})
+      assert Config.validate_jti("fake jti", nil, Example.User)
     end
 
     test "is false when the token has been revoked" do
       TokenRevocation
       |> stub(:revoked?, fn _, _ -> true end)
 
-      assert Config.validate_jti("fake jti", nil, %{resource: Example.UserWithUsername})
+      assert Config.validate_jti("fake jti", nil, Example.User)
     end
   end
 
   describe "token_signer/1" do
     test "it returns a signer configuration" do
-      assert %Joken.Signer{} = Config.token_signer(Example.UserWithUsername)
+      assert %Joken.Signer{} = Config.token_signer(Example.User)
     end
   end
 end

@@ -2,11 +2,11 @@ defmodule Example.UserIdentity do
   @moduledoc false
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication.ProviderIdentity]
+    extensions: [AshAuthentication.UserIdentity]
 
-  provider_identity do
+  user_identity do
     api Example
-    user_resource(Example.UserWithUsername)
+    user_resource(Example.User)
   end
 
   postgres do

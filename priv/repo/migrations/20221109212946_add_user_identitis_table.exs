@@ -13,11 +13,11 @@ defmodule Example.Repo.Migrations.AddUserIdentitisTable do
       add :access_token_expires_at, :utc_datetime_usec
       add :access_token, :text
       add :uid, :text, null: false
-      add :provider, :text, null: false
+      add :strategy, :text, null: false
       add :id, :uuid, null: false, primary_key: true
 
       add :user_id,
-          references(:user_with_username,
+          references(:user,
             column: :id,
             name: "user_identities_user_id_fkey",
             type: :uuid,
@@ -25,14 +25,14 @@ defmodule Example.Repo.Migrations.AddUserIdentitisTable do
           )
     end
 
-    create unique_index(:user_identities, [:provider, :uid, :user_id],
-             name: "user_identities_unique_on_provider_and_uid_and_user_id_index"
+    create unique_index(:user_identities, [:strategy, :uid, :user_id],
+             name: "user_identities_unique_on_strategy_and_uid_and_user_id_index"
            )
   end
 
   def down do
-    drop_if_exists unique_index(:user_identities, [:provider, :uid, :user_id],
-                     name: "user_identities_unique_on_provider_and_uid_and_user_id_index"
+    drop_if_exists unique_index(:user_identities, [:strategy, :uid, :user_id],
+                     name: "user_identities_unique_on_strategy_and_uid_and_user_id_index"
                    )
 
     drop constraint(:user_identities, "user_identities_user_id_fkey")
