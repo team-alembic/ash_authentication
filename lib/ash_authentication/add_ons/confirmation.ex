@@ -119,9 +119,6 @@ defmodule AshAuthentication.AddOn.Confirmation do
 
   This will generate a token with the `"act"` claim set to the confirmation
   action for the strategy, and the `"chg"` claim will contain any changes.
-
-  FIXME: The "chg" claim should encrypt the contents of the changes so as to not
-  leak users' private details.
   """
   @spec confirmation_token(Confirmation.t(), Changeset.t()) :: {:ok, String.t()} | :error
   def confirmation_token(strategy, changeset) do
