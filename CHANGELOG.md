@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v2.0.1](https://github.com/team-alembic/ash_authentication/compare/v2.0.0...v2.0.1) (2022-11-24)
+
+
+
+
+### Improvements:
+
+* Confirmation: Confirmation is not a strategy. (#46)
+
+* Confirmation: Confirmation is not a strategy.
+
+* Confirmation: Support more than one confirmation entity.
+
 ## [v2.0.0](https://github.com/team-alembic/ash_authentication/compare/v1.0.0...v2.0.0) (2022-11-22)
 ### Breaking Changes:
 
