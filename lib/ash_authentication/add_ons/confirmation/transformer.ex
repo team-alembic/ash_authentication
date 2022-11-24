@@ -39,20 +39,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
     dsl_state
     |> Info.authentication_add_ons()
     |> Enum.filter(&is_struct(&1, Confirmation))
-    |> case do
-      [] ->
-        {:ok, dsl_state}
-
-      [strategy] ->
-        transform_strategy(strategy, dsl_state)
-
-      [_ | _] ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :add_ons, :confirmation],
-           message: "Multiple confirmation add ons are not supported"
-         )}
-    end
+    |> Enum.reduce_while({:ok, dsl_state}, fn strategy, {:ok, dsl_state} ->
+      case transform_strategy(strategy, dsl_state) do
+        {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   defp transform_strategy(strategy, dsl_state) do

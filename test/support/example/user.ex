@@ -106,7 +106,7 @@ defmodule Example.User do
     end
 
     add_ons do
-      confirmation do
+      confirmation :confirm do
         monitor_fields([:username])
         inhibit_updates?(true)
 

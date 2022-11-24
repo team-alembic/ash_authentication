@@ -5,9 +5,9 @@ defmodule AshAuthentication.AddOn.Confirmation do
   Confirmation support.
 
   Sometimes when creating a new user, or changing a sensitive attribute (such as
-  their email address) you may want to for the user to confirm by way of sending
-  them a confirmation token to prove that it was really them that took the
-  action.
+  their email address) you may want to wait for the user to confirm by way of
+  sending them a confirmation token to prove that it was really them that took
+  the action.
 
   In order to add confirmation to your resource, it must been the following
   minimum requirements:
@@ -31,8 +31,10 @@ defmodule AshAuthentication.AddOn.Confirmation do
     authentication do
       api MyApp.Accounts
 
-      confirmation do
-        monitor_fields [:email]
+      add_ons do
+        confirmation :confirm do
+          monitor_fields [:email]
+        end
       end
 
       strategies do
