@@ -1,4 +1,4 @@
-defmodule AshAuthentication.Strategy.Confirmation.PlugTest do
+defmodule AshAuthentication.AddOn.Confirmation.PlugTest do
   @moduledoc false
   use DataCase, async: true
   import Plug.Test
@@ -6,10 +6,10 @@ defmodule AshAuthentication.Strategy.Confirmation.PlugTest do
   alias Ash.Changeset
 
   alias AshAuthentication.{
+    AddOn.Confirmation,
+    AddOn.Confirmation.Plug,
     Info,
-    Plug.Helpers,
-    Strategy.Confirmation,
-    Strategy.Confirmation.Plug
+    Plug.Helpers
   }
 
   describe "confirm/2" do

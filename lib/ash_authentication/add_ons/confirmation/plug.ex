@@ -1,9 +1,9 @@
-defmodule AshAuthentication.Strategy.Confirmation.Plug do
+defmodule AshAuthentication.AddOn.Confirmation.Plug do
   @moduledoc """
   Handlers for incoming OAuth2 HTTP requests.
   """
 
-  alias AshAuthentication.{Strategy, Strategy.Confirmation}
+  alias AshAuthentication.{AddOn.Confirmation, Strategy}
   alias Plug.Conn
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
 

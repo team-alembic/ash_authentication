@@ -1,8 +1,8 @@
-defmodule AshAuthentication.Strategy.Confirmation.StrategyTest do
+defmodule AshAuthentication.AddOn.Confirmation.StrategyTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  alias AshAuthentication.{Info, Strategy, Strategy.Confirmation}
+  alias AshAuthentication.{AddOn.Confirmation, Info, Strategy}
 
   use Mimic
   import Plug.Test

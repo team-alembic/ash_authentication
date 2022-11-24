@@ -1,12 +1,12 @@
-defmodule AshAuthentication.Strategy.Confirmation.Actions do
+defmodule AshAuthentication.AddOn.Confirmation.Actions do
   @moduledoc """
-  Actions for the confirmation strategy.
+  Actions for the confirmation add-on.
 
   Provides the code interface for working with resources via confirmation.
   """
 
   alias Ash.{Changeset, Resource}
-  alias AshAuthentication.{Errors.InvalidToken, Info, Jwt, Strategy.Confirmation}
+  alias AshAuthentication.{AddOn.Confirmation, Errors.InvalidToken, Info, Jwt}
 
   @doc """
   Attempt to confirm a user.
