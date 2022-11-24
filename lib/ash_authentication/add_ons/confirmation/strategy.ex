@@ -1,11 +1,11 @@
-defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Confirmation do
+defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.Confirmation do
   @moduledoc """
   Implementation of `AshAuthentication.Strategy` for
-  `AshAuthentication.Strategy.Confirmation`.
+  `AshAuthentication.AddOn.Confirmation`.
   """
 
   alias Ash.Resource
-  alias AshAuthentication.{Info, Strategy, Strategy.Confirmation}
+  alias AshAuthentication.{Info, Strategy, AddOn.Confirmation}
   alias Plug.Conn
 
   @typedoc "The request phases supposed by this strategy"

@@ -1,9 +1,9 @@
-defmodule AshAuthentication.Strategy.Confirmation.ActionsTest do
+defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
   @moduledoc false
   use DataCase, async: true
 
   alias Ash.Changeset
-  alias AshAuthentication.{Info, Strategy.Confirmation, Strategy.Confirmation.Actions}
+  alias AshAuthentication.{AddOn.Confirmation, AddOn.Confirmation.Actions, Info}
 
   describe "confirm/2" do
     test "it returns an error when there is no corresponding user" do

@@ -85,7 +85,7 @@ defmodule AshAuthentication do
       AshAuthentication.Transformer,
       AshAuthentication.Strategy.Password.Transformer,
       AshAuthentication.Strategy.OAuth2.Transformer,
-      AshAuthentication.Strategy.Confirmation.Transformer
+      AshAuthentication.AddOn.Confirmation.Transformer
     ]
 
   require Ash.Query

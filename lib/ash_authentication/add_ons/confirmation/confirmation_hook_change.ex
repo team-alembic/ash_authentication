@@ -1,4 +1,4 @@
-defmodule AshAuthentication.Strategy.Confirmation.ConfirmationHookChange do
+defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
   @moduledoc """
   Triggers a confirmation flow when one of the monitored fields is changed.
 
@@ -7,7 +7,7 @@ defmodule AshAuthentication.Strategy.Confirmation.ConfirmationHookChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Resource.Change}
-  alias AshAuthentication.{Info, Strategy.Confirmation}
+  alias AshAuthentication.{AddOn.Confirmation, Info}
 
   @doc false
   @impl true

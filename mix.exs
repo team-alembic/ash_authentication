@@ -38,11 +38,13 @@ defmodule AshAuthentication.MixProject do
             AshAuthentication.Strategy.Password,
             AshAuthentication.Strategy.OAuth2
           ],
+          "Add ons": [
+            AshAuthentication.AddOn.Confirmation
+          ],
           Cryptography: [
             AshAuthentication.HashProvider,
             AshAuthentication.BcryptProvider,
-            AshAuthentication.Jwt,
-            AshAuthentication.Jwt.Config
+            AshAuthentication.Jwt
           ],
           Plug: ~r/^AshAuthentication\.Plug.*/,
           Internals: ~r/^AshAuthentication.*/

@@ -1,6 +1,6 @@
-defmodule AshAuthentication.Strategy.Confirmation.Transformer do
+defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   @moduledoc """
-  DSL transformer for confirmation strategy.
+  DSL transformer for confirmation add-on.
 
   Ensures that there is only ever one present and that it is correctly
   configured.
@@ -8,7 +8,7 @@ defmodule AshAuthentication.Strategy.Confirmation.Transformer do
 
   use Spark.Dsl.Transformer
   alias Ash.{Resource, Type}
-  alias AshAuthentication.{GenerateTokenChange, Info, Sender, Strategy.Confirmation}
+  alias AshAuthentication.{AddOn.Confirmation, GenerateTokenChange, Info, Sender}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -37,22 +37,14 @@ defmodule AshAuthentication.Strategy.Confirmation.Transformer do
           | :halt
   def transform(dsl_state) do
     dsl_state
-    |> Info.authentication_strategies()
+    |> Info.authentication_add_ons()
     |> Enum.filter(&is_struct(&1, Confirmation))
-    |> case do
-      [] ->
-        {:ok, dsl_state}
-
-      [strategy] ->
-        transform_strategy(strategy, dsl_state)
-
-      [_ | _] ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies, :confirmation],
-           message: "Multiple confirmation strategies are not supported"
-         )}
-    end
+    |> Enum.reduce_while({:ok, dsl_state}, fn strategy, {:ok, dsl_state} ->
+      case transform_strategy(strategy, dsl_state) do
+        {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   defp transform_strategy(strategy, dsl_state) do
@@ -79,7 +71,7 @@ defmodule AshAuthentication.Strategy.Confirmation.Transformer do
       dsl_state =
         dsl_state
         |> Transformer.replace_entity(
-          [:authentication, :strategies],
+          [:authentication, :add_ons],
           %{strategy | resource: resource},
           &(&1.name == strategy.name)
         )
@@ -88,7 +80,7 @@ defmodule AshAuthentication.Strategy.Confirmation.Transformer do
     else
       {:error, reason} when is_binary(reason) ->
         {:error,
-         DslError.exception(path: [:authentication, :strategies, :confirmation], message: reason)}
+         DslError.exception(path: [:authentication, :add_ons, :confirmation], message: reason)}
 
       {:error, reason} ->
         {:error, reason}
@@ -96,7 +88,7 @@ defmodule AshAuthentication.Strategy.Confirmation.Transformer do
       :error ->
         {:error,
          DslError.exception(
-           path: [:authentication, :strategies, :confirmation],
+           path: [:authentication, :add_ons, :confirmation],
            message: "Configuration error"
          )}
     end
@@ -106,7 +98,7 @@ defmodule AshAuthentication.Strategy.Confirmation.Transformer do
     do:
       {:error,
        DslError.exception(
-         path: [:authentication, :strategies, :confirmation],
+         path: [:authentication, :add_ons, :confirmation],
          message: "You should be monitoring at least one field"
        )}
 

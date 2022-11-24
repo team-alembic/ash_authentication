@@ -1,4 +1,4 @@
-defmodule AshAuthentication.Strategy.Confirmation.ConfirmChange do
+defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   @moduledoc """
   Performs a change based on the contents of a confirmation token.
   """

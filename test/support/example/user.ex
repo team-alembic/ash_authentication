@@ -105,8 +105,8 @@ defmodule Example.User do
       revocation_resource(Example.TokenRevocation)
     end
 
-    strategies do
-      confirmation do
+    add_ons do
+      confirmation :confirm do
         monitor_fields([:username])
         inhibit_updates?(true)
 
@@ -114,7 +114,9 @@ defmodule Example.User do
           Logger.debug("Confirmation request for user #{user.username}, token #{inspect(token)}")
         end)
       end
+    end
 
+    strategies do
       password :password do
         resettable do
           sender(fn user, token ->
