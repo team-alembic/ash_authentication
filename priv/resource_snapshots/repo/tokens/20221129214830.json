@@ -1,6 +1,26 @@
 {
   "attributes": [
     {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "primary_key?": false,
+      "references": null,
+      "size": null,
+      "source": "extra_data",
+      "type": "map"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "primary_key?": false,
+      "references": null,
+      "size": null,
+      "source": "purpose",
+      "type": "text"
+    },
+    {
       "allow_nil?": false,
       "default": "nil",
       "generated?": false,
@@ -26,7 +46,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "98092CB4D3ED441847CB38BC76408D77082FA08266FC8224FDF994A08A42CECB",
+  "hash": "C03B9937AB0DBCCD13164A0772F6A052FB2DAEFBB6F125584F36399531AB5C43",
   "identities": [],
   "multitenancy": {
     "attribute": null,
@@ -35,5 +55,5 @@
   },
   "repo": "Elixir.Example.Repo",
   "schema": null,
-  "table": "token_revocations"
+  "table": "tokens"
 }

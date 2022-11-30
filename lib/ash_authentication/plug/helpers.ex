@@ -4,7 +4,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
 
   alias Ash.{PlugHelpers, Resource}
-  alias AshAuthentication.{Info, Jwt, TokenRevocation}
+  alias AshAuthentication.{Info, Jwt, TokenResource}
   alias Plug.Conn
 
   @doc """
@@ -116,8 +116,8 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, resource} <- Jwt.token_to_resource(token, otp_app),
-           {:ok, revocation_resource} <- Info.authentication_tokens_revocation_resource(resource),
-           :ok <- TokenRevocation.revoke(revocation_resource, token) do
+           {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource),
+           :ok <- TokenResource.Actions.revoke(token_resource, token) do
         conn
       else
         _ -> conn

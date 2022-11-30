@@ -2,7 +2,7 @@ defmodule AshAuthentication.Jwt.ConfigTest do
   @moduledoc false
   use ExUnit.Case, async: true
   use Mimic
-  alias AshAuthentication.{Jwt.Config, TokenRevocation}
+  alias AshAuthentication.{Jwt.Config, TokenResource}
 
   describe "default_claims/1" do
     test "it is a token config" do
@@ -51,15 +51,15 @@ defmodule AshAuthentication.Jwt.ConfigTest do
 
   describe "validate_jti/3" do
     test "is true when the token has not been revoked" do
-      TokenRevocation
-      |> stub(:revoked?, fn _, _ -> false end)
+      TokenResource
+      |> stub(:jti_revoked?, fn _, _ -> false end)
 
       assert Config.validate_jti("fake jti", nil, Example.User)
     end
 
     test "is false when the token has been revoked" do
-      TokenRevocation
-      |> stub(:revoked?, fn _, _ -> true end)
+      TokenResource
+      |> stub(:jti_revoked?, fn _, _ -> true end)
 
       assert Config.validate_jti("fake jti", nil, Example.User)
     end

@@ -30,7 +30,7 @@ defmodule AshAuthentication.MixProject do
         groups_for_modules: [
           Extensions: [
             AshAuthentication,
-            AshAuthentication.TokenRevocation,
+            AshAuthentication.TokenResource,
             AshAuthentication.UserIdentity
           ],
           Strategies: [

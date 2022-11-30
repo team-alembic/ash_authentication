@@ -4,10 +4,16 @@ defmodule AshAuthentication.Utils do
   alias Spark.{Dsl, Dsl.Transformer}
 
   @doc """
-  Returns true if `falsy` is either `nil` or `false`.
+  Returns `true` if `falsy` is either `nil` or `false`.
   """
   @spec is_falsy(any) :: Macro.t()
   defguard is_falsy(falsy) when falsy in [nil, false]
+
+  @doc """
+  Returns `false` if `truthy` is either `nil` or `false`.
+  """
+  @spec is_truthy(any) :: Macro.t()
+  defguard is_truthy(truthy) when truthy not in [nil, false]
 
   @doc """
   Convert a list of `String.Chars.t` into a sentence.
@@ -148,4 +154,79 @@ defmodule AshAuthentication.Utils do
       do: Map.put(map, field, generator.(map))
 
   def maybe_set_field_lazy(map, _field, _generator), do: map
+
+  @doc """
+  Asserts that `resource` is an Ash resource and `extension` is a Spark DSL
+  extension.
+  """
+  @spec assert_resource_has_extension(Resource.t(), Spark.Dsl.Extension.t()) ::
+          :ok | {:error, term}
+  def assert_resource_has_extension(resource, extension) do
+    with :ok <- assert_is_resource(resource) do
+      assert_has_extension(resource, extension)
+    end
+  end
+
+  @doc """
+  Asserts that `module` is actually an Ash resource.
+  """
+  @spec assert_is_resource(Resource.t()) :: :ok | {:error, term}
+  def assert_is_resource(module) do
+    with :ok <- assert_is_module(module),
+         true <- function_exported?(module, :spark_is, 0),
+         Resource <- module.spark_is() do
+      :ok
+    else
+      _ -> {:error, "Module `#{inspect(module)}` is not an Ash resource"}
+    end
+  end
+
+  @doc """
+  Asserts that `module` is a Spark DSL extension.
+  """
+  @spec assert_is_extension(Spark.Dsl.Extension.t()) :: :ok | {:error, term}
+  def assert_is_extension(extension) do
+    with :ok <- assert_is_module(extension) do
+      assert_has_behaviour(extension, Spark.Dsl.Extension)
+    end
+  end
+
+  @doc """
+  Asserts that `module` is actually a module.
+  """
+  @spec assert_is_module(module) :: :ok | {:error, term}
+  def assert_is_module(module) when is_atom(module) do
+    case Code.ensure_loaded(module) do
+      {:module, _module} -> :ok
+      {:error, _} -> {:error, "Argument `#{inspect(module)}` is not a valid module name"}
+    end
+  end
+
+  def assert_is_module(module),
+    do: {:error, "Argument `#{inspect(module)}` is not a valid module name"}
+
+  @doc """
+  Asserts that `module` is extended by `extension`.
+  """
+  @spec assert_has_extension(Resource.t(), Spark.Dsl.Extension.t()) :: :ok | {:error, term}
+  def assert_has_extension(module, extension) do
+    if extension in Spark.extensions(module) do
+      :ok
+    else
+      {:error, "Module `#{inspect(module)}` is not extended by `#{inspect(extension)}`"}
+    end
+  end
+
+  @doc """
+  Asserts that `module` implements `behaviour`.
+  """
+  @spec assert_has_behaviour(module, module) :: :ok | {:error, term}
+  def assert_has_behaviour(module, behaviour) do
+    if Spark.implements_behaviour?(module, behaviour) do
+      :ok
+    else
+      {:error,
+       "Module `#{inspect(module)}` does not implement the `#{inspect(behaviour)}` behaviour"}
+    end
+  end
 end

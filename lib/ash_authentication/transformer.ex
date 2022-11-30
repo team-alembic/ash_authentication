@@ -6,7 +6,8 @@ defmodule AshAuthentication.Transformer do
   """
 
   use Spark.Dsl.Transformer
-  alias AshAuthentication.Info
+  alias Ash.Resource
+  alias AshAuthentication.{Info, TokenResource}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -15,13 +16,13 @@ defmodule AshAuthentication.Transformer do
   @doc false
   @impl true
   @spec after?(any) :: boolean()
-  def after?(Ash.Resource.Transformers.ValidatePrimaryActions), do: true
+  def after?(Resource.Transformers.ValidatePrimaryActions), do: true
   def after?(_), do: false
 
   @doc false
   @impl true
   @spec before?(any) :: boolean
-  def before?(Ash.Resource.Transformers.DefaultAccept), do: true
+  def before?(Resource.Transformers.DefaultAccept), do: true
   def before?(_), do: false
 
   @doc false
@@ -40,7 +41,7 @@ defmodule AshAuthentication.Transformer do
              &build_get_by_subject_action/1
            ),
          :ok <- validate_read_action(dsl_state, get_by_subject_action_name),
-         :ok <- validate_token_revocation_resource(dsl_state),
+         :ok <- validate_token_resource(dsl_state),
          subject_name <- find_or_generate_subject_name(dsl_state) do
       dsl_state =
         dsl_state
@@ -53,7 +54,7 @@ defmodule AshAuthentication.Transformer do
   defp build_get_by_subject_action(dsl_state) do
     with {:ok, get_by_subject_action_name} <-
            Info.authentication_get_by_subject_action_name(dsl_state) do
-      Transformer.build_entity(Ash.Resource.Dsl, [:actions], :read,
+      Transformer.build_entity(Resource.Dsl, [:actions], :read,
         name: get_by_subject_action_name,
         get?: true
       )
@@ -73,29 +74,22 @@ defmodule AshAuthentication.Transformer do
     end
   end
 
-  defp validate_token_revocation_resource(dsl_state) do
-    if Transformer.get_option(dsl_state, [:tokens], :enabled?) do
-      with resource when not is_nil(resource) <-
-             Transformer.get_option(dsl_state, [:tokens], :revocation_resource),
-           Ash.Resource <- resource.spark_is(),
-           true <- AshAuthentication.TokenRevocation in Spark.extensions(resource) do
+  defp validate_token_resource(dsl_state) do
+    if_tokens_enabled(dsl_state, fn dsl_state ->
+      with {:ok, resource} when is_truthy(resource) <-
+             Info.authentication_tokens_token_resource(dsl_state),
+           :ok <- assert_resource_has_extension(resource, TokenResource) do
         :ok
       else
-        nil ->
-          {:error,
-           DslError.exception(
-             path: [:tokens, :revocation_resource],
-             message: "A revocation resource must be configured when tokens are enabled"
-           )}
-
-        _ ->
-          {:error,
-           DslError.exception(
-             path: [:tokens, :revocation_resource],
-             message:
-               "The revocation resource must be an Ash resource with the `AshAuthentication.TokenRevocation` extension"
-           )}
+        {:ok, falsy} when is_falsy(falsy) -> :ok
+        {:error, reason} -> {:error, reason}
       end
+    end)
+  end
+
+  defp if_tokens_enabled(dsl_state, validator) when is_function(validator, 1) do
+    if Info.authentication_tokens_enabled?(dsl_state) do
+      validator.(dsl_state)
     else
       :ok
     end

@@ -8,7 +8,7 @@ defmodule AshAuthentication.Jwt.Config do
   """
 
   alias Ash.Resource
-  alias AshAuthentication.{Info, Jwt, TokenRevocation}
+  alias AshAuthentication.{Info, Jwt, TokenResource}
   alias Joken.{Config, Signer}
 
   @doc """
@@ -95,9 +95,9 @@ defmodule AshAuthentication.Jwt.Config do
   """
   @spec validate_jti(String.t(), any, Resource.t() | any) :: boolean
   def validate_jti(jti, _claims, resource) when is_atom(resource) do
-    case Info.authentication_tokens_revocation_resource(resource) do
-      {:ok, revocation_resource} ->
-        TokenRevocation.valid?(revocation_resource, jti)
+    case Info.authentication_tokens_token_resource(resource) do
+      {:ok, token_resource} ->
+        TokenResource.Actions.valid_jti?(token_resource, jti)
 
       _ ->
         false

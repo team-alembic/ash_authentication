@@ -137,16 +137,16 @@ defmodule AshAuthentication.Dsl do
                 """,
                 default: @default_token_lifetime_days * 24
               ],
-              revocation_resource: [
-                type: {:behaviour, Resource},
+              token_resource: [
+                type: {:or, [{:behaviour, Resource}, {:in, [false]}]},
                 doc: """
-                The resource used to store token revocation information.
+                The resource used to store token information.
 
                 If token generation is enabled for this resource, we need a place to
-                store revocation information. This option is the name of an Ash
-                Resource which has the `AshAuthentication.TokenRevocation` extension
-                present.
-                """
+                store information about tokens, such as revocations and in-flight
+                confirmations.
+                """,
+                required: true
               ]
             ]
           },

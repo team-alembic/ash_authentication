@@ -102,7 +102,7 @@ defmodule Example.User do
 
     tokens do
       enabled?(true)
-      revocation_resource(Example.TokenRevocation)
+      token_resource(Example.Token)
     end
 
     add_ons do
