@@ -7,7 +7,7 @@ defmodule AshAuthentication.Application do
   @doc false
   @impl true
   def start(_type, _args) do
-    [AshAuthentication.TokenRevocation.Expunger]
+    [AshAuthentication.TokenResource.Expunger]
     |> maybe_append(start_dev_server?(), {DevServer, []})
     |> maybe_append(start_repo?(), {Example.Repo, []})
     |> Supervisor.start_link(strategy: :one_for_one, name: AshAuthentication.Supervisor)

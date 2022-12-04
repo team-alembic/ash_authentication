@@ -47,12 +47,12 @@
       "primary_key?": false,
       "references": null,
       "size": null,
-      "source": "provider",
+      "source": "strategy",
       "type": "text"
     },
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "fragment(\"uuid_generate_v4()\")",
       "generated?": false,
       "primary_key?": true,
       "references": null,
@@ -90,17 +90,17 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "721BB418378550EA1ABD21F538EFD59A02FEE3E20A96EBCBAF6D2C99E1EC0672",
+  "hash": "17B4CEEA4E648DF739AD38C1A090B8A97EB9B2A0C9A8F1DFE0B9C3A1842785BE",
   "identities": [
     {
       "base_filter": null,
-      "index_name": "user_identities_unique_on_provider_and_uid_and_user_id_index",
+      "index_name": "user_identities_unique_on_strategy_and_uid_and_user_id_index",
       "keys": [
-        "provider",
+        "strategy",
         "uid",
         "user_id"
       ],
-      "name": "unique_on_provider_and_uid_and_user_id"
+      "name": "unique_on_strategy_and_uid_and_user_id"
     }
   ],
   "multitenancy": {

@@ -1,44 +1,14 @@
 {
   "attributes": [
     {
-      "allow_nil?": true,
-      "default": "nil",
+      "allow_nil?": false,
+      "default": "fragment(\"now()\")",
       "generated?": false,
       "primary_key?": false,
       "references": null,
       "size": null,
-      "source": "confirmed_at",
+      "source": "updated_at",
       "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": false,
-      "default": "fragment(\"uuid_generate_v4()\")",
-      "generated?": false,
-      "primary_key?": true,
-      "references": null,
-      "size": null,
-      "source": "id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "primary_key?": false,
-      "references": null,
-      "size": null,
-      "source": "username",
-      "type": "citext"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "primary_key?": false,
-      "references": null,
-      "size": null,
-      "source": "hashed_password",
-      "type": "text"
     },
     {
       "allow_nil?": false,
@@ -51,14 +21,44 @@
       "type": "utc_datetime_usec"
     },
     {
-      "allow_nil?": false,
-      "default": "fragment(\"now()\")",
+      "allow_nil?": true,
+      "default": "nil",
       "generated?": false,
       "primary_key?": false,
       "references": null,
       "size": null,
-      "source": "updated_at",
-      "type": "utc_datetime_usec"
+      "source": "extra_data",
+      "type": "map"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "primary_key?": false,
+      "references": null,
+      "size": null,
+      "source": "purpose",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "primary_key?": false,
+      "references": null,
+      "size": null,
+      "source": "expires_at",
+      "type": "utc_datetime"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "primary_key?": true,
+      "references": null,
+      "size": null,
+      "source": "jti",
+      "type": "text"
     }
   ],
   "base_filter": null,
@@ -66,17 +66,8 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "12E7392CC92EAE2AB421A89BA0C03F0A92D72FD6732BB8CA6914408B1C77F471",
-  "identities": [
-    {
-      "base_filter": null,
-      "index_name": "user_with_username_username_index",
-      "keys": [
-        "username"
-      ],
-      "name": "username"
-    }
-  ],
+  "hash": "8E544287AF1E39AA15A68F9B7A98AA11E0E089030F01748B7C576CB75BF05A72",
+  "identities": [],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -84,5 +75,5 @@
   },
   "repo": "Elixir.Example.Repo",
   "schema": null,
-  "table": "user"
+  "table": "tokens"
 }

@@ -69,7 +69,7 @@ defmodule AshAuthentication.JwtTest do
     test "it is unsuccessful when the token has been revoked" do
       {:ok, token, _} = build_user() |> Jwt.token_for_user()
 
-      AshAuthentication.TokenRevocation.revoke(Example.TokenRevocation, token)
+      AshAuthentication.TokenResource.revoke(Example.Token, token)
 
       assert :error = Jwt.verify(token, :ash_authentication)
     end

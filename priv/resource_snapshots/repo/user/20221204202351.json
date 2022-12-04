@@ -66,11 +66,11 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "7CBDF6DCD8CC589215A49B2F4D2749581BC72D1E4FD27DFBC4460FCDCD6087A6",
+  "hash": "D72CF1073FC9EAAFA2C59CFAB17301530972DD0A7F030A1DDD006F62F75C1CDA",
   "identities": [
     {
       "base_filter": null,
-      "index_name": "user_with_username_username_index",
+      "index_name": "user_username_index",
       "keys": [
         "username"
       ],

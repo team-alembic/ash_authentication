@@ -93,16 +93,4 @@ defmodule DataCase do
       Ash.Resource.put_metadata(user, field, value)
     end)
   end
-
-  @doc "Token revocation factory"
-  @spec build_token_revocation :: Example.TokenRevocation.t() | no_return
-  def build_token_revocation do
-    {:ok, token, _claims} =
-      build_user()
-      |> AshAuthentication.Jwt.token_for_user()
-
-    Example.TokenRevocation
-    |> Ash.Changeset.for_create(:revoke_token, %{token: token})
-    |> Example.create!()
-  end
 end

@@ -18,7 +18,33 @@ defmodule AshAuthentication.AddOn.ConfirmationTest do
       assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
       assert {:ok, claims} = Jwt.peek(token)
       assert claims["act"] == to_string(strategy.confirm_action_name)
-      assert claims["chg"] == %{"username" => new_username}
+    end
+
+    test "it stores changes in the token resource" do
+      {:ok, strategy} = Info.strategy(Example.User, :confirm)
+      user = build_user()
+
+      new_username = username()
+      changeset = Changeset.for_update(user, :update, %{"username" => new_username})
+
+      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+      assert {:ok, claims} = Jwt.peek(token)
+      assert {:ok, changes} = Confirmation.Actions.get_changes(strategy, claims["jti"])
+
+      assert [{"username", new_username}] == Enum.to_list(changes)
+    end
+
+    test "it does not store the changes in the confirmation token" do
+      {:ok, strategy} = Info.strategy(Example.User, :confirm)
+      user = build_user()
+
+      new_username = username()
+      changeset = Changeset.for_update(user, :update, %{"username" => new_username})
+
+      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+      assert {:ok, claims} = Jwt.peek(token)
+
+      refute Map.has_key?(claims, "chg")
     end
   end
 

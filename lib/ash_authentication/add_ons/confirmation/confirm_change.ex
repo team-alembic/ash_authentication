@@ -4,7 +4,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.Jwt
+  alias AshAuthentication.{AddOn.Confirmation.Actions, Jwt}
 
   alias Ash.{
     Changeset,
@@ -30,9 +30,10 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
     changeset
     |> Changeset.before_action(fn changeset ->
       with token when is_binary(token) <- Changeset.get_argument(changeset, :confirm),
-           {:ok, %{"act" => action, "chg" => changes}, _} <-
+           {:ok, %{"act" => action, "jti" => jti}, _} <-
              Jwt.verify(token, changeset.resource),
-           true <- to_string(strategy.confirm_action_name) == action do
+           true <- to_string(strategy.confirm_action_name) == action,
+           {:ok, changes} <- Actions.get_changes(strategy, jti) do
         allowed_changes =
           if strategy.inhibit_updates?,
             do: Map.take(changes, Enum.map(strategy.monitor_fields, &to_string/1)),

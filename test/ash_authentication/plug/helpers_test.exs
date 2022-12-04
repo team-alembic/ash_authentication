@@ -77,7 +77,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
       |> Helpers.revoke_bearer_tokens(:ash_authentication)
 
-      assert AshAuthentication.TokenRevocation.revoked?(user.__struct__, jti)
+      assert AshAuthentication.TokenResource.jti_revoked?(user.__struct__, jti)
     end
   end
 
