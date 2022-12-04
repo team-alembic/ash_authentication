@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.0.0](https://github.com/team-alembic/ash_authentication/compare/v2.0.1...v3.0.0) (2022-12-04)
+### Breaking Changes:
+
+* TokenResource: Move `TokenRevocation` -> `TokenResource`.
+
+
+
+### Improvements:
+
+* Confirmation: Store confirmation changes in the token resource.
+
 ## [v2.0.1](https://github.com/team-alembic/ash_authentication/compare/v2.0.0...v2.0.1) (2022-11-24)
 
 
