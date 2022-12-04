@@ -132,7 +132,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
         params = %{"username" => Faker.Internet.user_name()}
 
         Password.Actions
-        |> expect(unquote(action), fn rx_strategy, rx_params ->
+        |> expect(unquote(action), fn rx_strategy, rx_params, _opts ->
           assert rx_strategy == strategy
           assert rx_params == params
         end)

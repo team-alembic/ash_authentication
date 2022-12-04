@@ -81,7 +81,7 @@ defmodule AshAuthentication.Strategy.OAuth2.StrategyTest do
         params = %{"user_info" => %{}, "oauth_tokens" => %{}}
 
         OAuth2.Actions
-        |> expect(unquote(action), fn rx_strategy, rx_params ->
+        |> expect(unquote(action), fn rx_strategy, rx_params, _opts ->
           assert rx_strategy == strategy
           assert rx_params == params
         end)

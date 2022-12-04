@@ -48,7 +48,7 @@ defmodule AshAuthentication.AddOn.Confirmation.StrategyTest do
       params = %{"confirm" => Ecto.UUID.generate()}
 
       Confirmation.Actions
-      |> expect(:confirm, fn rx_strategy, rx_params ->
+      |> expect(:confirm, fn rx_strategy, rx_params, _opts ->
         assert rx_strategy == strategy
         assert rx_params == params
       end)

@@ -11,8 +11,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   @doc """
   Attempt to sign in a user.
   """
-  @spec sign_in(OAuth2.t(), map) :: {:ok, Resource.record()} | {:error, any}
-  def sign_in(%OAuth2{} = strategy, _params) when strategy.registration_enabled?,
+  @spec sign_in(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def sign_in(%OAuth2{} = strategy, _params, _options) when strategy.registration_enabled?,
     do:
       {:error,
        NoSuchAction.exception(
@@ -21,14 +21,14 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
          type: :read
        )}
 
-  def sign_in(%OAuth2{} = strategy, params) do
+  def sign_in(%OAuth2{} = strategy, params, options) do
     api = Info.authentication_api!(strategy.resource)
 
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{strategy: strategy})
     |> Query.for_read(strategy.sign_in_action_name, params)
-    |> api.read()
+    |> api.read(options)
     |> case do
       {:ok, [user]} -> {:ok, user}
       _ -> {:error, Errors.AuthenticationFailed.exception([])}
@@ -38,8 +38,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   @doc """
   Attempt to register a new user.
   """
-  @spec register(OAuth2.t(), map) :: {:ok, Resource.record()} | {:error, any}
-  def register(%OAuth2{} = strategy, params) when strategy.registration_enabled? do
+  @spec register(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def register(%OAuth2{} = strategy, params, options) when strategy.registration_enabled? do
     api = Info.authentication_api!(strategy.resource)
     action = Resource.Info.action(strategy.resource, strategy.register_action_name, :create)
 
@@ -50,10 +50,10 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       upsert?: true,
       upsert_identity: action.upsert_identity
     )
-    |> api.create()
+    |> api.create(options)
   end
 
-  def register(%OAuth2{} = strategy, _params),
+  def register(%OAuth2{} = strategy, _params, _options),
     do:
       {:error,
        NoSuchAction.exception(

@@ -17,10 +17,14 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       {:ok, strategy} = Info.strategy(Example.User, :password)
 
       assert {:ok, user} =
-               Actions.sign_in(strategy, %{
-                 "username" => user.username,
-                 "password" => user.__metadata__.password
-               })
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   "username" => user.username,
+                   "password" => user.__metadata__.password
+                 },
+                 []
+               )
 
       assert {:ok, claims} = Jwt.peek(user.__metadata__.token)
       assert claims["sub"] =~ "user?id=#{user.id}"
@@ -31,14 +35,22 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       {:ok, strategy} = Info.strategy(Example.User, :password)
 
       assert {:error, %AuthenticationFailed{}} =
-               Actions.sign_in(strategy, %{"username" => user.username, "password" => password()})
+               Actions.sign_in(
+                 strategy,
+                 %{"username" => user.username, "password" => password()},
+                 []
+               )
     end
 
     test "it returns an error when the username and password are incorrect" do
       {:ok, strategy} = Info.strategy(Example.User, :password)
 
       assert {:error, %AuthenticationFailed{}} =
-               Actions.sign_in(strategy, %{"username" => username(), "password" => password()})
+               Actions.sign_in(
+                 strategy,
+                 %{"username" => username(), "password" => password()},
+                 []
+               )
     end
   end
 
@@ -50,11 +62,15 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       password = password()
 
       assert {:ok, user} =
-               Actions.register(strategy, %{
-                 "username" => username,
-                 "password" => password,
-                 "password_confirmation" => password
-               })
+               Actions.register(
+                 strategy,
+                 %{
+                   "username" => username,
+                   "password" => password,
+                   "password_confirmation" => password
+                 },
+                 []
+               )
 
       assert strategy.hash_provider.valid?(password, user.hashed_password)
 
@@ -69,11 +85,15 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       password = password()
 
       assert {:error, error} =
-               Actions.register(strategy, %{
-                 "username" => user.username,
-                 "password" => password,
-                 "password_confirmation" => password
-               })
+               Actions.register(
+                 strategy,
+                 %{
+                   "username" => user.username,
+                   "password" => password,
+                   "password_confirmation" => password
+                 },
+                 []
+               )
 
       assert Exception.message(error) =~ ~r/username: has already been taken/
     end
@@ -82,11 +102,15 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       {:ok, strategy} = Info.strategy(Example.User, :password)
 
       assert {:error, error} =
-               Actions.register(strategy, %{
-                 "username" => username(),
-                 "password" => password(),
-                 "password_confirmation" => password()
-               })
+               Actions.register(
+                 strategy,
+                 %{
+                   "username" => username(),
+                   "password" => password(),
+                   "password_confirmation" => password()
+                 },
+                 []
+               )
 
       assert Exception.message(error) =~ ~r/password_confirmation: does not match/
     end
@@ -99,7 +123,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
 
       log =
         capture_log(fn ->
-          assert :ok = Actions.reset_request(strategy, %{"username" => user.username()})
+          assert :ok = Actions.reset_request(strategy, %{"username" => user.username()}, [])
         end)
 
       assert log =~ ~r/password reset request for user #{user.username}/i
@@ -110,7 +134,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
 
       log =
         capture_log(fn ->
-          assert :ok = Actions.reset_request(strategy, %{"username" => username()})
+          assert :ok = Actions.reset_request(strategy, %{"username" => username()}, [])
         end)
 
       refute log =~ ~r/password reset request for user/i
@@ -120,7 +144,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       {:ok, strategy} = Info.strategy(Example.User, :password)
       strategy = %{strategy | resettable: []}
 
-      assert {:error, error} = Actions.reset_request(strategy, %{"username" => username()})
+      assert {:error, error} = Actions.reset_request(strategy, %{"username" => username()}, [])
       assert Exception.message(error) =~ ~r/no such action/i
     end
   end
@@ -139,7 +163,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
         "password_confirmation" => new_password
       }
 
-      assert {:ok, updated_user} = Actions.reset(strategy, params)
+      assert {:ok, updated_user} = Actions.reset(strategy, params, [])
 
       assert user.id == updated_user.id
       assert user.hashed_password != updated_user.hashed_password

@@ -20,14 +20,14 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
 
       Example.Repo.delete!(user)
 
-      assert {:error, error} = Actions.confirm(strategy, %{"confirm" => token})
+      assert {:error, error} = Actions.confirm(strategy, %{"confirm" => token}, [])
       assert Exception.message(error) == "record not found"
     end
 
     test "it returns an error when the token is invalid" do
       {:ok, strategy} = Info.strategy(Example.User, :confirm)
 
-      assert {:error, error} = Actions.confirm(strategy, %{"confirm" => Ecto.UUID.generate()})
+      assert {:error, error} = Actions.confirm(strategy, %{"confirm" => Ecto.UUID.generate()}, [])
       assert Exception.message(error) == "Invalid confirmation token"
     end
 
@@ -42,7 +42,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
 
       {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
 
-      assert {:ok, confirmed_user} = Actions.confirm(strategy, %{"confirm" => token})
+      assert {:ok, confirmed_user} = Actions.confirm(strategy, %{"confirm" => token}, [])
 
       assert confirmed_user.id == user.id
       assert to_string(confirmed_user.username) == new_username

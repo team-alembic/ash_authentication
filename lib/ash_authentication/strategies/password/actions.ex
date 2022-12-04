@@ -12,16 +12,16 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   @doc """
   Attempt to sign in a user.
   """
-  @spec sign_in(Password.t(), map) ::
+  @spec sign_in(Password.t(), map, keyword) ::
           {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
-  def sign_in(%Password{} = strategy, params) do
+  def sign_in(%Password{} = strategy, params, options) do
     api = Info.authentication_api!(strategy.resource)
 
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{strategy: strategy})
     |> Query.for_read(strategy.sign_in_action_name, params)
-    |> api.read()
+    |> api.read(options)
     |> case do
       {:ok, [user]} -> {:ok, user}
       _ -> {:error, Errors.AuthenticationFailed.exception([])}
@@ -31,24 +31,25 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   @doc """
   Attempt to register a new user.
   """
-  @spec register(Password.t(), map) :: {:ok, Resource.record()} | {:error, any}
-  def register(%Password{} = strategy, params) do
+  @spec register(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def register(%Password{} = strategy, params, options) do
     api = Info.authentication_api!(strategy.resource)
 
     strategy.resource
     |> Changeset.new()
     |> Changeset.set_context(%{strategy: strategy})
     |> Changeset.for_create(strategy.register_action_name, params)
-    |> api.create()
+    |> api.create(options)
   end
 
   @doc """
   Request a password reset.
   """
-  @spec reset_request(Password.t(), map) :: :ok | {:error, any}
+  @spec reset_request(Password.t(), map, keyword) :: :ok | {:error, any}
   def reset_request(
         %Password{resettable: [%Password.Resettable{} = resettable]} = strategy,
-        params
+        params,
+        options
       ) do
     api = Info.authentication_api!(strategy.resource)
 
@@ -56,14 +57,14 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     |> Query.new()
     |> Query.set_context(%{strategy: strategy})
     |> Query.for_read(resettable.request_password_reset_action_name, params)
-    |> api.read()
+    |> api.read(options)
     |> case do
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
     end
   end
 
-  def reset_request(%Password{} = strategy, _params),
+  def reset_request(%Password{} = strategy, _params, _options),
     do:
       {:error,
        NoSuchAction.exception(resource: strategy.resource, action: :reset_request, type: :read)}
@@ -71,8 +72,12 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   @doc """
   Attempt to change a user's password using a reset token.
   """
-  @spec reset(Password.t(), map) :: {:ok, Resource.record()} | {:error, any}
-  def reset(%Password{resettable: [%Password.Resettable{} = resettable]} = strategy, params) do
+  @spec reset(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def reset(
+        %Password{resettable: [%Password.Resettable{} = resettable]} = strategy,
+        params,
+        options
+      ) do
     with {:ok, token} <- Map.fetch(params, "reset_token"),
          {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, strategy.resource),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
@@ -82,13 +87,13 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       |> Changeset.new()
       |> Changeset.set_context(%{strategy: strategy})
       |> Changeset.for_update(resettable.password_reset_action_name, params)
-      |> api.update()
+      |> api.update(options)
     else
       {:error, %Changeset{} = changeset} -> {:error, changeset}
       _ -> {:error, Errors.InvalidToken.exception(type: :reset)}
     end
   end
 
-  def reset(%Password{} = strategy, _params),
+  def reset(%Password{} = strategy, _params, _options),
     do: {:error, NoSuchAction.exception(resource: strategy.resource, action: :reset, type: :read)}
 end

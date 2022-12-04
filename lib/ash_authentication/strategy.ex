@@ -109,7 +109,10 @@ defprotocol AshAuthentication.Strategy do
   that the context is correctly set, etc.
 
   See `actions/1` for a list of actions provided by the strategy.
+
+  Any options passed to the action will be passed to the underlying `Ash.Api` function.
   """
-  @spec action(t, action, params :: map) :: :ok | {:ok, Resource.record()} | {:error, any}
-  def action(strategy, action_name, params)
+  @spec action(t, action, params :: map, options :: keyword) ::
+          :ok | {:ok, Resource.record()} | {:error, any}
+  def action(strategy, action_name, params, options \\ [])
 end
