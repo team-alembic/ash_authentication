@@ -47,6 +47,8 @@ defmodule Example.Repo.Migrations.MigrateResources1 do
     create unique_index(:user, [:username], name: "user_username_index")
 
     create table(:tokens, primary_key: false) do
+      add :updated_at, :utc_datetime_usec, null: false, default: fragment("now()")
+      add :created_at, :utc_datetime_usec, null: false, default: fragment("now()")
       add :extra_data, :map
       add :purpose, :text, null: false
       add :expires_at, :utc_datetime, null: false

@@ -149,6 +149,10 @@ defmodule AshAuthentication.Utils do
 
   def maybe_set_field(map, _field, _value), do: map
 
+  @doc """
+  Like `maybe_set_field/3` except that the value is lazily generated.
+  """
+  @spec maybe_set_field_lazy(input, any, (input -> value)) :: map when input: map, value: any
   def maybe_set_field_lazy(map, field, generator)
       when is_falsy(:erlang.map_get(field, map)) and is_function(generator, 1),
       do: Map.put(map, field, generator.(map))
@@ -177,7 +181,8 @@ defmodule AshAuthentication.Utils do
          Resource <- module.spark_is() do
       :ok
     else
-      _ -> {:error, "Module `#{inspect(module)}` is not an Ash resource"}
+      _ ->
+        {:error, "Module `#{inspect(module)}` is not an Ash resource"}
     end
   end
 

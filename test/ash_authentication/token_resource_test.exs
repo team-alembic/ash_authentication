@@ -8,10 +8,12 @@ defmodule AshAuthentication.TokenResourceTest do
     test "it revokes tokens" do
       {token, %{"jti" => jti}} = build_token()
       refute TokenResource.jti_revoked?(Example.Token, jti)
+      refute TokenResource.token_revoked?(Example.Token, token)
 
       assert :ok = TokenResource.revoke(Example.Token, token)
 
       assert TokenResource.jti_revoked?(Example.Token, jti)
+      assert TokenResource.token_revoked?(Example.Token, token)
     end
   end
 

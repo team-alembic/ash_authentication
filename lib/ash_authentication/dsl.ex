@@ -170,6 +170,9 @@ defmodule AshAuthentication.Dsl do
     ]
   end
 
+  # The result spec should be changed to `Entity.t` when Spark 0.2.18 goes out.
+  @doc false
+  @spec strategy(:confirmation | :oauth2 | :password) :: map
   def strategy(:password) do
     %Entity{
       name: :password,

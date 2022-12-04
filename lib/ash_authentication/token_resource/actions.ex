@@ -25,7 +25,12 @@ defmodule AshAuthentication.TokenResource.Actions do
   """
   @spec expunge_expired(Resource.t(), keyword) :: :ok | {:error, any}
   def expunge_expired(resource, opts \\ []) do
-    DataLayer.transaction(resource, fn -> expunge_inside_transaction(resource, opts) end, 5000)
+    resource
+    |> DataLayer.transaction(fn -> expunge_inside_transaction(resource, opts) end, 5000)
+    |> case do
+      {:ok, :ok} -> :ok
+      {:errore, reason} -> {:error, reason}
+    end
   end
 
   @doc """
@@ -110,7 +115,7 @@ defmodule AshAuthentication.TokenResource.Actions do
         |> Changeset.for_destroy(expunge_expired_action_name, opts)
         |> api.destroy()
         |> case do
-          {:ok, _} -> {:cont, :ok}
+          :ok -> {:cont, :ok}
           {:error, reason} -> {:halt, {:error, reason}}
         end
       end)

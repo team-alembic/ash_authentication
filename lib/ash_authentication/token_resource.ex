@@ -59,6 +59,26 @@ defmodule AshAuthentication.TokenResource do
               default: :revoked?
             ]
           ]
+        },
+        %Spark.Dsl.Section{
+          name: :confirmation,
+          describe: "Configuration options for confirmation tokens",
+          schema: [
+            store_changes_action_name: [
+              type: :atom,
+              doc: """
+              The name of the action used to store confirmation changes.
+              """,
+              default: :store_confirmation_changes
+            ],
+            get_changes_action_name: [
+              type: :atom,
+              doc: """
+              The name of the action used to get confirmation changes.
+              """,
+              default: :get_confirmation_changes
+            ]
+          ]
         }
       ]
     }

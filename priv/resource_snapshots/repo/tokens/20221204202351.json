@@ -1,6 +1,26 @@
 {
   "attributes": [
     {
+      "allow_nil?": false,
+      "default": "fragment(\"now()\")",
+      "generated?": false,
+      "primary_key?": false,
+      "references": null,
+      "size": null,
+      "source": "updated_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"now()\")",
+      "generated?": false,
+      "primary_key?": false,
+      "references": null,
+      "size": null,
+      "source": "created_at",
+      "type": "utc_datetime_usec"
+    },
+    {
       "allow_nil?": true,
       "default": "nil",
       "generated?": false,
@@ -46,7 +66,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "C03B9937AB0DBCCD13164A0772F6A052FB2DAEFBB6F125584F36399531AB5C43",
+  "hash": "8E544287AF1E39AA15A68F9B7A98AA11E0E089030F01748B7C576CB75BF05A72",
   "identities": [],
   "multitenancy": {
     "attribute": null,

@@ -60,6 +60,19 @@ defmodule AshAuthentication.TokenResource.Transformer do
              allow_nil?: true,
              writable?: true
            ),
+         {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, :created_at, :utc_datetime_usec,
+             allow_nil?: false,
+             private?: true,
+             default: &DateTime.utc_now/0
+           ),
+         {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, :updated_at, :utc_datetime_usec,
+             allow_nil?: false,
+             private?: true,
+             default: &DateTime.utc_now/0,
+             update_default: &DateTime.utc_now/0
+           ),
          :ok <- validate_extra_data_field(dsl_state),
          {:ok, expunge_expired_action_name} <- Info.token_expunge_expired_action_name(dsl_state),
          {:ok, dsl_state} <-
@@ -93,8 +106,101 @@ defmodule AshAuthentication.TokenResource.Transformer do
              is_revoked_action_name,
              &build_is_revoked_action(&1, is_revoked_action_name)
            ),
-         :ok <- validate_is_revoked_action(dsl_state, is_revoked_action_name) do
+         :ok <- validate_is_revoked_action(dsl_state, is_revoked_action_name),
+         {:ok, get_confirmation_changes_action_name} <-
+           Info.token_confirmation_get_changes_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             get_confirmation_changes_action_name,
+             &build_get_confirmation_changes_action(&1, get_confirmation_changes_action_name)
+           ),
+         :ok <-
+           validate_get_confirmation_changes_action(
+             dsl_state,
+             get_confirmation_changes_action_name
+           ),
+         {:ok, store_confirmation_changes_action_name} <-
+           Info.token_confirmation_store_changes_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             store_confirmation_changes_action_name,
+             &build_store_confirmation_changes_action(&1, store_confirmation_changes_action_name)
+           ),
+         :ok <-
+           validate_store_confirmation_changes_action(
+             dsl_state,
+             store_confirmation_changes_action_name
+           ) do
       {:ok, dsl_state}
+    end
+  end
+
+  defp build_store_confirmation_changes_action(_dsl_state, action_name) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
+        name: :token,
+        type: :string,
+        allow_nil?: false,
+        sensitive?: true
+      )
+    ]
+
+    changes = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+        change: TokenResource.StoreConfirmationChangesChange
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :create,
+      name: action_name,
+      arguments: arguments,
+      changes: changes,
+      accept: [:extra_data, :purpose]
+    )
+  end
+
+  defp validate_store_confirmation_changes_action(dsl_state, action_name) do
+    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+         :ok <- validate_token_argument(action) do
+      validate_action_has_change(action, TokenResource.StoreConfirmationChangesChange)
+    end
+  end
+
+  defp build_get_confirmation_changes_action(_dsl_state, action_name) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :jti,
+        type: :string,
+        allow_nil?: false,
+        sensitive?: true
+      )
+    ]
+
+    preparations = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+        preparation: TokenResource.GetConfirmationChangesPreparation
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :read,
+      name: action_name,
+      arguments: arguments,
+      preparations: preparations,
+      get?: true
+    )
+  end
+
+  defp validate_get_confirmation_changes_action(dsl_state, action_name) do
+    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+         :ok <- validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]),
+         :ok <-
+           validate_action_has_preparation(
+             action,
+             TokenResource.GetConfirmationChangesPreparation
+           ) do
+      validate_field_in_values(action, :type, [:read])
     end
   end
 
@@ -186,7 +292,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
 
     Transformer.build_entity(Resource.Dsl, [:actions], :create,
       name: action_name,
-      primary?: true,
       arguments: arguments,
       changes: changes,
       accept: [:extra_data]

@@ -7,7 +7,7 @@ defmodule AshAuthentication.Transformer do
 
   use Spark.Dsl.Transformer
   alias Ash.Resource
-  alias AshAuthentication.{Info, TokenResource}
+  alias AshAuthentication.Info
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -78,11 +78,21 @@ defmodule AshAuthentication.Transformer do
     if_tokens_enabled(dsl_state, fn dsl_state ->
       with {:ok, resource} when is_truthy(resource) <-
              Info.authentication_tokens_token_resource(dsl_state),
-           :ok <- assert_resource_has_extension(resource, TokenResource) do
+           true <- is_atom(resource) do
         :ok
       else
-        {:ok, falsy} when is_falsy(falsy) -> :ok
-        {:error, reason} -> {:error, reason}
+        {:ok, falsy} when is_falsy(falsy) ->
+          :ok
+
+        {:error, reason} ->
+          {:error, reason}
+
+        false ->
+          {:error,
+           DslError.exception(
+             path: [:authentication, :tokens, :token_resource],
+             message: "is not a valid module name"
+           )}
       end
     end)
   end
