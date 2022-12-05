@@ -128,6 +128,14 @@ defmodule AshAuthentication.TokenResource do
   Whilst it is possible to have multiple token resources, there is no need to do
   so.
 
+  ## Removing expired records
+
+  Once a token has expired there's no point in keeping the information it refers
+  to, so expired tokens can be automatically removed by adding the
+  `AshAuthentication.Supervisor` to your application supervision tree.  This
+  will start the `AshAuthentication.TokenResource.Expunger` `GenServer` which
+  periodically scans and removes any expired records.
+
   ## Dsl
 
   ### Index
