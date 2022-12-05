@@ -18,8 +18,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   @doc """
   Attempt to confirm a user.
   """
-  @spec confirm(Confirmation.t(), map) :: {:ok, Resource.record()} | {:error, any}
-  def confirm(strategy, params) do
+  @spec confirm(Confirmation.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def confirm(strategy, params, options) do
     with {:ok, api} <- Info.authentication_api(strategy.resource),
          {:ok, token} <- Map.fetch(params, "confirm"),
          {:ok, %{"sub" => subject}, _} <- Jwt.verify(token, strategy.resource),
@@ -28,7 +28,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
       |> Changeset.new()
       |> Changeset.set_context(%{strategy: strategy})
       |> Changeset.for_update(strategy.confirm_action_name, params)
-      |> api.update()
+      |> api.update(options)
     else
       :error -> {:error, InvalidToken.exception(type: :confirmation)}
       {:error, reason} -> {:error, reason}

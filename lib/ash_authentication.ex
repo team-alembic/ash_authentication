@@ -150,13 +150,18 @@ defmodule AshAuthentication do
 
       iex> %{id: user_id} = build_user()
       ...> {:ok, %{id: ^user_id}} = subject_to_user("user?id=#{user_id}", Example.User)
-  """
-  @spec subject_to_user(subject | URI.t(), Resource.t()) ::
-          {:ok, Resource.record()} | {:error, any}
-  def subject_to_user(subject, resource) when is_binary(subject),
-    do: subject |> URI.parse() |> subject_to_user(resource)
 
-  def subject_to_user(%URI{path: subject_name, query: primary_key} = _subject, resource) do
+  Any options passed will be passed to the underlying `Api.read/2` callback.
+  """
+  @spec subject_to_user(subject | URI.t(), Resource.t(), keyword) ::
+          {:ok, Resource.record()} | {:error, any}
+
+  def subject_to_user(subject, resource, options \\ [])
+
+  def subject_to_user(subject, resource, options) when is_binary(subject),
+    do: subject |> URI.parse() |> subject_to_user(resource, options)
+
+  def subject_to_user(%URI{path: subject_name, query: primary_key} = _subject, resource, options) do
     with {:ok, resource_subject_name} <- Info.authentication_subject_name(resource),
          ^subject_name <- to_string(resource_subject_name),
          {:ok, action_name} <- Info.authentication_get_by_subject_action_name(resource),
@@ -169,7 +174,7 @@ defmodule AshAuthentication do
       resource
       |> Query.for_read(action_name, %{})
       |> Query.filter(^primary_key)
-      |> api.read()
+      |> api.read(options)
       |> case do
         {:ok, [user]} -> {:ok, user}
         _ -> {:error, NotFound.exception([])}

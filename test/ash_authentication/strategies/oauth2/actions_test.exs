@@ -9,7 +9,7 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
       {:ok, strategy} = Info.strategy(Example.User, :oauth2)
 
       assert {:error, error} =
-               Actions.sign_in(strategy, %{"user_info" => %{}, "oauth_tokens" => %{}})
+               Actions.sign_in(strategy, %{"user_info" => %{}, "oauth_tokens" => %{}}, [])
 
       assert Exception.message(error) =~ ~r/no such action :sign_in_with_oauth2/i
     end
@@ -20,18 +20,22 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
       user = build_user()
 
       assert {:ok, signed_in_user} =
-               Actions.sign_in(strategy, %{
-                 "user_info" => %{
-                   "nickname" => user.username,
-                   "uid" => user.id,
-                   "sub" => "user:#{user.id}"
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   "user_info" => %{
+                     "nickname" => user.username,
+                     "uid" => user.id,
+                     "sub" => "user:#{user.id}"
+                   },
+                   "oauth_tokens" => %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
                  },
-                 "oauth_tokens" => %{
-                   "access_token" => Ecto.UUID.generate(),
-                   "expires_in" => 86_400,
-                   "refresh_token" => Ecto.UUID.generate()
-                 }
-               })
+                 []
+               )
 
       assert signed_in_user.id == user.id
       assert {:ok, claims} = Jwt.peek(signed_in_user.__metadata__.token)
@@ -43,18 +47,22 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
       strategy = %{strategy | registration_enabled?: false}
 
       assert {:error, error} =
-               Actions.sign_in(strategy, %{
-                 "user_info" => %{
-                   "nickname" => username(),
-                   "uid" => Ecto.UUID.generate(),
-                   "sub" => "user:#{Ecto.UUID.generate()}"
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   "user_info" => %{
+                     "nickname" => username(),
+                     "uid" => Ecto.UUID.generate(),
+                     "sub" => "user:#{Ecto.UUID.generate()}"
+                   },
+                   "oauth_tokens" => %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
                  },
-                 "oauth_tokens" => %{
-                   "access_token" => Ecto.UUID.generate(),
-                   "expires_in" => 86_400,
-                   "refresh_token" => Ecto.UUID.generate()
-                 }
-               })
+                 []
+               )
 
       assert Exception.message(error) =~ ~r/authentication failed/i
     end
@@ -68,18 +76,22 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
       id = Ecto.UUID.generate()
 
       assert {:ok, user} =
-               Actions.register(strategy, %{
-                 "user_info" => %{
-                   "nickname" => username,
-                   "uid" => id,
-                   "sub" => "user:#{id}"
+               Actions.register(
+                 strategy,
+                 %{
+                   "user_info" => %{
+                     "nickname" => username,
+                     "uid" => id,
+                     "sub" => "user:#{id}"
+                   },
+                   "oauth_tokens" => %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
                  },
-                 "oauth_tokens" => %{
-                   "access_token" => Ecto.UUID.generate(),
-                   "expires_in" => 86_400,
-                   "refresh_token" => Ecto.UUID.generate()
-                 }
-               })
+                 []
+               )
 
       assert to_string(user.username) == username
       assert {:ok, claims} = Jwt.peek(user.__metadata__.token)
@@ -92,18 +104,22 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
       user = build_user()
 
       assert {:ok, signed_in_user} =
-               Actions.register(strategy, %{
-                 "user_info" => %{
-                   "nickname" => user.username,
-                   "uid" => user.id,
-                   "sub" => "user:#{user.id}"
+               Actions.register(
+                 strategy,
+                 %{
+                   "user_info" => %{
+                     "nickname" => user.username,
+                     "uid" => user.id,
+                     "sub" => "user:#{user.id}"
+                   },
+                   "oauth_tokens" => %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
                  },
-                 "oauth_tokens" => %{
-                   "access_token" => Ecto.UUID.generate(),
-                   "expires_in" => 86_400,
-                   "refresh_token" => Ecto.UUID.generate()
-                 }
-               })
+                 []
+               )
 
       assert signed_in_user.id == user.id
       assert {:ok, claims} = Jwt.peek(signed_in_user.__metadata__.token)

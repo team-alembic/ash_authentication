@@ -62,12 +62,16 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
   @doc """
   Perform actions.
   """
-  @spec action(Password.t(), phase, map) :: {:ok, Resource.record()} | {:error, any}
-  def action(strategy, :register, params), do: Password.Actions.register(strategy, params)
-  def action(strategy, :sign_in, params), do: Password.Actions.sign_in(strategy, params)
+  @spec action(Password.t(), phase, map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def action(strategy, :register, params, options),
+    do: Password.Actions.register(strategy, params, options)
 
-  def action(strategy, :reset_request, params),
-    do: Password.Actions.reset_request(strategy, params)
+  def action(strategy, :sign_in, params, options),
+    do: Password.Actions.sign_in(strategy, params, options)
 
-  def action(strategy, :reset, params), do: Password.Actions.reset(strategy, params)
+  def action(strategy, :reset_request, params, options),
+    do: Password.Actions.reset_request(strategy, params, options)
+
+  def action(strategy, :reset, params, options),
+    do: Password.Actions.reset(strategy, params, options)
 end
