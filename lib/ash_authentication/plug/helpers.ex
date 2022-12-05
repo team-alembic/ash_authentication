@@ -11,7 +11,6 @@ defmodule AshAuthentication.Plug.Helpers do
   Store the user in the connections' session.
   """
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
-
   def store_in_session(conn, user) when is_struct(user) do
     subject_name = Info.authentication_subject_name!(user.__struct__)
     subject = AshAuthentication.user_to_subject(user)
@@ -178,7 +177,6 @@ defmodule AshAuthentication.Plug.Helpers do
           :ok | {:ok, Resource.record()} | :error | {:error, any}
         ) ::
           Conn.t()
-
   def store_authentication_result(conn, :ok),
     do: Conn.put_private(conn, :authentication_result, {:ok, nil})
 

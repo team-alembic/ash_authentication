@@ -7,10 +7,14 @@ defmodule AshAuthentication.Application do
   @doc false
   @impl true
   def start(_type, _args) do
-    [AshAuthentication.TokenResource.Expunger]
+    []
+    |> maybe_append(
+      start_dev_server?(),
+      {AshAuthentication.Supervisor, otp_app: :ash_authentication}
+    )
     |> maybe_append(start_dev_server?(), {DevServer, []})
     |> maybe_append(start_repo?(), {Example.Repo, []})
-    |> Supervisor.start_link(strategy: :one_for_one, name: AshAuthentication.Supervisor)
+    |> Supervisor.start_link(strategy: :one_for_one, name: __MODULE__)
   end
 
   defp start_dev_server? do

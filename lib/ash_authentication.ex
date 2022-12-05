@@ -64,6 +64,26 @@ defmodule AshAuthentication do
      - authenticate using local or remote [OAuth 2.0](https://oauth.net/2/)
      compatible services.
 
+  ## Add-ons
+
+  Add-ons are like strategies, except that they don't actually provide
+  authentication - they just provide features adjacent to authentication.
+  Current add-ons:
+
+  1. [`AshAuthentication.AddOn.Confirmation`](https://team-alembic.github.io/ash_authentication/AshAuthentication.AddOn.Confirmation.html)
+     - allows you to force the user to confirm changes using a confirmation
+       token (eg. sending a confirmation email when a new user registers).
+
+  ## Supervisor
+
+  Some add-ons or strategies may require processes to be started which manage
+  their state over the lifetime of the application (eg periodically deleting
+  expired token revocations).  Because of this you should add
+  `{AshAuthentication.Supervisor, otp_app: :my_app}` to your application's
+  supervision tree.  See [the Elixir
+  docs](https://hexdocs.pm/elixir/Application.html#module-the-application-callback-module)
+  for more information.
+
   ## DSL Documentation
 
   ### Index
