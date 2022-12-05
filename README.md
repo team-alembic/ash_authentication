@@ -12,7 +12,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ash_authentication, "~> 3.0.0"}
+    {:ash_authentication, "~> 3.0.1"}
   ]
 end
 ```
