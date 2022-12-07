@@ -34,8 +34,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with {:ok, _api} <- validate_api_presence(dsl_state),
-         {:ok, resource} <- persisted_option(dsl_state, :module),
+    with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :id, Type.UUID,
              allow_nil?: false,
@@ -116,20 +115,6 @@ defmodule AshAuthentication.UserIdentity.Transformer do
            maybe_build_action(dsl_state, read_action, &build_read_action(&1, read_action)),
          :ok <- validate_read_action(dsl_state, read_action) do
       {:ok, dsl_state}
-    end
-  end
-
-  defp validate_api_presence(dsl_state) do
-    case Transformer.get_option(dsl_state, [:user_identity], :api) do
-      nil ->
-        {:error,
-         DslError.exception(
-           path: [:user_identity, :api],
-           message: "An API module must be present"
-         )}
-
-      api ->
-        {:ok, api}
     end
   end
 

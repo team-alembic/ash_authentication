@@ -67,6 +67,7 @@ defmodule AshAuthentication.Dsl do
       %Section{
         name: :authentication,
         describe: "Configure authentication for this resource",
+        modules: [:api],
         schema: [
           subject_name: [
             type: :atom,
@@ -106,6 +107,7 @@ defmodule AshAuthentication.Dsl do
           %Section{
             name: :tokens,
             describe: "Configure JWT settings for this resource",
+            modules: [:token_resource],
             schema: [
               enabled?: [
                 type: :boolean,
@@ -190,6 +192,7 @@ defmodule AshAuthentication.Dsl do
       args: [:name],
       hide: [:name],
       target: Password,
+      modules: [:hash_provider],
       schema:
         OptionsHelpers.merge_schemas(
           [
@@ -279,6 +282,17 @@ defmodule AshAuthentication.Dsl do
       describe: "OAuth2 authentication",
       args: [:name],
       target: OAuth2,
+      modules: [
+        :authorize_path,
+        :client_id,
+        :client_secret,
+        :identity_resource,
+        :private_key,
+        :redirect_uri,
+        :site,
+        :token_path,
+        :user_path
+      ],
       schema:
         OptionsHelpers.merge_schemas(
           [
@@ -547,6 +561,7 @@ defmodule AshAuthentication.Dsl do
       describe: "User confirmation flow",
       args: [:name],
       target: Confirmation,
+      modules: [:sender],
       schema:
         OptionsHelpers.merge_schemas(
           [

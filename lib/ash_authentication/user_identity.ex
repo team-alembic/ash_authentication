@@ -3,6 +3,7 @@ defmodule AshAuthentication.UserIdentity do
     %Spark.Dsl.Section{
       name: :user_identity,
       describe: "Configure identity options for this resource",
+      modules: [:api, :user_resource],
       schema: [
         api: [
           type: {:behaviour, Ash.Api},
@@ -125,5 +126,8 @@ defmodule AshAuthentication.UserIdentity do
 
   use Spark.Dsl.Extension,
     sections: @dsl,
-    transformers: [AshAuthentication.UserIdentity.Transformer]
+    transformers: [
+      AshAuthentication.UserIdentity.Transformer,
+      AshAuthentication.UserIdentity.Verifier
+    ]
 end

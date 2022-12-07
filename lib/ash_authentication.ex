@@ -103,9 +103,13 @@ defmodule AshAuthentication do
     sections: dsl(),
     transformers: [
       AshAuthentication.Transformer,
+      AshAuthentication.Verifier,
       AshAuthentication.Strategy.Password.Transformer,
+      AshAuthentication.Strategy.Password.Verifier,
       AshAuthentication.Strategy.OAuth2.Transformer,
-      AshAuthentication.AddOn.Confirmation.Transformer
+      AshAuthentication.Strategy.OAuth2.Verifier,
+      AshAuthentication.AddOn.Confirmation.Transformer,
+      AshAuthentication.AddOn.Confirmation.Verifier
     ]
 
   require Ash.Query

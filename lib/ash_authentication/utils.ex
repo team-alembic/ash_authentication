@@ -1,6 +1,6 @@
 defmodule AshAuthentication.Utils do
   @moduledoc false
-  alias Ash.Resource
+  alias Ash.{Api, Resource}
   alias Spark.{Dsl, Dsl.Transformer}
 
   @doc """
@@ -187,6 +187,20 @@ defmodule AshAuthentication.Utils do
   end
 
   @doc """
+  Asserts that `module` is actually an Ash API.
+  """
+  @spec assert_is_api(Api.t()) :: :ok | {:error, term}
+  def assert_is_api(module) do
+    with :ok <- assert_is_module(module),
+         true <- function_exported?(module, :spark_is, 0),
+         Api <- module.spark_is() do
+      :ok
+    else
+      _ -> {:error, "Module `#{inspect(module)}` is not an Ash API"}
+    end
+  end
+
+  @doc """
   Asserts that `module` is a Spark DSL extension.
   """
   @spec assert_is_extension(Spark.Dsl.Extension.t()) :: :ok | {:error, term}
@@ -201,9 +215,12 @@ defmodule AshAuthentication.Utils do
   """
   @spec assert_is_module(module) :: :ok | {:error, term}
   def assert_is_module(module) when is_atom(module) do
-    case Code.ensure_loaded(module) do
-      {:module, _module} -> :ok
-      {:error, _} -> {:error, "Argument `#{inspect(module)}` is not a valid module name"}
+    case Code.ensure_compiled(module) do
+      {:module, _module} ->
+        :ok
+
+      {:error, _} ->
+        {:error, "Argument `#{inspect(module)}` is not a valid module name"}
     end
   end
 

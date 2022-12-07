@@ -5,6 +5,7 @@ defmodule AshAuthentication.TokenResource do
     %Spark.Dsl.Section{
       name: :token,
       describe: "Configuration options for this token resource",
+      modules: [:api],
       schema: [
         api: [
           type: {:behaviour, Ash.Api},
@@ -152,7 +153,7 @@ defmodule AshAuthentication.TokenResource do
 
   use Spark.Dsl.Extension,
     sections: @dsl,
-    transformers: [TokenResource.Transformer]
+    transformers: [TokenResource.Transformer, TokenResource.Verifier]
 
   @doc """
   Has the token been revoked?
