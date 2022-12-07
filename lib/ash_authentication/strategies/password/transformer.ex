@@ -9,7 +9,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   use Spark.Dsl.Transformer
 
   alias Ash.{Resource, Type}
-  alias AshAuthentication.{GenerateTokenChange, HashProvider, Info, Sender, Strategy.Password}
+  alias AshAuthentication.{GenerateTokenChange, Info, Strategy.Password}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -69,7 +69,6 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
              &build_sign_in_action(&1, strategy)
            ),
          :ok <- validate_sign_in_action(dsl_state, strategy),
-         :ok <- validate_behaviour(strategy.hash_provider, HashProvider),
          {:ok, dsl_state, strategy} <- maybe_transform_resettable(dsl_state, strategy),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
       dsl_state =
@@ -249,9 +248,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     do: {:ok, dsl_state, strategy}
 
   defp maybe_transform_resettable(dsl_state, %{resettable: [resettable]} = strategy) do
-    with {:ok, {sender, _opts}} <- Map.fetch(resettable, :sender),
-         :ok <- validate_behaviour(sender, Sender),
-         resettable <-
+    with resettable <-
            maybe_set_field_lazy(
              resettable,
              :request_password_reset_action_name,
@@ -279,13 +276,6 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
          :ok <- validate_reset_action(dsl_state, resettable, strategy) do
       {:ok, dsl_state, %{strategy | resettable: [resettable]}}
     else
-      :error ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies, :password, :resettable],
-           message: "A `sender` is required."
-         )}
-
       {:error, reason} ->
         {:error, reason}
     end

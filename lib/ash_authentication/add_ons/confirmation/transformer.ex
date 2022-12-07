@@ -8,7 +8,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
 
   use Spark.Dsl.Transformer
   alias Ash.{Resource, Type}
-  alias AshAuthentication.{AddOn.Confirmation, GenerateTokenChange, Info, Sender}
+  alias AshAuthentication.{AddOn.Confirmation, GenerateTokenChange, Info}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -49,8 +49,6 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
 
   defp transform_strategy(strategy, dsl_state) do
     with :ok <- validate_token_generation_enabled(dsl_state),
-         {:ok, {sender, _opts}} <- Map.fetch(strategy, :sender),
-         :ok <- validate_behaviour(sender, Sender),
          :ok <- validate_monitor_fields(dsl_state, strategy),
          {:ok, dsl_state} <-
            maybe_build_action(

@@ -30,8 +30,7 @@ defmodule AshAuthentication.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with {:ok, _api} <- validate_api_presence(dsl_state),
-         :ok <- validate_at_least_one_strategy(dsl_state),
+    with :ok <- validate_at_least_one_strategy(dsl_state),
          {:ok, get_by_subject_action_name} <-
            Info.authentication_get_by_subject_action_name(dsl_state),
          {:ok, dsl_state} <-
@@ -41,7 +40,6 @@ defmodule AshAuthentication.Transformer do
              &build_get_by_subject_action/1
            ),
          :ok <- validate_read_action(dsl_state, get_by_subject_action_name),
-         :ok <- validate_token_resource(dsl_state),
          subject_name <- find_or_generate_subject_name(dsl_state) do
       dsl_state =
         dsl_state
@@ -71,59 +69,6 @@ defmodule AshAuthentication.Transformer do
       |> List.last()
       |> Macro.underscore()
       |> String.to_atom()
-    end
-  end
-
-  defp validate_token_resource(dsl_state) do
-    if_tokens_enabled(dsl_state, fn dsl_state ->
-      with {:ok, resource} when is_truthy(resource) <-
-             Info.authentication_tokens_token_resource(dsl_state),
-           true <- is_atom(resource) do
-        :ok
-      else
-        {:ok, falsy} when is_falsy(falsy) ->
-          :ok
-
-        {:error, reason} ->
-          {:error, reason}
-
-        false ->
-          {:error,
-           DslError.exception(
-             path: [:authentication, :tokens, :token_resource],
-             message: "is not a valid module name"
-           )}
-      end
-    end)
-  end
-
-  defp if_tokens_enabled(dsl_state, validator) when is_function(validator, 1) do
-    if Info.authentication_tokens_enabled?(dsl_state) do
-      validator.(dsl_state)
-    else
-      :ok
-    end
-  end
-
-  defp validate_api_presence(dsl_state) do
-    with api when not is_nil(api) <- Transformer.get_option(dsl_state, [:authentication], :api),
-         true <- function_exported?(api, :spark_is, 0),
-         Ash.Api <- api.spark_is() do
-      {:ok, api}
-    else
-      nil ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :api],
-           message: "An API module must be present"
-         )}
-
-      _ ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :api],
-           message: "Module is not an Ash.Api."
-         )}
     end
   end
 

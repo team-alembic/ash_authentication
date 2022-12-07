@@ -34,8 +34,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with {:ok, _api} <- validate_api_presence(dsl_state),
-         {:ok, dsl_state} <-
+    with {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :jti, :string,
              primary_key?: true,
              allow_nil?: false,
