@@ -215,7 +215,7 @@ defmodule AshAuthentication.Utils do
   """
   @spec assert_is_module(module) :: :ok | {:error, term}
   def assert_is_module(module) when is_atom(module) do
-    case Code.ensure_compiled(module) do
+    case ensure_compiled(module) do
       {:module, _module} ->
         :ok
 
@@ -250,5 +250,12 @@ defmodule AshAuthentication.Utils do
       {:error,
        "Module `#{inspect(module)}` does not implement the `#{inspect(behaviour)}` behaviour"}
     end
+  end
+
+  defp ensure_compiled(module) do
+    {:module, Code.ensure_compiled!(module)}
+  rescue
+    e  ->
+      {:error, Exception.message(e)}
   end
 end
