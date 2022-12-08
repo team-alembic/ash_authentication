@@ -209,7 +209,7 @@ pick the level of customisation you require.
   * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.OAuth2}}
     A component which renders a sign-in button for an OAuth 2.0 provider.
 
-## Overrides
+### Overrides
 
 All the components above and the {{link:ash_authentication_phoenix:AshAuthentication.Phoenix.SignInLive}}
 LiveView are customisable via the {{link:ash_authentication_phoenix:AshAuthentication.Phoenix.Overrides}}
@@ -217,6 +217,22 @@ system.
 
 Overrides allow you to configure CSS classes and other options for the
 components without needing to modify them.
+
+### Tailwind
+
+If you plan on using our default [Tailwind](https://tailwindcss.com/)-based
+components without overriding them you will need to modify your
+`assets/tailwind.config.js` to include the `ash_authentication_phoenix`
+dependency:
+
+```javascript
+module.exports = {
+  content: [
+    // Other paths.
+    "../deps/ash_authentication_phoenix/**/*.ex"
+  ]
+}
+```
 
 ## Summary
 
