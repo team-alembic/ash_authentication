@@ -157,7 +157,9 @@ defmodule MyApp.Accounts.User do
     api MyApp.Accounts
 
     strategies do
-      password :password, identity_field: :email
+      password :password do
+        identity_field :email
+      end
     end
 
     tokens do
