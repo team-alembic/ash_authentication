@@ -28,15 +28,19 @@ defmodule AshAuthentication.TokenResource.Actions do
     case Info.token_expunge_expired_action_name(resource) do
       {:ok, expunge_expired_action_name} ->
         resource
-        |> DataLayer.transaction(fn -> expunge_inside_transaction(resource, expunge_expired_action_name, opts) end, nil, %{
-          type: :bulk_destroy,
-          metadata: %{
+        |> DataLayer.transaction(
+          fn -> expunge_inside_transaction(resource, expunge_expired_action_name, opts) end,
+          nil,
+          %{
+            type: :bulk_destroy,
             metadata: %{
-              resource: resource,
-              action: expunge_expired_action_name
+              metadata: %{
+                resource: resource,
+                action: expunge_expired_action_name
+              }
             }
           }
-        })
+        )
         |> case do
           {:ok, :ok} -> :ok
           {:error, reason} -> {:error, reason}
