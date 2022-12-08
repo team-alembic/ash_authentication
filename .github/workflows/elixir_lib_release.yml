@@ -1,0 +1,33 @@
+name: Release an Elixir Library
+
+on:
+  release:
+    types: [published]
+jobs:
+  deps:
+    name: mix deps.get
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/mix-deps-get@main
+
+  build-dev:
+    name: MIX_ENV=dev mix.compile
+    runs-on: ubuntu-latest
+    needs: deps
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/mix-compile@main
+        with:
+          mix-env: dev
+
+  publish:
+    name: MIX_ENV=dev mix hex.publish
+    runs-on: ubuntu-latest
+    needs: build-dev
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/mix-hex-publish@main
+        with:
+          mix-env: dev
+          hex-api-key: ${{ secrets.HEX_API_KEY }}
