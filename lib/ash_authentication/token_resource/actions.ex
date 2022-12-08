@@ -3,7 +3,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   The code interface for interacting with the token resource.
   """
 
-  alias Ash.{Changeset, DataLayer, Query, Resource}
+  alias Ash.{Changeset, Query, Resource}
   alias AshAuthentication.{TokenResource, TokenResource.Info}
 
   import AshAuthentication.Utils
@@ -25,11 +25,43 @@ defmodule AshAuthentication.TokenResource.Actions do
   """
   @spec expunge_expired(Resource.t(), keyword) :: :ok | {:error, any}
   def expunge_expired(resource, opts \\ []) do
-    resource
-    |> DataLayer.transaction(fn -> expunge_inside_transaction(resource, opts) end, 5000)
-    |> case do
-      {:ok, :ok} -> :ok
-      {:errore, reason} -> {:error, reason}
+    with :ok <- assert_resource_has_extension(resource, TokenResource),
+         {:ok, api} <- Info.token_api(resource),
+         {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource),
+         {:ok, expunge_expired_action_name} <- Info.token_expunge_expired_action_name(resource),
+         query <-
+           Query.for_read(
+             resource,
+             read_expired_action_name,
+             Keyword.put(opts, :transaction?, true)
+           ) do
+      query
+      |> Ash.Query.after_action(fn query, expired ->
+        Enum.reduce_while(expired, :ok, fn record, :ok ->
+          record
+          |> Changeset.for_destroy(expunge_expired_action_name, opts)
+          |> api.destroy()
+          |> case do
+            :ok -> {:cont, :ok}
+            {:error, reason} -> {:halt, {:error, reason}}
+          end
+        end)
+        |> case do
+          :ok ->
+            {:ok, []}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+      end)
+      |> api.read(opts)
+      |> case do
+        {:ok, _} ->
+          :ok
+
+        {:error, error} ->
+          {:error, error}
+      end
     end
   end
 
@@ -100,25 +132,6 @@ defmodule AshAuthentication.TokenResource.Actions do
         {:ok, _} -> :ok
         {:error, reason} -> {:error, reason}
       end
-    end
-  end
-
-  defp expunge_inside_transaction(resource, opts) do
-    with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
-         {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource),
-         query <- Query.for_read(resource, read_expired_action_name, opts),
-         {:ok, expired} <- api.read(query),
-         {:ok, expunge_expired_action_name} <- Info.token_expunge_expired_action_name(resource) do
-      Enum.reduce_while(expired, :ok, fn record, :ok ->
-        record
-        |> Changeset.for_destroy(expunge_expired_action_name, opts)
-        |> api.destroy()
-        |> case do
-          :ok -> {:cont, :ok}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
-      end)
     end
   end
 end
