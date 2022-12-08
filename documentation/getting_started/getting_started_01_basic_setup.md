@@ -157,12 +157,15 @@ defmodule MyApp.Accounts.User do
     api MyApp.Accounts
 
     strategies do
-      password :identity_field :email
+      password :password do
+        identity_field :email
+      end
     end
 
     tokens do
       enabled? true
       token_resource MyApp.Accounts.Token
+    do
   end
 
   postgres do
