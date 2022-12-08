@@ -152,3 +152,4 @@ jobs:
       - uses: team-alembic/staple-actions/actions/git-ops@main
         with:
           mix-env: dev
+          no-major: true
