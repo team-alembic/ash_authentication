@@ -46,8 +46,8 @@ defmodule AshAuthentication.TokenResource.Actions do
           {:error, reason} -> {:error, reason}
         end
 
-      {:error, reason} ->
-        {:error, reason}
+      :error ->
+        {:error, "No configured expunge_expired_action_name"}
     end
   end
 
