@@ -8,6 +8,7 @@ defmodule AshAuthentication.MixProject do
     [
       app: :ash_authentication,
       version: @version,
+      description: "User authentication support for Ash",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       preferred_cli_env: [ci: :test],

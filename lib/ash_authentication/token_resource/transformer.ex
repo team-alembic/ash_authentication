@@ -9,7 +9,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
   require Ash.Expr
   alias Ash.{Resource, Type}
   alias AshAuthentication.{TokenResource, TokenResource.Info}
-  alias Spark.{Dsl.Transformer, Error.DslError}
+  alias Spark.Dsl.Transformer
 
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -305,20 +305,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
 
   defp build_expunge_expired_action(_dsl_state, action_name),
     do: Transformer.build_entity(Resource.Dsl, [:actions], :destroy, name: action_name)
-
-  defp validate_api_presence(dsl_state) do
-    case Transformer.get_option(dsl_state, [:token], :api) do
-      nil ->
-        {:error,
-         DslError.exception(
-           path: [:token, :api],
-           message: "An API module must be present"
-         )}
-
-      api ->
-        {:ok, api}
-    end
-  end
 
   defp validate_jti_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
