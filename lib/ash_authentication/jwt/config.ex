@@ -16,10 +16,13 @@ defmodule AshAuthentication.Jwt.Config do
   """
   @spec default_claims(Resource.t(), keyword) :: Joken.token_config()
   def default_claims(resource, opts \\ []) do
-    config =
-      resource
-      |> config()
-      |> Keyword.merge(opts)
+    token_lifetime =
+      opts
+      |> Keyword.fetch(:token_lifetime)
+      |> case do
+        {:ok, hours} -> hours * 60 * 60
+        :error -> token_lifetime(resource)
+      end
 
     {:ok, vsn} = :application.get_key(:ash_authentication, :vsn)
 
@@ -28,7 +31,7 @@ defmodule AshAuthentication.Jwt.Config do
       |> to_string()
       |> Version.parse!()
 
-    Config.default_claims(default_exp: token_lifetime(config))
+    Config.default_claims(default_exp: token_lifetime)
     |> Config.add_claim(
       "iss",
       fn -> generate_issuer(vsn) end,
@@ -111,38 +114,42 @@ defmodule AshAuthentication.Jwt.Config do
   """
   @spec token_signer(Resource.t(), keyword) :: Signer.t()
   def token_signer(resource, opts \\ []) do
-    config =
-      resource
-      |> config()
-      |> Keyword.merge(opts)
+    algorithm =
+      with :error <- Keyword.fetch(opts, :signing_algorithm),
+           :error <- Info.authentication_tokens_signing_algorithm(resource) do
+        Jwt.default_algorithm()
+      else
+        {:ok, algorithm} -> algorithm
+      end
 
-    algorithm = Keyword.get_lazy(config, :signing_algorithm, &Jwt.default_algorithm/0)
+    signing_secret =
+      with :error <- Keyword.fetch(opts, :signing_secret),
+           {:ok, {secret_module, secret_opts}} <-
+             Info.authentication_tokens_signing_secret(resource),
+           {:ok, secret} <-
+             secret_module.secret_for(
+               ~w[authentication tokens signing_secret]a,
+               resource,
+               secret_opts
+             ) do
+        secret
+      else
+        {:ok, secret} when is_binary(secret) ->
+          secret
 
-    case Keyword.fetch(config, :signing_secret) do
-      {:ok, secret} ->
-        Signer.create(algorithm, secret)
+        _ ->
+          raise "Missing JWT signing secret. Please see the documentation for `AshAuthentication.Jwt` for details"
+      end
 
-      :error ->
-        raise "Missing JWT signing secret. Please see the documentation for `AshAuthentication.Jwt` for details"
+    Signer.create(algorithm, signing_secret)
+  end
+
+  defp token_lifetime(resource) do
+    resource
+    |> Info.authentication_tokens_token_lifetime()
+    |> case do
+      {:ok, hours} -> hours * 60 * 60
+      :error -> Jwt.default_lifetime_hrs() * 60 * 60
     end
-  end
-
-  defp token_lifetime(config) do
-    hours =
-      config
-      |> Keyword.get_lazy(:token_lifetime, &Jwt.default_lifetime_hrs/0)
-
-    hours * 60 * 60
-  end
-
-  defp config(resource) do
-    config =
-      resource
-      |> Info.authentication_tokens_options()
-      |> Enum.reject(&is_nil(elem(&1, 1)))
-
-    :ash_authentication
-    |> Application.get_env(Jwt, [])
-    |> Keyword.merge(config)
   end
 end

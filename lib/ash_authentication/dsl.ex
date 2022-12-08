@@ -149,6 +149,14 @@ defmodule AshAuthentication.Dsl do
                 confirmations.
                 """,
                 required: true
+              ],
+              signing_secret: [
+                type: @secret_type,
+                doc: """
+                The secret used to sign tokens.
+
+                #{@secret_doc}
+                """
               ]
             ]
           },

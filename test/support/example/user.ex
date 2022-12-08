@@ -103,6 +103,7 @@ defmodule Example.User do
     tokens do
       enabled?(true)
       token_resource(Example.Token)
+      signing_secret(&get_config/2)
     end
 
     add_ons do
