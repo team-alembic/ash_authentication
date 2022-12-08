@@ -15,12 +15,10 @@ Bring in the `ash_authentication` dependency:
 defp deps()
   [
     # ...
-    {:ash_authentication, "~> x.x"}
+    ____mix_dep_ash_authentication____
   ]
 end
 ```
-
-Use `mix hex.info ash_authentication` to quickly find the latest version.
 
 ## Choosing your extensions, strategies and add-ons
 
