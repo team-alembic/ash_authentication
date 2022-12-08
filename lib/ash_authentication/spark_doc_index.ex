@@ -56,6 +56,10 @@ defmodule AshAuthentication.SparkDocIndex do
          AshAuthentication.Strategy,
          AshAuthentication.Strategy.Password,
          AshAuthentication.Strategy.OAuth2
+       ]},
+      {"Add Ons",
+       [
+         AshAuthentication.AddOn.Confirmation
        ]}
     ]
   end

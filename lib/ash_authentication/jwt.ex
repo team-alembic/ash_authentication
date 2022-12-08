@@ -12,30 +12,47 @@ defmodule AshAuthentication.Jwt do
   There are a few things we need to know in order to generate and sign a JWT:
 
     * `signing_algorithm` - the crypographic algorithm used to to sign tokens.
-      Instance-wide configuration is configured by the application environment,
-      but can be overriden on a per-resource basis.
     * `token_lifetime` - how long the token is valid for (in hours).
-      Instance-wide configuration is configured by the application environment,
-      but can be overriden on a per-resource basis.
-    * `signing_secret` - the secret key used to sign the tokens.  Only
-      configurable via the application environment.
+    * `signing_secret` - the secret key used to sign the tokens.
+
+  These can be configured in your resource's token DSL:
 
   ```elixir
-  config :ash_authentication, #{inspect(__MODULE__)},
-    signing_algorithm: #{inspect(@default_algorithm)}
-    signing_secret: "I finally invent something that works!",
-    token_lifetime: #{@default_lifetime_days * 24} # #{@default_lifetime_days} days
+  defmodule MyApp.Accounts.User do
+    # ...
+
+    authentication do
+      tokens do
+        enabled? true
+        token_lifetime 32
+        signing_secret fn _, _ ->
+          System.fetch_env("TOKEN_SIGNING_SECRET")
+        end
+      end
+    end
+
+    # ...
+  end
   ```
+
+  The signing secret is retrieved using the `AshAuthentication.Secret`
+  behaviour, which means that it can be retrieved one of three ways:
+
+  1. As a string directly in your resource DSL (please don't do this unless you
+     know why this is a bad idea!), or
+  2. a two-arity anonymous function which returns `{:ok, secret}`, or
+  3. the name of a module which implements the `AshAuthentication.Secret`
+     behaviour.
 
   Available signing algorithms are #{to_sentence(@supported_algorithms, final: "or")}.  Defaults to #{@default_algorithm}.
 
-  We strongly advise against storing the signing secret in your mix config.  We
-  instead suggest you make use of
+  We strongly advise against storing the signing secret in your mix config or
+  directly in your resource configuration.  We instead suggest you make use of
   [`runtime.exs`](https://elixir-lang.org/getting-started/mix-otp/config-and-releases.html#configuration)
   and read it from the system environment or other secret store.
 
-  The default token lifetime is #{@default_lifetime_days * 24} and should be specified
-  in integer positive hours.
+  The default token lifetime is #{@default_lifetime_days * 24} and should be
+  specified in integer positive hours.
   """
 
   alias Ash.Resource

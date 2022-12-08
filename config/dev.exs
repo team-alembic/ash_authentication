@@ -26,9 +26,6 @@ config :ash_authentication, Example,
     registry: Example.Registry
   ]
 
-config :ash_authentication, AshAuthentication.Jwt,
-  signing_secret: "Marty McFly in the past with the Delorean"
-
 config :ash_authentication,
   authentication: [
     strategies: [
@@ -41,5 +38,8 @@ config :ash_authentication,
         token_path: "/oauth/token",
         user_path: "/userinfo"
       ]
+    ],
+    tokens: [
+      signing_secret: "Marty McFly in the past with the Delorean"
     ]
   ]

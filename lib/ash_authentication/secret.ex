@@ -41,7 +41,7 @@ defmodule AshAuthentication.Secret do
 
       strategies do
         oauth2 do
-          client_id fn _secret, _resource, _opts ->
+          client_id fn _secret, _resource ->
             Application.fetch_env(:my_app, :oauth_client_id)
           end
         end
