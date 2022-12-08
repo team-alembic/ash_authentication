@@ -22,8 +22,7 @@ end
 
 ## Choosing your extensions, strategies and add-ons
 
-Ash Authentication supports many different features, each provided by different
-Ash extensions.
+Ash Authentication supports many different features, each configured separately.
 
 ### `AshAuthentication`
 
@@ -31,8 +30,7 @@ This is the core extension, and is required. It provides main DSL for working
 with authentication and related features and should be added to your "user"
 resource.
 
-The [`authentication`
-DSL](AshAuthentication.html#module-authentication)
+The {{link:ash_authentication:extension:AshAuthentication|`authentication` DSL}}
 provides configuration and sensible defaults for settings which relate to
 authentication, regardless of authentication mechanism.
 
@@ -50,13 +48,12 @@ define either or both of these actions yourself if you wish to customise them -
 if you do so then the extension will do it's best to validate that all required
 configuration is present.
 
-The [`password`
-DSL](AshAuthentication.Strategy.Password.html#module-dsl-documentation)
+The {{link:ash_authentication:module:AshAuthentication.Strategy.Password|`password` DSL}}
 allows you to override any of the default values.
 
 ### `AshAuthentication.Strategy.OAuth2`
 
-This authentication strategy provudes registration and sign-in for users using a
+This authentication strategy provides registration and sign-in for users using a
 remote [OAuth 2.0](https://oauth.net/2/) server as the source of truth.  You
 will be required to provide either a "register" or a "sign-in" action depending
 on your configuration, which the strategy will attempt to validate for common
@@ -187,9 +184,7 @@ Now we have enough in place to register and sign-in users using the
 
 ## Plugs and routing
 
-If you're using Phoenix, then you can skip this section and go straight to
-[Using with
-Phoenix](getting_started_02_phoenix.html).
+If you're using Phoenix, then you can skip this section and go straight to {{link:ash_authentication:guide:getting_started_02_phoenix|Using with Phoenix}}
 
 In order for your users to be able to sign in, you will likely need to provide
 an HTTP endpoint to submit credentials or OAuth requests to.  Ash Authentication
@@ -277,5 +272,4 @@ resources and handle authentication HTTP requests.
 
 You should now have an Ash application with working user authentication.
 
-Up next, [Using with
-Phoenix](getting_started_02_phoenix.html).
+Up next, {{link:ash_authentication:guide:getting_started_02_phoenix|Using with Phoenix}}.

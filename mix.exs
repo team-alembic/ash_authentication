@@ -121,7 +121,7 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, "~> 2.4"},
+      {:ash, ash_version("~> 2.4")},
       {:spark, "~> 0.2.12"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
@@ -164,4 +164,13 @@ defmodule AshAuthentication.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(:dev), do: ["lib", "test/support", "dev"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp ash_version(default_version) do
+    case System.get_env("ASH_VERSION") do
+      nil -> default_version
+      "local" -> [path: "../ash"]
+      "main" -> [git: "https://github.com/ash-project/ash.git"]
+      version -> "~> #{version}"
+    end
+  end
 end

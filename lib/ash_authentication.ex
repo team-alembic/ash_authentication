@@ -42,9 +42,7 @@ defmodule AshAuthentication do
   ```
 
   If you plan on providing authentication via the web, then you will need to
-  define a plug using
-  [`AshAuthentication.Plug`](https://team-alembic.github.io/ash_authentication/AshAuthentication.Plug.html)
-  which builds a [`Plug.Router`](https://hexdocs.pm/plug/Plug.Router.html) that
+  define a plug using `AshAuthentication.Plug` which builds a `Plug.Router` that
   routes incoming authentication requests to the correct provider and provides
   callbacks for you to manipulate the conn after success or failure.
 
@@ -57,10 +55,10 @@ defmodule AshAuthentication do
 
   Currently supported strategies:
 
-  1. [`AshAuthentication.Strategy.Password`](https://team-alembic.github.io/ash_authentication/AshAuthentication.Strategy.Password.html)
+  1. {{link:ash_authentication:module:AshAuthentication.Strategy.Password}}
      - authenticate users against your local database using a unique identity
      (such as username or email address) and a password.
-  2. [`AshAuthentication.Strategy.OAuth2`](https://team-alembic.github.io/ash_authentication/AshAuthentication.Strategy.OAuth2.html)
+  2. {{link:ash_authentication:module:AshAuthentication.Strategy.OAuth2}}
      - authenticate using local or remote [OAuth 2.0](https://oauth.net/2/)
      compatible services.
 
@@ -70,7 +68,7 @@ defmodule AshAuthentication do
   authentication - they just provide features adjacent to authentication.
   Current add-ons:
 
-  1. [`AshAuthentication.AddOn.Confirmation`](https://team-alembic.github.io/ash_authentication/AshAuthentication.AddOn.Confirmation.html)
+  1. {{link:ash_authentication:module:AshAuthentication.AddOn.Confirmation}}
      - allows you to force the user to confirm changes using a confirmation
        token (eg. sending a confirmation email when a new user registers).
 

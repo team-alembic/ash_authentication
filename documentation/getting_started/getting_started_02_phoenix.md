@@ -4,8 +4,7 @@ This guide assumes that you already have an Phoenix application set up with Ash.
 If you don't then check out the [Phoenix topic on Ash
 HQ](https://ash-hq.org/docs/guides/ash/2.2.0/topics/phoenix.md).
 
-If you haven't already, read [Getting started with Ash
-Authentication](getting_started_01_basic_setup.html). This provides a good
+If you haven't already, read {{link:ash_authentication:guide:getting_started_01_basic_setup|Getting started with Ash Authentication}}. This provides a good
 primer on creating the required resources to use Ash Authentication with your
 Phoenix app.
 
@@ -29,7 +28,7 @@ end
 Use `mix hex.info ash_authentication_phoenix` to quickly find the latest
 version.
 
-## [`AshAuthentication.Phoenix.Router`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html)
+## {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Router}}
 
 `ash_authentication_phoenix` includes several helper macros which can generate
 Phoenix routes for you. They are included by way of a `use` macro:
@@ -60,20 +59,18 @@ defmodule MyAppWeb.Router do
 end
 ```
 
-### [`sign_in_route/3`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html#sign_in_route/3)
+### {{link:ash_authentication_phoenix:function:AshAuthentication.Phoenix.Router.sign_in_route/3|`sign_in_route/3`}}
 
-This helper generates a live route to the
-[`AshAuthentication.Phoenix.SignInLive`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.SignInLive.html)
+This helper generates a live route to the `{{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.SignInLive}}`
 LiveView. This LiveView renders a generic sign-in/register screen. It is
-entirely optional, and can be customised either by way of
-[overrides](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Overrides.html)
+entirely optional, and can be customised either by way of {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Overrides|overrides}}
 or replaced entirely.
 
-### [`sign_out_route/3`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html#sign_out_route/3)
+### {{link:ash_authentication_phoenix:function:AshAuthentication.Phoenix.Router.sign_out_route/3|`sign_out_route/3`}}
 
 This helper generates a route which points to the `sign_out` action in your `AuthController`.
 
-### [`auth_routes_for/2`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html#auth_routes_for/2)
+### {{link:ash_authentication_phoenix:function:AshAuthentication.Phoenix.Router.auth_routes_for/2|`auth_routes_for/2`}}
 
 This helper generates all the required routes for all strategies supported by the provided resource.
 
@@ -95,15 +92,14 @@ auth_path  GET  /sign-in                           AshAuthentication.Phoenix.Sig
 auth_path  GET  /sign-out                          MyAppWeb.AuthController :sign_out
 ```
 
-## [`AshAuthentication.Phoenix.Controller`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Controller.html)
+## `{{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Controller}}`
 
-Instead of using [`AshAuthentication.Plug`](AshAuthentication.Plug.html) as
-suggested in [the previous guide](getting_started_01_basic_setup.md),
+Instead of using `AshAuthentication.Plug` as
+suggested in {{link:ash_authentication:guide:getting_started_01_basic_setup|the previous guide}},
 `ash_authentication_phoenix` comes with a generator which creates a
 `Phoenix.Controller` by way of a `use` macro.
 
-All functions in
-[`AshAuthentication.Phoenix.Plug`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Plug.html)
+All functions in {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Plug}}
 are automatically imported.
 
 You can define multiple versions if required (eg one for your `:api` pipeline
@@ -182,11 +178,9 @@ In the example above we simply set the HTTP status to 401 and render an HTML pag
 ### `sign_out/2`
 
 This is not strictly necessary, but if you have enabled the
-[`sign_out_route/3`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html#sign_out_route/3)
+{{link:ash_authentication_phoenix:function:AshAuthentication.Phoenix.Router.sign_out_route/3|`sign_out_route/3`}}
 helper in your router, then this is the controller action which will be called.
-Use this to perform any sign-out actions (like clearing the session or [revoking
-a
-token](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Plug.html#revoke_bearer_tokens/2))
+Use this to perform any sign-out actions (like clearing the session or {{link:ash_authentication_phoenix:function:AshAuthentication.Phoenix.Plug.revoke_bearer_tokens/2|revoking a token}}
 and then sending the user on their way.
 
 ## Component library
@@ -194,33 +188,31 @@ and then sending the user on their way.
 `ash_authentication_phoenix` ships with a number of components allowing you to
 pick the level of customisation you require.
 
-  * [`AshAuthentication.Phoenix.Components.SignIn`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Components.SignIn.html)
+  * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.SignIn}}
     This is the top-level component, given a [resource
     configuration](t:AshAuthentication.resource_config) it will iterate through
     all the configured authentication providers and render their UI. You can
     place this directly into your sign-in page if you want.
-  * [`AshAuthentication.Phoenix.Components.Password`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Components.Password.html)
+  * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.Password}}
     This component renders the UI for password authentication - both the
     registration and sign-in UI.
-  * [`AshAuthentication.Phoenix.Components.Password.SignInForm`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Components.Password.SignInForm.html)
+  * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.Password.SignInForm}}
     This component renders the UI for a password authentication sign-in form.
-  * [`AshAuthentication.Phoenix.Components.Password.RegisterForm`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Components.Password.RegisterForm.html)
+  * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.Password.RegisterForm}}
     This component renders the UI for a password authentication registration
     form.
-  * [`AshAuthentication.Phoenix.Components.Password.ResetForm`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Components.Password.ResetForm.html)
+  * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.Password.ResetForm}}
     This component renders the UI for a user to request a password reset.
-  * [`AshAuthentication.Phoenix.Components.Password.Input`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Components.Password.Input.html)
+  * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.Password.Input}}
     This module contains several function components which provide individual
     input fields and buttons for password authentication.
-  * [`AshAuthentication.Phoenix.Components.OAuth2`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Components.OAuth2.html)
+  * {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Components.OAuth2}}
     A component which renders a sign-in button for an OAuth 2.0 provider.
 
 ## Overrides
 
-All the components above and the
-[`AshAuthentication.Phoenix.SignInLive`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.SignInLive.html)
-LiveView are customisable via the
-[`AshAuthentication.Phoenix.Overrides`](https://team-alembic.github.io/ash_authentication_phoenix/AshAuthentication.Phoenix.Overrides.html)
+All the components above and the {{link:ash_authentication_phoenix:AshAuthentication.Phoenix.SignInLive}}
+LiveView are customisable via the {{link:ash_authentication_phoenix:AshAuthentication.Phoenix.Overrides}}
 system.
 
 Overrides allow you to configure CSS classes and other options for the
@@ -230,6 +222,3 @@ components without needing to modify them.
 
 In this guide we've learned how to add Ash Authentication to Phoenix, configure
 routes and handle authentication.
-
-Up next, [Using with
-AshAdmin](getting_started_03_admin.html).
