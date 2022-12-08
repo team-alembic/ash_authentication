@@ -255,7 +255,7 @@ defmodule AshAuthentication.Utils do
   defp ensure_compiled(module) do
     {:module, Code.ensure_compiled!(module)}
   rescue
-    e  ->
+    e ->
       {:error, Exception.message(e)}
   end
 end
