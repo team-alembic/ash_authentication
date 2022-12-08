@@ -163,6 +163,7 @@ defmodule MyApp.Accounts.User do
     tokens do
       enabled? true
       token_resource MyApp.Accounts.Token
+    do
   end
 
   postgres do
