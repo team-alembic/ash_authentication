@@ -22,7 +22,9 @@ defmodule AshAuthentication.MixProject do
       ],
       docs: [
         main: "readme",
-        extras: ["README.md"],
+        extras: extra_documentation(),
+        groups_for_extras: extra_documentation_groups(),
+        extra_section: "GUIDES",
         formatters: ["html"],
         filter_modules: ~r/^Elixir.AshAuthentication/,
         source_url_pattern:
@@ -51,6 +53,40 @@ defmodule AshAuthentication.MixProject do
         ]
       ]
     ]
+  end
+
+  defp extra_documentation do
+    (["README.md"] ++
+       Path.wildcard("documentation/**/*.md"))
+    |> Enum.map(fn
+      "README.md" ->
+        {:"README.md", title: "Read Me"}
+
+      "documentation/getting_started/" <> rest = path ->
+        [_, number, name] =
+          ~r/getting_started_(\d+)_(\w+).md/
+          |> Regex.run(rest)
+
+        number = String.to_integer(number)
+        name = name |> String.split(~r/_+/) |> Enum.join(" ") |> String.capitalize()
+
+        {String.to_atom(path), [title: "#{number}. #{name}"]}
+    end)
+  end
+
+  defp extra_documentation_groups do
+    "documentation/*"
+    |> Path.wildcard()
+    |> Enum.map(fn dir ->
+      name =
+        dir
+        |> Path.basename()
+        |> String.split(~r/_+/)
+        |> Enum.join(" ")
+        |> String.capitalize()
+
+      {name, dir |> Path.join("**") |> Path.wildcard()}
+    end)
   end
 
   def package do
