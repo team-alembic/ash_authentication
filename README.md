@@ -4,6 +4,10 @@ AshAuthentication provides drop-in support for user authentication for users of
 the [Ash framework](https://ash-hq.org).  It is designed to be highly
 configurable, with sensible defaults covering the most common use-cases.
 
+## Warning
+
+This is **beta** software.  Please don't use it without talking to us!
+
 ## Installation
 
 The package can be installed by adding `ash_authentication` to your list of
