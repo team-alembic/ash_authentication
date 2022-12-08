@@ -156,6 +156,7 @@ defmodule AshAuthentication.MixProject do
         "hex.audit",
         "test"
       ],
+      docs: ["docs", "ash.replace_doc_links"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
