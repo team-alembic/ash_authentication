@@ -70,6 +70,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
              allow_nil?: false,
              private?: true,
              default: &DateTime.utc_now/0,
+             match_other_defaults?: true,
              update_default: &DateTime.utc_now/0
            ),
          :ok <- validate_extra_data_field(dsl_state),
