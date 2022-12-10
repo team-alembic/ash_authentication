@@ -31,9 +31,12 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
       query, [record] ->
         password = Query.get_argument(query, strategy.password_field)
 
-        if strategy.hash_provider.valid?(password, record.hashed_password),
-          do: {:ok, [maybe_generate_token(record)]},
-          else: auth_failed(query)
+        if strategy.hash_provider.valid?(
+             password,
+             Map.get(record, strategy.hashed_password_field)
+           ),
+           do: {:ok, [maybe_generate_token(record)]},
+           else: auth_failed(query)
 
       _, _ ->
         strategy.hash_provider.simulate()
