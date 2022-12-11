@@ -218,7 +218,8 @@ defmodule AshAuthentication.Utils do
     module.module_info()
     :ok
   rescue
-    {:error, "Argument `#{inspect(module)}` is not a valid module"}
+    _ ->
+      {:error, "Argument `#{inspect(module)}` is not a valid module"}
   end
 
   def assert_is_module(module),
