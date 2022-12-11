@@ -215,17 +215,14 @@ defmodule AshAuthentication.Utils do
   """
   @spec assert_is_module(module) :: :ok | {:error, term}
   def assert_is_module(module) when is_atom(module) do
-    case ensure_compiled(module) do
-      {:module, _module} ->
-        :ok
-
-      {:error, _} ->
-        {:error, "Argument `#{inspect(module)}` is not a valid module name"}
-    end
+    module.module_info()
+    :ok
+  rescue
+    {:error, "Argument `#{inspect(module)}` is not a valid module"}
   end
 
   def assert_is_module(module),
-    do: {:error, "Argument `#{inspect(module)}` is not a valid module name"}
+    do: {:error, "Argument `#{inspect(module)}` is not a valid module"}
 
   @doc """
   Asserts that `module` is extended by `extension`.
