@@ -249,11 +249,4 @@ defmodule AshAuthentication.Utils do
        "Module `#{inspect(module)}` does not implement the `#{inspect(behaviour)}` behaviour"}
     end
   end
-
-  defp ensure_compiled(module) do
-    {:module, Code.ensure_compiled!(module)}
-  rescue
-    e ->
-      {:error, Exception.message(e)}
-  end
 end
