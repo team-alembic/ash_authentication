@@ -44,7 +44,7 @@ defmodule MyApp.Accounts.User do
     api MyApp.Accounts
 
     strategies do
-      password do
+      password :password do
         identity_field :email
         hashed_password_field :hashed_password
       end

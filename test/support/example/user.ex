@@ -24,7 +24,7 @@ defmodule Example.User do
     attribute(:username, :ci_string, allow_nil?: false)
     attribute(:hashed_password, :string, allow_nil?: true, sensitive?: true, private?: true)
 
-    create_timestamp(:created_at)
+    create_timestamp(:inserted_at)
     update_timestamp(:updated_at)
   end
 

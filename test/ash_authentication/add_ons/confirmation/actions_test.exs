@@ -72,7 +72,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
       query =
         from(t in Example.Token,
           where: t.purpose == "confirm",
-          order_by: [desc: t.created_at],
+          order_by: [desc: t.inserted_at],
           limit: 1
         )
 

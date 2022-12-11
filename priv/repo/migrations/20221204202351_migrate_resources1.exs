@@ -40,7 +40,7 @@ defmodule Example.Repo.Migrations.MigrateResources1 do
     alter table(:user) do
       add :username, :citext, null: false
       add :hashed_password, :text
-      add :created_at, :utc_datetime_usec, null: false, default: fragment("now()")
+      add :inserted_at, :utc_datetime_usec, null: false, default: fragment("now()")
       add :updated_at, :utc_datetime_usec, null: false, default: fragment("now()")
     end
 
@@ -48,7 +48,7 @@ defmodule Example.Repo.Migrations.MigrateResources1 do
 
     create table(:tokens, primary_key: false) do
       add :updated_at, :utc_datetime_usec, null: false, default: fragment("now()")
-      add :created_at, :utc_datetime_usec, null: false, default: fragment("now()")
+      add :inserted_at, :utc_datetime_usec, null: false, default: fragment("now()")
       add :extra_data, :map
       add :purpose, :text, null: false
       add :expires_at, :utc_datetime, null: false
@@ -63,7 +63,7 @@ defmodule Example.Repo.Migrations.MigrateResources1 do
 
     alter table(:user) do
       remove :updated_at
-      remove :created_at
+      remove :inserted_at
       remove :hashed_password
       remove :username
     end
