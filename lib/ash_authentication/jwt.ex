@@ -56,7 +56,7 @@ defmodule AshAuthentication.Jwt do
   """
 
   alias Ash.Resource
-  alias AshAuthentication.{Info, Jwt.Config}
+  alias AshAuthentication.{Info, Jwt.Config, TokenResource}
 
   @typedoc """
   A string likely to contain a valid JWT.
@@ -104,9 +104,24 @@ defmodule AshAuthentication.Jwt do
         :error -> extra_claims
       end
 
-    case Joken.generate_and_sign(default_claims, extra_claims, signer) do
-      {:ok, token, claims} -> {:ok, token, claims}
+    with {:ok, token, claims} <- Joken.generate_and_sign(default_claims, extra_claims, signer),
+         :ok <- maybe_store_token(token, resource) do
+      {:ok, token, claims}
+    else
       {:error, _reason} -> :error
+    end
+  end
+
+  defp maybe_store_token(token, resource) do
+    if Info.authentication_tokens_store_all_tokens?(resource) do
+      with {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
+        TokenResource.Actions.store_token(token_resource, %{
+          "token" => token,
+          "purpose" => "generic"
+        })
+      end
+    else
+      :ok
     end
   end
 

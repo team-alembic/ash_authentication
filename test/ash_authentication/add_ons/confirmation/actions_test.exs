@@ -100,7 +100,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
         },
         ~w[jti expires_at purpose extra_data]a
       )
-      |> Example.Repo.insert!()
+      |> Example.Repo.insert!(on_conflict: :replace_all, conflict_target: :jti)
 
       {:ok, changes} = Actions.get_changes(strategy, jti)
 

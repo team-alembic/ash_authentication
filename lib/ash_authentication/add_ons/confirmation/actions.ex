@@ -19,7 +19,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   Attempt to confirm a user.
   """
   @spec confirm(Confirmation.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
-  def confirm(strategy, params, options) do
+  def confirm(strategy, params, opts \\ []) do
     with {:ok, api} <- Info.authentication_api(strategy.resource),
          {:ok, token} <- Map.fetch(params, "confirm"),
          {:ok, %{"sub" => subject}, _} <- Jwt.verify(token, strategy.resource),
@@ -27,7 +27,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
       user
       |> Changeset.new()
       |> Changeset.for_update(strategy.confirm_action_name, params)
-      |> api.update(options)
+      |> api.update(opts)
     else
       :error -> {:error, InvalidToken.exception(type: :confirmation)}
       {:error, reason} -> {:error, reason}
@@ -37,8 +37,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   @doc """
   Store changes in the tokens resource for later re-use.
   """
-  @spec store_changes(Confirmation.t(), String.t(), Changeset.t()) :: :ok | {:error, any}
-  def store_changes(strategy, token, changeset) do
+  @spec store_changes(Confirmation.t(), String.t(), Changeset.t(), keyword) :: :ok | {:error, any}
+  def store_changes(strategy, token, changeset, opts \\ []) do
     changes =
       strategy.monitor_fields
       |> Stream.filter(&Changeset.changing_attribute?(changeset, &1))
@@ -57,7 +57,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
              extra_data: changes,
              purpose: to_string(strategy.name)
            })
-           |> api.create() do
+           |> api.create(Keyword.merge(opts, upsert?: true)) do
       :ok
     else
       {:error, reason} ->
@@ -74,8 +74,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   @doc """
   Get changes from the tokens resource for application.
   """
-  @spec get_changes(Confirmation.t(), String.t()) :: {:ok, map} | :error
-  def get_changes(strategy, jti) do
+  @spec get_changes(Confirmation.t(), String.t(), keyword) :: {:ok, map} | :error
+  def get_changes(strategy, jti, opts \\ []) do
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
          {:ok, api} <- TokenResource.Info.token_api(token_resource),
          {:ok, get_changes_action} <-
@@ -85,7 +85,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
            |> Query.new()
            |> Query.set_context(%{strategy: strategy})
            |> Query.for_read(get_changes_action, %{"jti" => jti})
-           |> api.read() do
+           |> api.read(opts) do
       changes =
         strategy.monitor_fields
         |> Stream.map(&to_string/1)

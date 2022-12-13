@@ -131,9 +131,49 @@ defmodule AshAuthentication.TokenResource.Transformer do
            validate_store_confirmation_changes_action(
              dsl_state,
              store_confirmation_changes_action_name
-           ) do
+           ),
+         {:ok, store_token_action_name} <-
+           Info.token_store_token_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             store_token_action_name,
+             &build_store_token_action(&1, store_token_action_name)
+           ),
+         :ok <- validate_store_token_action(dsl_state, store_token_action_name) do
       {:ok, dsl_state}
     end
+  end
+
+  defp validate_store_token_action(dsl_state, action_name) do
+    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+         :ok <- validate_token_argument(action) do
+      validate_action_has_change(action, TokenResource.StoreTokenChange)
+    end
+  end
+
+  defp build_store_token_action(_dsl_state, action_name) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
+        name: :token,
+        type: :string,
+        allow_nil?: false,
+        sensitive?: true
+      )
+    ]
+
+    changes = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+        change: TokenResource.StoreTokenChange
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :create,
+      name: action_name,
+      arguments: arguments,
+      changes: changes,
+      accept: [:extra_data, :purpose]
+    )
   end
 
   defp build_store_confirmation_changes_action(_dsl_state, action_name) do

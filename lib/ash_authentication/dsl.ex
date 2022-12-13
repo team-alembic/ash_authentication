@@ -116,6 +116,17 @@ defmodule AshAuthentication.Dsl do
                 """,
                 default: false
               ],
+              store_all_tokens?: [
+                type: :boolean,
+                doc: """
+                Store all tokens in the `token_resource`?
+
+                Some applications need to keep track of all tokens issued to
+                any user.  This is optional behaviour with `ash_authentication`
+                in order to preserve as much performance as possible.
+                """,
+                default: false
+              ],
               signing_algorithm: [
                 type: :string,
                 doc: """
