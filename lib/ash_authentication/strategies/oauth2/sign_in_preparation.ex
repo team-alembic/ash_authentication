@@ -11,7 +11,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   """
   use Ash.Resource.Preparation
   alias Ash.{Error.Framework.AssumptionFailed, Query, Resource.Preparation}
-  alias AshAuthentication.{Errors.AuthenticationFailed, Jwt, UserIdentity}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, UserIdentity}
   require Ash.Query
   import AshAuthentication.Utils, only: [is_falsy: 1]
 
@@ -19,7 +19,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, _opts, _context) do
-    case Map.fetch(query.context, :strategy) do
+    case Info.strategy_for_action(query.resource, query.action.name) do
       :error ->
         {:error,
          AssumptionFailed.exception(message: "Strategy is missing from the changeset context.")}

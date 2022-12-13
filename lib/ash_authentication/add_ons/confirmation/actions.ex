@@ -26,7 +26,6 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
          {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource) do
       user
       |> Changeset.new()
-      |> Changeset.set_context(%{strategy: strategy})
       |> Changeset.for_update(strategy.confirm_action_name, params)
       |> api.update(options)
     else
@@ -53,7 +52,6 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
          {:ok, _token_record} <-
            token_resource
            |> Changeset.new()
-           |> Changeset.set_context(%{strategy: strategy})
            |> Changeset.for_create(store_changes_action, %{
              token: token,
              extra_data: changes,

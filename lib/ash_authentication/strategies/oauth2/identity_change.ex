@@ -4,7 +4,7 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.UserIdentity
+  alias AshAuthentication.{Info, UserIdentity}
   alias Ash.{Changeset, Error.Framework.AssumptionFailed, Resource.Change}
   import AshAuthentication.Utils, only: [is_falsy: 1]
 
@@ -12,13 +12,15 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
   @impl true
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
   def change(changeset, _opts, _context) do
-    case Map.fetch(changeset.context, :strategy) do
+    case Info.strategy_for_action(changeset.resource, changeset.action.name) do
       {:ok, strategy} ->
         do_change(changeset, strategy)
 
       :error ->
         {:error,
-         AssumptionFailed.exception(message: "Strategy is missing from the changeset context.")}
+         AssumptionFailed.exception(
+           message: "Action does not correlate with an authentication strategy"
+         )}
     end
   end
 

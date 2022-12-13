@@ -8,6 +8,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Error.Framework.AssumptionFailed, Resource.Change}
+  alias AshAuthentication.Info
 
   @doc false
   @impl true
@@ -15,7 +16,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
   def change(changeset, _opts, _) do
     changeset
     |> Changeset.before_action(fn changeset ->
-      with {:ok, strategy} <- Map.fetch(changeset.context, :strategy),
+      with {:ok, strategy} <- Info.strategy_for_action(changeset.resource, changeset.action.name),
            value when is_binary(value) <-
              Changeset.get_argument(changeset, strategy.password_field),
            {:ok, hash} <- strategy.hash_provider.hash(value) do

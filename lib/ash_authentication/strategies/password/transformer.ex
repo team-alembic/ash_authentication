@@ -71,13 +71,35 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
          :ok <- validate_sign_in_action(dsl_state, strategy),
          {:ok, dsl_state, strategy} <- maybe_transform_resettable(dsl_state, strategy),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
+      strategy = %{strategy | resource: resource}
+
       dsl_state =
         dsl_state
         |> Transformer.replace_entity(
-          [:authentication, :strategies],
-          %{strategy | resource: resource},
+          ~w[authentication strategies]a,
+          strategy,
           &(&1.name == strategy.name)
         )
+        |> then(fn dsl_state ->
+          ~w[sign_in_action_name register_action_name]a
+          |> Stream.map(&Map.get(strategy, &1))
+          |> Enum.reduce(
+            dsl_state,
+            &Transformer.persist(&2, {:authentication_action, &1}, strategy)
+          )
+        end)
+        |> then(fn dsl_state ->
+          strategy
+          |> Map.get(:resettable, [])
+          |> Stream.flat_map(fn resettable ->
+            ~w[request_password_reset_action_name password_reset_action_name]a
+            |> Stream.map(&Map.get(resettable, &1))
+          end)
+          |> Enum.reduce(
+            dsl_state,
+            &Transformer.persist(&2, {:authentication_action, &1}, strategy)
+          )
+        end)
 
       {:ok, dsl_state}
     end

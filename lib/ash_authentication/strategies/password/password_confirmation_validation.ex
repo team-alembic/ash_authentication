@@ -7,6 +7,7 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
 
   use Ash.Resource.Validation
   alias Ash.{Changeset, Error.Changes.InvalidArgument, Error.Framework.AssumptionFailed}
+  alias AshAuthentication.Info
 
   @doc """
   Validates that the password and password confirmation fields contain
@@ -15,7 +16,7 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
   @impl true
   @spec validate(Changeset.t(), keyword) :: :ok | {:error, String.t() | Exception.t()}
   def validate(changeset, _) do
-    case Map.fetch(changeset.context, :strategy) do
+    case Info.strategy_for_action(changeset.resource, changeset.action.name) do
       {:ok, %{confirmation_required?: true} = strategy} ->
         validate_password_confirmation(changeset, strategy)
 
@@ -24,7 +25,9 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
 
       :error ->
         {:error,
-         AssumptionFailed.exception(message: "Strategy is missing from the changeset context.")}
+         AssumptionFailed.exception(
+           message: "Action does not correlate with an authentication strategy"
+         )}
     end
   end
 

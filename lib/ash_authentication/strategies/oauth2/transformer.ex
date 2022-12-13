@@ -52,13 +52,23 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
          :ok <- maybe_validate_register_action(dsl_state, strategy),
          :ok <- maybe_validate_sign_in_action(dsl_state, strategy),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
+      strategy = %{strategy | resource: resource}
+
       dsl_state =
         dsl_state
         |> Transformer.replace_entity(
-          [:authentication, :strategies],
-          %{strategy | resource: resource},
+          ~w[authentication strategies]a,
+          strategy,
           &(&1.name == strategy.name)
         )
+        |> then(fn dsl_state ->
+          ~w[register_action_name sign_in_action_name]a
+          |> Stream.map(&Map.get(strategy, &1))
+          |> Enum.reduce(
+            dsl_state,
+            &Transformer.persist(&2, {:authentication_action, &1}, strategy)
+          )
+        end)
 
       {:ok, dsl_state}
     else
