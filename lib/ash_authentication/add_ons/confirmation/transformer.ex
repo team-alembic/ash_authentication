@@ -66,13 +66,16 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
          :ok <- validate_confirmed_at_attribute(dsl_state, strategy),
          {:ok, dsl_state} <- maybe_build_change(dsl_state, Confirmation.ConfirmationHookChange),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
+      strategy = %{strategy | resource: resource}
+
       dsl_state =
         dsl_state
         |> Transformer.replace_entity(
           [:authentication, :add_ons],
-          %{strategy | resource: resource},
+          strategy,
           &(&1.name == strategy.name)
         )
+        |> Transformer.persist({:authentication_action, strategy.confirm_action_name}, strategy)
 
       {:ok, dsl_state}
     else

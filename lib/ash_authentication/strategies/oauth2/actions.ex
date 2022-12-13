@@ -26,7 +26,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
 
     strategy.resource
     |> Query.new()
-    |> Query.set_context(%{strategy: strategy})
     |> Query.for_read(strategy.sign_in_action_name, params)
     |> api.read(options)
     |> case do
@@ -45,7 +44,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
 
     strategy.resource
     |> Changeset.new()
-    |> Changeset.set_context(%{strategy: strategy})
     |> Changeset.for_create(strategy.register_action_name, params,
       upsert?: true,
       upsert_identity: action.upsert_identity

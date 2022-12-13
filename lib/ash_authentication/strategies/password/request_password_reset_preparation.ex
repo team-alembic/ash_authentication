@@ -10,14 +10,14 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
-  alias AshAuthentication.Strategy.Password
+  alias AshAuthentication.{Info, Strategy.Password}
   require Ash.Query
 
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, _opts, _context) do
-    strategy = Map.fetch!(query.context, :strategy)
+    strategy = Info.strategy_for_action!(query.resource, query.action.name)
 
     if Enum.any?(strategy.resettable) do
       identity_field = strategy.identity_field

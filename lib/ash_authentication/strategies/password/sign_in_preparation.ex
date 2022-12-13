@@ -13,7 +13,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   an authentication failed error.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Jwt}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
   alias Ash.{Query, Resource.Preparation}
   require Ash.Query
 
@@ -21,7 +21,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, _opts, _context) do
-    strategy = Map.fetch!(query.context, :strategy)
+    strategy = Info.strategy_for_action!(query.resource, query.action.name)
     identity_field = strategy.identity_field
     identity = Query.get_argument(query, identity_field)
 

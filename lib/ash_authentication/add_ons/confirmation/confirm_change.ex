@@ -4,7 +4,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{AddOn.Confirmation.Actions, Jwt}
+  alias AshAuthentication.{AddOn.Confirmation.Actions, Info, Jwt}
 
   alias Ash.{
     Changeset,
@@ -17,12 +17,13 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   @impl true
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
   def change(changeset, _opts, _context) do
-    case Map.fetch(changeset.context, :strategy) do
+    case Info.strategy_for_action(changeset.resource, changeset.action.name) do
       {:ok, strategy} ->
         do_change(changeset, strategy)
 
       :error ->
-        raise AssumptionFailed, message: "Strategy is missing from the changeset context."
+        raise AssumptionFailed,
+          message: "Action does not correlate with an authentication strategy"
     end
   end
 

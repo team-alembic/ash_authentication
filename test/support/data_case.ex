@@ -79,12 +79,9 @@ defmodule DataCase do
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
-    {:ok, strategy} = AshAuthentication.Info.strategy(Example.User, :password)
-
     user =
       Example.User
       |> Ash.Changeset.new()
-      |> Ash.Changeset.set_context(%{strategy: strategy})
       |> Ash.Changeset.for_create(:register_with_password, attrs)
       |> Example.create!()
 
