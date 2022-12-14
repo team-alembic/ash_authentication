@@ -112,7 +112,35 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, revoke_token_action_name} <-
            Info.token_revocation_revoke_token_action_name(resource) do
       resource
-      |> Changeset.for_create(revoke_token_action_name, %{"token" => token}, opts)
+      |> Changeset.for_create(
+        revoke_token_action_name,
+        %{"token" => token},
+        Keyword.merge(opts, upsert?: true)
+      )
+      |> api.create()
+      |> case do
+        {:ok, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  @doc """
+  Store a token.
+
+  Stores a token for any purpose.
+  """
+  @spec store_token(Resource.t(), map, keyword) :: :ok | {:error, any}
+  def store_token(resource, params, opts \\ []) do
+    with :ok <- assert_resource_has_extension(resource, TokenResource),
+         {:ok, api} <- Info.token_api(resource),
+         {:ok, store_token_action_name} <- Info.token_store_token_action_name(resource) do
+      resource
+      |> Changeset.for_create(
+        store_token_action_name,
+        params,
+        Keyword.merge(opts, upsert?: true)
+      )
       |> api.create()
       |> case do
         {:ok, _} -> :ok

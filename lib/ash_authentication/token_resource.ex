@@ -38,6 +38,15 @@ defmodule AshAuthentication.TokenResource do
           How often to scan this resource for records which have expired, and thus can be removed.
           """,
           default: @default_expunge_interval_hrs
+        ],
+        store_token_action_name: [
+          type: :atom,
+          doc: """
+          The name of the action to use to store a token.
+
+          Used it `store_all_tokens?` is enabled in your authentication resource.
+          """,
+          default: :store_token
         ]
       ],
       sections: [
