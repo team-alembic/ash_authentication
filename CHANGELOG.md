@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.1.0](https://github.com/team-alembic/ash_authentication/compare/v3.0.4...v3.1.0) (2022-12-14)
+### Breaking Changes:
+
+* Jwt: Use token signing secret into the DSL.
+
+
+
+### Features:
+
+* Add option to store all tokens when they're created. (#91)
+
+### Improvements:
+
+* remove the need for a strategy in changeset/query contexts. (#89)
+
+* add transaction reason
+
+* try a simpler way of ensuring module is compiled
+
 ## [v3.0.4](https://github.com/team-alembic/ash_authentication/compare/v3.0.3...v3.0.4) (2022-12-08)
 
 
