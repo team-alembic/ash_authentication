@@ -1,4 +1,4 @@
-# Using with Phoenix
+# Integrating Ash Authentication and Phoenix
 
 This guide assumes that you already have an Phoenix application set up with Ash.
 If you don't then check out the [Phoenix topic on Ash

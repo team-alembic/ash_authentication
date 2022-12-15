@@ -63,15 +63,8 @@ defmodule AshAuthentication.MixProject do
       "README.md" ->
         {:"README.md", title: "Read Me"}
 
-      "documentation/getting_started/" <> rest = path ->
-        [_, number, name] =
-          ~r/getting_started_(\d+)_(\w+).md/
-          |> Regex.run(rest)
-
-        number = String.to_integer(number)
-        name = name |> String.split(~r/_+/) |> Enum.join(" ") |> String.capitalize()
-
-        {String.to_atom(path), [title: "#{number}. #{name}"]}
+      "documentation/tutorials/" <> _ = path ->
+        {String.to_atom(path), []}
     end)
   end
 
@@ -122,7 +115,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:ash, ash_version("~> 2.4")},
-      {:spark, "~> 0.2.12"},
+      {:spark, "~> 0.3"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},

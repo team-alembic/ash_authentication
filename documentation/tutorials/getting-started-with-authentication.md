@@ -195,7 +195,7 @@ Now we have enough in place to register and sign-in users using the
 ## Plugs and routing
 
 If you're using Phoenix, then you can skip this section and go straight to
-{{link:ash_authentication:guide:getting_started_02_phoenix|Using with Phoenix}}
+{{link:ash_authentication:guide:integrating-ash-authentication-and-phoenix|Integrating Ash Authentication and Phoenix}}
 
 In order for your users to be able to sign in, you will likely need to provide
 an HTTP endpoint to submit credentials or OAuth requests to.  Ash Authentication
