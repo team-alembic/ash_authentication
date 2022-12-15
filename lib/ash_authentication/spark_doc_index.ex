@@ -44,23 +44,26 @@ defmodule AshAuthentication.SparkDocIndex do
   @spec code_modules :: [{String.t(), [module]}]
   def code_modules do
     [
-      {"Authentication",
-       [
-         AshAuthentication,
-         AshAuthentication.Info,
-         AshAuthentication.TokenResource,
-         AshAuthentication.Supervisor
-       ]},
-      {"Strategies",
-       [
-         AshAuthentication.Strategy,
-         AshAuthentication.Strategy.Password,
-         AshAuthentication.Strategy.OAuth2
-       ]},
-      {"Add Ons",
-       [
-         AshAuthentication.AddOn.Confirmation
-       ]}
+      Authentication: [
+        AshAuthentication,
+        AshAuthentication.Info,
+        AshAuthentication.TokenResource,
+        AshAuthentication.Supervisor
+      ],
+      Strategies: [
+        AshAuthentication.Strategy,
+        AshAuthentication.Strategy.Password,
+        AshAuthentication.Strategy.OAuth2
+      ],
+      "Add Ons": [
+        AshAuthentication.AddOn.Confirmation
+      ],
+      Cryptography: [
+        AshAuthentication.HashProvider,
+        AshAuthentication.BcryptProvider,
+        AshAuthentication.Jwt
+      ],
+      Plug: ~r/^AshAuthentication\.Plug.*/
     ]
   end
 end
