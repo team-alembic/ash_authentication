@@ -47,7 +47,7 @@ RUN git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v${ASDF_VERSI
   echo '\nsource $HOME/.asdf/asdf.sh' >> ~/.zshrc
 
 WORKDIR /workspace/
-RUN mkdir _build deps .elixir_ls
+RUN mkdir -p _build deps .elixir_ls priv/plts
 
 # Install all the tools specified in the tool versions file.
 COPY .tool-versions /workspace/
