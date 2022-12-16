@@ -22,6 +22,8 @@ defmodule AshAuthentication.Dsl do
     OptionsHelpers
   }
 
+  @type strategy :: :confirmation | :oauth2 | :password | :auth0
+
   @shared_strategy_options [
     name: [
       type: :atom,
@@ -176,7 +178,8 @@ defmodule AshAuthentication.Dsl do
             describe: "Configure authentication strategies on this resource",
             entities: [
               strategy(:password),
-              strategy(:oauth2)
+              strategy(:oauth2),
+              strategy(:auth0)
             ]
           },
           %Section{
@@ -193,7 +196,7 @@ defmodule AshAuthentication.Dsl do
 
   # The result spec should be changed to `Entity.t` when Spark 0.2.18 goes out.
   @doc false
-  @spec strategy(:confirmation | :oauth2 | :password) :: map
+  @spec strategy(strategy) :: map
   def strategy(:password) do
     %Entity{
       name: :password,
@@ -684,5 +687,21 @@ defmodule AshAuthentication.Dsl do
           "Shared options"
         )
     }
+  end
+
+  def strategy(:auth0) do
+    :oauth2
+    |> strategy()
+    |> Map.merge(%{
+      name: :auth0,
+      describe: "Auth0 authentication",
+      auto_set_fields: [
+        authorization_params: [scope: "openid profile email"],
+        auth_method: :client_secret_post,
+        authorize_path: "/authorize",
+        token_path: "/oauth/token",
+        user_path: "/userinfo"
+      ]
+    })
   end
 end
