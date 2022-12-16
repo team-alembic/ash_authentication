@@ -46,6 +46,17 @@ defmodule Example.User do
       primary? true
     end
 
+    create :register_with_auth0 do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+    end
+
     create :register_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
@@ -140,6 +151,16 @@ defmodule Example.User do
         authorization_params scope: "openid profile email"
         auth_method :client_secret_post
         identity_resource Example.UserIdentity
+      end
+
+      auth0 :auth0 do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        site &get_config/2
+        authorize_path &get_config/2
+        token_path &get_config/2
+        user_path &get_config/2
       end
     end
   end
