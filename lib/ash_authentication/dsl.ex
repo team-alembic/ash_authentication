@@ -700,7 +700,8 @@ defmodule AshAuthentication.Dsl do
         auth_method: :client_secret_post,
         authorize_path: "/authorize",
         token_path: "/oauth/token",
-        user_path: "/userinfo"
+        user_path: "/userinfo",
+        icon: :auth0
       ]
     })
   end

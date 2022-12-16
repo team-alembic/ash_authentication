@@ -237,7 +237,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
             identity_relationship_user_id_attribute: :user_id,
             provider: :oauth2,
             name: nil,
-            resource: nil
+            resource: nil,
+            icon: nil
 
   alias AshAuthentication.Strategy.OAuth2
 
@@ -267,6 +268,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           identity_relationship_user_id_attribute: atom,
           provider: atom,
           name: atom,
-          resource: module
+          resource: module,
+          icon: nil | atom
         }
 end
