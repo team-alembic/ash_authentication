@@ -43,6 +43,8 @@ defmodule Example.User do
     end
 
     update :update do
+      argument :password, :string, allow_nil?: true, sensitive?: true
+      argument :password_confirmation, :string, allow_nil?: true, sensitive?: true
       primary? true
     end
 
