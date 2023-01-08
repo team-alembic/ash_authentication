@@ -211,7 +211,7 @@ defmodule AshAuthentication.Dsl do
         end
         """
       ],
-      args: [:name],
+      args: [{:optional, :name, :password}],
       hide: [:name],
       target: Password,
       modules: [:hash_provider],
@@ -302,7 +302,7 @@ defmodule AshAuthentication.Dsl do
     %Entity{
       name: :oauth2,
       describe: "OAuth2 authentication",
-      args: [:name],
+      args: [{:optional, :name, :oauth2}],
       target: OAuth2,
       modules: [
         :authorize_path,
@@ -581,7 +581,7 @@ defmodule AshAuthentication.Dsl do
     %Entity{
       name: :confirmation,
       describe: "User confirmation flow",
-      args: [:name],
+      args: [{:optional, :name, :confirm}],
       target: Confirmation,
       modules: [:sender],
       schema:
@@ -694,6 +694,7 @@ defmodule AshAuthentication.Dsl do
     |> strategy()
     |> Map.merge(%{
       name: :auth0,
+      args: [{:optional, :name, :auth0}],
       describe: "Auth0 authentication",
       auto_set_fields: [
         authorization_params: [scope: "openid profile email"],

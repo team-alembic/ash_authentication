@@ -132,7 +132,7 @@ defmodule Example.User do
     end
 
     strategies do
-      password :password do
+      password do
         resettable do
           sender fn user, token ->
             Logger.debug(
@@ -142,7 +142,7 @@ defmodule Example.User do
         end
       end
 
-      oauth2 :oauth2 do
+      oauth2 do
         client_id &get_config/2
         redirect_uri &get_config/2
         client_secret &get_config/2
@@ -155,7 +155,7 @@ defmodule Example.User do
         identity_resource Example.UserIdentity
       end
 
-      auth0 :auth0 do
+      auth0 do
         client_id &get_config/2
         redirect_uri &get_config/2
         client_secret &get_config/2
