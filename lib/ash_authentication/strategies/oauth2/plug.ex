@@ -8,6 +8,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   alias Assent.{Config, HTTPAdapter.Mint}
   alias Assent.Strategy.OAuth2, as: Assent
   alias Plug.Conn
+  import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   import Plug.Conn
 
@@ -46,13 +47,23 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          conn <- delete_session(conn, session_key),
          config <- Config.put(config, :session_params, session_params),
          {:ok, %{user: user, token: token}} <- Assent.callback(config, conn.params),
+         action_opts <- action_opts(conn),
          {:ok, user} <-
-           register_or_sign_in_user(strategy, %{user_info: user, oauth_tokens: token}) do
+           register_or_sign_in_user(
+             strategy,
+             %{user_info: user, oauth_tokens: token},
+             action_opts
+           ) do
       store_authentication_result(conn, {:ok, user})
     else
       nil -> store_authentication_result(conn, {:error, nil})
       {:error, reason} -> store_authentication_result(conn, {:error, reason})
     end
+  end
+
+  defp action_opts(conn) do
+    [actor: get_actor(conn), tenant: get_tenant(conn)]
+    |> Enum.reject(&is_nil(elem(&1, 1)))
   end
 
   defp config_for(strategy) do
@@ -83,10 +94,11 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
-  defp register_or_sign_in_user(strategy, params) when strategy.registration_enabled?,
-    do: Strategy.action(strategy, :register, params)
+  defp register_or_sign_in_user(strategy, params, opts) when strategy.registration_enabled?,
+    do: Strategy.action(strategy, :register, params, opts)
 
-  defp register_or_sign_in_user(strategy, params), do: Strategy.action(strategy, :sign_in, params)
+  defp register_or_sign_in_user(strategy, params, opts),
+    do: Strategy.action(strategy, :sign_in, params, opts)
 
   # We need to temporarily store some information about the request in the
   # session so that we can verify that there hasn't been a CSRF-related attack.
