@@ -6,7 +6,7 @@ defmodule AshAuthentication.Plug.Router do
   Used internally by `AshAuthentication.Plug`.
   """
 
-  alias AshAuthentication.{Info, Strategy}
+  alias AshAuthentication.{Info, Plug.Dispatcher, Strategy}
 
   @doc false
   @spec __using__(keyword) :: Macro.t()
@@ -41,10 +41,10 @@ defmodule AshAuthentication.Plug.Router do
         |> Map.new()
 
       for {path, config} <- routes do
-        match(path, to: AshAuthentication.Plug.Dispatcher, init_opts: [config])
+        match(path, to: Dispatcher, init_opts: [config])
       end
 
-      match(_, to: AshAuthentication.Plug.Dispatcher, init_opts: [unquote(return_to)])
+      match(_, to: Dispatcher, init_opts: [unquote(return_to)])
     end
   end
 end
