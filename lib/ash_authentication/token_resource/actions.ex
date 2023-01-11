@@ -188,6 +188,8 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, api} <- Info.token_api(resource),
          {:ok, get_token_action_name} <- Info.token_get_token_action_name(resource) do
       resource
+      |> Query.new()
+      |> Query.set_context(%{private: %{ash_authentication?: true}})
       |> Query.for_read(get_token_action_name, params, opts)
       |> api.read()
     end
