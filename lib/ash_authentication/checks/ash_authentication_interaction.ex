@@ -20,6 +20,7 @@ defmodule AshAuthentication.Checks.AshAuthenticationInteraction do
     "AshAuthentication is performing this interaction"
   end
 
-  def match?(_, %{context: %{private: %{ash_authentication?: true}}}, _), do: true
+  def match?(_, %{query: %{context: %{private: %{ash_authentication?: true}}}}, _), do: true
+  def match?(_, %{changeset: %{context: %{private: %{ash_authentication?: true}}}}, _), do: true
   def match?(_, _, _), do: false
 end
