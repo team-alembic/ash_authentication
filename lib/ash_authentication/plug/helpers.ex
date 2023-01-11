@@ -13,9 +13,13 @@ defmodule AshAuthentication.Plug.Helpers do
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
   def store_in_session(conn, user) when is_struct(user) do
     subject_name = Info.authentication_subject_name!(user.__struct__)
-    subject = AshAuthentication.user_to_subject(user)
 
-    Conn.put_session(conn, subject_name, subject)
+    if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
+      Conn.put_session(conn, "#{subject_name}_token", user.__metadata__.token)
+    else
+      subject = AshAuthentication.user_to_subject(user)
+      Conn.put_session(conn, subject_name, subject)
+    end
   end
 
   def store_in_session(conn, _), do: conn
@@ -60,17 +64,39 @@ defmodule AshAuthentication.Plug.Helpers do
   def retrieve_from_session(conn, otp_app) do
     otp_app
     |> AshAuthentication.authenticated_resources()
-    |> Stream.map(&{&1, Info.authentication_options(&1)})
-    |> Enum.reduce(conn, fn {resource, options}, conn ->
-      current_subject_name = current_subject_name(options.subject_name)
+    |> Stream.map(
+      &{&1, Info.authentication_options(&1),
+       Info.authentication_tokens_require_token_presence_for_authentication?(&1)}
+    )
+    |> Enum.reduce(conn, fn
+      {resource, options, true}, conn ->
+        current_subject_name = current_subject_name(options.subject_name)
+        token_resource = Info.authentication_tokens_token_resource!(resource)
 
-      with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
-           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
-        Conn.assign(conn, current_subject_name, user)
-      else
-        _ ->
-          Conn.assign(conn, current_subject_name, nil)
-      end
+        with token when is_binary(token) <-
+               Conn.get_session(conn, "#{options.subject_name}_token"),
+             {:ok, %{"sub" => subject, "jti" => jti}, _} <- Jwt.verify(token, otp_app),
+             {:ok, [_]} <-
+               TokenResource.Actions.get_token(token_resource, %{
+                 "jti" => jti,
+                 "purpose" => "generic"
+               }),
+             {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
+          Conn.assign(conn, current_subject_name, user)
+        else
+          _ -> Conn.assign(conn, current_subject_name, nil)
+        end
+
+      {resource, options, false}, conn ->
+        current_subject_name = current_subject_name(options.subject_name)
+
+        with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
+             {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
+          Conn.assign(conn, current_subject_name, user)
+        else
+          _ ->
+            Conn.assign(conn, current_subject_name, nil)
+        end
     end)
   end
 
@@ -90,7 +116,8 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, otp_app),
+      with {:ok, %{"sub" => subject, "jti" => jti}, resource} <- Jwt.verify(token, otp_app),
+           :ok <- validate_token(resource, jti),
            {:ok, user} <- AshAuthentication.subject_to_user(subject, resource),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do
@@ -100,6 +127,21 @@ defmodule AshAuthentication.Plug.Helpers do
         _ -> conn
       end
     end)
+  end
+
+  defp validate_token(resource, jti) do
+    if Info.authentication_tokens_require_token_presence_for_authentication?(resource) do
+      with {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource),
+           {:ok, [_]} <-
+             TokenResource.Actions.get_token(token_resource, %{
+               "jti" => jti,
+               "purpose" => "generic"
+             }) do
+        :ok
+      end
+    else
+      :ok
+    end
   end
 
   @doc """

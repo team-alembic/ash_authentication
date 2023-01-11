@@ -22,10 +22,7 @@ defmodule Example.AuthPlug do
       Jason.encode!(%{
         status: :success,
         token: token,
-        user: %{
-          id: user.id,
-          username: user.username
-        },
+        user: Map.take(user, ~w[username id email]a),
         strategy: strategy,
         phase: phase
       })

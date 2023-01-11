@@ -4,6 +4,7 @@ defmodule Example.Registry do
 
   entries do
     entry Example.User
+    entry Example.UserWithTokenRequired
     entry Example.Token
     entry Example.UserIdentity
   end

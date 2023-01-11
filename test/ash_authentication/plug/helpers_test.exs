@@ -1,7 +1,7 @@
 defmodule AshAuthentication.Plug.HelpersTest do
   @moduledoc false
   use DataCase, async: true
-  alias AshAuthentication.{Jwt, Plug.Helpers}
+  alias AshAuthentication.{Jwt, Plug.Helpers, TokenResource}
   import Plug.Test, only: [conn: 3]
   alias Plug.Conn
 
@@ -15,7 +15,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
   end
 
   describe "store_in_session/2" do
-    test "it stores the user in the session", %{conn: conn} do
+    test "when token presence is not required it stores the user in the session", %{conn: conn} do
       user = build_user()
       subject = AshAuthentication.user_to_subject(user)
 
@@ -24,6 +24,17 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.store_in_session(user)
 
       assert conn.private.plug_session["user"] == subject
+    end
+
+    test "when token presence is required it stores the token in the session", %{conn: conn} do
+      user = build_user_with_token_required()
+
+      conn =
+        conn
+        |> Helpers.store_in_session(user)
+
+      assert conn.private.plug_session["user_with_token_required_token"] ==
+               user.__metadata__.token
     end
   end
 
@@ -39,7 +50,9 @@ defmodule AshAuthentication.Plug.HelpersTest do
   end
 
   describe "retrieve_from_session/2" do
-    test "it loads any subjects stored in the session", %{conn: conn} do
+    test "when token presence is not required it loads any subjects stored in the session", %{
+      conn: conn
+    } do
       user = build_user()
       subject = AshAuthentication.user_to_subject(user)
 
@@ -50,10 +63,54 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       assert conn.assigns.current_user.id == user.id
     end
+
+    test "when token presence is required and the token is present in the token resource it loads the token's subject",
+         %{conn: conn} do
+      user = build_user_with_token_required()
+
+      conn =
+        conn
+        |> Conn.put_session("user_with_token_required_token", user.__metadata__.token)
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      assert conn.assigns.current_user_with_token_required.id == user.id
+    end
+
+    test "when token presense is required and the token is not present in the token resource it doesn't load the token's subject",
+         %{conn: conn} do
+      user = build_user_with_token_required()
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      import Ecto.Query
+
+      Example.Repo.delete_all(from(t in Example.Token, where: t.jti == ^jti))
+
+      conn =
+        conn
+        |> Conn.put_session("user_with_token_required_token", user.__metadata__.token)
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      refute conn.assigns.current_user_with_token_required
+    end
+
+    test "when token presense is requried and the token has been revoked it doesn't load the token's subject",
+         %{conn: conn} do
+      user = build_user_with_token_required()
+
+      :ok = TokenResource.revoke(Example.Token, user.__metadata__.token)
+
+      conn =
+        conn
+        |> Conn.put_session("user_with_token_required_token", user.__metadata__.token)
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      refute conn.assigns.current_user_with_token_required
+    end
   end
 
   describe "retrieve_from_bearer/2" do
-    test "it loads any subjects from authorization headers", %{conn: conn} do
+    test "when token presense is not required it loads any subjects from authorization header(s)",
+         %{conn: conn} do
       user = build_user()
 
       conn =
@@ -62,6 +119,49 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
       assert conn.assigns.current_user.id == user.id
+    end
+
+    test "when token presense is required and the token is present in the database it loads the subjects from the authorization header(s)",
+         %{conn: conn} do
+      user = build_user_with_token_required()
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      assert conn.assigns.current_user_with_token_required.id == user.id
+    end
+
+    test "when token presense is required and the token is not present in the token resource it doesn't load the subjects from the authorization header(s)",
+         %{conn: conn} do
+      user = build_user_with_token_required()
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      import Ecto.Query
+
+      Example.Repo.delete_all(from(t in Example.Token, where: t.jti == ^jti))
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      refute is_map_key(conn.assigns, :current_user_with_token_required)
+    end
+
+    test "when token presense is required and the token has been revoked it doesn't lkoad the subjects from the authorization header(s)",
+         %{conn: conn} do
+      user = build_user_with_token_required()
+
+      :ok = TokenResource.revoke(Example.Token, user.__metadata__.token)
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      refute is_map_key(conn.assigns, :current_user_with_token_required)
     end
   end
 

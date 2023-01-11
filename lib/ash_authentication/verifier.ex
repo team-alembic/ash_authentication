@@ -20,6 +20,11 @@ defmodule AshAuthentication.Verifier do
 
   @doc false
   @impl true
+  @spec after_compile? :: boolean
+  def after_compile?, do: true
+
+  @doc false
+  @impl true
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
