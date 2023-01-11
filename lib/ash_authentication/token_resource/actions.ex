@@ -160,6 +160,7 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, api} <- Info.token_api(resource),
          {:ok, store_token_action_name} <- Info.token_store_token_action_name(resource) do
       resource
+      |> Changeset.new()
       |> Changeset.set_context(%{
         private: %{
           ash_authentication?: true

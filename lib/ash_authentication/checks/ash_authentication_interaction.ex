@@ -16,10 +16,12 @@ defmodule AshAuthentication.Checks.AshAuthenticationInteraction do
   """
   use Ash.Policy.SimpleCheck
 
+  @impl Ash.Policy.Check
   def describe(_) do
     "AshAuthentication is performing this interaction"
   end
 
+  @impl Ash.Policy.SimpleCheck
   def match?(_, %{query: %{context: %{private: %{ash_authentication?: true}}}}, _), do: true
   def match?(_, %{changeset: %{context: %{private: %{ash_authentication?: true}}}}, _), do: true
   def match?(_, _, _), do: false
