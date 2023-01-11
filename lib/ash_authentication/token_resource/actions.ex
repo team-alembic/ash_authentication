@@ -15,6 +15,12 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, api} <- Info.token_api(resource),
          {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource) do
       resource
+      |> Query.new()
+      |> Query.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Query.for_read(read_expired_action_name, opts)
       |> api.read()
     end
@@ -63,6 +69,12 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, api} <- Info.token_api(resource),
          {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource) do
       resource
+      |> Query.new()
+      |> Query.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Query.for_read(is_revoked_action_name, %{"token" => token}, opts)
       |> api.read()
       |> case do
@@ -85,6 +97,12 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, api} <- Info.token_api(resource),
          {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource) do
       resource
+      |> Query.new()
+      |> Query.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Query.for_read(is_revoked_action_name, %{"jti" => jti}, opts)
       |> api.read()
       |> case do
@@ -112,6 +130,12 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, revoke_token_action_name} <-
            Info.token_revocation_revoke_token_action_name(resource) do
       resource
+      |> Changeset.new()
+      |> Changeset.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Changeset.for_create(
         revoke_token_action_name,
         %{"token" => token},
@@ -136,6 +160,11 @@ defmodule AshAuthentication.TokenResource.Actions do
          {:ok, api} <- Info.token_api(resource),
          {:ok, store_token_action_name} <- Info.token_store_token_action_name(resource) do
       resource
+      |> Changeset.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Changeset.for_create(
         store_token_action_name,
         params,
@@ -167,10 +196,18 @@ defmodule AshAuthentication.TokenResource.Actions do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
          {:ok, api} <- Info.token_api(resource),
          {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource),
-         query <- Query.for_read(resource, read_expired_action_name, opts),
+         query <-
+           resource |> Query.new() |> Query.set_context(%{private: %{ash_authentication?: true}}),
+         query <- Query.for_read(query, read_expired_action_name, opts),
          {:ok, expired} <- api.read(query) do
       Enum.reduce_while(expired, :ok, fn record, :ok ->
         record
+        |> Changeset.new()
+        |> Changeset.set_context(%{
+          private: %{
+            ash_authentication?: true
+          }
+        })
         |> Changeset.for_destroy(expunge_expired_action_name, opts)
         |> api.destroy()
         |> case do

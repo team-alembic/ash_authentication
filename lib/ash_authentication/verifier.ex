@@ -35,6 +35,7 @@ defmodule AshAuthentication.Verifier do
 
   defp validate_api_presence(dsl_state) do
     with api when not is_nil(api) <- Transformer.get_option(dsl_state, [:authentication], :api),
+        :ok <- assert_is_module(api),
          true <- function_exported?(api, :spark_is, 0),
          Ash.Api <- api.spark_is() do
       {:ok, api}

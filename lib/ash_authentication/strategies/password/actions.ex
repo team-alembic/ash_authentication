@@ -19,6 +19,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
     strategy.resource
     |> Query.new()
+    |> Query.set_context(%{
+      private: %{
+        ash_authentication?: true
+      }
+    })
     |> Query.for_read(strategy.sign_in_action_name, params)
     |> api.read(options)
     |> case do
@@ -36,6 +41,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
     strategy.resource
     |> Changeset.new()
+    |> Changeset.set_context(%{
+      private: %{
+        ash_authentication?: true
+      }
+    })
     |> Changeset.for_create(strategy.register_action_name, params)
     |> api.create(options)
   end
@@ -53,6 +63,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
     strategy.resource
     |> Query.new()
+    |> Query.set_context(%{
+      private: %{
+        ash_authentication?: true
+      }
+    })
     |> Query.for_read(resettable.request_password_reset_action_name, params)
     |> api.read(options)
     |> case do
@@ -82,6 +97,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
       user
       |> Changeset.new()
+      |> Changeset.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Changeset.for_update(resettable.password_reset_action_name, params)
       |> api.update(options)
     else
