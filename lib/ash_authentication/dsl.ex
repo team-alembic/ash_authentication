@@ -129,6 +129,20 @@ defmodule AshAuthentication.Dsl do
                 """,
                 default: false
               ],
+              require_token_presence_for_authentication?: [
+                type: :boolean,
+                doc: """
+                Require a locally-stored token for authentication?
+
+                This inverts the token validation behaviour from requiring that
+                tokens are not revoked to requiring any token presented by a
+                client to be present in the token resource to be considered
+                valid.
+
+                Requires `store_all_tokens?` to be `true`.
+                """,
+                default: false
+              ],
               signing_algorithm: [
                 type: :string,
                 doc: """

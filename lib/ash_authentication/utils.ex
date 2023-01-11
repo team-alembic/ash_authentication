@@ -215,11 +215,10 @@ defmodule AshAuthentication.Utils do
   """
   @spec assert_is_module(module) :: :ok | {:error, term}
   def assert_is_module(module) when is_atom(module) do
-    module.module_info()
-    :ok
-  rescue
-    _ ->
-      {:error, "Argument `#{inspect(module)}` is not a valid module"}
+    case Code.ensure_compiled(module) do
+      {:module, _} -> :ok
+      _ -> {:error, "Argument `#{inspect(module)}` is not a valid module"}
+    end
   end
 
   def assert_is_module(module),

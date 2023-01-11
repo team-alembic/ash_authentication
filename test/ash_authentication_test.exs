@@ -6,7 +6,8 @@ defmodule AshAuthenticationTest do
 
   describe "authenticated_resources/0" do
     test "it correctly locates all authenticatable resources" do
-      assert [Example.User] = authenticated_resources(:ash_authentication)
+      assert [Example.User, Example.UserWithTokenRequired] =
+               authenticated_resources(:ash_authentication)
     end
   end
 end

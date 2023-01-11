@@ -129,7 +129,7 @@ defmodule AshAuthentication do
   ## Example
 
       iex> authenticated_resources(:ash_authentication)
-      [Example.User]
+      [Example.User, Example.UserWithTokenRequired]
 
   """
   @spec authenticated_resources(atom) :: [Resource.t()]

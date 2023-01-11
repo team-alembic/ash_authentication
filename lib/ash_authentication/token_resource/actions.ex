@@ -102,7 +102,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @doc """
   Revoke a token.
 
-  Extracts the JTI from the provided token and uses it to generate a revocationr
+  Extracts the JTI from the provided token and uses it to generate a revocation
   record.
   """
   @spec revoke(Resource.t(), String.t(), keyword) :: :ok | {:error, any}
@@ -146,6 +146,20 @@ defmodule AshAuthentication.TokenResource.Actions do
         {:ok, _} -> :ok
         {:error, reason} -> {:error, reason}
       end
+    end
+  end
+
+  @doc """
+  Retrieve a token by token or JTI optionally filtering by purpose.
+  """
+  @spec get_token(Resource.t(), map, keyword) :: {:ok, [Resource.record()]} | {:error, any}
+  def get_token(resource, params, opts \\ []) do
+    with :ok <- assert_resource_has_extension(resource, TokenResource),
+         {:ok, api} <- Info.token_api(resource),
+         {:ok, get_token_action_name} <- Info.token_get_token_action_name(resource) do
+      resource
+      |> Query.for_read(get_token_action_name, params, opts)
+      |> api.read()
     end
   end
 

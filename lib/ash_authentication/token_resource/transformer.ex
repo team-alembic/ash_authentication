@@ -140,9 +140,64 @@ defmodule AshAuthentication.TokenResource.Transformer do
              store_token_action_name,
              &build_store_token_action(&1, store_token_action_name)
            ),
-         :ok <- validate_store_token_action(dsl_state, store_token_action_name) do
+         :ok <- validate_store_token_action(dsl_state, store_token_action_name),
+         {:ok, get_token_action_name} <- Info.token_get_token_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             get_token_action_name,
+             &build_get_token_action(&1, get_token_action_name)
+           ),
+         :ok <- validate_get_token_action(dsl_state, get_token_action_name) do
       {:ok, dsl_state}
     end
+  end
+
+  defp validate_get_token_action(dsl_state, action_name) do
+    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+         :ok <-
+           validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
+         :ok <- validate_action_argument_option(action, :token, :allow_nil?, [true]),
+         :ok <- validate_action_argument_option(action, :token, :sensitive?, [true]),
+         :ok <- validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]),
+         :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [true]),
+         :ok <-
+           validate_action_argument_option(action, :purpose, :type, [Ash.Type.String, :string]) do
+      validate_action_has_preparation(action, TokenResource.GetTokenPreparation)
+    end
+  end
+
+  defp build_get_token_action(_dsl_state, action_name) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :token,
+        type: :string,
+        sensitive?: true
+      ),
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :jti,
+        type: :string,
+        sensitive?: false
+      ),
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :purpose,
+        type: :string,
+        sensitive?: false
+      )
+    ]
+
+    preparations = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+        preparation: TokenResource.GetTokenPreparation
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :read,
+      name: action_name,
+      arguments: arguments,
+      preparations: preparations,
+      get?: true
+    )
   end
 
   defp validate_store_token_action(dsl_state, action_name) do

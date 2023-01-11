@@ -44,9 +44,18 @@ defmodule AshAuthentication.TokenResource do
           doc: """
           The name of the action to use to store a token.
 
-          Used it `store_all_tokens?` is enabled in your authentication resource.
+          Used if `store_all_tokens?` is enabled in your authentication resource.
           """,
           default: :store_token
+        ],
+        get_token_action_name: [
+          type: :atom,
+          doc: """
+          The name of the action used to retrieve tokens from the store.
+
+          Used if `require_token_presence_for_authentication?` is enabled in your authentication resource.
+          """,
+          default: :get_token
         ]
       ],
       sections: [
