@@ -5,6 +5,13 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.5.0](https://github.com/team-alembic/ash_authentication/compare/v3.4.2...v3.5.0) (2023-01-12)
+### Breaking Changes:
+
+* GitHub: Add GitHub authentication strategy. (#125)
+
+
+
 ## [v3.4.2](https://github.com/team-alembic/ash_authentication/compare/v3.4.1...v3.4.2) (2023-01-12)
 
 
