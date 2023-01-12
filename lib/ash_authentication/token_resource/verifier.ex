@@ -6,6 +6,7 @@ defmodule AshAuthentication.TokenResource.Verifier do
   use Spark.Dsl.Transformer
   require Ash.Expr
   alias Spark.{Dsl.Transformer, Error.DslError}
+  import AshAuthentication.Utils
 
   @doc false
   @impl true
@@ -32,6 +33,7 @@ defmodule AshAuthentication.TokenResource.Verifier do
 
   defp validate_api_presence(dsl_state) do
     with api when not is_nil(api) <- Transformer.get_option(dsl_state, [:token], :api),
+         :ok <- assert_is_module(api),
          true <- function_exported?(api, :spark_is, 0),
          Ash.Api <- api.spark_is() do
       {:ok, api}

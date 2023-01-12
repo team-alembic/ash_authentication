@@ -123,12 +123,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
     |> Resource.Info.identities()
     |> Enum.find(&(&1.keys == [field]))
     |> case do
-      %{eager_check_with: nil} ->
+      %{name: name, eager_check_with: nil} ->
         {:error,
          DslError.exception(
            path: [:identities, :identity],
            message:
-             "The attribute `#{inspect(field)}` on the resource `#{inspect(resource)}` needs the `eager_check_with` property set so that inhibited changes are still validated."
+             "The #{name} identity on the resource `#{inspect(resource)}` needs the `eager_check_with` property set so that inhibited changes are still validated."
          )}
 
       _ ->

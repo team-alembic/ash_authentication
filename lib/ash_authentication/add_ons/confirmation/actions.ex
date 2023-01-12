@@ -26,6 +26,11 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
          {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource) do
       user
       |> Changeset.new()
+      |> Changeset.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Changeset.for_update(strategy.confirm_action_name, params)
       |> api.update(opts)
     else
@@ -52,6 +57,11 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
          {:ok, _token_record} <-
            token_resource
            |> Changeset.new()
+           |> Changeset.set_context(%{
+             private: %{
+               ash_authentication?: true
+             }
+           })
            |> Changeset.for_create(store_changes_action, %{
              token: token,
              extra_data: changes,
@@ -83,6 +93,11 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
          {:ok, [token_record]} <-
            token_resource
            |> Query.new()
+           |> Query.set_context(%{
+             private: %{
+               ash_authentication?: true
+             }
+           })
            |> Query.set_context(%{strategy: strategy})
            |> Query.for_read(get_changes_action, %{"jti" => jti})
            |> api.read(opts) do

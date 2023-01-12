@@ -194,6 +194,12 @@ defmodule AshAuthentication do
         |> Enum.to_list()
 
       resource
+      |> Query.new()
+      |> Query.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Query.for_read(action_name, %{})
       |> Query.filter(^primary_key)
       |> api.read(options)

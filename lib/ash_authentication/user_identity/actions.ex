@@ -20,6 +20,12 @@ defmodule AshAuthentication.UserIdentity.Actions do
            UserIdentity.Info.user_identity_upsert_action_name(resource),
          action when is_map(action) <- Resource.Info.action(resource, upsert_action_name) do
       resource
+      |> Changeset.new()
+      |> Changeset.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
       |> Changeset.for_create(upsert_action_name, attributes,
         upsert?: true,
         upsert_identity: action.upsert_identity

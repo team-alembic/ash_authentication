@@ -65,6 +65,9 @@ defmodule AshAuthentication.MixProject do
 
       "documentation/tutorials/" <> _ = path ->
         {String.to_atom(path), []}
+
+      "documentation/topics/" <> _ = path ->
+        {String.to_atom(path), []}
     end)
   end
 
