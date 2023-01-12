@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.5.1](https://github.com/team-alembic/ash_authentication/compare/v3.5.0...v3.5.1) (2023-01-12)
+
+
+
+
+### Bug Fixes:
+
+* missing icons in OAuth2 strategies. (#126)
+
 ## [v3.5.0](https://github.com/team-alembic/ash_authentication/compare/v3.4.2...v3.5.0) (2023-01-12)
 ### Breaking Changes:
 
