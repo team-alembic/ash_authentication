@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.4.2](https://github.com/team-alembic/ash_authentication/compare/v3.4.1...v3.4.2) (2023-01-12)
+
+
+
+
+### Bug Fixes:
+
+* improve some error message/validation logic
+
+### Improvements:
+
+* add policy utilities and accompanying guide (#119)
+
+* add policy utilities and accompanying guide
+
+* fix build/warnings/dialyzer/format
+
 ## [v3.4.1](https://github.com/team-alembic/ash_authentication/compare/v3.4.0...v3.4.1) (2023-01-12)
 
 
