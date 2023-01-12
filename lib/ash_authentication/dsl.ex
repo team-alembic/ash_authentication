@@ -725,8 +725,9 @@ defmodule AshAuthentication.Dsl do
   end
 
   defp strategy_fields(strategy, params) do
-    params
-    |> Keyword.put(:assent_strategy, strategy)
+    []
     |> strategy.default_config()
+    |> Keyword.put(:assent_strategy, strategy)
+    |> Keyword.merge(params)
   end
 end
