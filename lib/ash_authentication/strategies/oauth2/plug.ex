@@ -6,7 +6,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.{Errors, Info, Strategy, Strategy.OAuth2}
   alias Assent.{Config, HTTPAdapter.Mint}
-  alias Assent.Strategy.OAuth2, as: Assent
   alias Plug.Conn
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
@@ -22,7 +21,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   def request(conn, strategy) do
     with {:ok, config} <- config_for(strategy),
          {:ok, session_key} <- session_key(strategy),
-         {:ok, %{session_params: session_params, url: url}} <- Assent.authorize_url(config) do
+         {:ok, %{session_params: session_params, url: url}} <-
+           strategy.assent_strategy.authorize_url(config) do
       conn
       |> put_session(session_key, session_params)
       |> put_resp_header("location", url)
@@ -46,7 +46,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          session_params when is_map(session_params) <- get_session(conn, session_key),
          conn <- delete_session(conn, session_key),
          config <- Config.put(config, :session_params, session_params),
-         {:ok, %{user: user, token: token}} <- Assent.callback(config, conn.params),
+         {:ok, %{user: user, token: token}} <-
+           strategy.assent_strategy.callback(config, conn.params),
          action_opts <- action_opts(conn),
          {:ok, user} <-
            register_or_sign_in_user(
@@ -70,9 +71,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     with {:ok, client_id} <- fetch_secret(strategy, :client_id),
          {:ok, site} <- fetch_secret(strategy, :site),
          {:ok, redirect_uri} <- build_redirect_uri(strategy),
-         {:ok, authorize_url} <- build_uri(strategy, :authorize_path),
-         {:ok, token_url} <- build_uri(strategy, :token_path),
-         {:ok, user_url} <- build_uri(strategy, :user_path) do
+         {:ok, authorize_url} <- fetch_secret(strategy, :authorize_url),
+         {:ok, token_url} <- fetch_secret(strategy, :token_url),
+         {:ok, user_url} <- fetch_secret(strategy, :user_url) do
       config =
         [
           auth_method: strategy.auth_method,
@@ -152,16 +153,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  defp build_uri(strategy, secret_name) do
-    with {:ok, site} <- fetch_secret(strategy, :site),
-         {:ok, uri} <- URI.new(site),
-         {:ok, path} <- fetch_secret(strategy, secret_name) do
-      path = Path.join(uri.path || "/", path)
-
-      {:ok, to_string(%URI{uri | path: path})}
     end
   end
 end

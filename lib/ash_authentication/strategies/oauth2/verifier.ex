@@ -44,13 +44,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
   end
 
   defp transform_strategy(strategy) do
-    with :ok <- validate_secret(strategy, :authorize_path),
+    with :ok <- validate_secret(strategy, :authorize_url),
          :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :client_secret),
          :ok <- validate_secret(strategy, :redirect_uri),
          :ok <- validate_secret(strategy, :site),
-         :ok <- validate_secret(strategy, :token_path),
-         :ok <- validate_secret(strategy, :user_path) do
+         :ok <- validate_secret(strategy, :token_url),
+         :ok <- validate_secret(strategy, :user_url) do
       validate_secret(strategy, :private_key, strategy.auth_method != :private_key_jwt)
     end
   end
@@ -71,7 +71,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
          DslError.exception(
            path: [:authentication, :strategies, :oauth2],
            message:
-             "Expected `#{inspect(option)}` to be either a string or a module which implements the `AshAuthentication.Sender` behaviour."
+             "Expected `#{inspect(option)}` to be either a string or a module which implements the `AshAuthentication.Secret` behaviour."
          )}
     end
   end

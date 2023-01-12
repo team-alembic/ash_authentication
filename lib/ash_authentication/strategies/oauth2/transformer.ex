@@ -82,12 +82,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
   end
 
   defp set_defaults(strategy) do
-    default_secret = {OAuth2.Default, []}
-
     strategy
-    |> maybe_set_field(:authorize_path, default_secret)
-    |> maybe_set_field(:token_path, default_secret)
-    |> maybe_set_field(:user_path, default_secret)
     |> maybe_set_field_lazy(:register_action_name, &:"register_with_#{&1.name}")
     |> maybe_set_field_lazy(:sign_in_action_name, &:"sign_in_with_#{&1.name}")
   end

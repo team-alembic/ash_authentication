@@ -22,7 +22,7 @@ defmodule AshAuthentication.Dsl do
     OptionsHelpers
   }
 
-  @type strategy :: :confirmation | :oauth2 | :password | :auth0
+  @type strategy :: :confirmation | :oauth2 | :password | :auth0 | :github
 
   @shared_strategy_options [
     name: [
@@ -193,7 +193,8 @@ defmodule AshAuthentication.Dsl do
             entities: [
               strategy(:password),
               strategy(:oauth2),
-              strategy(:auth0)
+              strategy(:auth0),
+              strategy(:github)
             ]
           },
           %Section{
@@ -319,15 +320,15 @@ defmodule AshAuthentication.Dsl do
       args: [{:optional, :name, :oauth2}],
       target: OAuth2,
       modules: [
-        :authorize_path,
+        :authorize_url,
         :client_id,
         :client_secret,
         :identity_resource,
         :private_key,
         :redirect_uri,
         :site,
-        :token_path,
-        :user_path
+        :token_url,
+        :user_url
       ],
       schema:
         OptionsHelpers.merge_schemas(
@@ -415,59 +416,56 @@ defmodule AshAuthentication.Dsl do
               """,
               required: false
             ],
-            authorize_path: [
+            authorize_url: [
               type: @secret_type,
               doc: """
-              The API path to the OAuth2 authorize endpoint.
+              The API url to the OAuth2 authorize endpoint.
 
               Relative to the value of `site`.
-              If not set, it defaults to `#{inspect(OAuth2.Default.default(:authorize_path))}`.
 
               #{@secret_doc}
 
               Example:
 
               ```elixir
-              authorize_path fn _, _ -> {:ok, "/authorize"} end
+              authorize_url fn _, _ -> {:ok, "https://exampe.com/authorize"} end
               ```
               """,
-              required: false
+              required: true
             ],
-            token_path: [
+            token_url: [
               type: @secret_type,
               doc: """
-              The API path to access the token endpoint.
+              The API url to access the token endpoint.
 
               Relative to the value of `site`.
-              If not set, it defaults to `#{inspect(OAuth2.Default.default(:token_path))}`.
 
               #{@secret_doc}
 
               Example:
 
               ```elixir
-              token_path fn _, _ -> {:ok, "/oauth_token"} end
+              token_url fn _, _ -> {:ok, "https://example.com/oauth_token"} end
               ```
               """,
-              required: false
+              required: true
             ],
-            user_path: [
+            user_url: [
               type: @secret_type,
               doc: """
-              The API path to access the user endpoint.
+              The API url to access the user endpoint.
 
               Relative to the value of `site`.
-              If not set, it defaults to `#{inspect(OAuth2.Default.default(:user_path))}`.
 
               #{@secret_doc}
 
               Example:
 
               ```elixir
-              user_path fn _, _ -> {:ok, "/userinfo"} end
+              user_url fn _, _ -> {:ok, "https://example.com/userinfo"} end
               ```
               """,
-              required: false
+              required: true
             ],
             private_key: [
               type: @secret_type,
@@ -587,7 +585,8 @@ defmodule AshAuthentication.Dsl do
           ],
           @shared_strategy_options,
           "Shared options"
-        )
+        ),
+      auto_set_fields: [assent_strategy: Assent.Strategy.OAuth2]
     }
   end
 
@@ -710,14 +709,24 @@ defmodule AshAuthentication.Dsl do
       name: :auth0,
       args: [{:optional, :name, :auth0}],
       describe: "Auth0 authentication",
-      auto_set_fields: [
-        authorization_params: [scope: "openid profile email"],
-        auth_method: :client_secret_post,
-        authorize_path: "/authorize",
-        token_path: "/oauth/token",
-        user_path: "/userinfo",
-        icon: :auth0
-      ]
+      auto_set_fields: strategy_fields(Assent.Strategy.Auth0, icon: :auth0)
     })
+  end
+
+  def strategy(:github) do
+    :oauth2
+    |> strategy()
+    |> Map.merge(%{
+      name: :github,
+      args: [{:optional, :name, :github}],
+      describe: "GitHub authentication",
+      auto_set_fields: strategy_fields(Assent.Strategy.Github, icon: :github)
+    })
+  end
+
+  defp strategy_fields(strategy, params) do
+    params
+    |> Keyword.put(:assent_strategy, strategy)
+    |> strategy.default_config()
   end
 end
