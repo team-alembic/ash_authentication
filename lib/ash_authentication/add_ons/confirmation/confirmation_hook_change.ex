@@ -74,7 +74,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
     changeset
     |> Changeset.after_action(fn _changeset, user ->
       strategy
-      |> Confirmation.confirmation_token(original_changeset)
+      |> Confirmation.confirmation_token(original_changeset, user)
       |> case do
         {:ok, token} ->
           {sender, send_opts} = strategy.sender

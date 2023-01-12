@@ -20,7 +20,8 @@ defmodule AshAuthentication.AddOn.Confirmation.PlugTest do
       {:ok, token} =
         Confirmation.confirmation_token(
           strategy,
-          Changeset.for_update(user, :update, %{"username" => username()})
+          Changeset.for_update(user, :update, %{"username" => username()}),
+          user
         )
 
       Example.Repo.delete!(user)
@@ -63,7 +64,8 @@ defmodule AshAuthentication.AddOn.Confirmation.PlugTest do
       {:ok, token} =
         Confirmation.confirmation_token(
           strategy,
-          Changeset.for_update(user, :update, %{"username" => username()})
+          Changeset.for_update(user, :update, %{"username" => username()}),
+          user
         )
 
       params = %{
