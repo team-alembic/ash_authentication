@@ -223,9 +223,9 @@ defmodule AshAuthentication.Strategy.OAuth2 do
             site: nil,
             auth_method: :client_secret_post,
             client_secret: nil,
-            authorize_path: nil,
-            token_path: nil,
-            user_path: nil,
+            authorize_url: nil,
+            token_url: nil,
+            user_url: nil,
             private_key: nil,
             redirect_uri: nil,
             authorization_params: [],
@@ -238,7 +238,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
             provider: :oauth2,
             name: nil,
             resource: nil,
-            icon: nil
+            icon: nil,
+            assent_strategy: Assent.Strategy.OAuth2
 
   alias AshAuthentication.Strategy.OAuth2
 
@@ -254,9 +255,9 @@ defmodule AshAuthentication.Strategy.OAuth2 do
             | :client_secret_jwt
             | :private_key_jwt,
           client_secret: secret,
-          authorize_path: secret,
-          token_path: secret,
-          user_path: secret,
+          authorize_url: secret,
+          token_url: secret,
+          user_url: secret,
           private_key: secret,
           redirect_uri: secret,
           authorization_params: keyword,
@@ -269,6 +270,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           provider: atom,
           name: atom,
           resource: module,
-          icon: nil | atom
+          icon: nil | atom,
+          assent_strategy: module
         }
 end

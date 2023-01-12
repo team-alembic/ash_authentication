@@ -23,9 +23,4 @@ defmodule AshAuthentication.Strategy.OAuth2.PlugTest do
       assert session.state =~ ~r/.+/
     end
   end
-
-  describe "callback/2" do
-    @tag skip: "not exactly sure the best way to test this"
-    test "it signs in or registers the user"
-  end
 end

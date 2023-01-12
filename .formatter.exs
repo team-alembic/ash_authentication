@@ -5,7 +5,7 @@ spark_locals_without_parens = [
   auth0: 2,
   auth_method: 1,
   authorization_params: 1,
-  authorize_path: 1,
+  authorize_url: 1,
   client_id: 1,
   client_secret: 1,
   confirm_action_name: 1,
@@ -60,9 +60,9 @@ spark_locals_without_parens = [
   store_token_action_name: 1,
   subject_name: 1,
   token_lifetime: 1,
-  token_path: 1,
+  token_url: 1,
   token_resource: 1,
-  user_path: 1
+  user_url: 1
 ]
 
 [
