@@ -7,7 +7,7 @@ defmodule AshAuthentication.AddOn.ConfirmationTest do
 
   doctest Confirmation
 
-  describe "confirmation_token/2" do
+  describe "confirmation_token/3" do
     test "it generates a confirmation token" do
       {:ok, strategy} = Info.strategy(Example.User, :confirm)
       user = build_user()
@@ -15,9 +15,10 @@ defmodule AshAuthentication.AddOn.ConfirmationTest do
       new_username = username()
       changeset = Changeset.for_update(user, :update, %{"username" => new_username})
 
-      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
       assert {:ok, claims} = Jwt.peek(token)
       assert claims["act"] == to_string(strategy.confirm_action_name)
+      assert claims["sub"] == to_string("user?id=#{user.id}")
     end
 
     test "it stores changes in the token resource" do
@@ -27,10 +28,9 @@ defmodule AshAuthentication.AddOn.ConfirmationTest do
       new_username = username()
       changeset = Changeset.for_update(user, :update, %{"username" => new_username})
 
-      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
       assert {:ok, claims} = Jwt.peek(token)
       assert {:ok, changes} = Confirmation.Actions.get_changes(strategy, claims["jti"])
-
       assert [{"username", new_username}] == Enum.to_list(changes)
     end
 
@@ -41,9 +41,8 @@ defmodule AshAuthentication.AddOn.ConfirmationTest do
       new_username = username()
       changeset = Changeset.for_update(user, :update, %{"username" => new_username})
 
-      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+      assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
       assert {:ok, claims} = Jwt.peek(token)
-
       refute Map.has_key?(claims, "chg")
     end
   end
@@ -55,7 +54,7 @@ defmodule AshAuthentication.AddOn.ConfirmationTest do
     new_username = username()
     changeset = Changeset.for_update(user, :update, %{"username" => new_username})
 
-    assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+    assert {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
     token
   end
 

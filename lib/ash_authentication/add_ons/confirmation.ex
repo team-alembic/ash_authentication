@@ -97,7 +97,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
             provider: :confirmation,
             name: :confirm
 
-  alias Ash.Changeset
+  alias Ash.{Changeset, Resource}
   alias AshAuthentication.{AddOn.Confirmation, Jwt}
 
   @type t :: %Confirmation{
@@ -120,14 +120,14 @@ defmodule AshAuthentication.AddOn.Confirmation do
   This will generate a token with the `"act"` claim set to the confirmation
   action for the strategy, and the `"chg"` claim will contain any changes.
   """
-  @spec confirmation_token(Confirmation.t(), Changeset.t()) ::
+  @spec confirmation_token(Confirmation.t(), Changeset.t(), Resource.record()) ::
           {:ok, String.t()} | :error | {:error, any}
-  def confirmation_token(strategy, changeset) do
+  def confirmation_token(strategy, changeset, user) do
     claims = %{"act" => strategy.confirm_action_name}
     token_lifetime = strategy.token_lifetime * 3600
 
     with {:ok, token, _claims} <-
-           Jwt.token_for_user(changeset.data, claims, token_lifetime: token_lifetime),
+           Jwt.token_for_user(user, claims, token_lifetime: token_lifetime),
          :ok <- Confirmation.Actions.store_changes(strategy, token, changeset) do
       {:ok, token}
     end

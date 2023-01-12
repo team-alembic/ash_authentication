@@ -16,7 +16,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
         user
         |> Changeset.for_update(:update, %{"username" => username()})
 
-      {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+      {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
 
       Example.Repo.delete!(user)
 
@@ -40,7 +40,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
         user
         |> Changeset.for_update(:update, %{"username" => new_username})
 
-      {:ok, token} = Confirmation.confirmation_token(strategy, changeset)
+      {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
 
       assert {:ok, confirmed_user} = Actions.confirm(strategy, %{"confirm" => token}, [])
 
