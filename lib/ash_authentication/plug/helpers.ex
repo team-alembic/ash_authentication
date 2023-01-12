@@ -79,7 +79,7 @@ defmodule AshAuthentication.Plug.Helpers do
              {:ok, [_]} <-
                TokenResource.Actions.get_token(token_resource, %{
                  "jti" => jti,
-                 "purpose" => "generic"
+                 "purpose" => "user"
                }),
              {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
           Conn.assign(conn, current_subject_name, user)
@@ -135,7 +135,7 @@ defmodule AshAuthentication.Plug.Helpers do
            {:ok, [_]} <-
              TokenResource.Actions.get_token(token_resource, %{
                "jti" => jti,
-               "purpose" => "generic"
+               "purpose" => "user"
              }) do
         :ok
       end
