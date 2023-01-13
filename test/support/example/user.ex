@@ -90,6 +90,11 @@ defmodule Example.User do
     end
   end
 
+  code_interface do
+    define_for Example
+    define :update_user, action: :update
+  end
+
   graphql do
     type :user
 
@@ -136,8 +141,13 @@ defmodule Example.User do
         monitor_fields [:username]
         inhibit_updates? true
 
-        sender fn user, token ->
-          Logger.debug("Confirmation request for user #{user.username}, token #{inspect(token)}")
+        sender fn _user, token, opts ->
+          username =
+            opts
+            |> Keyword.fetch!(:changeset)
+            |> Ash.Changeset.get_attribute(:username)
+
+          Logger.debug("Confirmation request for user #{username}, token #{inspect(token)}")
         end
       end
     end
@@ -145,7 +155,7 @@ defmodule Example.User do
     strategies do
       password do
         resettable do
-          sender fn user, token ->
+          sender fn user, token, _opts ->
             Logger.debug(
               "Password reset request for user #{user.username}, token #{inspect(token)}"
             )

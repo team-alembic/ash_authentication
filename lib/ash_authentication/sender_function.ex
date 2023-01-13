@@ -18,8 +18,8 @@ defmodule AshAuthentication.SenderFunction do
       {fun, opts} when is_function(fun, 3) ->
         fun.(user, token, opts)
 
-      {{m, f, a}, _opts} ->
-        apply(m, f, [user, token | a])
+      {{m, f, a}, opts} ->
+        apply(m, f, [user, token, Keyword.merge(a, opts)])
 
       {nil, opts} ->
         raise "Invalid options given to `send/3` callback: `#{inspect(opts)}`."

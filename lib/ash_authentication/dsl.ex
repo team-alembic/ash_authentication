@@ -669,7 +669,7 @@ defmodule AshAuthentication.Dsl do
             sender: [
               type:
                 {:spark_function_behaviour, AshAuthentication.Sender,
-                 {AshAuthentication.SenderFunction, 2}},
+                 {AshAuthentication.SenderFunction, 3}},
               doc: """
               How to send the confirmation instructions to the user.
 
@@ -680,6 +680,11 @@ defmodule AshAuthentication.Dsl do
 
               Accepts a module, module and opts, or a function that takes a record,
               reset token and options.
+
+              The options will be a keyword list containing the original
+              changeset, before any changes were inhibited.  This allows you
+              to send an email to the user's new email address if it is being
+              changed for example.
 
               See `AshAuthentication.Sender` for more information.
               """,

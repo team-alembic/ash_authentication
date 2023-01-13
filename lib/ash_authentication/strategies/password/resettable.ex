@@ -58,7 +58,7 @@ defmodule AshAuthentication.Strategy.Password.Resettable do
         sender: [
           type:
             {:spark_function_behaviour, AshAuthentication.Sender,
-             {AshAuthentication.SenderFunction, 2}},
+             {AshAuthentication.SenderFunction, 3}},
           doc: """
           How to send the password reset instructions to the user.
 
