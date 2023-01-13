@@ -43,6 +43,13 @@ defmodule AshAuthentication.TokenResource.Transformer do
            ),
          :ok <- validate_jti_field(dsl_state),
          {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, :subject, :string,
+             allow_nil?: false,
+             sensitive?: false,
+             writable?: true
+           ),
+         :ok <- validate_subject_field(dsl_state),
+         {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :expires_at, :utc_datetime,
              allow_nil?: false,
              writable?: true
@@ -150,6 +157,15 @@ defmodule AshAuthentication.TokenResource.Transformer do
            ),
          :ok <- validate_get_token_action(dsl_state, get_token_action_name) do
       {:ok, dsl_state}
+    end
+  end
+
+  defp validate_subject_field(dsl_state) do
+    with {:ok, resource} <- persisted_option(dsl_state, :module),
+         {:ok, attribute} <- find_attribute(dsl_state, :subject),
+         :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]) do
+      validate_attribute_option(attribute, resource, :writable?, [true])
     end
   end
 

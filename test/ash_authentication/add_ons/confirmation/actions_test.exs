@@ -88,17 +88,18 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
       {:ok, strategy} = Info.strategy(Example.User, :confirm)
       user = build_user()
 
-      {:ok, _token, %{"jti" => jti, "exp" => exp}} = Jwt.token_for_user(user)
+      {:ok, _token, %{"jti" => jti, "exp" => exp, "sub" => subject}} = Jwt.token_for_user(user)
 
       %Example.Token{}
       |> Ecto.Changeset.cast(
         %{
           "jti" => jti,
+          "subject" => subject,
           "expires_at" => DateTime.from_unix!(exp),
           "purpose" => "confirm",
           "extra_data" => %{"username" => username(), "hashed_password" => password()}
         },
-        ~w[jti expires_at purpose extra_data]a
+        ~w[jti subject expires_at purpose extra_data]a
       )
       |> Example.Repo.insert!(on_conflict: :replace_all, conflict_target: :jti)
 
