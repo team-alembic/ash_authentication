@@ -106,6 +106,9 @@ You can define multiple versions if required (eg one for your `:api` pipeline
 and another for your `:browser` pipeline). Let's define a version for a browser
 client:
 
+> Remember to define an appropriate template in `failure.html.heex` for your
+> controller. Alternatively, you could redirect with a flash message.
+
 ```elixir
 # lib/my_app_web/controllers/auth_controller.ex
 
