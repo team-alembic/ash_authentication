@@ -28,12 +28,15 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     query
     |> Query.filter(ref(^identity_field) == ^identity)
     |> Query.after_action(fn
-      query, [record] ->
+      query, [record] when is_binary(:erlang.map_get(strategy.hashed_password_field, record)) ->
         password = Query.get_argument(query, strategy.password_field)
 
-        if strategy.hash_provider.valid?(password, record.hashed_password),
-          do: {:ok, [maybe_generate_token(record)]},
-          else: auth_failed(query)
+        if strategy.hash_provider.valid?(
+             password,
+             Map.get(record, strategy.hashed_password_field)
+           ),
+           do: {:ok, [maybe_generate_token(record)]},
+           else: auth_failed(query)
 
       _, _ ->
         strategy.hash_provider.simulate()
