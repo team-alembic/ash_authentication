@@ -72,7 +72,6 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
   defp maybe_perform_confirmation(%Changeset{} = changeset, strategy, original_changeset) do
     changeset
-
     |> Changeset.force_change_attribute(strategy.confirmed_at_field, nil)
     |> Changeset.after_action(fn _changeset, user ->
       strategy
