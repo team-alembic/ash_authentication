@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.5.3](https://github.com/team-alembic/ash_authentication/compare/v3.5.2...v3.5.3) (2023-01-13)
+
+
+
+
+### Bug Fixes:
+
+* Confirmation: send the original changeset to confirmation senders. (#132)
+
 ## [v3.5.2](https://github.com/team-alembic/ash_authentication/compare/v3.5.1...v3.5.2) (2023-01-12)
 
 
