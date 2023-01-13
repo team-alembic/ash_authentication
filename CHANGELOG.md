@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.6.0](https://github.com/team-alembic/ash_authentication/compare/v3.5.3...v3.6.0) (2023-01-13)
+### Breaking Changes:
+
+* TokenResource: Store the token subject in the token resource. (#133)
+
+* TokenResource: Store the token subject in the token resource.
+
+
+
 ## [v3.5.3](https://github.com/team-alembic/ash_authentication/compare/v3.5.2...v3.5.3) (2023-01-13)
 
 
