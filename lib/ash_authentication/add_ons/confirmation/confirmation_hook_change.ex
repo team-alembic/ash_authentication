@@ -78,7 +78,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
       |> case do
         {:ok, token} ->
           {sender, send_opts} = strategy.sender
-          sender.send(user, token, send_opts)
+          sender.send(user, token, Keyword.put(send_opts, :changeset, original_changeset))
 
           metadata =
             user.__metadata__
