@@ -12,10 +12,15 @@ defmodule AshAuthentication.TokenResource.RevokeTokenChange do
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
   def change(changeset, _opts, _context) do
     with token when byte_size(token) > 0 <- Changeset.get_argument(changeset, :token),
-         {:ok, %{"jti" => jti, "exp" => exp}} <- Jwt.peek(token),
+         {:ok, %{"jti" => jti, "exp" => exp, "sub" => subject}} <- Jwt.peek(token),
          {:ok, expires_at} <- DateTime.from_unix(exp) do
       changeset
-      |> Changeset.change_attributes(jti: jti, purpose: "revocation", expires_at: expires_at)
+      |> Changeset.change_attributes(
+        jti: jti,
+        purpose: "revocation",
+        expires_at: expires_at,
+        subject: subject
+      )
     else
       _ ->
         changeset
