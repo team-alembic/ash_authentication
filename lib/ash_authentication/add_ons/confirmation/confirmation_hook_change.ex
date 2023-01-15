@@ -72,6 +72,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
   defp maybe_perform_confirmation(%Changeset{} = changeset, strategy, original_changeset) do
     changeset
+    |> nil_confirmed_at_field(strategy)
     |> Changeset.after_action(fn _changeset, user ->
       strategy
       |> Confirmation.confirmation_token(original_changeset, user)
@@ -94,4 +95,17 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
   defp maybe_perform_confirmation(_changeset, _strategy, original_changeset),
     do: original_changeset
+
+  defp nil_confirmed_at_field(changeset, strategy) do
+    # If we're updating values, and we are inhibiting values on the changes (enforced at the call site)
+    # then we want to reset the confirmed_at_field to `nil`
+    # However, we do it `lazily` in case something they've done is already changing
+    # the `confirmed_at`. This might happen in a social sign up where the email has
+    # already been verified
+    if changeset.action.type == :update do
+      Changeset.force_change_new_attribute(changeset, strategy.confirmed_at_field, nil)
+    else
+      changeset
+    end
+  end
 end
