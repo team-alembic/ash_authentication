@@ -153,4 +153,4 @@ jobs:
         with:
           mix-env: dev
           no-major: true
-          release-token: ${{ secrets.JIMSY_ACESS_TOKEN }}
+          release-token: ${{ secrets.JIMSY_ACCESS_TOKEN }}
