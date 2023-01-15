@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.6.1](https://github.com/team-alembic/ash_authentication/compare/v3.6.0...v3.6.1) (2023-01-15)
+
+
+
+
+### Bug Fixes:
+
+* don't call `hash_provider.valid?` on `nil` values (#135)
+
+* use configured hashed_password_field
+
+### Improvements:
+
+* set confirmed field to `nil`, for reconfirmation (#136)
+
+* set confirmed field to `nil`, for reconfirmation
+
+* only change `confirmed_at_field` if its not changing, and only on updates
+
 ## [v3.6.0](https://github.com/team-alembic/ash_authentication/compare/v3.5.3...v3.6.0) (2023-01-13)
 ### Breaking Changes:
 
