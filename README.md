@@ -1,5 +1,10 @@
 # AshAuthentication
 
+![Logo](https://github.com/ash-project/ash/blob/main/logos/ash-auth-logo.svg?raw=true)
+![Elixir CI](https://github.com/team-alembic/ash_authentication/workflows/Elixir%20Library/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Hex version badge](https://img.shields.io/hexpm/v/ash_authentication.svg)](https://hex.pm/packages/ash_authentication)
+
 AshAuthentication provides drop-in support for user authentication for users of
 the [Ash framework](https://ash-hq.org).  It is designed to be highly
 configurable, with sensible defaults covering the most common use-cases.
