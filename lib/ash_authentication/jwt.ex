@@ -26,7 +26,7 @@ defmodule AshAuthentication.Jwt do
         enabled? true
         token_lifetime 32
         signing_secret fn _, _ ->
-          System.fetch_env("TOKEN_SIGNING_SECRET")
+          {:ok, System.fetch_env("TOKEN_SIGNING_SECRET")}
         end
       end
     end

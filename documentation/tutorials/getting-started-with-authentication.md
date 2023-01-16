@@ -170,7 +170,7 @@ defmodule MyApp.Accounts.User do
       enabled? true
       token_resource MyApp.Accounts.Token
       signing_secret fn _, _ ->
-        Application.fetch_env(:my_app, :token_signing_secret)
+        {:ok, Application.fetch_env(:my_app, :token_signing_secret)}
       end
     do
   end
@@ -290,7 +290,7 @@ At it's simplest you should so something like this:
 
 ```
 signing_secret fn _, _ ->
-  Application.fetch_env(:my_app, :token_signing_secret)
+  {:ok, Application.fetch_env(:my_app, :token_signing_secret)}
 end
 ```
 
