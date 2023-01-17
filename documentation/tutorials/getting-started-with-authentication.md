@@ -20,6 +20,17 @@ defp deps()
 end
 ```
 
+And add `ash_authentication` to your `.formatter.exs`:
+
+```elixir
+# .formatter.exs
+
+[
+  # ...
+  import_deps: [:ash_authentication]
+]
+```
+
 ## Choosing your extensions, strategies and add-ons
 
 Ash Authentication supports many different features, each configured separately.
@@ -154,7 +165,7 @@ defmodule MyApp.Accounts.User do
   attributes do
     uuid_primary_key :id
     attribute :email, :ci_string, allow_nil?: false
-    attribute :hashed_password, :string, allow_nil?: false
+    attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
   end
 
   authentication do
@@ -172,7 +183,7 @@ defmodule MyApp.Accounts.User do
       signing_secret fn _, _ ->
         Application.fetch_env(:my_app, :token_signing_secret)
       end
-    do
+    end
   end
 
   postgres do

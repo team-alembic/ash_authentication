@@ -28,6 +28,17 @@ end
 Use `mix hex.info ash_authentication_phoenix` to quickly find the latest
 version.
 
+Add `ash_authentication_phoenix` to your `.formatter.exs`:
+
+```elixir
+# .formatter.exs
+
+[
+  # ...
+  import_deps: [:ash_authentication_phoenix]
+]
+```
+
 ## {{link:ash_authentication_phoenix:module:AshAuthentication.Phoenix.Router}}
 
 `ash_authentication_phoenix` includes several helper macros which can generate
