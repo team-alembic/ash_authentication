@@ -97,8 +97,6 @@ auth_path  *    /auth/user/password/register       MyAppWeb.AuthController {:use
 auth_path  *    /auth/user/password/sign_in        MyAppWeb.AuthController {:user, :password, :sign_in}
 auth_path  *    /auth/user/password/reset_request  MyAppWeb.AuthController {:user, :password, :reset_request}
 auth_path  *    /auth/user/password/reset          MyAppWeb.AuthController {:user, :password, :reset}
-auth_path  *    /auth/user/auth0                   MyAppWeb.AuthController {:user, :auth0, :request}
-auth_path  *    /auth/user/auth0/callback          MyAppWeb.AuthController {:user, :auth0, :callback}
 auth_path  GET  /sign-in                           AshAuthentication.Phoenix.SignInLive :sign_in
 auth_path  GET  /sign-out                          MyAppWeb.AuthController :sign_out
 ```

@@ -84,3 +84,49 @@ The values for this configuration should be:
   * `redirect_uri` - the URL to the generated auth routes in your application
     (eg `http://localhost:4000/auth`).
   * `client_secret` the client secret copied from the GitHub settings page.
+
+Lastly, we need to add a register action to your user resource.  This is defined
+as an upsert so that it can register new users, or update information for
+returning users.  The default name of the action is `register_with_` followed by
+the strategy name.  In our case that is `register_with_github`.
+
+The register action takes two arguments, `user_info` and the `oauth_tokens`.
+  - `user_info` contains the [`GET /user` response from
+    GitHub](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user)
+    which you can use to populate your user attributes as needed.
+  - `oauth_tokens` contains the [`POST /login/oauth/access_token` response from
+    GitHub](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#response)
+    - you may want to store these if you intend to call the GitHub API on behalf
+    of the user.
+
+```elixir
+defmodule MyApp.Accounts.User do
+  use Ash.Resource, extensions: [AshAuthentication]
+
+  # ...
+
+  actions do
+    create :register_with_github do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :email
+
+      # Required if you have token generation enabled.
+      change AshAuthentication.GenerateTokenChange
+
+      # Required if you have the `identity_resource` configuration enabled.
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+
+      change fn changeset, _ ->
+        user_info = Ash.Changeset.get_argument(changeset, :user_info)
+
+        Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
+      end
+    end
+  end
+
+  # ...
+
+end
+```

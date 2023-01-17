@@ -90,3 +90,48 @@ The values for this configuration should be:
   * `client_secret` the client secret copied from the Auth0 settings page.
   * `site` - the "domain" value copied from the Auth0 settings page prefixed
     with `https://` (eg `https://dev-yu30yo5y4tg2hg0y.us.auth0.com`).
+
+Lastly, we need to add a register action to your user resource.  This is defined
+as an upsert so that it can register new users, or update information for
+returning users.  The default name of the action is `register_with_` followed by
+the strategy name.  In our case that is `register_with_auth0`.
+
+The register action takes two arguments, `user_info` and the `oauth_tokens`.
+  - `user_info` contains the [`GET /userinfo` response from
+    Auth0](https://auth0.com/docs/api/authentication#get-user-info) which you
+    can use to populate your user attributes as needed.
+  - `oauth_tokens` contains the [`POST /oauth/token` response from
+    Auth0](https://auth0.com/docs/api/authentication#get-token) - you may want
+    to store these if you intend to call the Auth0 API on behalf of the user.
+
+```elixir
+defmodule MyApp.Accounts.User do
+  use Ash.Resource, extensions: [AshAuthentication]
+
+  # ...
+
+  actions do
+    create :register_with_auth0 do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :email
+
+      # Required if you have token generation enabled.
+      change AshAuthentication.GenerateTokenChange
+
+      # Required if you have the `identity_resource` configuration enabled.
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+
+      change fn changeset, _ ->
+        user_info = Ash.Changeset.get_argument(changeset, :user_info)
+
+        Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
+      end
+    end
+  end
+
+  # ...
+
+end
+```

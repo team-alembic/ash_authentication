@@ -194,7 +194,7 @@ defmodule AshAuthentication.TokenResource do
   @doc """
   Revoke a token.
 
-  Extracts the JTI from the provided token and uses it to generate a revocationr
+  Extracts the JTI from the provided token and uses it to generate a revocation
   record.
   """
   @spec revoke(Resource.t(), String.t(), keyword) :: :ok | {:error, any}
