@@ -1,6 +1,7 @@
 # AshAuthentication
 
-![Logo](https://github.com/ash-project/ash/blob/main/logos/ash-auth-logo.svg?raw=true)
+<img src="https://github.com/ash-project/ash/blob/main/logos/ash-auth-logo.svg?raw=true" alt="Ash Authentication Logo" width="250"/>
+
 ![Elixir CI](https://github.com/team-alembic/ash_authentication/workflows/Elixir%20Library/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hex version badge](https://img.shields.io/hexpm/v/ash_authentication.svg)](https://hex.pm/packages/ash_authentication)
@@ -11,7 +12,7 @@ configurable, with sensible defaults covering the most common use-cases.
 
 ## Warning
 
-This is **beta** software.  Please don't use it without talking to us!
+This software is out of beta, but it is still relatively young, and authentication is a very critical flow in any application, that touches on many aspects of security. We highly encourage considering how you configure this package very carefully, and testing its behavior in your own application. Those tests will also help ensure that any custom behavior you implement by modifying your resources does not break your authentication flows. Even though we do our best to prevent that situation with compile time validations, its not always possible.
 
 ## Installation
 
