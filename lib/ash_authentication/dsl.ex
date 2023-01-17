@@ -737,7 +737,20 @@ defmodule AshAuthentication.Dsl do
     |> Map.merge(%{
       name: :github,
       args: [{:optional, :name, :github}],
-      describe: "GitHub authentication",
+      describe: """
+      Provides a pre-configured authentication strategy for [GitHub](https://github.com/).
+
+      This strategy is built using `:oauth2` strategy, and thus provides all the same
+      configuration options should you need them.
+
+      For more information see the {{link:ash_authentication:guide:GitHub Quick Start Guide}} in our documentation.
+
+      #### Strategy defaults:
+
+      #{strategy_override_docs(Assent.Strategy.Github)}
+
+      #### Schema:
+      """,
       auto_set_fields: strategy_fields(Assent.Strategy.Github, icon: :github)
     })
   end
