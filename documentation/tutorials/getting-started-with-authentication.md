@@ -20,6 +20,17 @@ defp deps()
 end
 ```
 
+And add `ash_authentication` to your `.formatter.exs`:
+
+```elixir
+# .formatter.exs
+
+[
+  # ...
+  import_deps: [:ash_authentication]
+]
+```
+
 ## Choosing your extensions, strategies and add-ons
 
 Ash Authentication supports many different features, each configured separately.
