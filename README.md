@@ -12,7 +12,7 @@ configurable, with sensible defaults covering the most common use-cases.
 
 ## Warning
 
-This software is out of beta, but it is still relatively young, and authentication is a very critical flow in any application, that touches on many aspects of security. We highly encourage considering how you configure this package very carefully, and testing its behavior in your own application. Those tests will also help ensure that any custom behavior you implement by modifying your resources does not break your authentication flows. Even though we do our best to prevent that situation with compile time validations, its not always possible.
+This software is not in beta, but it is still relatively young, and authentication is a very critical flow in any application, that touches on many aspects of security. We highly encourage considering how you configure this package very carefully, and testing its behavior in your own application. Those tests will also help ensure that any custom behavior you implement by modifying your resources does not break your authentication flows. Even though we do our best to prevent that situation with compile time validations, its not always possible.
 
 ## Installation
 
