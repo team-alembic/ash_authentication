@@ -41,9 +41,7 @@ This is the core extension, and is required. It provides main DSL for working
 with authentication and related features and should be added to your "user"
 resource.
 
-The {{link:ash_authentication:extension:AshAuthentication|`authentication` DSL}}
-provides configuration and sensible defaults for settings which relate to
-authentication, regardless of authentication mechanism.
+The `AshAuthentication` extension provides configuration and sensible defaults for settings which relate to authentication, regardless of authentication mechanism.
 
 All strategy and add-on configuration is nested inside this DSL block.
 
@@ -59,8 +57,7 @@ define either or both of these actions yourself if you wish to customise them -
 if you do so then the extension will do it's best to validate that all required
 configuration is present.
 
-The {{link:ash_authentication:module:AshAuthentication.Strategy.Password|`password` DSL}}
-allows you to override any of the default values.
+The `AshAuthentication.Strategy.Password` DSL allows you to override any of the default values.
 
 ### `AshAuthentication.Strategy.OAuth2`
 
@@ -206,7 +203,7 @@ Now we have enough in place to register and sign-in users using the
 ## Plugs and routing
 
 If you're using Phoenix, then you can skip this section and go straight to
-{{link:ash_authentication:guide:integrating-ash-authentication-and-phoenix|Integrating Ash Authentication and Phoenix}}
+[Integrating Ash Authentication and Phoenix](/documentation/tutorials/integrating-ash-authentication-and-phoenix.md)
 
 In order for your users to be able to sign in, you will likely need to provide
 an HTTP endpoint to submit credentials or OAuth requests to.  Ash Authentication
@@ -312,4 +309,4 @@ resources and handle authentication HTTP requests.
 
 You should now have an Ash application with working user authentication.
 
-Up next, {{link:ash_authentication:guide:getting_started_02_phoenix|Using with Phoenix}}.
+Up next, [Using with Phoenix](/documentation/tutorials/integrating-ash-authentication-and-phoenix.md).
