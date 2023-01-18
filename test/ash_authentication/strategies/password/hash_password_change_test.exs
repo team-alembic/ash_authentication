@@ -48,7 +48,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
         end)
     end
 
-    test "when the action is not associated with a strategy, but is provided a strategy name in the action cotnext, it can hash the password" do
+    test "when the action is not associated with a strategy, but is provided a strategy name in the action context, it can hash the password" do
       strategy = Info.strategy!(Example.User, :password)
       user = build_user()
       password = password()
@@ -62,6 +62,27 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
         Changeset.new(user, %{})
         |> Changeset.for_update(:update, attrs)
         |> HashPasswordChange.change([], %{strategy_name: strategy.name})
+        |> Changeset.with_hooks(fn changeset ->
+          assert strategy.hash_provider.valid?(password, changeset.attributes.hashed_password)
+
+          {:ok, struct(strategy.resource)}
+        end)
+    end
+
+    test "when the action is not associated with a strategy, but is provided a strategy name in the change options, it can hash the password" do
+      strategy = Info.strategy!(Example.User, :password)
+      user = build_user()
+      password = password()
+
+      attrs = %{
+        to_string(strategy.password_field) => password,
+        to_string(strategy.password_confirmation_field) => password
+      }
+
+      {:ok, _user, _changeset, _} =
+        Changeset.new(user, %{})
+        |> Changeset.for_update(:update, attrs)
+        |> HashPasswordChange.change([strategy_name: :password], %{})
         |> Changeset.with_hooks(fn changeset ->
           assert strategy.hash_provider.valid?(password, changeset.attributes.hashed_password)
 
