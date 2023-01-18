@@ -195,9 +195,15 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   end
 
   defp validate_allow_nil_input(action, field) do
-    allowed_nil_fields = Map.get(action, :allow_nil_input, [])
+    allowed_nil_fields =
+      action
+      |> Map.get(:arguments, [])
+      |> Stream.filter(&(&1.allow_nil? == true))
+      |> Stream.map(& &1.name)
+      |> Stream.concat(Map.get(action, :allow_nil_input, []))
+      |> Enum.into(MapSet.new())
 
-    if field in allowed_nil_fields do
+    if MapSet.member?(allowed_nil_fields, field) do
       :ok
     else
       {:error,
