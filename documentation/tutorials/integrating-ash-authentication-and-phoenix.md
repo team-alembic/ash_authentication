@@ -20,7 +20,7 @@ dependency:
 defp deps()
 [
   # ...
-    ____mix_dep_ash_authentication_phoenix____
+  {:ash_authentication_phoenix, "~> x.x.x"}
 ]
 end
 ```
