@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.7.3](https://github.com/team-alembic/ash_authentication/compare/v3.7.2...v3.7.3) (2023-01-18)
+
+
+
+
+### Bug Fixes:
+
+* Password: validate fields using both methods of allowing nil input. (#151)
+
 ## [v3.7.2](https://github.com/team-alembic/ash_authentication/compare/v3.7.1...v3.7.2) (2023-01-18)
 
 
