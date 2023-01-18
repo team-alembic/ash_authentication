@@ -10,7 +10,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
     3. Updates the user identity resource, if one is enabled.
   """
   use Ash.Resource.Preparation
-  alias Ash.{Error.Framework.AssumptionFailed, Query, Resource.Preparation}
+  alias Ash.{Query, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, UserIdentity}
   require Ash.Query
   import AshAuthentication.Utils, only: [is_falsy: 1]
@@ -22,7 +22,14 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
     case Info.strategy_for_action(query.resource, query.action.name) do
       :error ->
         {:error,
-         AssumptionFailed.exception(message: "Strategy is missing from the changeset context.")}
+         AuthenticationFailed.exception(
+           query: query,
+           caused_by: %{
+             module: __MODULE__,
+             action: query.action,
+             message: "Unable to infer strategy"
+           }
+         )}
 
       {:ok, strategy} ->
         query
@@ -33,7 +40,16 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
             end
 
           _, _ ->
-            {:error, AuthenticationFailed.exception(query: query)}
+            {:error,
+             AuthenticationFailed.exception(
+               query: query,
+               caused_by: %{
+                 module: __MODULE__,
+                 action: query.action,
+                 strategy: strategy,
+                 message: "Query should return a single user"
+               }
+             )}
         end)
     end
   end

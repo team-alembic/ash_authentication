@@ -7,6 +7,8 @@ defmodule AshAuthentication.Application do
   @doc false
   @impl true
   def start(_type, _args) do
+    AshAuthentication.Debug.start()
+
     []
     |> maybe_append(
       start_dev_server?(),
