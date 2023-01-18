@@ -55,10 +55,10 @@ defmodule AshAuthentication do
 
   Currently supported strategies:
 
-  1. {{link:ash_authentication:module:AshAuthentication.Strategy.Password}}
+  1. `AshAuthentication.Strategy.Password`
      - authenticate users against your local database using a unique identity
      (such as username or email address) and a password.
-  2. {{link:ash_authentication:module:AshAuthentication.Strategy.OAuth2}}
+  2. `AshAuthentication.Strategy.OAuth2`
      - authenticate using local or remote [OAuth 2.0](https://oauth.net/2/)
      compatible services.
 
@@ -68,7 +68,7 @@ defmodule AshAuthentication do
   authentication - they just provide features adjacent to authentication.
   Current add-ons:
 
-  1. {{link:ash_authentication:module:AshAuthentication.AddOn.Confirmation}}
+  1. `AshAuthentication.AddOn.Confirmation`
      - allows you to force the user to confirm changes using a confirmation
        token (eg. sending a confirmation email when a new user registers).
 

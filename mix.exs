@@ -30,6 +30,28 @@ defmodule AshAuthentication.MixProject do
         filter_modules: ~r/^Elixir.AshAuthentication/,
         source_url_pattern:
           "https://github.com/team-alembic/ash_authentication/blob/main/%{path}#L%{line}",
+        spark: [
+          extensions: [
+            %{
+              module: AshAuthentication,
+              name: "Authentication",
+              target: "Ash.Resource",
+              type: "Authentication"
+            },
+            %{
+              module: AshAuthentication.TokenResource,
+              name: "Token Resource",
+              target: "Ash.Resource",
+              type: "Token"
+            },
+            %{
+              module: AshAuthentication.UserIdentity,
+              name: "User Identity",
+              target: "Ash.Resource",
+              type: "User identity"
+            }
+          ]
+        ],
         groups_for_modules: [
           Extensions: [
             AshAuthentication,

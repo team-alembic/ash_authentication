@@ -719,7 +719,8 @@ defmodule AshAuthentication.Dsl do
       This strategy is built using `:oauth2` strategy, and thus provides all the same
       configuration options should you need them.
 
-      For more information see the {{link:ash_authentication:guide:Auth0 Quick Start Guide}} in our documentation.
+      For more information see the [Auth0 Quick Start Guide](/documentation/tutorials/auth0-quickstart.md)
+      in our documentation.
 
       #### Strategy defaults:
 
@@ -743,7 +744,8 @@ defmodule AshAuthentication.Dsl do
       This strategy is built using `:oauth2` strategy, and thus provides all the same
       configuration options should you need them.
 
-      For more information see the {{link:ash_authentication:guide:GitHub Quick Start Guide}} in our documentation.
+      For more information see the [Github Quick Start Guide](/documentation/tutorials/github-quickstart.md)
+      in our documentation.
 
       #### Strategy defaults:
 
