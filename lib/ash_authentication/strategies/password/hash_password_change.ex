@@ -25,6 +25,14 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
     change AshAuthentication.Strategy.Password.HashPasswordChange
   end
   ```
+
+  or by adding it as an option to the change definition:
+
+  ```elixir
+  update :change_password do
+    change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+  end
+  ```
   """
 
   use Ash.Resource.Change
@@ -34,10 +42,10 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
   @doc false
   @impl true
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
-  def change(changeset, _opts, context) do
+  def change(changeset, options, context) do
     changeset
     |> Changeset.before_action(fn changeset ->
-      with {:ok, strategy} <- find_strategy(changeset, context),
+      with {:ok, strategy} <- find_strategy(changeset, context, options),
            value when is_binary(value) <-
              Changeset.get_argument(changeset, strategy.password_field),
            {:ok, hash} <- strategy.hash_provider.hash(value) do
@@ -52,10 +60,11 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
     end)
   end
 
-  defp find_strategy(changeset, context) do
+  defp find_strategy(changeset, context, options) do
     with :error <- Info.strategy_for_action(changeset.resource, changeset.action.name),
          :error <- Map.fetch(changeset.context, :strategy_name),
-         :error <- Map.fetch(context, :strategy_name) do
+         :error <- Map.fetch(context, :strategy_name),
+         :error <- Keyword.fetch(options, :strategy_name) do
       :error
     else
       {:ok, strategy_name} when is_atom(strategy_name) ->
