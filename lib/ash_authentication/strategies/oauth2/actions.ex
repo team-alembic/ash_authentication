@@ -34,8 +34,47 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
     |> Query.for_read(strategy.sign_in_action_name, params)
     |> api.read(options)
     |> case do
-      {:ok, [user]} -> {:ok, user}
-      _ -> {:error, Errors.AuthenticationFailed.exception([])}
+      {:ok, [user]} ->
+        {:ok, user}
+
+      {:ok, []} ->
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: :sign_in,
+             message: "Query returned no users"
+           }
+         )}
+
+      {:ok, _users} ->
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: :sign_in,
+             message: "Query returned too many users"
+           }
+         )}
+
+      {:error, error} when is_struct(error, Errors.AuthenticationFailed) ->
+        {:error, error}
+
+      {:error, error} when is_exception(error) ->
+        {:error, Errors.AuthenticationFailed.exception(caused_by: error)}
+
+      {:error, error} ->
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: :sign_in,
+             message: "Query returned error: #{inspect(error)}"
+           }
+         )}
     end
   end
 

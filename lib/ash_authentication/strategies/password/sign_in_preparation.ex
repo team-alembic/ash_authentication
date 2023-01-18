@@ -36,15 +36,47 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
              Map.get(record, strategy.hashed_password_field)
            ),
            do: {:ok, [maybe_generate_token(record)]},
-           else: auth_failed(query)
+           else:
+             {:error,
+              AuthenticationFailed.exception(
+                query: query,
+                caused_by: %{
+                  module: __MODULE__,
+                  action: query.action,
+                  resource: query.resource,
+                  message: "Password is not valid"
+                }
+              )}
 
-      _, _ ->
+      query, [] ->
         strategy.hash_provider.simulate()
-        auth_failed(query)
+
+        {:error,
+         AuthenticationFailed.exception(
+           query: query,
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: :sign_in,
+             message: "Query returned no users"
+           }
+         )}
+
+      query, users when is_list(users) ->
+        strategy.hash_provider.simulate()
+
+        {:error,
+         AuthenticationFailed.exception(
+           query: query,
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: :sign_in,
+             message: "Query returned too many users"
+           }
+         )}
     end)
   end
-
-  defp auth_failed(query), do: {:error, AuthenticationFailed.exception(query: query)}
 
   defp maybe_generate_token(record) do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do

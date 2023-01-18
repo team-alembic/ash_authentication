@@ -54,3 +54,5 @@ config :ash_authentication,
       signing_secret: "Marty McFly in the past with the Delorean"
     ]
   ]
+
+# config :ash_authentication, debug_authentication_failures?: true
