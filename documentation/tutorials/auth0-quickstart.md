@@ -38,11 +38,13 @@ defmodule MyApp.Accounts.User do
   use Ash.Resource, extensions: [AshAuthentication]
 
   authentication do
-    auth0 do
-      client_id MyApp.Secrets
-      redirect_uri MyApp.Secrets
-      client_secret MyApp.Secrets
-      site MyApp.Secrets
+    strategies do
+      auth0 do
+        client_id MyApp.Secrets
+        redirect_uri MyApp.Secrets
+        client_secret MyApp.Secrets
+        site MyApp.Secrets
+      end
     end
   end
 end
