@@ -15,6 +15,10 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.Confirmation do
   @type action :: :confirm
 
   @doc false
+  @spec name(Confirmation.t()) :: atom
+  def name(strategy), do: strategy.name
+
+  @doc false
   @spec phases(Confirmation.t()) :: [phase]
   def phases(_), do: [:confirm]
 

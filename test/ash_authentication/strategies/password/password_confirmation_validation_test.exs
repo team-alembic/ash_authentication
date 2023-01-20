@@ -1,7 +1,7 @@
 defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidationTest do
   use DataCase, async: true
   alias Ash.{Changeset, Error.Changes.InvalidArgument}
-  alias AshAuthentication.{Info, Strategy.Password.PasswordConfirmationValidation}
+  alias AshAuthentication.{Info, Strategy, Strategy.Password.PasswordConfirmationValidation}
 
   describe "validate/2" do
     test "when the action is associated with a strategy, it can validate the password confirmation" do
@@ -34,7 +34,7 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidationTest
 
     assert {:error, %InvalidArgument{field: :password_confirmation}} =
              Changeset.new(user, %{})
-             |> Changeset.set_context(%{strategy_name: strategy.name})
+             |> Changeset.set_context(%{strategy_name: Strategy.name(strategy)})
              |> Changeset.for_update(:update, attrs)
              |> PasswordConfirmationValidation.validate([])
   end

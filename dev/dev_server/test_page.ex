@@ -178,8 +178,29 @@ defmodule DevServer.TestPage do
 
   defp render_strategy(strategy, :callback, _) when strategy.provider == :oauth2, do: ""
 
+  defp render_strategy(strategy, :sign_in, _options)
+       when is_struct(strategy, Example.OnlyMartiesAtTheParty) do
+    EEx.eval_string(
+      ~s"""
+      <form method="<%= @method %>" action="<%= @route %>">
+        <fieldset>
+          <legend>Sign in a Marty</legend>
+          <input type="text" name="<%= @strategy.name_field %>" placeholder="<%= @strategy.name_field %>" />
+          <br />
+          <input type="submit" value="Sign in" />
+        </fieldset>
+      </form>
+      """,
+      assigns: [
+        strategy: strategy,
+        route: route_for_phase(strategy, :sign_in),
+        method: Strategy.method_for_phase(strategy, :sign_in)
+      ]
+    )
+  end
+
   defp render_strategy(strategy, phase, _options) do
-    inspect({strategy.provider, phase})
+    inspect({strategy, phase})
   end
 
   defp route_for_phase(strategy, phase) do

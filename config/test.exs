@@ -36,3 +36,5 @@ config :ash_authentication,
       signing_secret: "Marty McFly in the past with the Delorean"
     ]
   ]
+
+config :ash_authentication, extra_strategies: [Example.OnlyMartiesAtTheParty]

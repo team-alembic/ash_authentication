@@ -1,5 +1,6 @@
 defmodule AshAuthentication.Strategy.Password do
-  import AshAuthentication.Dsl
+  alias __MODULE__.{Dsl, Transformer, Verifier}
+  use AshAuthentication.Strategy.Custom
 
   @moduledoc """
   Strategy for authenticating using local resources as the source of truth.
@@ -92,7 +93,7 @@ defmodule AshAuthentication.Strategy.Password do
 
   ## DSL Documentation
 
-  #{Spark.Dsl.Extension.doc_entity(strategy(:password))}
+  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   defstruct identity_field: :username,
@@ -125,6 +126,10 @@ defmodule AshAuthentication.Strategy.Password do
           provider: atom,
           resource: module
         }
+
+  defdelegate dsl(), to: Dsl
+  defdelegate transform(strategy, dsl_state), to: Transformer
+  defdelegate verify(strategy, dsl_state), to: Verifier
 
   @doc """
   Generate a reset token for a user.

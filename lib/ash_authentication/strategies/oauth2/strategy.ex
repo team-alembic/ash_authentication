@@ -15,6 +15,10 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.OAuth2 do
   @type action :: :register | :sign_in
 
   @doc false
+  @spec name(OAuth2.t()) :: atom
+  def name(strategy), do: strategy.name
+
+  @doc false
   @spec phases(OAuth2.t()) :: [phase]
   def phases(_), do: [:request, :callback]
 

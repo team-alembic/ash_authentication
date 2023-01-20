@@ -56,3 +56,5 @@ config :ash_authentication,
   ]
 
 # config :ash_authentication, debug_authentication_failures?: true
+
+config :ash_authentication, extra_strategies: [Example.OnlyMartiesAtTheParty]

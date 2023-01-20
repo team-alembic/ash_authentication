@@ -6,9 +6,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   configured.
   """
 
-  use Spark.Dsl.Transformer
   alias Ash.{Resource, Type}
-  alias AshAuthentication.{AddOn.Confirmation, GenerateTokenChange, Info}
+  alias AshAuthentication.{AddOn.Confirmation, GenerateTokenChange}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -16,38 +15,9 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   import AshAuthentication.Validations.Attribute
 
   @doc false
-  @impl true
-  @spec after?(module) :: boolean
-  def after?(AshAuthentication.Transformer), do: true
-  def after?(_), do: false
-
-  @doc false
-  @impl true
-  @spec before?(module) :: boolean
-  def before?(Resource.Transformers.DefaultAccept), do: true
-  def before?(_), do: false
-
-  @doc false
-  @impl true
-  @spec transform(map) ::
-          :ok
-          | {:ok, map()}
-          | {:error, term()}
-          | {:warn, map(), String.t() | [String.t()]}
-          | :halt
-  def transform(dsl_state) do
-    dsl_state
-    |> Info.authentication_add_ons()
-    |> Enum.filter(&is_struct(&1, Confirmation))
-    |> Enum.reduce_while({:ok, dsl_state}, fn strategy, {:ok, dsl_state} ->
-      case transform_strategy(strategy, dsl_state) do
-        {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
-  end
-
-  defp transform_strategy(strategy, dsl_state) do
+  @spec transform(Confirmation.t(), map) ::
+          {:ok, Confirmation.t() | map} | {:error, Exception.t()}
+  def transform(strategy, dsl_state) do
     with :ok <- validate_token_generation_enabled(dsl_state),
          :ok <- validate_monitor_fields(dsl_state, strategy),
          {:ok, dsl_state} <-

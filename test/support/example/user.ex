@@ -191,6 +191,11 @@ defmodule Example.User do
         redirect_uri &get_config/2
         client_secret &get_config/2
       end
+
+      only_marty do
+        case_sensitive?(false)
+        name_field(:username)
+      end
     end
   end
 

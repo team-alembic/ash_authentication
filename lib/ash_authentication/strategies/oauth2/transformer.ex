@@ -6,47 +6,17 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
   actions and settings are in place.
   """
 
-  use Spark.Dsl.Transformer
   alias Ash.{Resource, Type}
-  alias AshAuthentication.{GenerateTokenChange, Info, Strategy.OAuth2}
+  alias AshAuthentication.{GenerateTokenChange, Info, Strategy, Strategy.OAuth2}
   alias Spark.{Dsl.Transformer, Error.DslError}
+  import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
 
   @doc false
-  @impl true
-  @spec after?(module) :: boolean
-  def after?(AshAuthentication.Transformer), do: true
-  def after?(_), do: false
-
-  @doc false
-  @impl true
-  @spec before?(module) :: boolean
-  def before?(Resource.Transformers.DefaultAccept), do: true
-  def before?(_), do: false
-
-  @doc false
-  @impl true
-  @spec transform(map) ::
-          :ok
-          | {:ok, map()}
-          | {:error, term()}
-          | {:warn, map(), String.t() | [String.t()]}
-          | :halt
-  def transform(dsl_state) do
-    dsl_state
-    |> Info.authentication_strategies()
-    |> Stream.filter(&is_struct(&1, OAuth2))
-    |> Enum.reduce_while({:ok, dsl_state}, fn strategy, {:ok, dsl_state} ->
-      case transform_strategy(strategy, dsl_state) do
-        {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
-  end
-
-  defp transform_strategy(strategy, dsl_state) do
+  @spec transform(OAuth2.t(), map) :: {:ok, OAuth2.t() | map} | {:error, Exception.t()}
+  def transform(strategy, dsl_state) do
     with strategy <- set_defaults(strategy),
          {:ok, dsl_state} <- maybe_build_identity_relationship(dsl_state, strategy),
          :ok <- maybe_validate_register_action(dsl_state, strategy),
@@ -59,15 +29,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
         |> Transformer.replace_entity(
           ~w[authentication strategies]a,
           strategy,
-          &(&1.name == strategy.name)
+          &(Strategy.name(&1) == strategy.name)
         )
         |> then(fn dsl_state ->
           ~w[register_action_name sign_in_action_name]a
-          |> Stream.map(&Map.get(strategy, &1))
-          |> Enum.reduce(
-            dsl_state,
-            &Transformer.persist(&2, {:authentication_action, &1}, strategy)
-          )
+          |> Enum.map(&Map.get(strategy, &1))
+          |> register_strategy_actions(dsl_state, strategy)
         end)
 
       {:ok, dsl_state}

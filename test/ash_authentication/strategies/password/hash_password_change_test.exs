@@ -1,7 +1,7 @@
 defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
   use DataCase, async: true
   alias Ash.Changeset
-  alias AshAuthentication.{Info, Strategy.Password.HashPasswordChange}
+  alias AshAuthentication.{Info, Strategy, Strategy.Password.HashPasswordChange}
 
   describe "change/3" do
     test "when the action is associated with a strategy, it can hash the password" do
@@ -38,7 +38,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
 
       {:ok, _user, _changeset, _} =
         Changeset.new(user, %{})
-        |> Changeset.set_context(%{strategy_name: strategy.name})
+        |> Changeset.set_context(%{strategy_name: Strategy.name(strategy)})
         |> Changeset.for_update(:update, attrs)
         |> HashPasswordChange.change([], %{})
         |> Changeset.with_hooks(fn changeset ->
@@ -61,7 +61,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
       {:ok, _user, _changeset, _} =
         Changeset.new(user, %{})
         |> Changeset.for_update(:update, attrs)
-        |> HashPasswordChange.change([], %{strategy_name: strategy.name})
+        |> HashPasswordChange.change([], %{strategy_name: Strategy.name(strategy)})
         |> Changeset.with_hooks(fn changeset ->
           assert strategy.hash_provider.valid?(password, changeset.attributes.hashed_password)
 

@@ -1,5 +1,5 @@
 defmodule AshAuthentication.AddOn.Confirmation do
-  import AshAuthentication.Dsl
+  alias __MODULE__.{Dsl, Transformer, Verifier}
 
   @moduledoc """
   Confirmation support.
@@ -82,7 +82,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
 
   ## DSL Documentation
 
-  #{Spark.Dsl.Extension.doc_entity(strategy(:confirmation))}
+  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   defstruct token_lifetime: nil,
@@ -113,6 +113,10 @@ defmodule AshAuthentication.AddOn.Confirmation do
           provider: :confirmation,
           name: :confirm
         }
+
+  defdelegate dsl(), to: Dsl
+  defdelegate transform(strategy, dsl_state), to: Transformer
+  defdelegate verify(strategy, dsl_state), to: Verifier
 
   @doc """
   Generate a confirmation token for a changeset.
