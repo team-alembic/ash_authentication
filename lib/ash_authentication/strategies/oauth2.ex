@@ -50,7 +50,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
 
   > ### Warning {: .warning}
   >
-  > We **strongly** urge you not to sure actual secrets in your code or
+  > We **strongly** urge you not to share actual secrets in your code or
   > repository.
 
   ### Examples:
