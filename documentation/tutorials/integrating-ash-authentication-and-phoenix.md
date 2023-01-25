@@ -39,6 +39,11 @@ Add `ash_authentication_phoenix` to your `.formatter.exs`:
 ]
 ```
 
+## Phoenix 1.7 compatibility
+
+In `your_app_web.ex` you will need to change `helpers: false` to `helpers: true` in the router section. AshAuthenticationPhoenix relies on
+these helpers to know where your authenticated routes are.
+
 ## `AshAuthentication.Phoenix.Router`
 
 `ash_authentication_phoenix` includes several helper macros which can generate

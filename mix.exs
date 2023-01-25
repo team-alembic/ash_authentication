@@ -83,7 +83,7 @@ defmodule AshAuthentication.MixProject do
        Path.wildcard("documentation/**/*.md"))
     |> Enum.map(fn
       "README.md" ->
-        {:"README.md", title: "Read Me"}
+        {:"README.md", title: "Read Me", ash_hq?: false}
 
       "documentation/tutorials/" <> _ = path ->
         {String.to_atom(path), []}
