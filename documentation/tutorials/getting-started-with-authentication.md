@@ -106,6 +106,13 @@ defmodule MyApp.Accounts do
 end
 ```
 
+Be sure to add it to the `ash_apis` config in your `config.exs`
+
+```elixir
+# in config/config.exs
+config :my_app, :ash_apis, [..., MyApp.Accounts]
+```
+
 Next, let's define our registry:
 
 ```elixir
