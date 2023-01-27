@@ -104,7 +104,7 @@ defmodule AshAuthentication.Dsl do
             """,
             default: :get_by_subject
           ],
-          select_fields_for_senders: [
+          select_for_senders: [
             type: {:list, :atom},
             doc: """
             Ensures that fields required by your senders are selected when they are called

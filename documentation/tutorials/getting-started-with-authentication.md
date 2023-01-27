@@ -175,6 +175,8 @@ defmodule MyApp.Accounts.User do
   authentication do
     api MyApp.Accounts
 
+    select_for_senders [:email]
+
     strategies do
       password :password do
         identity_field :email
