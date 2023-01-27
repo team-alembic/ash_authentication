@@ -41,7 +41,8 @@ defmodule AshAuthentication.Strategy.Password.Actions do
            }
          )}
 
-      {:ok, _users} ->
+      {:ok, users} ->
+        IO.inspect(users, label: "bar")
         {:error,
          Errors.AuthenticationFailed.exception(
            caused_by: %{

@@ -27,6 +27,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
     query
     |> Query.filter(ref(^identity_field) == ^identity)
+    |> Query.ensure_selected([strategy.hashed_password_field])
     |> Query.after_action(fn
       query, [record] when is_binary(:erlang.map_get(strategy.hashed_password_field, record)) ->
         password = Query.get_argument(query, strategy.password_field)
@@ -64,6 +65,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
       query, users when is_list(users) ->
         strategy.hash_provider.simulate()
+        IO.inspect(users, label: "buz")
 
         {:error,
          AuthenticationFailed.exception(

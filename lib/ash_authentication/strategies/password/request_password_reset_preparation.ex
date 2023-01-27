@@ -25,6 +25,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
 
       query
       |> Query.filter(ref(^identity_field) == ^identity)
+      |> Query.ensure_selected(Info.authentication_select_fields_for_senders(query.resource))
       |> Query.after_action(&after_action(&1, &2, strategy))
     else
       query

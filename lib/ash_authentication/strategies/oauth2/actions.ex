@@ -48,7 +48,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
            }
          )}
 
-      {:ok, _users} ->
+      {:ok, users} ->
+        IO.inspect(users, label: "foo")
         {:error,
          Errors.AuthenticationFailed.exception(
            caused_by: %{

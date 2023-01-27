@@ -103,6 +103,13 @@ defmodule AshAuthentication.Dsl do
             action doesn't exist, one will be generated for you.
             """,
             default: :get_by_subject
+          ],
+          select_fields_for_senders: [
+            type: {:list, :atom},
+            doc: """
+            Ensures that fields required by your senders are selected when they are called
+            """,
+            default: []
           ]
         ],
         sections: [
