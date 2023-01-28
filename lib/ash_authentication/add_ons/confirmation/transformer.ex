@@ -154,10 +154,19 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
       )
     ]
 
+    metadata = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :update], :metadata,
+        name: :token,
+        type: :string,
+        allow_nil?: false
+      )
+    ]
+
     Transformer.build_entity(Resource.Dsl, [:actions], :update,
       name: strategy.confirm_action_name,
       accept: strategy.monitor_fields,
       arguments: arguments,
+      metadata: metadata,
       changes: changes
     )
   end
