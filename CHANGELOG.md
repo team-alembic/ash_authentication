@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.7.4](https://github.com/team-alembic/ash_authentication/compare/v3.7.3...v3.7.4) (2023-01-30)
+
+
+
+
+### Improvements:
+
+* validate signing secret is a string (#163)
+
 ## [v3.7.3](https://github.com/team-alembic/ash_authentication/compare/v3.7.2...v3.7.3) (2023-01-18)
 
 
