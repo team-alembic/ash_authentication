@@ -214,10 +214,24 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       )
     ]
 
+    metadata =
+      if AshAuthentication.Info.authentication_tokens_enabled?(dsl_state) do
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :update], :metadata,
+            name: :token,
+            type: :string,
+            allow_nil?: false
+          )
+        ]
+      else
+        []
+      end
+
     Transformer.build_entity(Resource.Dsl, [:actions], :read,
       name: strategy.sign_in_action_name,
       arguments: arguments,
       preparations: preparations,
+      metadata: metadata,
       get?: true
     )
   end
@@ -367,10 +381,19 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         )
       ])
 
+    metadata = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :update], :metadata,
+        name: :token,
+        type: :string,
+        allow_nil?: false
+      )
+    ]
+
     Transformer.build_entity(Resource.Dsl, [:actions], :update,
       name: resettable.password_reset_action_name,
       arguments: arguments,
       changes: changes,
+      metadata: metadata,
       accept: []
     )
   end
