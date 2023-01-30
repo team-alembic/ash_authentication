@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.8.0](https://github.com/team-alembic/ash_authentication/compare/v3.7.3...v3.8.0) (2023-01-30)
+
+
+
+
+### Features:
+
+* Add support and documentation for custom strategies. (#154)
+
 ## [v3.7.3](https://github.com/team-alembic/ash_authentication/compare/v3.7.2...v3.7.3) (2023-01-18)
 
 
