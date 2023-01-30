@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.7.6](https://github.com/team-alembic/ash_authentication/compare/v3.7.5...v3.7.6) (2023-01-30)
+
+
+
+
+### Bug Fixes:
+
+* resources can appear in multiple apis, so we need to uniq them here (#169)
+
+* put_add_on/2 was putting into strategies
+
+### Improvements:
+
+* add metadata declarations to actions that have a `token` (#164)
+
+* validate signing secret is a string (#163)
+
 ## [v3.7.5](https://github.com/team-alembic/ash_authentication/compare/v3.7.4...v3.7.5) (2023-01-30)
 
 
