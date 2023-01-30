@@ -135,6 +135,7 @@ defmodule AshAuthentication do
     otp_app
     |> Application.get_env(:ash_apis, [])
     |> Stream.flat_map(&Api.Info.resources(&1))
+    |> Stream.uniq()
     |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
     |> Enum.to_list()
   end
