@@ -126,7 +126,7 @@ defmodule AshAuthentication.Jwt.Config do
       with :error <- Keyword.fetch(opts, :signing_secret),
            {:ok, {secret_module, secret_opts}} <-
              Info.authentication_tokens_signing_secret(resource),
-           {:ok, secret} <-
+           {:ok, secret} when is_binary(secret) <-
              secret_module.secret_for(
                ~w[authentication tokens signing_secret]a,
                resource,
@@ -136,6 +136,9 @@ defmodule AshAuthentication.Jwt.Config do
       else
         {:ok, secret} when is_binary(secret) ->
           secret
+
+        {:ok, secret} when not is_binary(secret) ->
+          raise "Invalid JWT signing secret: #{inspect(secret)}. Please see the documentation for `AshAuthentication.Jwt` for details"
 
         _ ->
           raise "Missing JWT signing secret. Please see the documentation for `AshAuthentication.Jwt` for details"
