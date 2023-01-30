@@ -45,7 +45,7 @@ defmodule AshAuthentication.Strategy.Custom.Helpers do
   """
   @spec put_add_on(dsl_state, Custom.strategy()) :: dsl_state when dsl_state: map
   def put_add_on(dsl_state, strategy),
-    do: put_entity(dsl_state, strategy, ~w[authentication strategies]a)
+    do: put_entity(dsl_state, strategy, ~w[authentication add_ons]a)
 
   defp put_entity(dsl_state, strategy, path) do
     name = Strategy.name(strategy)
