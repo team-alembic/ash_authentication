@@ -37,6 +37,15 @@ defprotocol AshAuthentication.Strategy do
           :get | :head | :post | :put | :delete | :connect | :options | :trace | :patch
 
   @doc """
+  The "short name" of the strategy, used for genererating routes, etc.
+
+  This is most likely the same value that you use for the entity's `name`
+  argument.
+  """
+  @spec name(t) :: atom
+  def name(strategy)
+
+  @doc """
   Return a list of phases supported by the strategy.
 
   ## Example

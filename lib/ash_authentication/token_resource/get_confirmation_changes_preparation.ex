@@ -6,6 +6,7 @@ defmodule AshAuthentication.TokenResource.GetConfirmationChangesPreparation do
 
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
+  alias AshAuthentication.Strategy
   require Ash.Query
 
   @doc false
@@ -16,7 +17,7 @@ defmodule AshAuthentication.TokenResource.GetConfirmationChangesPreparation do
     strategy = query.context.strategy
 
     query
-    |> Query.filter(purpose: to_string(strategy.name), jti: jti)
+    |> Query.filter(purpose: to_string(Strategy.name(strategy)), jti: jti)
     |> Query.filter(expires_at >= now())
   end
 end

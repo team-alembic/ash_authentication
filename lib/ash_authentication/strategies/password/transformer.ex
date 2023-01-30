@@ -6,49 +6,18 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   the correct actions and settings are in place.
   """
 
-  use Spark.Dsl.Transformer
-
   alias Ash.{Resource, Type}
-  alias AshAuthentication.{GenerateTokenChange, Info, Strategy.Password}
+  alias AshAuthentication.{GenerateTokenChange, Strategy, Strategy.Password}
   alias Spark.{Dsl.Transformer, Error.DslError}
+  import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
 
   @doc false
-  @impl true
-  @spec after?(module) :: boolean
-  def after?(AshAuthentication.Transformer), do: true
-  def after?(_), do: false
-
-  @doc false
-  @impl true
-  @spec before?(module) :: boolean
-  def before?(Resource.Transformers.DefaultAccept), do: true
-  def before?(_), do: false
-
-  @doc false
-  @impl true
-  @spec transform(map) ::
-          :ok
-          | {:ok, map()}
-          | {:error, term()}
-          | {:warn, map(), String.t() | [String.t()]}
-          | :halt
-  def transform(dsl_state) do
-    dsl_state
-    |> Info.authentication_strategies()
-    |> Stream.filter(&is_struct(&1, Password))
-    |> Enum.reduce_while({:ok, dsl_state}, fn strategy, {:ok, dsl_state} ->
-      case transform_strategy(strategy, dsl_state) do
-        {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
-  end
-
-  defp transform_strategy(strategy, dsl_state) do
+  @spec transform(Password.t(), map) :: {:ok, Password.t() | map} | {:error, Exception.t()}
+  def transform(strategy, dsl_state) do
     with :ok <- validate_identity_field(strategy.identity_field, dsl_state),
          :ok <- validate_hashed_password_field(strategy.hashed_password_field, dsl_state),
          strategy <-
@@ -78,27 +47,21 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         |> Transformer.replace_entity(
           ~w[authentication strategies]a,
           strategy,
-          &(&1.name == strategy.name)
+          &(Strategy.name(&1) == strategy.name)
         )
         |> then(fn dsl_state ->
           ~w[sign_in_action_name register_action_name]a
-          |> Stream.map(&Map.get(strategy, &1))
-          |> Enum.reduce(
-            dsl_state,
-            &Transformer.persist(&2, {:authentication_action, &1}, strategy)
-          )
+          |> Enum.map(&Map.get(strategy, &1))
+          |> register_strategy_actions(dsl_state, strategy)
         end)
         |> then(fn dsl_state ->
           strategy
           |> Map.get(:resettable, [])
-          |> Stream.flat_map(fn resettable ->
+          |> Enum.flat_map(fn resettable ->
             ~w[request_password_reset_action_name password_reset_action_name]a
-            |> Stream.map(&Map.get(resettable, &1))
+            |> Enum.map(&Map.get(resettable, &1))
           end)
-          |> Enum.reduce(
-            dsl_state,
-            &Transformer.persist(&2, {:authentication_action, &1}, strategy)
-          )
+          |> register_strategy_actions(dsl_state, strategy)
         end)
 
       {:ok, dsl_state}

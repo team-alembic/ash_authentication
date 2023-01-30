@@ -12,6 +12,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
     Errors.InvalidToken,
     Info,
     Jwt,
+    Strategy,
     TokenResource
   }
 
@@ -65,7 +66,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
            |> Changeset.for_create(store_changes_action, %{
              token: token,
              extra_data: changes,
-             purpose: to_string(strategy.name)
+             purpose: to_string(Strategy.name(strategy))
            })
            |> api.create(Keyword.merge(opts, upsert?: true)) do
       :ok

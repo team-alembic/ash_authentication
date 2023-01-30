@@ -1,33 +1,22 @@
 defmodule AshAuthentication.Verifier do
   @moduledoc """
   The Authentication verifier.
+
+  Checks configuration constraints after compile.
   """
 
-  use Spark.Dsl.Transformer
+  use Spark.Dsl.Verifier
   alias AshAuthentication.Info
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
 
   @doc false
   @impl true
-  @spec after?(any) :: boolean
-  def after?(_), do: true
-
-  @doc false
-  @impl true
-  @spec before?(any) :: boolean
-  def before?(_), do: false
-
-  @doc false
-  @impl true
-  @spec after_compile? :: boolean
-  def after_compile?, do: true
-
-  @doc false
-  @impl true
-  @spec transform(map) ::
-          :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
-  def transform(dsl_state) do
+  @spec verify(map) ::
+          :ok
+          | {:error, term}
+          | {:warn, String.t() | list(String.t())}
+  def verify(dsl_state) do
     with {:ok, _api} <- validate_api_presence(dsl_state) do
       validate_token_resource(dsl_state)
     end

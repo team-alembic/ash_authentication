@@ -1,5 +1,5 @@
 defmodule AshAuthentication.Strategy.OAuth2 do
-  import AshAuthentication.Dsl
+  alias __MODULE__.{Dsl, Transformer, Verifier}
 
   @moduledoc """
   Strategy for authenticating using an OAuth 2.0 server as the source of truth.
@@ -216,7 +216,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
 
   ## DSL Documentation
 
-  #{Spark.Dsl.Extension.doc_entity(strategy(:oauth2))}
+  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   defstruct client_id: nil,
@@ -240,6 +240,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
             resource: nil,
             icon: nil,
             assent_strategy: Assent.Strategy.OAuth2
+
+  use AshAuthentication.Strategy.Custom
 
   alias AshAuthentication.Strategy.OAuth2
 
@@ -273,4 +275,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           icon: nil | atom,
           assent_strategy: module
         }
+
+  defdelegate dsl, to: Dsl
+  defdelegate transform(strategy, dsl_state), to: Transformer
+  defdelegate verify(strategy, dsl_state), to: Verifier
 end

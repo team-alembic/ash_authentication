@@ -19,6 +19,10 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
   @type phase :: :register | :sign_in | :reset_request | :reset
 
   @doc false
+  @spec name(Password.t()) :: atom
+  def name(strategy), do: strategy.name
+
+  @doc false
   @spec phases(Password.t()) :: [phase]
   def phases(%{resettable: []}), do: [:register, :sign_in]
   def phases(_strategy), do: [:register, :sign_in, :reset_request, :reset]

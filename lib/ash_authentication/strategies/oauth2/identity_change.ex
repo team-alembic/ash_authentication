@@ -4,7 +4,7 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{Info, UserIdentity}
+  alias AshAuthentication.{Info, Strategy, UserIdentity}
   alias Ash.{Changeset, Error.Framework.AssumptionFailed, Resource.Change}
   import AshAuthentication.Utils, only: [is_falsy: 1]
 
@@ -33,7 +33,7 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
       |> UserIdentity.Actions.upsert(%{
         user_info: Changeset.get_argument(changeset, :user_info),
         oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens),
-        strategy: strategy.name,
+        strategy: Strategy.name(strategy),
         user_id: user.id
       })
       |> case do

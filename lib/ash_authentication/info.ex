@@ -22,7 +22,7 @@ defmodule AshAuthentication.Info do
     |> authentication_strategies()
     |> Stream.concat(authentication_add_ons(dsl_or_resource))
     |> Enum.find_value(:error, fn strategy ->
-      if strategy.name == name, do: {:ok, strategy}
+      if Strategy.name(strategy) == name, do: {:ok, strategy}
     end)
   end
 

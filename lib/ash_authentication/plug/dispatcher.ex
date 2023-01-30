@@ -23,7 +23,7 @@ defmodule AshAuthentication.Plug.Dispatcher do
   @impl true
   @spec call(Conn.t(), config | any) :: Conn.t()
   def call(conn, {phase, strategy, return_to}) do
-    activity = {strategy.name, phase}
+    activity = {Strategy.name(strategy), phase}
 
     strategy
     |> Strategy.plug(phase, conn)
