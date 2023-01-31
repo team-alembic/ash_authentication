@@ -85,6 +85,9 @@ defmodule AshAuthentication.MixProject do
       "README.md" ->
         {:"README.md", title: "Read Me", ash_hq?: false}
 
+      "documentation/tutorials/integrating-ash-authentication-and-phoenix.md" = name ->
+        {String.to_atom(name), ash_hq?: false}
+
       "documentation/tutorials/" <> _ = path ->
         {String.to_atom(path), []}
 
