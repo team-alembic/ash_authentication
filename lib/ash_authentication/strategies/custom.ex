@@ -84,7 +84,10 @@ defmodule AshAuthentication.Strategy.Custom do
 
           _ ->
             raise CompileError,
-                  "You must provide a `Spark.Dsl.Entity` as the `entity` argument to `use AshAuthentication.Strategy.Custom`."
+              file: __ENV__.file,
+              line: __ENV__.line,
+              description:
+                "You must provide a `Spark.Dsl.Entity` as the `entity` argument to `use AshAuthentication.Strategy.Custom`."
         end
 
       use Spark.Dsl.Extension,

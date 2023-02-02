@@ -217,7 +217,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     metadata =
       if AshAuthentication.Info.authentication_tokens_enabled?(dsl_state) do
         [
-          Transformer.build_entity!(Resource.Dsl, [:actions, :update], :metadata,
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
             name: :token,
             type: :string,
             allow_nil?: false

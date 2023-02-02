@@ -108,6 +108,7 @@ defmodule AshAuthentication do
     Info,
     Strategy.Auth0,
     Strategy.Github,
+    Strategy.MagicLink,
     Strategy.OAuth2,
     Strategy.Password
   }
@@ -117,7 +118,10 @@ defmodule AshAuthentication do
   use Spark.Dsl.Extension,
     sections: dsl(),
     dsl_patches:
-      Enum.flat_map([Confirmation, Auth0, Github, OAuth2, Password], & &1.dsl_patches()),
+      Enum.flat_map(
+        [Confirmation, Auth0, Github, OAuth2, Password, MagicLink],
+        & &1.dsl_patches()
+      ),
     transformers: [
       AshAuthentication.Transformer,
       AshAuthentication.Strategy.Custom.Transformer

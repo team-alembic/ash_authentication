@@ -22,7 +22,6 @@ defmodule AshAuthentication.Strategy.PasswordTest do
       strategy = %Password{resettable: [resettable], resource: user.__struct__}
 
       assert {:ok, token} = Password.reset_token_for(strategy, user)
-
       assert {:ok, claims} = Jwt.peek(token)
       assert claims["act"] == to_string(resettable.password_reset_action_name)
     end
