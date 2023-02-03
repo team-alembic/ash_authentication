@@ -38,11 +38,11 @@ defmodule AshAuthentication.Plug do
   import MyAppWeb.AuthPlug
 
   pipeline :session_users do
-    pipe :load_from_session
+    plug :load_from_session
   end
 
   pipeline :bearer_users do
-    pipe :load_from_bearer
+    plug :load_from_bearer
   end
 
   scope "/", MyAppWeb do
