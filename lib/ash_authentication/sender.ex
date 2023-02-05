@@ -32,7 +32,7 @@ defmodule AshAuthentication.Sender do
           Someone (maybe you) has requested a password reset for your account.
           If you did not initiate this request then please ignore this email.
         </p>
-        <a href="#{"https://example.com/user/password/reset?#{URI.encode_query(reset_token: reset_token)}}">
+        <a href=\"#{"https://example.com/user/password/reset?#{URI.encode_query(reset_token: reset_token)}"}\">
           Click here to reset
         </a>
       ")
