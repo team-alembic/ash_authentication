@@ -155,6 +155,8 @@ defmodule AshAuthentication.TokenResource do
   will start the `AshAuthentication.TokenResource.Expunger` `GenServer` which
   periodically scans and removes any expired records.
 
+  <!--- ash-hq-hide-start --> <!--- -->
+
   ## Dsl
 
   ### Index
@@ -164,6 +166,7 @@ defmodule AshAuthentication.TokenResource do
   ### Docs
 
   #{Spark.Dsl.Extension.doc(@dsl)}
+  <!--- ash-hq-hide-stop --> <!--- -->
   """
 
   alias Ash.Resource

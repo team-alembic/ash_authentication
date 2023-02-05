@@ -82,6 +82,8 @@ defmodule AshAuthentication do
   docs](https://hexdocs.pm/elixir/Application.html#module-the-application-callback-module)
   for more information.
 
+  <!--- ash-hq-hide-start --> <!--- -->
+
   ## DSL Documentation
 
   ### Index
@@ -92,6 +94,7 @@ defmodule AshAuthentication do
 
   #{Spark.Dsl.Extension.doc(dsl())}
 
+  <!--- ash-hq-hide-stop --> <!--- -->
   """
   alias Ash.{Api, Error.Query.NotFound, Query, Resource}
   alias AshAuthentication.Info

@@ -145,6 +145,7 @@ jobs:
     name: mix git-ops.release
     runs-on: ubuntu-latest
     needs: build-dev
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v3
         with:
