@@ -226,7 +226,7 @@ Let's generate our plug:
 defmodule MyApp.AuthPlug do
   use AshAuthentication.Plug, otp_app: :my_app
 
-  def handle_success(conn, _activity, user, token)
+  def handle_success(conn, _activity, user, token) do
     if is_api_request?(conn) do
       conn
       |> send_resp(200, Jason.encode!(%{
