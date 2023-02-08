@@ -96,12 +96,28 @@ defmodule AshAuthentication do
 
   <!--- ash-hq-hide-stop --> <!--- -->
   """
-  alias Ash.{Api, Error.Query.NotFound, Query, Resource}
-  alias AshAuthentication.Info
+  alias Ash.{
+    Api,
+    Error.Query.NotFound,
+    Query,
+    Resource
+  }
+
+  alias AshAuthentication.{
+    AddOn.Confirmation,
+    Info,
+    Strategy.Auth0,
+    Strategy.Github,
+    Strategy.OAuth2,
+    Strategy.Password
+  }
+
   alias Spark.Dsl.Extension
 
   use Spark.Dsl.Extension,
     sections: dsl(),
+    dsl_patches:
+      Enum.flat_map([Confirmation, Auth0, Github, OAuth2, Password], & &1.dsl_patches()),
     transformers: [
       AshAuthentication.Transformer,
       AshAuthentication.Strategy.Custom.Transformer

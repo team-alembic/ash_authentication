@@ -5,7 +5,8 @@ defmodule Example.User do
     extensions: [
       AshAuthentication,
       AshGraphql.Resource,
-      AshJsonApi.Resource
+      AshJsonApi.Resource,
+      Example.OnlyMartiesAtTheParty
     ]
 
   require Logger

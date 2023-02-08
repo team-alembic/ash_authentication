@@ -19,12 +19,6 @@ defmodule AshAuthentication.Strategy.Custom do
   @type strategy :: struct
 
   @doc """
-  A callback which allows the strategy to provide it's own DSL-based
-  configuration.
-  """
-  @callback dsl :: entity
-
-  @doc """
   If your strategy needs to modify either the entity or the parent resource then
   you can implement this callback.
 
@@ -61,7 +55,7 @@ defmodule AshAuthentication.Strategy.Custom do
 
   @doc false
   @spec __using__(keyword) :: Macro.t()
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
     quote generated: true do
       @behaviour unquote(__MODULE__)
       import unquote(__MODULE__).Helpers
@@ -70,6 +64,31 @@ defmodule AshAuthentication.Strategy.Custom do
       def verify(_entity, _dsl_state), do: :ok
 
       defoverridable transform: 2, verify: 2
+
+      opts = unquote(opts)
+
+      path =
+        opts
+        |> Keyword.get(:style, :strategy)
+        |> case do
+          :strategy -> ~w[authentication strategies]a
+          :add_on -> ~w[authentication add_ons]a
+        end
+
+      entity =
+        opts
+        |> Keyword.get(:entity)
+        |> case do
+          %Dsl.Entity{} = entity ->
+            entity
+
+          _ ->
+            raise CompileError,
+                  "You must provide a `Spark.Dsl.Entity` as the `entity` argument to `use AshAuthentication.Strategy.Custom`."
+        end
+
+      use Spark.Dsl.Extension,
+        dsl_patches: [%Dsl.Patch.AddEntity{section_path: path, entity: entity}]
     end
   end
 end

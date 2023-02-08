@@ -4,7 +4,7 @@ defmodule AshAuthentication.UserIdentity.Info do
   extension.
   """
 
-  use AshAuthentication.InfoGenerator,
+  use Spark.InfoGenerator,
     extension: AshAuthentication.UserIdentity,
     sections: [:user_identity]
 end

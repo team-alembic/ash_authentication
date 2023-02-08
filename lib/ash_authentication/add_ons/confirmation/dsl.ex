@@ -3,7 +3,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
   Defines the Spark DSL entity for this add on.
   """
 
-  alias AshAuthentication.AddOn.Confirmation
+  alias AshAuthentication.{
+    AddOn.Confirmation,
+    Sender,
+    SenderFunction
+  }
+
   alias Spark.Dsl.Entity
 
   @default_confirmation_lifetime_days 3
@@ -85,9 +90,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
           default: true
         ],
         sender: [
-          type:
-            {:spark_function_behaviour, AshAuthentication.Sender,
-             {AshAuthentication.SenderFunction, 3}},
+          type: {:spark_function_behaviour, Sender, {SenderFunction, 3}},
           doc: """
           How to send the confirmation instructions to the user.
           Allows you to glue sending of confirmation instructions to

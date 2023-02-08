@@ -10,14 +10,6 @@ defmodule AshAuthentication.Dsl do
 
   alias Ash.{Api, Resource}
 
-  alias AshAuthentication.{
-    AddOn.Confirmation,
-    Strategy.Auth0,
-    Strategy.Github,
-    Strategy.OAuth2,
-    Strategy.Password
-  }
-
   @default_token_lifetime_days 14
 
   alias Spark.Dsl.Section
@@ -175,37 +167,17 @@ defmodule AshAuthentication.Dsl do
           %Section{
             name: :strategies,
             describe: "Configure authentication strategies on this resource",
-            entities: Enum.map(available_strategies(), & &1.dsl())
+            entities: [],
+            patchable?: true
           },
           %Section{
             name: :add_ons,
             describe: "Additional add-ons related to, but not providing authentication",
-            entities: Enum.map(available_add_ons(), & &1.dsl())
+            entities: [],
+            patchable?: true
           }
         ]
       }
     ]
-  end
-
-  @doc """
-  Return the available strategy modules.
-
-  This is used for DSL generation and transformation.
-  """
-  @spec available_strategies :: [module]
-  def available_strategies do
-    [Auth0, Github, OAuth2, Password]
-    |> Enum.concat(Application.get_env(:ash_authentication, :extra_strategies, []))
-  end
-
-  @doc """
-  Return the available add-on modules.
-
-  This is used for DSL generation and transformation.
-  """
-  @spec available_add_ons :: [module]
-  def available_add_ons do
-    [Confirmation]
-    |> Enum.concat(Application.get_env(:ash_authentication, :extra_add_ons, []))
   end
 end

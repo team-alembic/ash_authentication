@@ -7,7 +7,7 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
 
   use Spark.Dsl.Transformer
 
-  alias AshAuthentication.{Dsl, Info, Strategy}
+  alias AshAuthentication.{Info, Strategy}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Strategy.Custom.Helpers
 
@@ -32,22 +32,33 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
           | {:warn, map(), String.t() | [String.t()]}
           | :halt
   def transform(dsl_state) do
-    strategy_modules =
-      Dsl.available_add_ons()
-      |> Stream.concat(Dsl.available_strategies())
-      |> Enum.map(&{&1.dsl().target, &1})
+    strategy_to_target =
+      :code.all_available()
+      |> Stream.map(&elem(&1, 0))
+      |> Stream.map(&to_string/1)
+      |> Stream.filter(&String.starts_with?(&1, "Elixir.AshAuthentication"))
+      |> Stream.map(&Module.concat([&1]))
+      |> Stream.concat(Transformer.get_persisted(dsl_state, :extensions, []))
+      |> Stream.filter(&Spark.implements_behaviour?(&1, Strategy.Custom))
+      |> Stream.flat_map(fn strategy ->
+        strategy.dsl_patches()
+        |> Stream.map(&{&1.entity.target, strategy})
+      end)
       |> Map.new()
 
-    with {:ok, dsl_state} <- do_strategy_transforms(dsl_state, strategy_modules) do
-      do_add_on_transforms(dsl_state, strategy_modules)
+    dsl_state =
+      Transformer.persist(dsl_state, :ash_authentication_strategy_to_target, strategy_to_target)
+
+    with {:ok, dsl_state} <- do_strategy_transforms(dsl_state, strategy_to_target) do
+      do_add_on_transforms(dsl_state, strategy_to_target)
     end
   end
 
-  defp do_strategy_transforms(dsl_state, strategy_modules) do
+  defp do_strategy_transforms(dsl_state, strategy_to_target) do
     dsl_state
     |> Info.authentication_strategies()
     |> Enum.reduce_while({:ok, dsl_state}, fn strategy, {:ok, dsl_state} ->
-      strategy_module = Map.fetch!(strategy_modules, strategy.__struct__)
+      strategy_module = Map.fetch!(strategy_to_target, strategy.__struct__)
 
       case do_transform(strategy_module, strategy, dsl_state, :strategy) do
         {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
@@ -56,11 +67,11 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
     end)
   end
 
-  defp do_add_on_transforms(dsl_state, strategy_modules) do
+  defp do_add_on_transforms(dsl_state, strategy_to_target) do
     dsl_state
     |> Info.authentication_add_ons()
     |> Enum.reduce_while({:ok, dsl_state}, fn strategy, {:ok, dsl_state} ->
-      strategy_module = Map.fetch!(strategy_modules, strategy.__struct__)
+      strategy_module = Map.fetch!(strategy_to_target, strategy.__struct__)
 
       case do_transform(strategy_module, strategy, dsl_state, :add_on) do
         {:ok, dsl_state} -> {:cont, {:ok, dsl_state}}
