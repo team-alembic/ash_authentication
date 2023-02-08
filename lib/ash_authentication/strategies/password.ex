@@ -1,6 +1,5 @@
 defmodule AshAuthentication.Strategy.Password do
-  alias __MODULE__.{Dsl, Transformer, Verifier}
-  use AshAuthentication.Strategy.Custom
+  alias __MODULE__.Dsl
 
   @moduledoc """
   Strategy for authenticating using local resources as the source of truth.
@@ -110,7 +109,17 @@ defmodule AshAuthentication.Strategy.Password do
             resource: nil
 
   alias Ash.Resource
-  alias AshAuthentication.{Jwt, Strategy.Password}
+
+  alias AshAuthentication.{
+    Jwt,
+    Strategy.Custom,
+    Strategy.Password,
+    Strategy.Password.Resettable,
+    Strategy.Password.Transformer,
+    Strategy.Password.Verifier
+  }
+
+  use Custom, entity: Dsl.dsl()
 
   @type t :: %Password{
           identity_field: atom,
@@ -121,7 +130,7 @@ defmodule AshAuthentication.Strategy.Password do
           password_confirmation_field: atom,
           register_action_name: atom,
           sign_in_action_name: atom,
-          resettable: [Password.Resettable.t()],
+          resettable: [Resettable.t()],
           name: atom,
           provider: atom,
           resource: module
@@ -138,7 +147,7 @@ defmodule AshAuthentication.Strategy.Password do
   """
   @spec reset_token_for(t(), Resource.record()) :: {:ok, String.t()} | :error
   def reset_token_for(
-        %Password{resettable: [%Password.Resettable{} = resettable]} = _strategy,
+        %Password{resettable: [%Resettable{} = resettable]} = _strategy,
         user
       ) do
     case Jwt.token_for_user(user, %{"act" => resettable.password_reset_action_name},

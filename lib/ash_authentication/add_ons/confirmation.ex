@@ -98,7 +98,9 @@ defmodule AshAuthentication.AddOn.Confirmation do
             name: :confirm
 
   alias Ash.{Changeset, Resource}
-  alias AshAuthentication.{AddOn.Confirmation, Jwt}
+  alias AshAuthentication.{AddOn.Confirmation, Jwt, Strategy.Custom}
+
+  use Custom, style: :add_on, entity: Dsl.dsl()
 
   @type t :: %Confirmation{
           token_lifetime: hours :: pos_integer,
@@ -114,7 +116,6 @@ defmodule AshAuthentication.AddOn.Confirmation do
           name: :confirm
         }
 
-  defdelegate dsl(), to: Dsl
   defdelegate transform(strategy, dsl_state), to: Transformer
   defdelegate verify(strategy, dsl_state), to: Verifier
 

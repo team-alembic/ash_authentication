@@ -7,7 +7,8 @@ defmodule AshAuthentication.Strategy.Custom.Verifier do
 
   use Spark.Dsl.Verifier
 
-  alias AshAuthentication.{Dsl, Info}
+  alias AshAuthentication.Info
+  alias Spark.Dsl.Transformer
 
   @doc false
   @impl true
@@ -16,17 +17,15 @@ defmodule AshAuthentication.Strategy.Custom.Verifier do
           | {:error, term}
           | {:warn, String.t() | list(String.t())}
   def verify(dsl_state) do
-    strategy_modules =
-      Dsl.available_add_ons()
-      |> Stream.concat(Dsl.available_strategies())
-      |> Enum.map(&{&1.dsl().target, &1})
-      |> Map.new()
+    strategy_to_target =
+      dsl_state
+      |> Transformer.get_persisted(:ash_authentication_strategy_to_target, %{})
 
     dsl_state
     |> Info.authentication_strategies()
     |> Stream.concat(Info.authentication_add_ons(dsl_state))
     |> Enum.reduce_while(:ok, fn strategy, :ok ->
-      strategy_module = Map.fetch!(strategy_modules, strategy.__struct__)
+      strategy_module = Map.fetch!(strategy_to_target, strategy.__struct__)
 
       strategy
       |> strategy_module.verify(dsl_state)

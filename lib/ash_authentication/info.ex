@@ -3,7 +3,7 @@ defmodule AshAuthentication.Info do
   Generated configuration functions based on a resource's DSL configuration.
   """
 
-  use AshAuthentication.InfoGenerator,
+  use Spark.InfoGenerator,
     extension: AshAuthentication,
     sections: [:authentication]
 

@@ -1,7 +1,7 @@
 # Defining Custom Authentication Strategies
 
 AshAuthentication allows you to bring your own authentication strategy without
-having to change the Ash Authenticaiton codebase.
+having to change the Ash Authentication codebase.
 
 > There is functionally no difference between "add ons" and "strategies" other
 > than where they appear in the DSL.  We invented "add ons" because it felt
@@ -20,8 +20,6 @@ There are several moving parts which must all work together so hold on to your h
   4. The `AshAuthentication.Strategy` protocol, which provides the glue needed
      for everything to wire up and wrappers around the actions needed to run on
      the resource.
-  5. Runtime configuration of `AshAuthentication` to help it find the extra
-     strategies.
 
 We're going to define an extremely dumb strategy which lets anyone with a name
 that starts with "Marty" sign in with just their name.  Of course you would
@@ -39,52 +37,50 @@ end
 ```
 
 Sadly, this isn't enough to make the magic happen.  We need to define our DSL
-entity by implementing the `dsl/0` callback:
+entity by adding it to the `use` statement:
 
 ```elixir
 defmodule OnlyMartiesAtTheParty do
-  use AshAuthentication.Strategy.Custom
-
-  def dsl do
-    %Spark.Dsl.Entity{
-      name: :only_marty,
-      describe: "Strategy which only allows folks whose name starts with \"Marty\" to sign in.",
-      examples: [
-        """
-        only_marty do
-          case_sensitive? true
-          name_field :name
-        end
-        """
+  @entity %Spark.Dsl.Entity{
+    name: :only_marty,
+    describe: "Strategy which only allows folks whose name starts with \"Marty\" to sign in.",
+    examples: [
+      """
+      only_marty do
+        case_sensitive? true
+        name_field :name
+      end
+      """
+    ],
+    target: __MODULE__,
+    args: [{:optional, :name, :marty}],
+    schema: [
+      name: [
+        type: :atom,
+        doc: """
+        The strategy name.
+        """,
+        required: true
       ],
-      target: __MODULE__,
-      args: [{:optional, :name, :marty}],
-      schema: [
-        name: [
-          type: :atom,
-          doc: """
-          The strategy name.
-          """,
-          required: true
-        ],
-        case_sensitive?: [
-          type: :boolean,
-          doc: """
-          Ignore letter case when comparing?
-          """,
-          required: false,
-          default: false
-        ],
-        name_field: [
-          type: :atom,
-          doc: """
-          The field to check for the users' name.
-          """,
-          required: true
-        ]
+      case_sensitive?: [
+        type: :boolean,
+        doc: """
+        Ignore letter case when comparing?
+        """,
+        required: false,
+        default: false
+      ],
+      name_field: [
+        type: :atom,
+        doc: """
+        The field to check for the users' name.
+        """,
+        required: true
       ]
-    }
-  end
+    ]
+  }
+
+  use AshAuthentication.Strategy.Custom, entity: @entity
 end
 ```
 
@@ -103,6 +99,10 @@ here's a brief overview of what each field we've set does:
     provides a number of additional types over the default ones though, so check
     out `Spark.OptionsHelpers` for more information.
 
+> By default the entity is added to the `authentication / strategy` DSL, however
+> if you want it in the `authentication / add_ons` DSL instead you can also pass
+> `style: :add_on` in the `use` statement.
+
 Next up, we need to define our struct.  The struct should have *at least* the
 fields named in the entity schema.  Additionally, Ash Authentication requires
 that it have a `resource` field which will be set to the module of the resource
@@ -112,22 +112,20 @@ it's attached to during compilation.
 defmodule OnlyMartiesAtTheParty do
   defstruct name: :marty, case_sensitive?: false, name_field: nil, resource: nil
 
-  use AshAuthentication.Strategy.Custom
+  # ...
+
+  use AshAuthentication.Strategy.Custom, entity: @entity
 
   # other code elided ...
 end
 ```
 
 Now it would be theoretically possible to add this custom strategies to your app
-by adding it to the runtime configuration and the user resource:
+by adding it to the `extensions` section of your resource:
 
 ```elixir
-# config.exs
-config :ash_authentication, extra_strategies: [OnlyMartiesAtTheParty]
-
-# user resource
 defmodule MyApp.Accounts.User do
-  use Ash.Resource, extensions: [AshAuthentication]
+  use Ash.Resource, extensions: [AshAuthentication, OnlyMartiesAtTheParty]
 
   authentication do
     api MyApp.Accounts
@@ -169,7 +167,8 @@ concepts:
     will generate routes using `Plug.Router` (or `Phoenix.Router`) - the
     `routes/1` callback is used to retrieve this information from the strategy.
 
-Given this information, let's implment the strategy. It's quite long, so I'm going to break it up into smaller chunks.
+Given this information, let's implement the strategy. It's quite long, so I'm
+going to break it up into smaller chunks.
 
 ```elixir
 defimpl AshAuthentication.Strategy, for: OnlyMartiesAtTheParty do
@@ -191,12 +190,12 @@ and action.
 ```
 
 Next we generate the routes for the strategy.  Routes *should* contain the
-subject name of the resource being authenticated in case the implementor is
+subject name of the resource being authenticated in case the implementer is
 authenticating multiple different resources - eg `User` and `Admin`.
 
 ```elixir
   def routes(strategy) do
-    subject_name = Info.authentication_subject_name!(strategy.resource)
+    subject_name = AshAuthentication.Info.authentication_subject_name!(strategy.resource)
 
     [
       {"/#{subject_name}/#{strategy.name}", :sign_in}
@@ -307,9 +306,9 @@ end
 ```
 
 In some cases you may want to modify the strategy and the resources DSL.  In
-this case you can return the newly muted DSL state in an ok tuple or an error
-tuple, preferably containing a `Spark.Error.DslError`.  For example if we
-wanted to build a sign in action for `OnlyMartiesAtTheParty` to use:
+this case you can return the newly mutated DSL state in an ok tuple or an error
+tuple, preferably containing a `Spark.Error.DslError`.  For example if we wanted
+to build a sign in action for `OnlyMartiesAtTheParty` to use:
 
 ```elixir
 def transform(strategy, dsl_state) do
@@ -341,7 +340,7 @@ to the resource.  See the docs for `Spark.Dsl.Transformer` for more information.
 
 We also support a variant of transformers which run in the new `@after_verify`
 compile hook provided by Elixir 1.14.  This is a great place to put checks
-to make sure that the user's configuration make sense without adding any
+to make sure that the user's configuration makes sense without adding any
 compile-time dependencies between modules which may cause compiler deadlocks.
 
 For example, verifying that the "name" attribute contains "marty" (why you would
@@ -355,7 +354,7 @@ def verify(strategy, _dsl_state) do
     {:error,
       Spark.Error.DslError.exception(
         path: [:authentication, :strategies, :only_marties],
-        message: "Option `name_field` must contain the \"marty\""
+        message: "Option `name_field` must contain \"marty\""
       )}
   end
 end

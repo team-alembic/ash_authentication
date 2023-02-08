@@ -5,48 +5,46 @@ defmodule Example.OnlyMartiesAtTheParty do
 
   defstruct name: :marty, case_sensitive?: false, name_field: nil, resource: nil
 
-  use AshAuthentication.Strategy.Custom
-
-  def dsl do
-    %Spark.Dsl.Entity{
-      name: :only_marty,
-      describe: "Strategy which only allows folks whose name starts with \"Marty\" to sign in.",
-      examples: [
-        """
-        only_marty do
-          case_sensitive? true
-          name_field :name
-        end
-        """
+  @entity %Spark.Dsl.Entity{
+    name: :only_marty,
+    describe: "Strategy which only allows folks whose name starts with \"Marty\" to sign in.",
+    examples: [
+      """
+      only_marty do
+        case_sensitive? true
+        name_field :name
+      end
+      """
+    ],
+    target: __MODULE__,
+    args: [{:optional, :name, :marty}],
+    schema: [
+      name: [
+        type: :atom,
+        doc: """
+        The strategy name.
+        """,
+        required: true
       ],
-      target: __MODULE__,
-      args: [{:optional, :name, :marty}],
-      schema: [
-        name: [
-          type: :atom,
-          doc: """
-          The strategy name.
-          """,
-          required: true
-        ],
-        case_sensitive?: [
-          type: :boolean,
-          doc: """
-          Ignore letter case when comparing?
-          """,
-          required: false,
-          default: false
-        ],
-        name_field: [
-          type: :atom,
-          doc: """
-          The field to check for the users' name.
-          """,
-          required: true
-        ]
+      case_sensitive?: [
+        type: :boolean,
+        doc: """
+        Ignore letter case when comparing?
+        """,
+        required: false,
+        default: false
+      ],
+      name_field: [
+        type: :atom,
+        doc: """
+        The field to check for the users' name.
+        """,
+        required: true
       ]
-    }
-  end
+    ]
+  }
+
+  use AshAuthentication.Strategy.Custom, entity: @entity
 
   defimpl AshAuthentication.Strategy do
     alias AshAuthentication.Errors.AuthenticationFailed

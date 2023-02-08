@@ -241,9 +241,9 @@ defmodule AshAuthentication.Strategy.OAuth2 do
             icon: nil,
             assent_strategy: Assent.Strategy.OAuth2
 
-  use AshAuthentication.Strategy.Custom
+  alias AshAuthentication.Strategy.{Custom, OAuth2}
 
-  alias AshAuthentication.Strategy.OAuth2
+  use Custom, entity: Dsl.dsl()
 
   @type secret :: nil | String.t() | {module, keyword}
 

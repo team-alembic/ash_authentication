@@ -4,7 +4,7 @@ defmodule AshAuthentication.TokenResource.Info do
   extension.
   """
 
-  use AshAuthentication.InfoGenerator,
+  use Spark.InfoGenerator,
     extension: AshAuthentication.TokenResource,
     sections: [:token]
 end
