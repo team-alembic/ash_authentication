@@ -47,7 +47,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
   ## Actions
 
   By default the magic link strategy will automatically generate the request and
-  sign-in actions for you, however you're free to define them yousefl.  If you
+  sign-in actions for you, however you're free to define them yourself.  If you
   do, then the action will be validated to ensure that all the needed
   configuration is present.
 
