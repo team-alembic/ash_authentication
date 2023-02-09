@@ -7,7 +7,7 @@ defmodule AshAuthentication.Transformer do
 
   use Spark.Dsl.Transformer
   alias Ash.Resource
-  alias AshAuthentication.Info
+  alias AshAuthentication.{Info, Strategy}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -31,6 +31,8 @@ defmodule AshAuthentication.Transformer do
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
     with :ok <- validate_at_least_one_strategy(dsl_state),
+         :ok <- validate_unique_strategy_names(dsl_state),
+         :ok <- validate_unique_add_on_names(dsl_state),
          {:ok, get_by_subject_action_name} <-
            Info.authentication_get_by_subject_action_name(dsl_state),
          {:ok, dsl_state} <-
@@ -99,6 +101,44 @@ defmodule AshAuthentication.Transformer do
            path: [:actions],
            message: "Expected resource to have either read action named `#{action_name}`"
          )}
+    end
+  end
+
+  defp validate_unique_add_on_names(dsl_state) do
+    dsl_state
+    |> Transformer.get_entities([:authentication, :add_ons])
+    |> Enum.map(&Strategy.name/1)
+    |> validate_unique("add on")
+  end
+
+  defp validate_unique_strategy_names(dsl_state) do
+    dsl_state
+    |> Transformer.get_entities([:authentication, :strategies])
+    |> Enum.map(&Strategy.name/1)
+    |> validate_unique("strategy")
+  end
+
+  defp validate_unique(strategy_names, descriptor) do
+    duplicates =
+      strategy_names
+      |> Enum.frequencies()
+      |> Enum.reject(&(elem(&1, 1) == 1))
+
+    if Enum.any?(duplicates) do
+      errors =
+        duplicates
+        |> Enum.map_join("\n", fn
+          {name, 2} -> "  * #{descriptor} `#{inspect(name)}` is repeated twice."
+          {name, n} -> "  * #{descriptor} `#{inspect(name)}` is repeated #{n} times."
+        end)
+
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies],
+         message: "Strategy names must be unique.\n\n#{errors}"
+       )}
+    else
+      :ok
     end
   end
 end
