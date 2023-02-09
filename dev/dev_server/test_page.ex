@@ -199,6 +199,50 @@ defmodule DevServer.TestPage do
     )
   end
 
+  defp render_strategy(strategy, phase, options)
+       when is_struct(strategy, Strategy.MagicLink) and phase == :request do
+    EEx.eval_string(
+      ~s"""
+      <form method="<%= @method %>" action="<%= @route %>">
+        <fieldset>
+          <legend><%= @strategy.name %> request</legend>
+          <input type="text" name="<%= @options.subject_name %>[<%= @strategy.identity_field %>]" placeholder="<%= @strategy.identity_field %>" />
+          <br />
+          <input type="submit" value="Request" />
+        </fieldset>
+      </form>
+      """,
+      assigns: [
+        strategy: strategy,
+        route: route_for_phase(strategy, phase),
+        options: options,
+        method: Strategy.method_for_phase(strategy, phase)
+      ]
+    )
+  end
+
+  defp render_strategy(strategy, phase, options)
+       when is_struct(strategy, Strategy.MagicLink) and phase == :sign_in do
+    EEx.eval_string(
+      ~s"""
+      <form method="<%= @method %>" action="<%= @route %>">
+        <fieldset>
+          <legend><%= @strategy.name %> sign in</legend>
+          <input type="text" name="token" placeholder="token" />
+          <br />
+          <input type="submit" value="Sign in" />
+        </fieldset>
+      </form>
+      """,
+      assigns: [
+        strategy: strategy,
+        route: route_for_phase(strategy, phase),
+        options: options,
+        method: Strategy.method_for_phase(strategy, phase)
+      ]
+    )
+  end
+
   defp render_strategy(strategy, phase, _options) do
     inspect({strategy, phase})
   end

@@ -89,6 +89,8 @@ defmodule AshAuthentication.Jwt do
   def token_for_user(user, extra_claims \\ %{}, opts \\ []) do
     resource = user.__struct__
 
+    {purpose, opts} = Keyword.pop(opts, :purpose, :user)
+
     default_claims = Config.default_claims(resource, opts)
     signer = Config.token_signer(resource, opts)
 
@@ -105,21 +107,21 @@ defmodule AshAuthentication.Jwt do
       end
 
     with {:ok, token, claims} <- Joken.generate_and_sign(default_claims, extra_claims, signer),
-         :ok <- maybe_store_token(token, resource, user) do
+         :ok <- maybe_store_token(token, resource, user, purpose) do
       {:ok, token, claims}
     else
       {:error, _reason} -> :error
     end
   end
 
-  defp maybe_store_token(token, resource, user) do
+  defp maybe_store_token(token, resource, user, purpose) do
     if Info.authentication_tokens_store_all_tokens?(resource) do
       with {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
         TokenResource.Actions.store_token(
           token_resource,
           %{
             "token" => token,
-            "purpose" => "user"
+            "purpose" => to_string(purpose)
           },
           context: %{
             ash_authentication: %{

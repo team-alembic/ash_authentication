@@ -1,19 +1,19 @@
-defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
+defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
   @moduledoc """
-  Prepare a query for a password reset request.
+  Prepare a query for a magic link request.
 
   This preparation performs three jobs, one before the query executes and two
   after:
   1. it constraints the query to match the identity field passed to the action.
   2. if there is a user returned by the query, then
-    a. generate a reset token and
+    a. generate a magic link token and
     b. publish a notification.
 
   Always returns an empty result.
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
-  alias AshAuthentication.{Info, Strategy.Password}
+  alias AshAuthentication.{Info, Strategy.MagicLink}
   require Ash.Query
 
   @doc false
@@ -22,20 +22,16 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
   def prepare(query, _opts, _context) do
     strategy = Info.strategy_for_action!(query.resource, query.action.name)
 
-    if Enum.any?(strategy.resettable) do
-      identity_field = strategy.identity_field
-      identity = Query.get_argument(query, identity_field)
+    identity_field = strategy.identity_field
+    identity = Query.get_argument(query, identity_field)
 
-      query
-      |> Query.filter(ref(^identity_field) == ^identity)
-      |> Query.after_action(&after_action(&1, &2, strategy))
-    else
-      query
-    end
+    query
+    |> Query.filter(ref(^identity_field) == ^identity)
+    |> Query.after_action(&after_action(&1, &2, strategy))
   end
 
-  defp after_action(_query, [user], %{resettable: [%{sender: {sender, send_opts}}]} = strategy) do
-    case Password.reset_token_for(strategy, user) do
+  defp after_action(_query, [user], %{sender: {sender, send_opts}} = strategy) do
+    case MagicLink.request_token_for(strategy, user) do
       {:ok, token} -> sender.send(user, token, send_opts)
       _ -> nil
     end
@@ -43,5 +39,5 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
     {:ok, []}
   end
 
-  defp after_action(_query, _, _), do: {:ok, []}
+  defp after_action(_, _, _), do: {:ok, []}
 end

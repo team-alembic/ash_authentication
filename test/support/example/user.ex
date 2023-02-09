@@ -197,6 +197,16 @@ defmodule Example.User do
         case_sensitive?(false)
         name_field(:username)
       end
+
+      magic_link do
+        sender fn user, token, _opts ->
+          Logger.debug("Magic link request for #{user.username}, token #{inspect(token)}")
+        end
+      end
+    end
+
+    tokens do
+      store_all_tokens? true
     end
   end
 

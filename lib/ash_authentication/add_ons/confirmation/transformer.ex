@@ -18,7 +18,11 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   @spec transform(Confirmation.t(), map) ::
           {:ok, Confirmation.t() | map} | {:error, Exception.t()}
   def transform(strategy, dsl_state) do
-    with :ok <- validate_token_generation_enabled(dsl_state),
+    with :ok <-
+           validate_token_generation_enabled(
+             dsl_state,
+             "Token generation must be enabled for password resets to work."
+           ),
          :ok <- validate_monitor_fields(dsl_state, strategy),
          {:ok, dsl_state} <-
            maybe_build_action(

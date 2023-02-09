@@ -14,7 +14,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   """
   use Ash.Resource.Preparation
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
-  alias Ash.{Query, Resource.Preparation}
+  alias Ash.{Query, Resource, Resource.Preparation}
   require Ash.Query
 
   @doc false
@@ -81,7 +81,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   defp maybe_generate_token(record) do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
       {:ok, token, _claims} = Jwt.token_for_user(record)
-      %{record | __metadata__: Map.put(record.__metadata__, :token, token)}
+      Resource.put_metadata(record, :token, token)
     else
       record
     end

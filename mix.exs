@@ -60,8 +60,11 @@ defmodule AshAuthentication.MixProject do
           ],
           Strategies: [
             AshAuthentication.Strategy,
-            AshAuthentication.Strategy.Password,
-            AshAuthentication.Strategy.OAuth2
+            AshAuthentication.Strategy.Auth0,
+            AshAuthentication.Strategy.Github,
+            AshAuthentication.Strategy.MagicLink,
+            AshAuthentication.Strategy.OAuth2,
+            AshAuthentication.Strategy.Password
           ],
           "Add ons": [
             AshAuthentication.AddOn.Confirmation

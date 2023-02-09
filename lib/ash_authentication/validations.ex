@@ -111,16 +111,11 @@ defmodule AshAuthentication.Validations do
   @doc """
   Ensure that token generation is enabled for the resource.
   """
-  @spec validate_token_generation_enabled(Dsl.t()) :: :ok | {:error, Exception.t()}
-  def validate_token_generation_enabled(dsl_state) do
+  @spec validate_token_generation_enabled(Dsl.t(), binary) :: :ok | {:error, Exception.t()}
+  def validate_token_generation_enabled(dsl_state, message) do
     if AshAuthentication.Info.authentication_tokens_enabled?(dsl_state),
       do: :ok,
-      else:
-        {:error,
-         DslError.exception(
-           path: [:tokens],
-           message: "Token generation must be enabled for password resets to work."
-         )}
+      else: {:error, DslError.exception(path: [:tokens], message: message)}
   end
 
   @doc """
