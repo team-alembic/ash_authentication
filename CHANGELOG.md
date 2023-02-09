@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.9.0](https://github.com/team-alembic/ash_authentication/compare/v3.8.0...v3.9.0) (2023-02-09)
+
+
+
+
+### Features:
+
+* Add new "magic link" authentication strategy. (#184)
+
+### Bug Fixes:
+
+* validate uniqueness of strategy names. (#185)
+
+* resources can appear in multiple apis, so we need to uniq them here (#169)
+
+* put_add_on/2 was putting into strategies
+
+### Improvements:
+
+* Strategy.Custom: handle custom strategies as extensions. (#183)
+
+* improve error message for badly formed token secrets (#181)
+
+* add metadata declarations to actions that have a `token` (#164)
+
+* validate signing secret is a string (#163)
+
 ## [v3.8.0](https://github.com/team-alembic/ash_authentication/compare/v3.7.9...v3.8.0) (2023-02-09)
 
 
