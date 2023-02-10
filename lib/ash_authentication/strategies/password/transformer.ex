@@ -85,7 +85,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     end
   end
 
-  defp build_register_action(_dsl_state, strategy) do
+  defp build_register_action(dsl_state, strategy) do
     password_opts = [
       type: Type.String,
       allow_nil?: false,
