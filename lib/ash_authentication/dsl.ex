@@ -80,6 +80,16 @@ defmodule AshAuthentication.Dsl do
             action doesn't exist, one will be generated for you.
             """,
             default: :get_by_subject
+          ],
+          select_for_senders: [
+            type: {:list, :atom},
+            doc: """
+            A list of fields that we will ensure are selected whenever a sender will be invoked.
+            This is useful if using something like `ash_graphql` which by default only selects
+            what fields appear in the query, and if you are exposing these actions that way.
+            Defaults to `[:email]` if there is an `:email` attribute on the resource, and `[]`
+            otherwise.
+            """
           ]
         ],
         sections: [

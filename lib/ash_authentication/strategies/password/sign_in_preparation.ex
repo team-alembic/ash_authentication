@@ -27,6 +27,9 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
     query
     |> Query.filter(ref(^identity_field) == ^identity)
+    |> Query.before_action(fn query ->
+      Ash.Query.ensure_selected(query, [strategy.hashed_password_field])
+    end)
     |> Query.after_action(fn
       query, [record] when is_binary(:erlang.map_get(strategy.hashed_password_field, record)) ->
         password = Query.get_argument(query, strategy.password_field)
