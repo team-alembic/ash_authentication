@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.9.1](https://github.com/team-alembic/ash_authentication/compare/v3.9.0...v3.9.1) (2023-02-12)
+
+
+
+
+### Bug Fixes:
+
+* select `hashed_password` on sign in preparation
+
+* don't allow special purpose tokens to be used for sign in. (#191)
+
+### Improvements:
+
+* add select_for_senders (#189)
+
+* add select_for_senders
+
+* include metadata declaration on register action
+
 ## [v3.9.0](https://github.com/team-alembic/ash_authentication/compare/v3.8.0...v3.9.0) (2023-02-09)
 
 
