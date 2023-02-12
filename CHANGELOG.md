@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.9.2](https://github.com/team-alembic/ash_authentication/compare/v3.9.1...v3.9.2) (2023-02-12)
+
+
+
+
+### Bug Fixes:
+
+* Password.Transformer: don't force users to define a `hashed_password` argument to the register action. (#192)
+
 ## [v3.9.1](https://github.com/team-alembic/ash_authentication/compare/v3.9.0...v3.9.1) (2023-02-12)
 
 
