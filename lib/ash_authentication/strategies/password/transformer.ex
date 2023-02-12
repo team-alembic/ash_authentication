@@ -153,7 +153,6 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
 
   defp validate_register_action(dsl_state, strategy) do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.register_action_name),
-         :ok <- validate_allow_nil_input(action, strategy.hashed_password_field),
          :ok <- validate_password_argument(action, strategy.password_field, true),
          :ok <-
            validate_password_argument(
@@ -168,27 +167,6 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         Password.PasswordConfirmationValidation,
         strategy.confirmation_required?
       )
-    end
-  end
-
-  defp validate_allow_nil_input(action, field) do
-    allowed_nil_fields =
-      action
-      |> Map.get(:arguments, [])
-      |> Stream.filter(&(&1.allow_nil? == true))
-      |> Stream.map(& &1.name)
-      |> Stream.concat(Map.get(action, :allow_nil_input, []))
-      |> Enum.into(MapSet.new())
-
-    if MapSet.member?(allowed_nil_fields, field) do
-      :ok
-    else
-      {:error,
-       DslError.exception(
-         path: [:actions, :allow_nil_input],
-         message:
-           "Expected the action `#{inspect(action.name)}` to allow nil input for the field `#{inspect(field)}`"
-       )}
     end
   end
 
