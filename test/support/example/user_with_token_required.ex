@@ -1,6 +1,7 @@
 defmodule Example.UserWithTokenRequired do
   @moduledoc false
   use Ash.Resource, data_layer: AshPostgres.DataLayer, extensions: [AshAuthentication]
+  require Logger
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
@@ -32,6 +33,14 @@ defmodule Example.UserWithTokenRequired do
     strategies do
       password do
         identity_field :email
+
+        resettable do
+          sender fn user, token, _opts ->
+            Logger.debug(
+              "Password reset request for user #{user.username}, token #{inspect(token)}"
+            )
+          end
+        end
       end
     end
   end

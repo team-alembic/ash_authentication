@@ -1,7 +1,7 @@
 defmodule AshAuthentication.Plug.HelpersTest do
   @moduledoc false
   use DataCase, async: true
-  alias AshAuthentication.{Jwt, Plug.Helpers, TokenResource}
+  alias AshAuthentication.{Info, Jwt, Plug.Helpers, Strategy.Password, TokenResource}
   import Plug.Test, only: [conn: 3]
   alias Plug.Conn
 
@@ -106,6 +106,20 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       refute conn.assigns.current_user_with_token_required
     end
+
+    test "when the token is for another purpose it can't be used for sign in", %{conn: conn} do
+      user = build_user_with_token_required()
+
+      strategy = Info.strategy!(user.__struct__, :password)
+      {:ok, reset_token} = Password.reset_token_for(strategy, user)
+
+      conn =
+        conn
+        |> Conn.put_session("user_with_token_required_token", reset_token)
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      refute conn.assigns.current_user_with_token_required
+    end
   end
 
   describe "retrieve_from_bearer/2" do
@@ -159,6 +173,20 @@ defmodule AshAuthentication.Plug.HelpersTest do
       conn =
         conn
         |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      refute is_map_key(conn.assigns, :current_user_with_token_required)
+    end
+
+    test "when the token is for another purpose, it doesn't let them sign in", %{conn: conn} do
+      user = build_user()
+
+      strategy = Info.strategy!(user.__struct__, :password)
+      {:ok, reset_token} = Password.reset_token_for(strategy, user)
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{reset_token}")
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
       refute is_map_key(conn.assigns, :current_user_with_token_required)

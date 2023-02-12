@@ -75,7 +75,8 @@ defmodule AshAuthentication.Plug.Helpers do
 
         with token when is_binary(token) <-
                Conn.get_session(conn, "#{options.subject_name}_token"),
-             {:ok, %{"sub" => subject, "jti" => jti}, _} <- Jwt.verify(token, otp_app),
+             {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
+             when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app),
              {:ok, [_]} <-
                TokenResource.Actions.get_token(token_resource, %{
                  "jti" => jti,
@@ -116,7 +117,8 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, %{"sub" => subject, "jti" => jti}, resource} <- Jwt.verify(token, otp_app),
+      with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
+           when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app),
            :ok <- validate_token(resource, jti),
            {:ok, user} <- AshAuthentication.subject_to_user(subject, resource),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
