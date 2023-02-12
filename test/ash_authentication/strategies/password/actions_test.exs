@@ -129,6 +129,39 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert log =~ ~r/password reset request for user #{user.username}/i
     end
 
+    test "it selects required fields for senders using `select_for_senders`" do
+      user = build_user()
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+
+      log =
+        capture_log(fn ->
+          params = %{"username" => user.username}
+          options = []
+          api = Info.authentication_api!(strategy.resource)
+          resettable = strategy.resettable |> Enum.at(0)
+
+          result =
+            strategy.resource
+            |> Ash.Query.new()
+            |> Ash.Query.set_context(%{
+              private: %{
+                ash_authentication?: true
+              }
+            })
+            |> Ash.Query.for_read(resettable.request_password_reset_action_name, params)
+            |> Ash.Query.select([])
+            |> api.read(options)
+            |> case do
+              {:ok, _} -> :ok
+              {:error, reason} -> {:error, reason}
+            end
+
+          assert result == :ok
+        end)
+
+      assert log =~ ~r/password reset request for user #{user.username}/i
+    end
+
     test "it doesn't generate a reset token when no matching user exists and the strategy is resettable" do
       {:ok, strategy} = Info.strategy(Example.User, :password)
 

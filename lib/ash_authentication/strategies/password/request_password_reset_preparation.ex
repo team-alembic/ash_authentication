@@ -25,9 +25,13 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
     if Enum.any?(strategy.resettable) do
       identity_field = strategy.identity_field
       identity = Query.get_argument(query, identity_field)
+      select_for_senders = Info.authentication_select_for_senders!(query.resource)
 
       query
       |> Query.filter(ref(^identity_field) == ^identity)
+      |> Query.before_action(fn query ->
+        Ash.Query.ensure_selected(query, select_for_senders)
+      end)
       |> Query.after_action(&after_action(&1, &2, strategy))
     else
       query

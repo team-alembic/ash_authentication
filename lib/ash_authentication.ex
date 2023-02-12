@@ -124,6 +124,7 @@ defmodule AshAuthentication do
       ),
     transformers: [
       AshAuthentication.Transformer,
+      AshAuthentication.Transformer.SetSelectForSenders,
       AshAuthentication.Strategy.Custom.Transformer
     ],
     verifiers: [

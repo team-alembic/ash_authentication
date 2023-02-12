@@ -130,6 +130,8 @@ defmodule Example.User do
   authentication do
     api Example
 
+    select_for_senders([:username])
+
     tokens do
       enabled? true
       store_all_tokens? true

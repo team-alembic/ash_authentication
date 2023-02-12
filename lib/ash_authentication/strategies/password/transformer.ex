@@ -85,7 +85,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     end
   end
 
-  defp build_register_action(_dsl_state, strategy) do
+  defp build_register_action(dsl_state, strategy) do
     password_opts = [
       type: Type.String,
       allow_nil?: false,
@@ -129,10 +129,24 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         )
       ])
 
+    metadata =
+      if AshAuthentication.Info.authentication_tokens_enabled?(dsl_state) do
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :create], :metadata,
+            name: :token,
+            type: :string,
+            allow_nil?: false
+          )
+        ]
+      else
+        []
+      end
+
     Transformer.build_entity(Resource.Dsl, [:actions], :create,
       name: strategy.register_action_name,
       arguments: arguments,
       changes: changes,
+      metadata: metadata,
       allow_nil_input: [strategy.hashed_password_field]
     )
   end
