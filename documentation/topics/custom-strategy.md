@@ -249,7 +249,7 @@ the resource.
   alias AshAuthentication.Errors.AuthenticationFailed
   require Ash.Query
 
-  def action(strategy, :sign_in, params, options) when strategy.case_sensitive? do
+  def action(strategy, :sign_in, params, options) do
     name_field = strategy.name_field
     name = Map.get(params, to_string(name_field))
     api = AshAuthentication.Info.authentication_api!(strategy.resource)
