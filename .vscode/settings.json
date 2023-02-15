@@ -3,7 +3,10 @@
     "defimpl",
     "defstruct",
     "ilike",
+    "Joken",
     "Marties",
-    "moduledocs"
+    "moduledocs",
+    "oidc",
+    "unguessable"
   ]
 }

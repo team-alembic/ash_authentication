@@ -219,27 +219,39 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
-  defstruct client_id: nil,
-            site: nil,
-            auth_method: :client_secret_post,
-            client_secret: nil,
-            authorize_url: nil,
-            token_url: nil,
-            user_url: nil,
-            private_key: nil,
-            redirect_uri: nil,
-            authorization_params: [],
-            registration_enabled?: true,
-            register_action_name: nil,
-            sign_in_action_name: nil,
-            identity_resource: false,
-            identity_relationship_name: :identities,
-            identity_relationship_user_id_attribute: :user_id,
-            provider: :oauth2,
-            name: nil,
-            resource: nil,
-            icon: nil,
-            assent_strategy: Assent.Strategy.OAuth2
+  @struct_fields [
+    assent_strategy: Assent.Strategy.OAuth2,
+    auth_method: :client_secret_post,
+    authorization_params: [],
+    authorize_url: nil,
+    client_authentication_method: nil,
+    client_id: nil,
+    client_secret: nil,
+    icon: nil,
+    id_token_signed_response_alg: nil,
+    id_token_ttl_seconds: nil,
+    identity_relationship_name: :identities,
+    identity_relationship_user_id_attribute: :user_id,
+    identity_resource: false,
+    name: nil,
+    nonce: false,
+    openid_configuration_uri: nil,
+    openid_configuration: nil,
+    private_key: nil,
+    provider: :oauth2,
+    redirect_uri: nil,
+    register_action_name: nil,
+    registration_enabled?: true,
+    resource: nil,
+    sign_in_action_name: nil,
+    site: nil,
+    strategy_module: __MODULE__,
+    token_url: nil,
+    trusted_audiences: nil,
+    user_url: nil
+  ]
+
+  defstruct @struct_fields
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}
 
@@ -248,32 +260,40 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   @type secret :: nil | String.t() | {module, keyword}
 
   @type t :: %OAuth2{
-          client_id: secret,
-          site: secret,
+          assent_strategy: module,
           auth_method:
             nil
             | :client_secret_basic
             | :client_secret_post
             | :client_secret_jwt
             | :private_key_jwt,
-          client_secret: secret,
-          authorize_url: secret,
-          token_url: secret,
-          user_url: secret,
-          private_key: secret,
-          redirect_uri: secret,
           authorization_params: keyword,
-          registration_enabled?: boolean,
-          register_action_name: atom,
-          sign_in_action_name: atom,
-          identity_resource: module | false,
+          authorize_url: secret,
+          client_authentication_method: nil | atom,
+          client_id: secret,
+          client_secret: secret,
+          icon: nil | atom,
+          id_token_signed_response_alg: nil | binary,
+          id_token_ttl_seconds: nil | pos_integer(),
           identity_relationship_name: atom,
           identity_relationship_user_id_attribute: atom,
-          provider: atom,
+          identity_resource: module | false,
           name: atom,
+          nonce: boolean | secret,
+          openid_configuration_uri: nil | binary,
+          openid_configuration: nil | map,
+          private_key: secret,
+          provider: atom,
+          redirect_uri: secret,
+          register_action_name: atom,
+          registration_enabled?: boolean,
           resource: module,
-          icon: nil | atom,
-          assent_strategy: module
+          sign_in_action_name: atom,
+          site: secret,
+          strategy_module: module,
+          token_url: secret,
+          trusted_audiences: nil | [binary],
+          user_url: secret
         }
 
   defdelegate dsl, to: Dsl

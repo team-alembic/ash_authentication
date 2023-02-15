@@ -13,7 +13,7 @@ defmodule AshAuthentication.Strategy.Auth0.Dsl do
       describe: """
       Provides a pre-configured authentication strategy for [Auth0](https://auth0.com/).
 
-      This strategy is built using `:oauth2` strategy, and thus provides all the same
+      This strategy is built using the `:oauth2` strategy, and thus provides all the same
       configuration options should you need them.
 
       For more information see the [Auth0 Quick Start Guide](/documentation/tutorials/auth0-quickstart.md)

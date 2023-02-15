@@ -284,6 +284,16 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           `user_id_attribute_name` option of the provider identity.
           """,
           default: :user_id
+        ],
+        icon: [
+          type: :atom,
+          doc: """
+          The name of an icon to use in any potential UI.
+
+          This is a *hint* for UI generators to use, and not in any way canonical.
+          """,
+          required: false,
+          default: :oauth2
         ]
       ],
       auto_set_fields: [assent_strategy: Assent.Strategy.OAuth2]

@@ -107,6 +107,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
             sender: nil,
             sign_in_action_name: nil,
             single_use_token?: true,
+            strategy_module: __MODULE__,
             token_lifetime: 10,
             token_param_name: :token
 
@@ -123,6 +124,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
           sender: {module, keyword},
           single_use_token?: boolean,
           sign_in_action_name: atom,
+          strategy_module: module,
           token_lifetime: pos_integer(),
           token_param_name: atom
         }
