@@ -55,7 +55,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   end
 
   defp maybe_update_identity(user, _query, strategy) when is_falsy(strategy.identity_resource),
-    do: user
+    do: {:ok, user}
 
   defp maybe_update_identity(user, query, strategy) do
     strategy.identity_resource
