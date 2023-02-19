@@ -79,6 +79,14 @@ defmodule Example.User do
       filter expr(username == get_path(^arg(:user_info), [:nickname]))
     end
 
+    read :sign_in_with_oauth2_without_identity do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
+
+      filter expr(username == get_path(^arg(:user_info), [:nickname]))
+    end
+
     create :register_with_github do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
@@ -177,6 +185,19 @@ defmodule Example.User do
         authorization_params scope: "openid profile email"
         auth_method :client_secret_post
         identity_resource Example.UserIdentity
+      end
+
+      oauth2 :oauth2_without_identity do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        site &get_config/2
+        authorize_url &get_config/2
+        token_url &get_config/2
+        user_url &get_config/2
+        authorization_params scope: "openid profile email"
+        auth_method :client_secret_post
+        registration_enabled? false
       end
 
       auth0 do
