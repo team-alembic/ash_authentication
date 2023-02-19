@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.9.3](https://github.com/team-alembic/ash_authentication/compare/v3.9.2...v3.9.3) (2023-02-19)
+
+
+
+
+### Bug Fixes:
+
+* sign in preparation without identity resource (#198)
+
 ## [v3.9.2](https://github.com/team-alembic/ash_authentication/compare/v3.9.1...v3.9.2) (2023-02-12)
 
 
