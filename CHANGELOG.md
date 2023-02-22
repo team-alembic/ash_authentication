@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.9.4](https://github.com/team-alembic/ash_authentication/compare/v3.9.3...v3.9.4) (2023-02-22)
+
+
+
+
+### Improvements:
+
+* PasswordConfirmationValidation: allow `strategy_name` to be passed as an option. (#208)
+
 ## [v3.9.3](https://github.com/team-alembic/ash_authentication/compare/v3.9.2...v3.9.3) (2023-02-19)
 
 
