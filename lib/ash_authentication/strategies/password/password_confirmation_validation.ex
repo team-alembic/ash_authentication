@@ -37,8 +37,8 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
   """
   @impl true
   @spec validate(Changeset.t(), keyword) :: :ok | {:error, String.t() | Exception.t()}
-  def validate(changeset, _options) do
-    case find_strategy(changeset) do
+  def validate(changeset, options) do
+    case find_strategy(changeset, options) do
       {:ok, %{confirmation_required?: true} = strategy} ->
         validate_password_confirmation(changeset, strategy)
 
@@ -68,9 +68,10 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
     end
   end
 
-  defp find_strategy(changeset) do
+  defp find_strategy(changeset, options) do
     with :error <- Info.strategy_for_action(changeset.resource, changeset.action.name),
-         :error <- Map.fetch(changeset.context, :strategy_name) do
+         :error <- Map.fetch(changeset.context, :strategy_name),
+         :error <- Keyword.fetch(options, :strategy_name) do
       :error
     else
       {:ok, strategy_name} when is_atom(strategy_name) ->
