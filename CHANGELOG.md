@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.9.5](https://github.com/team-alembic/ash_authentication/compare/v3.9.4...v3.9.5) (2023-02-23)
+
+
+
+
+### Improvements:
+
+* support multiple otp apps w/resources (#209)
+
 ## [v3.9.4](https://github.com/team-alembic/ash_authentication/compare/v3.9.3...v3.9.4) (2023-02-22)
 
 
