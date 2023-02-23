@@ -154,14 +154,18 @@ defmodule AshAuthentication do
       [Example.User, Example.UserWithTokenRequired]
 
   """
-  @spec authenticated_resources(atom) :: [Resource.t()]
+  @spec authenticated_resources(atom | [atom]) :: [Resource.t()]
   def authenticated_resources(otp_app) do
     otp_app
-    |> Application.get_env(:ash_apis, [])
-    |> Stream.flat_map(&Api.Info.resources(&1))
-    |> Stream.uniq()
-    |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
-    |> Enum.to_list()
+    |> List.wrap()
+    |> Enum.flat_map(fn otp_app ->
+      otp_app
+      |> Application.get_env(:ash_apis, [])
+      |> Stream.flat_map(&Api.Info.resources(&1))
+      |> Stream.uniq()
+      |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
+      |> Enum.to_list()
+    end)
   end
 
   @doc """
