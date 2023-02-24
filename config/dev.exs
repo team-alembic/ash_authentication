@@ -5,7 +5,10 @@ config :git_ops,
   changelog_file: "CHANGELOG.md",
   repository_url: "https://github.com/team-alembic/ash_authentication",
   manage_mix_version?: true,
-  manage_readme_version: "documentation/tutorials/getting-started-with-authentication.md",
+  manage_readme_version: [
+    "README.md",
+    "documentation/tutorials/getting-started-with-authentication.md"
+  ],
   version_tag_prefix: "v"
 
 config :ash_authentication, DevServer, start?: true, port: 4000
