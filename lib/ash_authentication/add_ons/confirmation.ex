@@ -34,11 +34,18 @@ defmodule AshAuthentication.AddOn.Confirmation do
       add_ons do
         confirmation :confirm do
           monitor_fields [:email]
+          sender MyApp.ConfirmationSender
         end
       end
 
       strategies do
         # ...
+      end
+    end
+
+    identities do
+      identity :email, [:email] do
+        eager_check_with MyApp.Accounts
       end
     end
   end
