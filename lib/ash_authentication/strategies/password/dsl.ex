@@ -98,6 +98,15 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           """,
           required: false
         ],
+        registration_enabled?: [
+          type: :boolean,
+          doc: """
+          If you do not want new users to be able to register using this
+          strategy, set this to false.
+          """,
+          required: false,
+          default: true
+        ],
         sign_in_action_name: [
           type: :atom,
           doc: """
@@ -107,6 +116,15 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           with `sign_in_with_`.
           """,
           required: false
+        ],
+        sign_in_enabled?: [
+          type: :boolean,
+          doc: """
+          If you do not want new users to be able to sign in using this
+          strategy, set this to false.
+          """,
+          required: false,
+          default: true
         ]
       ],
       entities: [

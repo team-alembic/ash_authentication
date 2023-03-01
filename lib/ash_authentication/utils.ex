@@ -71,6 +71,15 @@ defmodule AshAuthentication.Utils do
   def maybe_append(collection, _test, element), do: Enum.concat(collection, [element])
 
   @doc """
+  Optionally concat a collection to another collection.
+
+  When `test` is truthy, concat the collections together.
+  """
+  @spec maybe_concat(Enum.t(), test :: any, Enum.t()) :: Enum.t()
+  def maybe_concat(collection, test, _new_elements) when is_falsy(test), do: collection
+  def maybe_concat(collection, _test, new_elements), do: Enum.concat(collection, new_elements)
+
+  @doc """
   Used within transformers to optionally build actions as needed.
   """
   @spec maybe_build_action(Dsl.t(), atom, (map -> map)) :: {:ok, atom | map} | {:error, any}
