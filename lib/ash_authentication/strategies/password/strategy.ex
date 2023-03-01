@@ -11,6 +11,8 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
   alias AshAuthentication.{Info, Strategy, Strategy.Password}
   alias Plug.Conn
 
+  import AshAuthentication.Utils
+
   @typedoc """
   The possible request phases for the password strategy.
 
@@ -24,8 +26,12 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
 
   @doc false
   @spec phases(Password.t()) :: [phase]
-  def phases(%{resettable: []}), do: [:register, :sign_in]
-  def phases(_strategy), do: [:register, :sign_in, :reset_request, :reset]
+  def phases(strategy) do
+    []
+    |> maybe_append(strategy.registration_enabled?, :register)
+    |> maybe_append(strategy.sign_in_enabled?, :sign_in)
+    |> maybe_concat(Enum.any?(strategy.resettable), [:reset_request, :reset])
+  end
 
   @doc false
   @spec actions(Password.t()) :: [phase]

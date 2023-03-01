@@ -14,7 +14,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   """
   @spec sign_in(Password.t(), map, keyword) ::
           {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
-  def sign_in(%Password{} = strategy, params, options) do
+  def sign_in(%Password{} = strategy, params, options) when strategy.sign_in_enabled? do
     api = Info.authentication_api!(strategy.resource)
 
     strategy.resource
@@ -68,11 +68,24 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     end
   end
 
+  def sign_in(%Password{} = strategy, _params, _options) do
+    {:error,
+     Errors.AuthenticationFailed.exception(
+       caused_by: %{
+         module: __MODULE__,
+         strategy: strategy,
+         action: :sign_in,
+         message: "Attempt to sign in with sign in disabled."
+       }
+     )}
+  end
+
   @doc """
   Attempt to register a new user.
   """
   @spec register(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
-  def register(%Password{} = strategy, params, options) do
+  def register(%Password{} = strategy, params, options)
+      when strategy.registration_enabled? == true do
     api = Info.authentication_api!(strategy.resource)
 
     strategy.resource
@@ -84,6 +97,18 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     })
     |> Changeset.for_create(strategy.register_action_name, params)
     |> api.create(options)
+  end
+
+  def register(%Password{} = strategy, _params, _options) do
+    {:error,
+     Errors.AuthenticationFailed.exception(
+       caused_by: %{
+         module: __MODULE__,
+         strategy: strategy,
+         action: :register,
+         message: "Attempt to register a new user with registration disabled."
+       }
+     )}
   end
 
   @doc """

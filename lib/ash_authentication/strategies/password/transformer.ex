@@ -23,7 +23,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
          strategy <-
            maybe_set_field_lazy(strategy, :register_action_name, &:"register_with_#{&1.name}"),
          {:ok, dsl_state} <-
-           maybe_build_action(
+           maybe_maybe_build_action(
+             strategy.registration_enabled?,
              dsl_state,
              strategy.register_action_name,
              &build_register_action(&1, strategy)
@@ -32,7 +33,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
          strategy <-
            maybe_set_field_lazy(strategy, :sign_in_action_name, &:"sign_in_with_#{&1.name}"),
          {:ok, dsl_state} <-
-           maybe_build_action(
+           maybe_maybe_build_action(
+             strategy.sign_in_enabled?,
              dsl_state,
              strategy.sign_in_action_name,
              &build_sign_in_action(&1, strategy)
@@ -151,7 +153,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     )
   end
 
-  defp validate_register_action(dsl_state, strategy) do
+  defp validate_register_action(dsl_state, strategy)
+       when strategy.registration_enabled? == true do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.register_action_name),
          :ok <- validate_password_argument(action, strategy.password_field, true),
          :ok <-
@@ -169,6 +172,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       )
     end
   end
+
+  defp validate_register_action(_dsl_state, _strategy), do: :ok
 
   defp validate_password_argument(action, field, true) do
     with :ok <- validate_action_argument_option(action, field, :type, [Ash.Type.String]) do
@@ -228,7 +233,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     )
   end
 
-  defp validate_sign_in_action(dsl_state, strategy) do
+  defp validate_sign_in_action(dsl_state, strategy) when strategy.sign_in_enabled? == true do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
          :ok <- validate_identity_argument(dsl_state, action, strategy.identity_field),
          :ok <- validate_password_argument(action, strategy.password_field, true) do
@@ -236,10 +241,17 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     end
   end
 
+  defp validate_sign_in_action(_dsl_state, _strategy), do: :ok
+
   defp validate_identity_argument(dsl_state, action, identity_field) do
     identity_attribute = Ash.Resource.Info.attribute(dsl_state, identity_field)
     validate_action_argument_option(action, identity_field, :type, [identity_attribute.type])
   end
+
+  defp maybe_maybe_build_action(true, dsl_state, action_name, builder),
+    do: maybe_build_action(dsl_state, action_name, builder)
+
+  defp maybe_maybe_build_action(false, dsl_state, _action_name, _builder), do: {:ok, dsl_state}
 
   defp maybe_transform_resettable(dsl_state, %{resettable: []} = strategy),
     do: {:ok, dsl_state, strategy}
