@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.9.6](https://github.com/team-alembic/ash_authentication/compare/v3.9.5...v3.9.6) (2023-03-01)
+
+
+
+
+### Improvements:
+
+* allow registration and sign in to be disabled on password strategies. (#218)
+
 ## [v3.9.5](https://github.com/team-alembic/ash_authentication/compare/v3.9.4...v3.9.5) (2023-02-23)
 
 
