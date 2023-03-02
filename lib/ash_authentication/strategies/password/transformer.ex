@@ -144,8 +144,14 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         []
       end
 
+    accept =
+      [strategy.identity_field]
+      |> Enum.concat(List.wrap(strategy.register_action_accept))
+      |> Enum.uniq()
+
     Transformer.build_entity(Resource.Dsl, [:actions], :create,
       name: strategy.register_action_name,
+      accept: accept,
       arguments: arguments,
       changes: changes,
       metadata: metadata,
