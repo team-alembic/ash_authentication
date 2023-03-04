@@ -179,6 +179,9 @@ defmodule AshAuthentication.MixProject do
         "hex.audit",
         "test"
       ],
+      "spark.formatter": [
+        "spark.formatter --extensions AshAuthentication,AshAuthentication.TokenResource,AshAuthentication.UserIdentity,AshAuthentication.Strategy.MagicLink,AshAuthentication.AddOn.Confirmation,AshAuthentication.Strategy.Auth0,AshAuthentication.Strategy.Github,AshAuthentication.Strategy.OAuth2,AshAuthentication.Strategy.Password"
+      ],
       docs: ["docs", "ash.replace_doc_links"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]

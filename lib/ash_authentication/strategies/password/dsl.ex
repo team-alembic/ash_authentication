@@ -72,6 +72,11 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           """,
           default: true
         ],
+        register_action_accept: [
+          type: {:list, :atom},
+          default: [],
+          doc: "A list of additional fields to be accepted in the register action."
+        ],
         password_field: [
           type: :atom,
           doc: """

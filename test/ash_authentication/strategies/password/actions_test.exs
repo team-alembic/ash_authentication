@@ -78,6 +78,59 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert claims["sub"] =~ "user?id=#{user.id}"
     end
 
+    test "it can register a new user with additional accepted fields" do
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+
+      username = username()
+      password = password()
+
+      assert {:ok, user} =
+               Actions.register(
+                 strategy,
+                 %{
+                   "username" => username,
+                   "password" => password,
+                   "password_confirmation" => password,
+                   "extra_stuff" => "Extra"
+                 },
+                 []
+               )
+
+      assert user.extra_stuff == "Extra"
+
+      assert strategy.hash_provider.valid?(password, user.hashed_password)
+
+      assert {:ok, claims} = Jwt.peek(user.__metadata__.token)
+      assert claims["sub"] =~ "user?id=#{user.id}"
+    end
+
+    test "it cant set unaccepted fields" do
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+
+      username = username()
+      password = password()
+
+      assert {:error,
+              %Ash.Error.Invalid{
+                errors: [
+                  %Ash.Error.Changes.InvalidAttribute{
+                    message: "cannot be changed",
+                    field: :not_accepted_extra_stuff
+                  }
+                ]
+              }} =
+               Actions.register(
+                 strategy,
+                 %{
+                   "username" => username,
+                   "password" => password,
+                   "password_confirmation" => password,
+                   "not_accepted_extra_stuff" => "Extra"
+                 },
+                 []
+               )
+    end
+
     test "it returns an error if the user already exists" do
       user = build_user()
       {:ok, strategy} = Info.strategy(Example.User, :password)

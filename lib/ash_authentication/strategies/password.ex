@@ -106,6 +106,7 @@ defmodule AshAuthentication.Strategy.Password do
             registration_enabled?: true,
             sign_in_enabled?: true,
             resettable: [],
+            register_action_accept: [],
             name: nil,
             provider: :password,
             resource: nil
@@ -130,6 +131,7 @@ defmodule AshAuthentication.Strategy.Password do
           confirmation_required?: boolean,
           password_field: atom,
           password_confirmation_field: atom,
+          register_action_accept: [atom],
           register_action_name: atom,
           sign_in_action_name: atom,
           registration_enabled?: boolean,

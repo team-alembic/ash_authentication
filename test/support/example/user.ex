@@ -23,6 +23,8 @@ defmodule Example.User do
     uuid_primary_key :id, writable?: true
 
     attribute :username, :ci_string, allow_nil?: false
+    attribute :extra_stuff, :string
+    attribute :not_accepted_extra_stuff, :string
     attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, private?: true
 
     create_timestamp :created_at
@@ -165,6 +167,8 @@ defmodule Example.User do
 
     strategies do
       password do
+        register_action_accept [:extra_stuff]
+
         resettable do
           sender fn user, token, _opts ->
             Logger.debug(

@@ -72,17 +72,19 @@ defmodule DataCase do
   def build_user(attrs \\ []) do
     password = password()
 
-    attrs =
+    {force_change_attrs, attrs} =
       attrs
       |> Map.new()
       |> Map.put_new(:username, username())
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
+      |> Map.split([:id])
 
     user =
       Example.User
       |> Ash.Changeset.new()
       |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.Changeset.force_change_attributes(force_change_attrs)
       |> Example.create!()
 
     attrs
