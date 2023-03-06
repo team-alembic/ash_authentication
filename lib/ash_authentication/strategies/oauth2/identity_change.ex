@@ -29,20 +29,22 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
   defp do_change(changeset, strategy) do
     changeset
     |> Changeset.after_action(fn changeset, user ->
-      strategy.identity_resource
-      |> UserIdentity.Actions.upsert(%{
-        user_info: Changeset.get_argument(changeset, :user_info),
-        oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens),
-        strategy: Strategy.name(strategy),
-        user_id: user.id
-      })
-      |> case do
-        {:ok, _identity} ->
-          user
-          |> changeset.api.load(strategy.identity_relationship_name)
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, user_id_attribute_name} <-
+             strategy.identity_resource
+             |> UserIdentity.Info.user_identity_user_id_attribute_name(),
+           {:ok, _identity} <-
+             strategy.identity_resource
+             |> UserIdentity.Actions.upsert(%{
+               user_info: Changeset.get_argument(changeset, :user_info),
+               oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens),
+               strategy: Strategy.name(strategy),
+               "#{user_id_attribute_name}": user.id
+             }) do
+        user
+        |> changeset.api.load(strategy.identity_relationship_name)
+      else
+        :error -> :error
+        {:error, reason} -> {:error, reason}
       end
     end)
   end
