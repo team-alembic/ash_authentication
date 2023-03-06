@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.10.1](https://github.com/team-alembic/ash_authentication/compare/v3.10.0...v3.10.1) (2023-03-06)
+
+
+
+
+### Bug Fixes:
+
+* fix failing JWT tests because of bad version regex.
+
 ## [v3.10.0](https://github.com/team-alembic/ash_authentication/compare/v3.9.6...v3.10.0) (2023-03-04)
 ### Breaking Changes:
 
