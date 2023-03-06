@@ -40,7 +40,7 @@ defmodule AshAuthentication.JwtTest do
       assert {:ok, _} = Version.parse_requirement(claims["aud"])
       assert claims["exp"] > now
       assert_in_delta(claims["iat"], now, 1.5)
-      assert claims["iss"] =~ ~r/^AshAuthentication v\d\.\d\.\d$/
+      assert claims["iss"] =~ ~r/^AshAuthentication v\d+\.\d+\.\d+$/
       assert claims["jti"] =~ ~r/^[0-9a-z]+$/
       assert_in_delta(claims["nbf"], now, 1.5)
       assert claims["sub"] == "user?id=#{user.id}"
