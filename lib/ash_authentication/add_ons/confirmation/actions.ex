@@ -24,7 +24,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
     with {:ok, api} <- Info.authentication_api(strategy.resource),
          {:ok, token} <- Map.fetch(params, "confirm"),
          {:ok, %{"sub" => subject}, _} <- Jwt.verify(token, strategy.resource),
-         {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource) do
+         {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource, opts) do
       user
       |> Changeset.new()
       |> Changeset.set_context(%{

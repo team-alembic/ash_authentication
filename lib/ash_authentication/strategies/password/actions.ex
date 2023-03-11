@@ -153,7 +153,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       ) do
     with {:ok, token} <- Map.fetch(params, "reset_token"),
          {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, strategy.resource),
-         {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
+         {:ok, user} <- AshAuthentication.subject_to_user(subject, resource, options) do
       api = Info.authentication_api!(resource)
 
       user
