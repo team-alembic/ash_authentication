@@ -15,7 +15,7 @@ Bring in the `ash_authentication` dependency:
 defp deps()
   [
     # ...
-    {:ash_authentication, "~> 3.10.2"}
+    {:ash_authentication, "~> 3.10.3"}
   ]
 end
 ```

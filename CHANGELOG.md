@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.10.3](https://github.com/team-alembic/ash_authentication/compare/v3.10.2...v3.10.3) (2023-03-12)
+
+
+
+
+### Improvements:
+
+* use tenant in `retrieve_from_session/3` (#229)
+
+* use tenant in `retrieve_from_session/3`
+
 ## [v3.10.2](https://github.com/team-alembic/ash_authentication/compare/v3.10.1...v3.10.2) (2023-03-06)
 
 
