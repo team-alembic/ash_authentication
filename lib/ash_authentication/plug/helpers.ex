@@ -26,9 +26,11 @@ defmodule AshAuthentication.Plug.Helpers do
 
   @doc """
   Given a list of subjects, turn as many as possible into users.
+
+  Opts are forwarded to `AshAuthentication.subject_to_user/2`
   """
-  @spec load_subjects([AshAuthentication.subject()], module) :: map
-  def load_subjects(subjects, otp_app) when is_list(subjects) do
+  @spec load_subjects([AshAuthentication.subject()], module, opts :: Keyword.t()) :: map
+  def load_subjects(subjects, otp_app, opts \\ []) when is_list(subjects) do
     resources =
       otp_app
       |> AshAuthentication.authenticated_resources()
@@ -40,7 +42,7 @@ defmodule AshAuthentication.Plug.Helpers do
       subject = URI.parse(subject)
 
       with {:ok, resource} <- Map.fetch(resources, subject.path),
-           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource),
+           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource, opts),
            {:ok, subject_name} <- Info.authentication_subject_name(resource) do
         current_subject_name = current_subject_name(subject_name)
 
@@ -78,11 +80,18 @@ defmodule AshAuthentication.Plug.Helpers do
              {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
              when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app),
              {:ok, [_]} <-
-               TokenResource.Actions.get_token(token_resource, %{
-                 "jti" => jti,
-                 "purpose" => "user"
-               }),
-             {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
+               TokenResource.Actions.get_token(
+                 token_resource,
+                 %{
+                   "jti" => jti,
+                   "purpose" => "user"
+                 },
+                 tenant: Ash.PlugHelpers.get_tenant(conn)
+               ),
+             {:ok, user} <-
+               AshAuthentication.subject_to_user(subject, resource,
+                 tenant: Ash.PlugHelpers.get_tenant(conn)
+               ) do
           Conn.assign(conn, current_subject_name, user)
         else
           _ -> Conn.assign(conn, current_subject_name, nil)
@@ -92,7 +101,10 @@ defmodule AshAuthentication.Plug.Helpers do
         current_subject_name = current_subject_name(options.subject_name)
 
         with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
-             {:ok, user} <- AshAuthentication.subject_to_user(subject, resource) do
+             {:ok, user} <-
+               AshAuthentication.subject_to_user(subject, resource,
+                 tenant: Ash.PlugHelpers.get_tenant(conn)
+               ) do
           Conn.assign(conn, current_subject_name, user)
         else
           _ ->
@@ -120,7 +132,10 @@ defmodule AshAuthentication.Plug.Helpers do
       with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
            when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app),
            :ok <- validate_token(resource, jti),
-           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource),
+           {:ok, user} <-
+             AshAuthentication.subject_to_user(subject, resource,
+               tenant: Ash.PlugHelpers.get_tenant(conn)
+             ),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do
         conn
