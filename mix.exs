@@ -152,7 +152,7 @@ defmodule AshAuthentication.MixProject do
       {:plug, "~> 1.13"},
       {:assent, "~> 0.2"},
       {:mint, "~> 1.4"},
-      {:castore, "~> 0.1"},
+      {:castore, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 0.21", only: [:dev, :test]},
