@@ -109,6 +109,8 @@ defmodule AshAuthentication.Strategy.Password do
             register_action_accept: [],
             name: nil,
             provider: :password,
+            sign_in_tokens_enabled?: false,
+            sign_in_token_lifetime: 60,
             resource: nil
 
   alias Ash.Resource
@@ -135,8 +137,10 @@ defmodule AshAuthentication.Strategy.Password do
           register_action_name: atom,
           sign_in_action_name: atom,
           registration_enabled?: boolean,
+          sign_in_tokens_enabled?: boolean,
           sign_in_enabled?: boolean,
           resettable: [Resettable.t()],
+          sign_in_token_lifetime: pos_integer,
           name: atom,
           provider: atom,
           resource: module

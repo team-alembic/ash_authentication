@@ -27,6 +27,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
     query
     |> Query.filter(ref(^identity_field) == ^identity)
+    |> check_sign_in_token_configuration(strategy)
     |> Query.before_action(fn query ->
       Ash.Query.ensure_selected(query, [strategy.hashed_password_field])
     end)
@@ -38,10 +39,19 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
              password,
              Map.get(record, strategy.hashed_password_field)
            ),
-           do: {:ok, [maybe_generate_token(record)]},
+           do:
+             {:ok,
+              [
+                maybe_generate_token(
+                  query.context[:token_type] || :user,
+                  record,
+                  strategy
+                )
+              ]},
            else:
              {:error,
               AuthenticationFailed.exception(
+                strategy: strategy,
                 query: query,
                 caused_by: %{
                   module: __MODULE__,
@@ -56,6 +66,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
         {:error,
          AuthenticationFailed.exception(
+           strategy: strategy,
            query: query,
            caused_by: %{
              module: __MODULE__,
@@ -70,6 +81,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
         {:error,
          AuthenticationFailed.exception(
+           strategy: strategy,
            query: query,
            caused_by: %{
              module: __MODULE__,
@@ -81,9 +93,30 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     end)
   end
 
-  defp maybe_generate_token(record) do
+  defp check_sign_in_token_configuration(query, strategy)
+       when query.context.token_type == :sign_in and not strategy.sign_in_tokens_enabled? do
+    Ash.Query.add_error(
+      query,
+      Ash.Error.Unknown.exception(
+        message: """
+        Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
+        does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
+        """
+      )
+    )
+  end
+
+  defp check_sign_in_token_configuration(query, _) do
+    query
+  end
+
+  defp maybe_generate_token(purpose, record, strategy) when purpose in [:user, :sign_in] do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
-      {:ok, token, _claims} = Jwt.token_for_user(record)
+      {:ok, token, _claims} =
+        Jwt.token_for_user(record, %{"purpose" => to_string(purpose)},
+          token_lifetime: strategy.sign_in_token_lifetime
+        )
+
       Resource.put_metadata(record, :token, token)
     else
       record

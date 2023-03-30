@@ -60,12 +60,21 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidation do
       if strategy.hash_provider.valid?(password, hashed_password) do
         :ok
       else
-        {:error, AuthenticationFailed.exception(changeset: changeset)}
+        {:error,
+         AuthenticationFailed.exception(
+           strategy: strategy,
+           changeset: changeset
+         )}
       end
     else
       :error ->
         strategy.hash_provider.simulate()
-        {:error, AuthenticationFailed.exception(changeset: changeset)}
+
+        {:error,
+         AuthenticationFailed.exception(
+           strategy: strategy,
+           changeset: changeset
+         )}
     end
   end
 

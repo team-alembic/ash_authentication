@@ -18,7 +18,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
 
   Only the first two will be used if password resets are disabled.
   """
-  @type phase :: :register | :sign_in | :reset_request | :reset
+  @type phase :: :register | :sign_in | :reset_request | :reset | :validate_sign_in_token
 
   @doc false
   @spec name(Password.t()) :: atom
@@ -28,6 +28,10 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
   @spec phases(Password.t()) :: [phase]
   def phases(strategy) do
     []
+    |> maybe_append(
+      strategy.sign_in_tokens_enabled? && strategy.sign_in_enabled?,
+      :validate_sign_in_token
+    )
     |> maybe_append(strategy.registration_enabled?, :register)
     |> maybe_append(strategy.sign_in_enabled?, :sign_in)
     |> maybe_concat(Enum.any?(strategy.resettable), [:reset_request, :reset])
@@ -68,6 +72,9 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
   def plug(strategy, :sign_in, conn), do: Password.Plug.sign_in(conn, strategy)
   def plug(strategy, :reset_request, conn), do: Password.Plug.reset_request(conn, strategy)
   def plug(strategy, :reset, conn), do: Password.Plug.reset(conn, strategy)
+
+  def plug(strategy, :validate_sign_in_token, conn),
+    do: Password.Plug.validate_sign_in_token(conn, strategy)
 
   @doc """
   Perform actions.
