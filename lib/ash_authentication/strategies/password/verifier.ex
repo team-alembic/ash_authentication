@@ -4,8 +4,7 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
   """
 
   alias AshAuthentication.{HashProvider, Info, Sender, Strategy.Password}
-  alias Spark.Error.DslError
-  alias Spark.Dsl.Verifier
+  alias Spark.{Dsl.Verifier, Error.DslError}
   import AshAuthentication.Validations
 
   @doc false

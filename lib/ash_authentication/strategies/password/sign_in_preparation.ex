@@ -14,7 +14,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   """
   use Ash.Resource.Preparation
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
-  alias Ash.{Query, Resource, Resource.Preparation}
+  alias Ash.{Error.Unknown, Query, Resource, Resource.Preparation}
   require Ash.Query
 
   @doc false
@@ -95,9 +95,9 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
   defp check_sign_in_token_configuration(query, strategy)
        when query.context.token_type == :sign_in and not strategy.sign_in_tokens_enabled? do
-    Ash.Query.add_error(
+    Query.add_error(
       query,
-      Ash.Error.Unknown.exception(
+      Unknown.exception(
         message: """
         Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
         does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
