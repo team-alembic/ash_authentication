@@ -141,7 +141,7 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           Sign in tokens can be generated on request by setting the `:token_type` context to `:sign_in`
           when calling the sign in action. You might do this when you need to generate a short lived token
           to be exchanged for a real token using the `validate_sign_in_token` route. This is used, for example,
-          by `ash_authentication_phoenix` (since 2.0) to support signing in in a liveview, and then redirecting
+          by `ash_authentication_phoenix` (since 1.7) to support signing in in a liveview, and then redirecting
           with a valid token to a controller action, allowing the liveview to show invalid username/password errors.
           """,
           required: false,

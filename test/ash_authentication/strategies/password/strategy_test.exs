@@ -85,7 +85,8 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
                  {"/user/password/register", :register},
                  {"/user/password/reset", :reset},
                  {"/user/password/reset_request", :reset_request},
-                 {"/user/password/sign_in", :sign_in}
+                 {"/user/password/sign_in", :sign_in},
+                 {"/user/password/sign_in_with_token", :sign_in_with_token}
                ])
              )
     end
@@ -102,7 +103,8 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
                routes,
                MapSet.new([
                  {"/user/password/register", :register},
-                 {"/user/password/sign_in", :sign_in}
+                 {"/user/password/sign_in", :sign_in},
+                 {"/user/password/sign_in_with_token", :sign_in_with_token}
                ])
              )
     end

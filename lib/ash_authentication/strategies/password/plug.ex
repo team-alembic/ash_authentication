@@ -5,8 +5,7 @@ defmodule AshAuthentication.Strategy.Password.Plug do
   Handles registration, sign-in and password resets.
   """
 
-  alias Ash.Resource
-  alias AshAuthentication.{Info, Jwt, Strategy, Strategy.Password}
+  alias AshAuthentication.{Info, Strategy, Strategy.Password}
   alias Plug.Conn
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
@@ -30,27 +29,11 @@ defmodule AshAuthentication.Strategy.Password.Plug do
   end
 
   @doc "Handle a request to validate a sign in token"
-  @spec validate_sign_in_token(Conn.t(), Password.t()) :: Conn.t()
-  def validate_sign_in_token(conn, strategy) do
+  @spec sign_in_with_token(Conn.t(), Password.t()) :: Conn.t()
+  def sign_in_with_token(conn, strategy) do
     params = conn.params
     opts = opts(conn)
-
-    result =
-      with {:ok, %{"sub" => sub} = claims, _} <- Jwt.verify(params["token"], strategy.resource),
-           :ok <- verify_sign_in_token_purpose(claims),
-           {:ok, user} <-
-             AshAuthentication.subject_to_user(
-               sub,
-               strategy.resource,
-               Keyword.put(opts, :tenant, claims["tenant"] || opts[:tenant])
-             ),
-           {:ok, token, _claims} <- Jwt.token_for_user(user) do
-        {:ok, Resource.put_metadata(user, :token, token)}
-      else
-        _ ->
-          {:error, :invalid_sign_in_token}
-      end
-
+    result = Strategy.action(strategy, :sign_in_with_token, params, opts)
     store_authentication_result(conn, result)
   end
 
@@ -85,7 +68,4 @@ defmodule AshAuthentication.Strategy.Password.Plug do
     [actor: get_actor(conn), tenant: get_tenant(conn)]
     |> Enum.reject(&is_nil(elem(&1, 1)))
   end
-
-  defp verify_sign_in_token_purpose(%{"purpose" => "sign_in"}), do: :ok
-  defp verify_sign_in_token_purpose(_), do: :error
 end
