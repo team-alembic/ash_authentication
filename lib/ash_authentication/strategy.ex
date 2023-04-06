@@ -52,7 +52,7 @@ defprotocol AshAuthentication.Strategy do
 
       iex> strategy = Info.strategy!(Example.User, :password)
       ...> phases(strategy)
-      [:register, :sign_in, :reset_request, :reset]
+      [:sign_in_with_token, :register, :sign_in, :reset_request, :reset]
   """
   @spec phases(t) :: [phase]
   def phases(strategy)
@@ -64,7 +64,7 @@ defprotocol AshAuthentication.Strategy do
 
       iex> strategy = Info.strategy!(Example.User, :password)
       ...> actions(strategy)
-      [:register, :sign_in, :reset_request, :reset]
+      [:sign_in_with_token, :register, :sign_in, :reset_request, :reset]
   """
   @spec actions(t) :: [action]
   def actions(strategy)
@@ -78,6 +78,7 @@ defprotocol AshAuthentication.Strategy do
       iex> strategy = Info.strategy!(Example.User, :password)
       ...> routes(strategy)
       [
+        {"/user/password/sign_in_with_token", :sign_in_with_token},
         {"/user/password/register", :register},
         {"/user/password/sign_in", :sign_in},
         {"/user/password/reset_request", :reset_request},

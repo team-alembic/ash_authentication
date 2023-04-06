@@ -95,21 +95,24 @@ defmodule AshAuthentication.Strategy.Password do
   #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
-  defstruct identity_field: :username,
-            hashed_password_field: :hashed_password_field,
+  defstruct confirmation_required?: false,
             hash_provider: AshAuthentication.BcryptProvider,
-            confirmation_required?: false,
-            password_field: :password,
-            password_confirmation_field: :password_confirmation,
-            register_action_name: nil,
-            sign_in_action_name: nil,
-            registration_enabled?: true,
-            sign_in_enabled?: true,
-            resettable: [],
-            register_action_accept: [],
+            hashed_password_field: :hashed_password_field,
+            identity_field: :username,
             name: nil,
+            password_confirmation_field: :password_confirmation,
+            password_field: :password,
             provider: :password,
-            resource: nil
+            register_action_accept: [],
+            register_action_name: nil,
+            registration_enabled?: true,
+            resettable: [],
+            resource: nil,
+            sign_in_action_name: nil,
+            sign_in_enabled?: true,
+            sign_in_token_lifetime: 60,
+            sign_in_tokens_enabled?: false,
+            sign_in_with_token_action_name: nil
 
   alias Ash.Resource
 
@@ -125,21 +128,24 @@ defmodule AshAuthentication.Strategy.Password do
   use Custom, entity: Dsl.dsl()
 
   @type t :: %Password{
-          identity_field: atom,
-          hashed_password_field: atom,
-          hash_provider: module,
           confirmation_required?: boolean,
-          password_field: atom,
+          hash_provider: module,
+          hashed_password_field: atom,
+          identity_field: atom,
+          name: atom,
           password_confirmation_field: atom,
+          password_field: atom,
+          provider: atom,
           register_action_accept: [atom],
           register_action_name: atom,
-          sign_in_action_name: atom,
           registration_enabled?: boolean,
-          sign_in_enabled?: boolean,
           resettable: [Resettable.t()],
-          name: atom,
-          provider: atom,
-          resource: module
+          resource: module,
+          sign_in_action_name: atom,
+          sign_in_enabled?: boolean,
+          sign_in_token_lifetime: pos_integer,
+          sign_in_tokens_enabled?: boolean,
+          sign_in_with_token_action_name: atom
         }
 
   defdelegate dsl(), to: Dsl

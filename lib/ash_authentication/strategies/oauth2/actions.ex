@@ -40,6 +40,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       {:ok, []} ->
         {:error,
          Errors.AuthenticationFailed.exception(
+           strategy: strategy,
            caused_by: %{
              module: __MODULE__,
              strategy: strategy,
@@ -51,6 +52,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       {:ok, _users} ->
         {:error,
          Errors.AuthenticationFailed.exception(
+           strategy: strategy,
            caused_by: %{
              module: __MODULE__,
              strategy: strategy,
@@ -63,11 +65,16 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
         {:error, error}
 
       {:error, error} when is_exception(error) ->
-        {:error, Errors.AuthenticationFailed.exception(caused_by: error)}
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           strategy: strategy,
+           caused_by: error
+         )}
 
       {:error, error} ->
         {:error,
          Errors.AuthenticationFailed.exception(
+           strategy: strategy,
            caused_by: %{
              module: __MODULE__,
              strategy: strategy,

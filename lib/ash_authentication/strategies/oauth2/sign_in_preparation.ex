@@ -23,6 +23,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
       :error ->
         {:error,
          AuthenticationFailed.exception(
+           strategy: :unknown,
            query: query,
            caused_by: %{
              module: __MODULE__,
@@ -42,6 +43,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
           _, _ ->
             {:error,
              AuthenticationFailed.exception(
+               strategy: strategy,
                query: query,
                caused_by: %{
                  module: __MODULE__,

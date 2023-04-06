@@ -28,6 +28,15 @@ defmodule AshAuthentication.Strategy.Password.Plug do
     store_authentication_result(conn, result)
   end
 
+  @doc "Handle a request to validate a sign in token"
+  @spec sign_in_with_token(Conn.t(), Password.t()) :: Conn.t()
+  def sign_in_with_token(conn, strategy) do
+    params = conn.params
+    opts = opts(conn)
+    result = Strategy.action(strategy, :sign_in_with_token, params, opts)
+    store_authentication_result(conn, result)
+  end
+
   @doc "Handle a reset request request"
   @spec reset_request(Conn.t(), Password.t()) :: Conn.t()
   def reset_request(conn, strategy) do

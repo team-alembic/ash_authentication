@@ -168,6 +168,7 @@ defmodule Example.User do
     strategies do
       password do
         register_action_accept [:extra_stuff]
+        sign_in_tokens_enabled? true
 
         resettable do
           sender fn user, token, _opts ->
@@ -230,10 +231,6 @@ defmodule Example.User do
           Logger.debug("Magic link request for #{user.username}, token #{inspect(token)}")
         end
       end
-    end
-
-    tokens do
-      store_all_tokens? true
     end
   end
 

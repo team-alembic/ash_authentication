@@ -92,13 +92,25 @@ defmodule Example.OnlyMartiesAtTheParty do
           {:ok, user}
 
         {:ok, []} ->
-          {:error, AuthenticationFailed.exception(caused_by: %{reason: :no_user})}
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             caused_by: %{reason: :no_user}
+           )}
 
         {:ok, _users} ->
-          {:error, AuthenticationFailed.exception(caused_by: %{reason: :too_many_users})}
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             caused_by: %{reason: :too_many_users}
+           )}
 
         {:error, reason} ->
-          {:error, AuthenticationFailed.exception(caused_by: %{reason: reason})}
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             caused_by: %{reason: reason}
+           )}
       end
     end
   end

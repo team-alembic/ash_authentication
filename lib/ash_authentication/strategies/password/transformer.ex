@@ -40,6 +40,20 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
              &build_sign_in_action(&1, strategy)
            ),
          :ok <- validate_sign_in_action(dsl_state, strategy),
+         strategy <-
+           maybe_set_field_lazy(
+             strategy,
+             :sign_in_with_token_action_name,
+             &:"sign_in_with_token_for_#{&1.name}"
+           ),
+         {:ok, dsl_state} <-
+           maybe_maybe_build_action(
+             strategy.sign_in_tokens_enabled?,
+             dsl_state,
+             strategy.sign_in_with_token_action_name,
+             &build_sign_in_with_token_action(&1, strategy)
+           ),
+         :ok <- validate_sign_in_with_token_action(dsl_state, strategy),
          {:ok, dsl_state, strategy} <- maybe_transform_resettable(dsl_state, strategy),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
       strategy = %{strategy | resource: resource}
@@ -52,7 +66,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
           &(Strategy.name(&1) == strategy.name)
         )
         |> then(fn dsl_state ->
-          ~w[sign_in_action_name register_action_name]a
+          ~w[sign_in_action_name register_action_name sign_in_with_token_action_name]a
           |> Enum.map(&Map.get(strategy, &1))
           |> register_strategy_actions(dsl_state, strategy)
         end)
@@ -101,7 +115,9 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
           Resource.Dsl,
           [:actions, :create],
           :argument,
-          Keyword.put(password_opts, :name, strategy.password_field)
+          password_opts
+          |> Keyword.put(:name, strategy.password_field)
+          |> Keyword.put(:description, "The proposed password for the user, in plain text.")
         )
       ]
       |> maybe_append(
@@ -110,7 +126,12 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
           Resource.Dsl,
           [:actions, :create],
           :argument,
-          Keyword.put(password_opts, :name, strategy.password_confirmation_field)
+          password_opts
+          |> Keyword.put(:name, strategy.password_confirmation_field)
+          |> Keyword.put(
+            :description,
+            "The proposed password for the user (again), in plain text."
+          )
         )
       )
 
@@ -119,15 +140,21 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       |> maybe_append(
         strategy.confirmation_required?,
         Transformer.build_entity!(Resource.Dsl, [:actions, :create], :validate,
-          validation: Password.PasswordConfirmationValidation
+          validation: Password.PasswordConfirmationValidation,
+          description:
+            "Confirm that the values of `#{inspect(strategy.password_field)}` and `#{inspect(strategy.password_confirmation_field)}` are the same if confirmation is enabled."
         )
       )
       |> Enum.concat([
         Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
-          change: Password.HashPasswordChange
+          change: Password.HashPasswordChange,
+          description:
+            "Generate a cryptographic hash of the user's plain text password and store it in the `#{inspect(strategy.hashed_password_field)}` attribute."
         ),
         Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
-          change: GenerateTokenChange
+          change: GenerateTokenChange,
+          description:
+            "If token generation is enabled, generate a token and store it in the user's metadata."
         )
       ])
 
@@ -137,7 +164,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
           Transformer.build_entity!(Resource.Dsl, [:actions, :create], :metadata,
             name: :token,
             type: :string,
-            allow_nil?: false
+            allow_nil?: false,
+            description: "A JWT which the user can use to authenticate to the API."
           )
         ]
       else
@@ -155,7 +183,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       arguments: arguments,
       changes: changes,
       metadata: metadata,
-      allow_nil_input: [strategy.hashed_password_field]
+      allow_nil_input: [strategy.hashed_password_field],
+      description: "Register a new user with a username and password."
     )
   end
 
@@ -201,13 +230,15 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
         name: strategy.identity_field,
         type: identity_attribute.type,
-        allow_nil?: false
+        allow_nil?: false,
+        description: "The identity to use for retrieving the user."
       ),
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
         name: strategy.password_field,
         type: Type.String,
         allow_nil?: false,
-        sensitive?: true
+        sensitive?: true,
+        description: "The password to check for the matching user."
       )
     ]
 
@@ -223,7 +254,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
           Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
             name: :token,
             type: :string,
-            allow_nil?: false
+            allow_nil?: false,
+            description: "A JWT which the user can use to authenticate to the API."
           )
         ]
       else
@@ -235,7 +267,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       arguments: arguments,
       preparations: preparations,
       metadata: metadata,
-      get?: true
+      get?: true,
+      description: "Attempt to sign in using a username and password."
     )
   end
 
@@ -252,6 +285,61 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   defp validate_identity_argument(dsl_state, action, identity_field) do
     identity_attribute = Ash.Resource.Info.attribute(dsl_state, identity_field)
     validate_action_argument_option(action, identity_field, :type, [identity_attribute.type])
+  end
+
+  defp build_sign_in_with_token_action(_dsl_state, strategy) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :token,
+        type: :string,
+        allow_nil?: false,
+        sensitive?: true,
+        description: "The short-lived sign in JWT."
+      )
+    ]
+
+    preparations = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+        preparation: Password.SignInWithTokenPreparation
+      )
+    ]
+
+    metadata = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
+        name: :token,
+        type: :string,
+        allow_nil?: false,
+        description: "A JWT which the user can use to authenticate to the API."
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :read,
+      name: strategy.sign_in_with_token_action_name,
+      arguments: arguments,
+      preparations: preparations,
+      metadata: metadata,
+      get?: true,
+      description: "Attempt to sign in using a short-lived sign in token."
+    )
+  end
+
+  defp validate_sign_in_with_token_action(dsl_state, strategy)
+       when strategy.sign_in_tokens_enabled? == true do
+    with {:ok, action} <-
+           validate_action_exists(dsl_state, strategy.sign_in_with_token_action_name),
+         :ok <- validate_token_argument(action) do
+      validate_action_has_preparation(action, Password.SignInWithTokenPreparation)
+    end
+  end
+
+  defp validate_sign_in_with_token_action(_dsl_state, _strategy), do: :ok
+
+  defp validate_token_argument(action) do
+    with :ok <-
+           validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
+         :ok <- validate_action_argument_option(action, :token, :allow_nil?, [false]) do
+      validate_action_argument_option(action, :token, :sensitive?, [true])
+    end
   end
 
   defp maybe_maybe_build_action(true, dsl_state, action_name, builder),
@@ -310,7 +398,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
         name: strategy.identity_field,
         type: identity_attribute.type,
-        allow_nil?: false
+        allow_nil?: false,
+        description: "The proposed identity to send reset instructions to."
       )
     ]
 
@@ -323,7 +412,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     Transformer.build_entity(Resource.Dsl, [:actions], :read,
       name: resettable.request_password_reset_action_name,
       arguments: arguments,
-      preparations: preparations
+      preparations: preparations,
+      description: "Send password reset instructions to a user if they exist."
     )
   end
 

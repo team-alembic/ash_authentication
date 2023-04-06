@@ -14,16 +14,24 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   """
   @spec sign_in(Password.t(), map, keyword) ::
           {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
-  def sign_in(%Password{} = strategy, params, options) when strategy.sign_in_enabled? do
+  def sign_in(strategy, params, options)
+      when is_struct(strategy, Password) and strategy.sign_in_enabled? do
     api = Info.authentication_api!(strategy.resource)
+
+    {context, options} = Keyword.pop(options, :context, [])
+
+    context =
+      context
+      |> Map.new()
+      |> Map.merge(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
 
     strategy.resource
     |> Query.new()
-    |> Query.set_context(%{
-      private: %{
-        ash_authentication?: true
-      }
-    })
+    |> Query.set_context(context)
     |> Query.for_read(strategy.sign_in_action_name, params)
     |> api.read(options)
     |> case do
@@ -33,6 +41,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       {:ok, []} ->
         {:error,
          Errors.AuthenticationFailed.exception(
+           strategy: strategy,
            caused_by: %{
              module: __MODULE__,
              strategy: strategy,
@@ -44,6 +53,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       {:ok, _users} ->
         {:error,
          Errors.AuthenticationFailed.exception(
+           strategy: strategy,
            caused_by: %{
              module: __MODULE__,
              strategy: strategy,
@@ -53,11 +63,16 @@ defmodule AshAuthentication.Strategy.Password.Actions do
          )}
 
       {:error, error} when is_exception(error) ->
-        {:error, Errors.AuthenticationFailed.exception(caused_by: error)}
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           strategy: strategy,
+           caused_by: error
+         )}
 
       {:error, error} ->
         {:error,
          Errors.AuthenticationFailed.exception(
+           strategy: strategy,
            caused_by: %{
              module: __MODULE__,
              strategy: strategy,
@@ -68,9 +83,10 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     end
   end
 
-  def sign_in(%Password{} = strategy, _params, _options) do
+  def sign_in(strategy, _params, _options) when is_struct(strategy, Password) do
     {:error,
      Errors.AuthenticationFailed.exception(
+       strategy: strategy,
        caused_by: %{
          module: __MODULE__,
          strategy: strategy,
@@ -81,11 +97,56 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   end
 
   @doc """
+  Attempt to sign in a previously-authenticated user with a short-lived sign in token.
+  """
+  @spec sign_in_with_token(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def sign_in_with_token(strategy, params, options) when is_struct(strategy, Password) do
+    api = Info.authentication_api!(strategy.resource)
+
+    strategy.resource
+    |> Query.new()
+    |> Query.set_context(%{private: %{ash_authentication?: true}})
+    |> Query.for_read(strategy.sign_in_with_token_action_name, params)
+    |> api.read(options)
+    |> case do
+      {:ok, [user]} ->
+        {:ok, user}
+
+      {:error, error} when is_struct(error, Errors.AuthenticationFailed) ->
+        {:error, error}
+
+      {:error, error} when is_exception(error) ->
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           strategy: strategy,
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: strategy.sign_in_with_token_action_name,
+             message: Exception.message(error)
+           }
+         )}
+
+      {:error, reason} ->
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           strategy: strategy,
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: strategy.sign_in_with_token_action_name,
+             message: reason
+           }
+         )}
+    end
+  end
+
+  @doc """
   Attempt to register a new user.
   """
   @spec register(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
-  def register(%Password{} = strategy, params, options)
-      when strategy.registration_enabled? == true do
+  def register(strategy, params, options)
+      when is_struct(strategy, Password) and strategy.registration_enabled? == true do
     api = Info.authentication_api!(strategy.resource)
 
     strategy.resource
@@ -99,9 +160,10 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     |> api.create(options)
   end
 
-  def register(%Password{} = strategy, _params, _options) do
+  def register(strategy, _params, _options) when is_struct(strategy, Password) do
     {:error,
      Errors.AuthenticationFailed.exception(
+       strategy: strategy,
        caused_by: %{
          module: __MODULE__,
          strategy: strategy,
@@ -171,6 +233,6 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     end
   end
 
-  def reset(%Password{} = strategy, _params, _options),
+  def reset(strategy, _params, _options) when is_struct(strategy, Password),
     do: {:error, NoSuchAction.exception(resource: strategy.resource, action: :reset, type: :read)}
 end

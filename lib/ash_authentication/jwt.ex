@@ -91,30 +91,34 @@ defmodule AshAuthentication.Jwt do
 
     {purpose, opts} = Keyword.pop(opts, :purpose, :user)
 
-    default_claims = Config.default_claims(resource, opts)
-    signer = Config.token_signer(resource, opts)
-
     subject = AshAuthentication.user_to_subject(user)
 
     extra_claims =
       extra_claims
       |> Map.put("sub", subject)
 
-    extra_claims =
+    {extra_claims, action_opts} =
       case Map.fetch(user.__metadata__, :tenant) do
-        {:ok, tenant} -> Map.put(extra_claims, "tenant", to_string(tenant))
-        :error -> extra_claims
+        {:ok, tenant} ->
+          tenant = to_string(tenant)
+          {Map.put(extra_claims, "tenant", tenant), [tenant: tenant]}
+
+        :error ->
+          {extra_claims, opts}
       end
 
+    default_claims = Config.default_claims(resource, action_opts)
+    signer = Config.token_signer(resource, opts)
+
     with {:ok, token, claims} <- Joken.generate_and_sign(default_claims, extra_claims, signer),
-         :ok <- maybe_store_token(token, resource, user, purpose) do
+         :ok <- maybe_store_token(token, resource, user, purpose, action_opts) do
       {:ok, token, claims}
     else
       {:error, _reason} -> :error
     end
   end
 
-  defp maybe_store_token(token, resource, user, purpose) do
+  defp maybe_store_token(token, resource, user, purpose, opts) do
     if Info.authentication_tokens_store_all_tokens?(resource) do
       with {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
         TokenResource.Actions.store_token(
@@ -123,11 +127,11 @@ defmodule AshAuthentication.Jwt do
             "token" => token,
             "purpose" => to_string(purpose)
           },
-          context: %{
+          Keyword.put(opts, :context, %{
             ash_authentication: %{
               user: user
             }
-          }
+          })
         )
       end
     else

@@ -45,7 +45,7 @@ defmodule AshAuthentication.Jwt.Config do
     |> Config.add_claim(
       "jti",
       &Joken.generate_jti/0,
-      &validate_jti/3
+      &validate_jti(&1, &2, &3, opts)
     )
   end
 
@@ -96,18 +96,20 @@ defmodule AshAuthentication.Jwt.Config do
   resource.  Requires that the subject's resource configuration be passed as the
   validation context.  This is automatically done by calling `Jwt.verify/2`.
   """
-  @spec validate_jti(String.t(), any, Resource.t() | any) :: boolean
-  def validate_jti(jti, _claims, resource) when is_atom(resource) do
+  @spec validate_jti(String.t(), any, Resource.t() | any, Keyword.t()) :: boolean
+  def validate_jti(jti, _claims, resource, opts \\ [])
+
+  def validate_jti(jti, _claims, resource, opts) when is_atom(resource) do
     case Info.authentication_tokens_token_resource(resource) do
       {:ok, token_resource} ->
-        TokenResource.Actions.valid_jti?(token_resource, jti)
+        TokenResource.Actions.valid_jti?(token_resource, jti, opts)
 
       _ ->
         false
     end
   end
 
-  def validate_jti(_, _, _), do: false
+  def validate_jti(_, _, _, _), do: false
 
   @doc """
   The signer used to sign the token on a per-resource basis.

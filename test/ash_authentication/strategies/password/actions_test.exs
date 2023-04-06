@@ -54,6 +54,24 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
     end
   end
 
+  describe "sign_in_with_token/2" do
+    test "it can sign in a user with a sign-in token" do
+      user = build_user()
+
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+
+      {:ok, user} =
+        Actions.sign_in(
+          strategy,
+          %{"username" => user.username, "password" => user.__metadata__.password},
+          context: %{token_type: :sign_in}
+        )
+
+      assert {:ok, _user} =
+               Actions.sign_in_with_token(strategy, %{"token" => user.__metadata__.token}, [])
+    end
+  end
+
   describe "register/2" do
     test "it can register a new user" do
       {:ok, strategy} = Info.strategy(Example.User, :password)

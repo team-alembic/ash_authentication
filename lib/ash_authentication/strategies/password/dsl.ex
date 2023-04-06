@@ -130,6 +130,29 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           """,
           required: false,
           default: true
+        ],
+        sign_in_tokens_enabled?: [
+          type: :boolean,
+          doc: """
+          Whether or not to support generating short lived sign in tokens. Requires the resource to have
+          tokens enabled. There is no drawback to supporting this, and in the future this default will
+          change from `false` to `true`.
+
+          Sign in tokens can be generated on request by setting the `:token_type` context to `:sign_in`
+          when calling the sign in action. You might do this when you need to generate a short lived token
+          to be exchanged for a real token using the `validate_sign_in_token` route. This is used, for example,
+          by `ash_authentication_phoenix` (since 1.7) to support signing in in a liveview, and then redirecting
+          with a valid token to a controller action, allowing the liveview to show invalid username/password errors.
+          """,
+          required: false,
+          default: false
+        ],
+        sign_in_token_lifetime: [
+          type: :pos_integer,
+          default: 60,
+          doc: """
+          A lifetime (in seconds) for which a generated sign in token will be valid, if `sign_in_tokens_enabled?`.
+          """
         ]
       ],
       entities: [
