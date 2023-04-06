@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.10.5](https://github.com/team-alembic/ash_authentication/compare/v3.10.4...v3.10.5) (2023-04-06)
+
+
+
+
+### Improvements:
+
+* add sign in tokens to password strategy (#252)
+
+* add sign in tokens to password strategy
+
+* convert `sign_in_with_token` into an action.
+
 ## [v3.10.4](https://github.com/team-alembic/ash_authentication/compare/v3.10.3...v3.10.4) (2023-04-03)
 
 
