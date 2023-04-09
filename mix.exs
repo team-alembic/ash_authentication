@@ -146,7 +146,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:ash, ash_version("~> 2.5 and >= 2.5.11")},
-      {:spark, "~> 0.4 and >= 0.4.1 or ~> 1.0"},
+      {:spark, "~> 1.0"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
