@@ -3,7 +3,7 @@ defmodule AshAuthentication.Errors.AuthenticationFailed do
   A generic, authentication failed error.
   """
   use Ash.Error.Exception
-  def_ash_error([:strategy, caused_by: %{}], class: :forbidden)
+  def_ash_error([:field, :strategy, caused_by: %{}], class: :forbidden)
   import AshAuthentication.Debug
 
   @type t :: Exception.t()
