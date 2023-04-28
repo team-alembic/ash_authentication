@@ -62,6 +62,7 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidation do
       else
         {:error,
          AuthenticationFailed.exception(
+           field: password_arg,
            strategy: strategy,
            changeset: changeset
          )}
