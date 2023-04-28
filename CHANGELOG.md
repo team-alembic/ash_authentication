@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.10.7](https://github.com/team-alembic/ash_authentication/compare/v3.10.6...v3.10.7) (2023-04-28)
+
+
+
+
+### Improvements:
+
+* run CI on pull requests
+
 ## [v3.10.6](https://github.com/team-alembic/ash_authentication/compare/v3.10.5...v3.10.6) (2023-04-09)
 
 
