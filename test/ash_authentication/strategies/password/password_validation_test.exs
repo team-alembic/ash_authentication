@@ -21,7 +21,7 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidationTest do
     test "when provided with an incorrect password, it fails vailidation" do
       user = build_user()
 
-      assert {:error, error} =
+      assert {:error, %AuthenticationFailed{field: :current_password}} =
                user
                |> Changeset.new(%{})
                |> Changeset.set_argument(:current_password, password())
@@ -29,8 +29,6 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidationTest do
                  strategy_name: :password,
                  password_argument: :current_password
                )
-
-      assert is_struct(error, AuthenticationFailed)
     end
   end
 end
