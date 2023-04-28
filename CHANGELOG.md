@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.10.8](https://github.com/team-alembic/ash_authentication/compare/v3.10.7...v3.10.8) (2023-04-28)
+
+
+
+
+### Bug Fixes:
+
+* PasswordValidation should associate errors with the field being â¦ (#279)
+
 ## [v3.10.7](https://github.com/team-alembic/ash_authentication/compare/v3.10.6...v3.10.7) (2023-04-28)
 
 
