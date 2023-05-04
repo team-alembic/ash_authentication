@@ -44,7 +44,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
 
   In order to use OAuth 2.0 you need to provide a varying number of secrets and
   other configuration which may change based on runtime environment.  The
-  `AshAuthentication.Secret` behaviour is provided to accomodate this.  This
+  `AshAuthentication.Secret` behaviour is provided to accommodate this.  This
   allows you to provide configuration either directly on the resource (ie as a
   string), as an anonymous function, or as a module.
 
@@ -74,7 +74,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     def secret_for([:authentication, :strategies, :example, :client_secret], MyApp.User, _opts), do: Application.fetch_env(:my_app, :oauth2_client_secret)
   end
 
-  # and in your stragegies:
+  # and in your strategies:
 
   oauth2 :example do
     client_secret MyApp.Secrets
@@ -130,7 +130,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   The register action is a little more complicated than the sign-in action,
   because we cannot tell the difference between a new user and a returning user
   (they all use the same OAuth flow).  In order to handle this your register
-  action must be defined as an upset with a configured `upsert_identity` (see
+  action must be defined as an upsert with a configured `upsert_identity` (see
   example below).
 
   ### Examples:
