@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.0](https://github.com/team-alembic/ash_authentication/compare/v3.10.8...v3.11.0) (2023-05-04)
+
+
+
+
+### Features:
+
+* OpenID Connect Strategy (#197)
+
+* AshAuthentication.Strategy.Oidc: Add OpenID Connect strategy.
+
 ## [v3.10.8](https://github.com/team-alembic/ash_authentication/compare/v3.10.7...v3.10.8) (2023-04-28)
 
 
