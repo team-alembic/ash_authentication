@@ -141,6 +141,10 @@ defmodule DevServer.TestPage do
     )
   end
 
+  defp render_strategy(strategy, phase, _)
+       when strategy.provider == :password and phase == :sign_in_with_token,
+       do: ""
+
   defp render_strategy(strategy, phase, options)
        when strategy.provider == :confirmation and phase == :confirm do
     EEx.eval_string(

@@ -1,6 +1,6 @@
-defmodule AshAuthentication.Strategy.OAuth2.Verifier do
+defmodule AshAuthentication.Strategy.Oidc.Verifier do
   @moduledoc """
-  DSL verifier for oauth2 strategies.
+  DSL verifier for OpenID Connect strategy.
   """
 
   alias AshAuthentication.Strategy.OAuth2
@@ -15,7 +15,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
          :ok <- validate_secret(strategy, :redirect_uri),
          :ok <- validate_secret(strategy, :site),
          :ok <- validate_secret(strategy, :token_url),
-         :ok <- validate_secret(strategy, :user_url) do
+         :ok <- validate_secret(strategy, :user_url, [nil]),
+         :ok <- validate_secret(strategy, :nonce, [true, false]) do
       if strategy.auth_method == :private_key_jwt do
         validate_secret(strategy, :private_key)
       else

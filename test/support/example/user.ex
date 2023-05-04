@@ -73,6 +73,17 @@ defmodule Example.User do
       change AshAuthentication.Strategy.OAuth2.IdentityChange
     end
 
+    create :register_with_oidc do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+    end
+
     read :sign_in_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
@@ -230,6 +241,16 @@ defmodule Example.User do
         sender fn user, token, _opts ->
           Logger.debug("Magic link request for #{user.username}, token #{inspect(token)}")
         end
+      end
+
+      oidc do
+        authorization_params scope: "openid profile email phone address"
+        authorize_url &get_config/2
+        client_id &get_config/2
+        client_secret &get_config/2
+        redirect_uri &get_config/2
+        site &get_config/2
+        token_url &get_config/2
       end
     end
   end

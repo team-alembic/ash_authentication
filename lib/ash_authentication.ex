@@ -103,25 +103,23 @@ defmodule AshAuthentication do
     Resource
   }
 
-  alias AshAuthentication.{
-    AddOn.Confirmation,
-    Info,
-    Strategy.Auth0,
-    Strategy.Github,
-    Strategy.MagicLink,
-    Strategy.OAuth2,
-    Strategy.Password
-  }
+  alias AshAuthentication.Info
 
   alias Spark.Dsl.Extension
 
+  @built_in_strategies [
+    AshAuthentication.AddOn.Confirmation,
+    AshAuthentication.Strategy.Auth0,
+    AshAuthentication.Strategy.Github,
+    AshAuthentication.Strategy.OAuth2,
+    AshAuthentication.Strategy.Oidc,
+    AshAuthentication.Strategy.Password,
+    AshAuthentication.Strategy.MagicLink
+  ]
+
   use Spark.Dsl.Extension,
     sections: dsl(),
-    dsl_patches:
-      Enum.flat_map(
-        [Confirmation, Auth0, Github, OAuth2, Password, MagicLink],
-        & &1.dsl_patches()
-      ),
+    dsl_patches: Enum.flat_map(@built_in_strategies, & &1.dsl_patches()),
     transformers: [
       AshAuthentication.Transformer,
       AshAuthentication.Transformer.SetSelectForSenders,
@@ -236,4 +234,8 @@ defmodule AshAuthentication do
       end
     end
   end
+
+  @doc false
+  @spec __built_in_strategies__ :: [module]
+  def __built_in_strategies__, do: @built_in_strategies
 end

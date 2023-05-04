@@ -2,8 +2,6 @@ name: Elixir Library
 
 on:
   push:
-  pull_request:
-    branches: [main]
 
 jobs:
   deps:

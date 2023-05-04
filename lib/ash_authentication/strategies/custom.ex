@@ -13,10 +13,21 @@ defmodule AshAuthentication.Strategy.Custom do
 
   See `Spark.Dsl.Entity` for more information.
   """
-  # credo:disable-for-next-line Credo.Check.Warning.SpecWithStruct
-  @type entity :: %Dsl.Entity{}
+  @type entity :: Spark.Dsl.Entity.t()
 
-  @type strategy :: struct
+  @typedoc """
+  This is the DSL target for your entity and the struct for which you will
+  implement the `AshAuthentication.Strategy` protocol.
+
+  The only required field is `strategy_module` which is used to keep track of
+  which custom strategy created which strategy.
+  """
+  @type strategy :: %{
+          required(:__struct__) => module,
+          required(:strategy_module) => module,
+          required(:resource) => module,
+          optional(atom) => any
+        }
 
   @doc """
   If your strategy needs to modify either the entity or the parent resource then
@@ -80,7 +91,11 @@ defmodule AshAuthentication.Strategy.Custom do
         |> Keyword.get(:entity)
         |> case do
           %Dsl.Entity{} = entity ->
-            entity
+            %{
+              entity
+              | auto_set_fields:
+                  Keyword.merge([strategy_module: __MODULE__], entity.auto_set_fields || [])
+            }
 
           _ ->
             raise CompileError,

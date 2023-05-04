@@ -165,4 +165,37 @@ defmodule AshAuthentication.Validations do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  @doc """
+  Validate that a "secret" field is configured correctly.
+  """
+  def validate_secret(strategy, option, allowed_extras \\ []) do
+    value = Map.get(strategy, option)
+
+    cond do
+      is_binary(value) ->
+        :ok
+
+      value in allowed_extras ->
+        :ok
+
+      is_tuple(value) and tuple_size(value) == 2 ->
+        validate_behaviour(elem(value, 0), AshAuthentication.Secret)
+
+      true ->
+        message =
+          case allowed_extras do
+            [] ->
+              "Expected `#{inspect(option)}` to be a string or a module which implements the `AshAuthentication.Secret` behaviour."
+
+            _ ->
+              options = Enum.map_join(allowed_extras, ", ", &"`#{inspect(&1)}`")
+
+              "Expected `#{inspect(option)}` to be #{options}, a string or a module which implements the `AshAuthentication.Secret` behaviour."
+          end
+
+        {:error,
+         DslError.exception(path: [:authentication, :strategies, strategy.name], message: message)}
+    end
+  end
 end

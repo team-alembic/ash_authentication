@@ -11,6 +11,15 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   import Plug.Conn
 
+  @raw_config_attrs [
+    :auth_method,
+    :authorization_params,
+    :client_authentication_method,
+    :id_token_signed_response_alg,
+    :id_token_ttl_seconds,
+    :openid_configuration_uri
+  ]
+
   @doc """
   Perform the request phase of OAuth2.
 
@@ -20,6 +29,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   @spec request(Conn.t(), OAuth2.t()) :: Conn.t()
   def request(conn, strategy) do
     with {:ok, config} <- config_for(strategy),
+         {:ok, config} <- maybe_add_nonce(config, strategy),
          {:ok, session_key} <- session_key(strategy),
          {:ok, %{session_params: session_params, url: url}} <-
            strategy.assent_strategy.authorize_url(config) do
@@ -68,27 +78,25 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   end
 
   defp config_for(strategy) do
-    with {:ok, client_id} <- fetch_secret(strategy, :client_id),
-         {:ok, site} <- fetch_secret(strategy, :site),
+    config =
+      strategy
+      |> Map.take(@raw_config_attrs)
+      |> Map.put(:http_adapter, Mint)
+
+    with {:ok, config} <- add_secret_value(config, strategy, :authorize_url),
+         {:ok, config} <- add_secret_value(config, strategy, :client_id),
+         {:ok, config} <- add_secret_value(config, strategy, :client_secret),
+         {:ok, config} <- add_secret_value(config, strategy, :site),
+         {:ok, config} <- add_secret_value(config, strategy, :token_url),
+         {:ok, config} <- add_secret_value(config, strategy, :user_url, !!strategy.authorize_url),
          {:ok, redirect_uri} <- build_redirect_uri(strategy),
-         {:ok, authorize_url} <- fetch_secret(strategy, :authorize_url),
-         {:ok, token_url} <- fetch_secret(strategy, :token_url),
-         {:ok, user_url} <- fetch_secret(strategy, :user_url) do
+         {:ok, jwt_algorithm} <-
+           Info.authentication_tokens_signing_algorithm(strategy.resource) do
       config =
-        [
-          auth_method: strategy.auth_method,
-          client_id: client_id,
-          client_secret: get_secret(strategy, :client_secret),
-          private_key: get_secret(strategy, :private_key),
-          jwt_algorithm: Info.authentication_tokens_signing_algorithm(strategy.resource),
-          authorization_params: strategy.authorization_params,
-          redirect_uri: redirect_uri,
-          site: site,
-          authorize_url: authorize_url,
-          token_url: token_url,
-          user_url: user_url,
-          http_adapter: Mint
-        ]
+        config
+        |> Map.put(:jwt_algorithm, jwt_algorithm)
+        |> Map.put(:redirect_uri, redirect_uri)
+        |> Map.update(:client_authentication_method, nil, &to_string/1)
         |> Enum.reject(&is_nil(elem(&1, 1)))
 
       {:ok, config}
@@ -116,6 +124,34 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
+  # With OpenID Connect we can pass a "nonce" value into the assent strategy
+  # which is an additional way to ensure that the callback matches the request.
+  defp maybe_add_nonce(config, strategy) do
+    case fetch_secret(strategy, :nonce) do
+      {:ok, value} when is_binary(value) and byte_size(value) > 0 ->
+        {:ok, Keyword.put(config, :nonce, value)}
+
+      {:ok, false} ->
+        {:ok, config}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp add_secret_value(config, strategy, secret_name, allow_nil? \\ false) do
+    case fetch_secret(strategy, secret_name) do
+      {:ok, nil} when allow_nil? ->
+        {:ok, config}
+
+      {:ok, value} when is_binary(value) and byte_size(value) > 0 ->
+        {:ok, Map.put(config, secret_name, value)}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp fetch_secret(strategy, secret_name) do
     path = [:authentication, :strategies, strategy.name, secret_name]
 
@@ -124,15 +160,11 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
            secret_module.secret_for(path, strategy.resource, secret_opts) do
       {:ok, secret}
     else
-      {:ok, secret} when is_binary(secret) -> {:ok, secret}
-      _ -> {:error, Errors.MissingSecret.exception(path: path, resource: strategy.resource)}
-    end
-  end
+      {:ok, secret} ->
+        {:ok, secret}
 
-  defp get_secret(strategy, secret_name) do
-    case fetch_secret(strategy, secret_name) do
-      {:ok, secret} -> secret
-      _ -> nil
+      _ ->
+        {:error, Errors.MissingSecret.exception(path: path, resource: strategy.resource)}
     end
   end
 

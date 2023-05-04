@@ -3,7 +3,11 @@ defmodule Example.OnlyMartiesAtTheParty do
   A really dumb custom strategy that lets anyone named Marty sign in.
   """
 
-  defstruct name: :marty, case_sensitive?: false, name_field: nil, resource: nil
+  defstruct name: :marty,
+            case_sensitive?: false,
+            name_field: nil,
+            resource: nil,
+            strategy_module: __MODULE__
 
   @entity %Spark.Dsl.Entity{
     name: :only_marty,

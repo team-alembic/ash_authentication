@@ -92,17 +92,18 @@ defmodule AshAuthentication.AddOn.Confirmation do
   #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
-  defstruct token_lifetime: nil,
-            monitor_fields: [],
-            confirmed_at_field: :confirmed_at,
+  defstruct confirm_action_name: :confirm,
             confirm_on_create?: true,
             confirm_on_update?: true,
+            confirmed_at_field: :confirmed_at,
             inhibit_updates?: false,
-            sender: nil,
-            confirm_action_name: :confirm,
-            resource: nil,
+            monitor_fields: [],
+            name: :confirm,
             provider: :confirmation,
-            name: :confirm
+            resource: nil,
+            sender: nil,
+            strategy_module: __MODULE__,
+            token_lifetime: nil
 
   alias Ash.{Changeset, Resource}
   alias AshAuthentication.{AddOn.Confirmation, Jwt, Strategy.Custom}
@@ -110,17 +111,18 @@ defmodule AshAuthentication.AddOn.Confirmation do
   use Custom, style: :add_on, entity: Dsl.dsl()
 
   @type t :: %Confirmation{
-          token_lifetime: hours :: pos_integer,
-          monitor_fields: [atom],
-          confirmed_at_field: atom,
+          confirm_action_name: atom,
           confirm_on_create?: boolean,
           confirm_on_update?: boolean,
+          confirmed_at_field: atom,
           inhibit_updates?: boolean,
-          sender: nil | {module, keyword},
-          confirm_action_name: atom,
-          resource: module,
+          monitor_fields: [atom],
+          name: :confirm,
           provider: :confirmation,
-          name: :confirm
+          resource: module,
+          sender: nil | {module, keyword},
+          strategy_module: module,
+          token_lifetime: hours :: pos_integer
         }
 
   defdelegate transform(strategy, dsl_state), to: Transformer
