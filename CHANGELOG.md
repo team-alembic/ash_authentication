@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.1](https://github.com/team-alembic/ash_authentication/compare/v3.11.0...v3.11.1) (2023-05-04)
+
+
+
+
+### Bug Fixes:
+
+* correct oauth2 and getting started typos (#267)
+
 ## [v3.11.0](https://github.com/team-alembic/ash_authentication/compare/v3.10.8...v3.11.0) (2023-05-04)
 
 
