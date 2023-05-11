@@ -49,6 +49,42 @@ defmodule AshAuthentication.MixProject do
               name: "User Identity",
               target: "Ash.Resource",
               type: "User identity"
+            },
+            %{
+              module: AshAuthentication.Strategy.MagicLink,
+              name: "Magic Link",
+              target: "Ash.Resource",
+              type: "Authentication Strategy"
+            },
+            %{
+              module: AshAuthentication.AddOn.Confirmation,
+              name: "Confirmation",
+              target: "Ash.Resource",
+              type: "Authentication Add On"
+            },
+            %{
+              module: AshAuthentication.Strategy.Auth0,
+              name: "Auth0",
+              target: "Ash.Resource",
+              type: "Authentication Strategy"
+            },
+            %{
+              module: AshAuthentication.Strategy.Github,
+              name: "Github",
+              target: "Ash.Resource",
+              type: "Authentication Strategy"
+            },
+            %{
+              module: AshAuthentication.Strategy.OAuth2,
+              name: "OAuth2",
+              target: "Ash.Resource",
+              type: "Authentication Strategy"
+            },
+            %{
+              module: AshAuthentication.Strategy.Password,
+              name: "Password",
+              target: "Ash.Resource",
+              type: "Authentication Strategy"
             }
           ]
         ],
