@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.2](https://github.com/team-alembic/ash_authentication/compare/v3.11.1...v3.11.2) (2023-05-28)
+
+
+
+
+### Bug Fixes:
+
+* Strategy.Password: Preparations should allow strategy to be passed in. (#314)
+
 ## [v3.11.1](https://github.com/team-alembic/ash_authentication/compare/v3.11.0...v3.11.1) (2023-05-04)
 
 
