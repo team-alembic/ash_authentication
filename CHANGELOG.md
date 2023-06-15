@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.4](https://github.com/team-alembic/ash_authentication/compare/v3.11.3...v3.11.4) (2023-06-15)
+
+
+
+
+### Bug Fixes:
+
+* primary keys are implicitly uniquely constrained. (#333)
+
 ## [v3.11.3](https://github.com/team-alembic/ash_authentication/compare/v3.11.2...v3.11.3) (2023-05-31)
 
 
