@@ -60,28 +60,41 @@ defmodule AshAuthentication.Validations.Attribute do
   """
   @spec validate_attribute_unique_constraint(map, [atom], module) :: :ok | {:error, Exception.t()}
   def validate_attribute_unique_constraint(dsl_state, fields, resource) do
-    message =
-      case fields do
-        [field] ->
-          "The `#{inspect(field)}` attribute on the resource `#{inspect(resource)}` should be uniquely constrained"
-
-        [_ | _] = fields ->
-          fields =
-            fields
-            |> Enum.map(&"`#{&1}`")
-            |> to_sentence(final: "and")
-
-          "The #{fields} attributes on the resource `#{inspect(resource)}` should be uniquely constrained"
-      end
-
     fields = MapSet.new(fields)
 
-    dsl_state
-    |> Info.identities()
-    |> Enum.find(&MapSet.equal?(MapSet.new(&1.keys), fields))
+    identities =
+      dsl_state
+      |> Info.identities()
+      |> Enum.map(&MapSet.new(&1.keys))
+
+    primary_key =
+      dsl_state
+      |> Info.primary_key()
+      |> MapSet.new()
+
+    identities
+    |> Enum.concat(primary_key)
+    |> Enum.find(&MapSet.equal?(&1, fields))
     |> case do
-      nil -> {:error, DslError.exception(path: [:identities, :identity], message: message)}
-      _ -> :ok
+      nil ->
+        message =
+          case Enum.to_list(fields) do
+            [field] ->
+              "The `#{inspect(field)}` attribute on the resource `#{inspect(resource)}` should be uniquely constrained"
+
+            [_ | _] = fields ->
+              fields =
+                fields
+                |> Enum.map(&"`#{&1}`")
+                |> to_sentence(final: "and")
+
+              "The #{fields} attributes on the resource `#{inspect(resource)}` should be uniquely constrained"
+          end
+
+        {:error, DslError.exception(path: [:identities, :identity], message: message)}
+
+      _ ->
+        :ok
     end
   end
 end
