@@ -332,6 +332,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
     end)
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp maybe_build_identity(dsl_state, keys) do
     dsl_state
     |> find_identity(keys)

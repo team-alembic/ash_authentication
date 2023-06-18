@@ -26,6 +26,7 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
 
   defp do_change(changeset, strategy) when is_falsy(strategy.identity_resource), do: changeset
 
+  # sobelow_skip ["DOS.BinToAtom"]
   defp do_change(changeset, strategy) do
     changeset
     |> Changeset.after_action(fn changeset, user ->

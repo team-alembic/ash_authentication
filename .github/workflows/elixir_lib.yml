@@ -116,6 +116,25 @@ jobs:
       - uses: team-alembic/staple-actions/actions/conventional-commit@main
         with:
           mix-env: test
+  sobelow:
+    name: mix sobelow --config
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/mix-sobelow@main
+        with:
+          mix-env: test
+
+  unused_deps:
+    name: mix deps.unlock --check-unused
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: team-alembic/staple-actions/actions/mix-deps-unlock@main
+        with:
+          mix-env: test
 
   build-dev:
     name: MIX_ENV=dev mix.compile
@@ -128,6 +147,8 @@ jobs:
       - auditor
       - test
       - dialyzer
+      - sobelow
+      - unused_deps
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v3
