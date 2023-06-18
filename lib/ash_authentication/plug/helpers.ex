@@ -255,6 +255,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
   # Dyanamically generated atoms are generally frowned upon, but in this case
   # the `subject_name` is a statically configured atom, so should be fine.
+  # sobelow_skip ["DOS.StringToAtom"]
   defp current_subject_name(subject_name) when is_atom(subject_name),
     do: String.to_atom("current_#{subject_name}")
 end

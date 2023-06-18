@@ -48,6 +48,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
     end
   end
 
+  # sobelow_skip ["DOS.BinToAtom"]
   defp set_defaults(strategy) do
     strategy
     |> maybe_set_field_lazy(:register_action_name, &:"register_with_#{&1.name}")

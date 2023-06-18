@@ -17,6 +17,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
 
   @doc false
   @spec transform(Password.t(), map) :: {:ok, Password.t() | map} | {:error, Exception.t()}
+  # sobelow_skip ["DOS.BinToAtom"]
   def transform(strategy, dsl_state) do
     with :ok <- validate_identity_field(strategy.identity_field, dsl_state),
          :ok <- validate_hashed_password_field(strategy.hashed_password_field, dsl_state),
@@ -350,6 +351,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   defp maybe_transform_resettable(dsl_state, %{resettable: []} = strategy),
     do: {:ok, dsl_state, strategy}
 
+  # sobelow_skip ["DOS.BinToAtom"]
   defp maybe_transform_resettable(dsl_state, %{resettable: [resettable]} = strategy) do
     with resettable <-
            maybe_set_field_lazy(

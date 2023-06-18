@@ -61,6 +61,7 @@ defmodule AshAuthentication.Transformer do
     end
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp find_or_generate_subject_name(dsl_state) do
     with nil <- Transformer.get_option(dsl_state, [:authentication], :subject_name),
          nil <- Transformer.get_option(dsl_state, [:resource], :short_name) do

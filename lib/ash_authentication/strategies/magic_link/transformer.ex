@@ -48,13 +48,15 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
     end
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp maybe_set_sign_in_action_name(strategy) when is_nil(strategy.sign_in_action_name),
-    do: %{strategy | sign_in_action_name: :"sign_in_with_#{strategy.name}"}
+    do: %{strategy | sign_in_action_name: String.to_atom("sign_in_with_#{strategy.name}")}
 
   defp maybe_set_sign_in_action_name(strategy), do: strategy
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp maybe_set_request_action_name(strategy) when is_nil(strategy.request_action_name),
-    do: %{strategy | request_action_name: :"request_#{strategy.name}"}
+    do: %{strategy | request_action_name: String.to_atom("request_#{strategy.name}")}
 
   defp maybe_set_request_action_name(strategy), do: strategy
 

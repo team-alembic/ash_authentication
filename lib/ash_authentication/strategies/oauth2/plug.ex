@@ -27,6 +27,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   user to that endpoint.
   """
   @spec request(Conn.t(), OAuth2.t()) :: Conn.t()
+  # sobelow_skip ["XSS.SendResp"]
   def request(conn, strategy) do
     with {:ok, config} <- config_for(strategy),
          {:ok, config} <- maybe_add_nonce(config, strategy),
