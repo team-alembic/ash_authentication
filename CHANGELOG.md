@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.5](https://github.com/team-alembic/ash_authentication/compare/v3.11.4...v3.11.5) (2023-06-18)
+
+
+
+
+### Bug Fixes:
+
+* ConfirmationHookChange: use `Info.find_strategy/2..3` rather than a hard coded strategy name. (#336)
+
 ## [v3.11.4](https://github.com/team-alembic/ash_authentication/compare/v3.11.3...v3.11.4) (2023-06-15)
 
 
