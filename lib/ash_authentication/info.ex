@@ -7,6 +7,7 @@ defmodule AshAuthentication.Info do
     extension: AshAuthentication,
     sections: [:authentication]
 
+  alias Ash.{Changeset, Query}
   alias AshAuthentication.Strategy
   alias Spark.Dsl.Extension
 
@@ -65,6 +66,41 @@ defmodule AshAuthentication.Info do
 
       :error ->
         raise "No strategy action named `#{inspect(action_name)}` found on resource `#{inspect(dsl_or_resource)}`"
+    end
+  end
+
+  @doc """
+  Find the underlying strategy that required a change/preparation to be used.
+
+  This is because the `strategy_name` can be passed on the change options, eg:
+
+  ```elixir
+  change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :banana_custard}
+  ```
+
+  Or via the action context, eg:
+
+  ```elixir
+  prepare set_context(%{strategy_name: :banana_custard})
+  prepare AshAuthentication.Strategy.Password.SignInPreparation
+  ```
+
+  Or via the passed-in context on calling the action.
+  """
+  @spec find_strategy(Query.t() | Changeset.t(), context, options) :: {:ok, Strategy.t()} | :error
+        when context: map, options: Keyword.t()
+  def find_strategy(queryset, context \\ %{}, options) do
+    with :error <- Keyword.fetch(options, :strategy_name),
+         :error <- Map.fetch(context, :strategy_name),
+         :error <- Map.fetch(queryset.context, :strategy_name),
+         :error <- strategy_for_action(queryset.resource, queryset.action.name) do
+      :error
+    else
+      {:ok, strategy_name} when is_atom(strategy_name) ->
+        strategy(queryset.resource, strategy_name)
+
+      {:ok, strategy} ->
+        {:ok, strategy}
     end
   end
 end

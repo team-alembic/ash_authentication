@@ -21,7 +21,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, options, context) do
-    {:ok, strategy} = find_strategy(query, context, options)
+    {:ok, strategy} = Info.find_strategy(query, context, options)
     identity_field = strategy.identity_field
     identity = Query.get_argument(query, identity_field)
 
@@ -120,21 +120,6 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
       Resource.put_metadata(record, :token, token)
     else
       record
-    end
-  end
-
-  defp find_strategy(query, context, options) do
-    with :error <- Info.strategy_for_action(query.resource, query.action.name),
-         :error <- Map.fetch(query.context, :strategy_name),
-         :error <- Map.fetch(context, :strategy_name),
-         :error <- Keyword.fetch(options, :strategy_name) do
-      :error
-    else
-      {:ok, strategy_name} when is_atom(strategy_name) ->
-        Info.strategy(query.resource, strategy_name)
-
-      {:ok, strategy} ->
-        {:ok, strategy}
     end
   end
 end
