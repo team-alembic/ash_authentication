@@ -13,6 +13,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
+  import AshAuthentication.Strategy.Custom.Helpers
 
   @doc false
   @spec transform(Confirmation.t(), map) ::
@@ -38,18 +39,18 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
              &build_confirmed_at_attribute(&1, strategy)
            ),
          :ok <- validate_confirmed_at_attribute(dsl_state, strategy),
-         {:ok, dsl_state} <- maybe_build_change(dsl_state, Confirmation.ConfirmationHookChange),
+         {:ok, dsl_state} <-
+           maybe_build_change(
+             dsl_state,
+             {Confirmation.ConfirmationHookChange, strategy_name: strategy.name}
+           ),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
       strategy = %{strategy | resource: resource}
 
       dsl_state =
         dsl_state
-        |> Transformer.replace_entity(
-          [:authentication, :add_ons],
-          strategy,
-          &(&1.name == strategy.name)
-        )
-        |> Transformer.persist({:authentication_action, strategy.confirm_action_name}, strategy)
+        |> then(&register_strategy_actions([strategy.confirm_action_name], &1, strategy))
+        |> put_add_on(strategy)
 
       {:ok, dsl_state}
     else
@@ -184,11 +185,13 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   end
 
   defp maybe_build_change(dsl_state, change_module) do
-    with {:ok, resource} <- persisted_option(dsl_state, :module),
-         changes <- Resource.Info.changes(resource),
-         false <- change_module in changes,
+    with changes <- Resource.Info.changes(dsl_state),
+         false <- Enum.any?(changes, &(&1.change == change_module)),
          {:ok, change} <-
-           Transformer.build_entity(Resource.Dsl, [:changes], :change, change: change_module) do
+           Transformer.build_entity(Resource.Dsl, [:changes], :change,
+             change: change_module,
+             on: [:create, :update]
+           ) do
       {:ok, Transformer.add_entity(dsl_state, [:changes], change)}
     else
       true -> {:ok, dsl_state}

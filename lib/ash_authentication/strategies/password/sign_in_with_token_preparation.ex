@@ -14,7 +14,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
   def prepare(query, options, context) do
-    {:ok, strategy} = find_strategy(query, context, options)
+    {:ok, strategy} = Info.find_strategy(query, context, options)
 
     query
     |> check_sign_in_token_configuration(strategy)
@@ -156,19 +156,4 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
 
   defp extract_primary_keys_from_subject(_, _),
     do: {:error, "The token does not contain a subject"}
-
-  defp find_strategy(query, context, options) do
-    with :error <- Info.strategy_for_action(query.resource, query.action.name),
-         :error <- Map.fetch(query.context, :strategy_name),
-         :error <- Map.fetch(context, :strategy_name),
-         :error <- Keyword.fetch(options, :strategy_name) do
-      :error
-    else
-      {:ok, strategy_name} when is_atom(strategy_name) ->
-        Info.strategy(query.resource, strategy_name)
-
-      {:ok, strategy} ->
-        {:ok, strategy}
-    end
-  end
 end
