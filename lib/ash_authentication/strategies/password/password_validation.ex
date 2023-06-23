@@ -83,7 +83,7 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidation do
     with :error <- Keyword.fetch(options, :strategy_name),
          :error <- Map.fetch(changeset.context, :strategy_name),
          :error <- Info.strategy_for_action(changeset.resource, changeset.action) do
-      Logger.warn(
+      Logger.warning(
         "[PasswordValidation] Unable to identify the strategy_name for `#{inspect(changeset.action)}` on `#{inspect(changeset.resource)}`."
       )
 
