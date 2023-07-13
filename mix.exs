@@ -182,7 +182,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:ash, ash_version("~> 2.5 and >= 2.5.11")},
-      {:spark, "~> 1.0 and >= 1.0.9"},
+      {:spark, "~> 1.1 and >= 1.1.20"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
@@ -209,6 +209,19 @@ defmodule AshAuthentication.MixProject do
   end
 
   defp aliases do
+    extensions = [
+      "AshAuthentication",
+      "AshAuthentication.AddOn.Confirmation",
+      "AshAuthentication.Strategy.Auth0",
+      "AshAuthentication.Strategy.Github",
+      "AshAuthentication.Strategy.MagicLink",
+      "AshAuthentication.Strategy.OAuth2",
+      "AshAuthentication.Strategy.Oidc",
+      "AshAuthentication.Strategy.Password",
+      "AshAuthentication.TokenResource",
+      "AshAuthentication.UserIdentity"
+    ]
+
     [
       ci: [
         "format --check-formatted",
@@ -219,7 +232,7 @@ defmodule AshAuthentication.MixProject do
         "test"
       ],
       "spark.formatter": [
-        "spark.formatter --extensions AshAuthentication,AshAuthentication.TokenResource,AshAuthentication.UserIdentity,AshAuthentication.Strategy.MagicLink,AshAuthentication.AddOn.Confirmation,AshAuthentication.Strategy.Auth0,AshAuthentication.Strategy.Github,AshAuthentication.Strategy.OAuth2,AshAuthentication.Strategy.Password"
+        "spark.formatter --extensions #{Enum.join(extensions, ",")}"
       ],
       docs: ["docs", "ash.replace_doc_links"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]

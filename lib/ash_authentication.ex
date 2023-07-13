@@ -111,15 +111,15 @@ defmodule AshAuthentication do
     AshAuthentication.AddOn.Confirmation,
     AshAuthentication.Strategy.Auth0,
     AshAuthentication.Strategy.Github,
+    AshAuthentication.Strategy.MagicLink,
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,
-    AshAuthentication.Strategy.Password,
-    AshAuthentication.Strategy.MagicLink
+    AshAuthentication.Strategy.Password
   ]
 
   use Spark.Dsl.Extension,
     sections: dsl(),
-    dsl_patches: Enum.flat_map(@built_in_strategies, & &1.dsl_patches()),
+    add_extensions: @built_in_strategies,
     transformers: [
       AshAuthentication.Transformer,
       AshAuthentication.Transformer.SetSelectForSenders,
