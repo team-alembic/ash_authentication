@@ -42,7 +42,8 @@ defmodule AshAuthentication.Transformer do
              &build_get_by_subject_action/1
            ),
          :ok <- validate_read_action(dsl_state, get_by_subject_action_name),
-         subject_name <- find_or_generate_subject_name(dsl_state) do
+         subject_name <- find_or_generate_subject_name(dsl_state),
+         current_user when is_atom(current_user) <- ensure_current_user_atom_exists(subject_name) do
       dsl_state =
         dsl_state
         |> Transformer.set_option([:authentication], :subject_name, subject_name)
@@ -74,6 +75,10 @@ defmodule AshAuthentication.Transformer do
       |> String.to_atom()
     end
   end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp ensure_current_user_atom_exists(subject_name),
+    do: String.to_atom("current_#{subject_name}")
 
   defp validate_at_least_one_strategy(dsl_state) do
     ok? =
