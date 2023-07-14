@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.7](https://github.com/team-alembic/ash_authentication/compare/v3.11.6...v3.11.7) (2023-07-14)
+
+
+
+
+### Bug Fixes:
+
+* ensure that the `current_` atom exists at compile time. (#359)
+
 ## [v3.11.6](https://github.com/team-alembic/ash_authentication/compare/v3.11.5...v3.11.6) (2023-06-23)
 
 
