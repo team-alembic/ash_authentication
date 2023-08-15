@@ -24,11 +24,6 @@ config :ash_authentication, Example.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
-config :ash_authentication, Example,
-  resources: [
-    registry: Example.Registry
-  ]
-
 config :ash_authentication,
   authentication: [
     strategies: [
