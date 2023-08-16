@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.8](https://github.com/team-alembic/ash_authentication/compare/v3.11.7...v3.11.8) (2023-08-16)
+
+
+
+
+### Bug Fixes:
+
+* correct spec for `Jwt.token_for_user` (#389)
+
 ## [v3.11.7](https://github.com/team-alembic/ash_authentication/compare/v3.11.6...v3.11.7) (2023-07-14)
 
 
