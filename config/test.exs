@@ -10,11 +10,6 @@ config :ash_authentication, Example.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 10
 
-config :ash_authentication, Example,
-  resources: [
-    registry: Example.Registry
-  ]
-
 config :bcrypt_elixir, :log_rounds, 4
 
 config :ash, :disable_async?, true

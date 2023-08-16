@@ -101,7 +101,8 @@ defmodule MyApp.Accounts do
   use Ash.Api
 
   resources do
-    registry MyApp.Accounts.Registry
+    resource MyApp.Accounts.User
+    resource MyApp.Accounts.Token
   end
 end
 ```
@@ -111,21 +112,6 @@ Be sure to add it to the `ash_apis` config in your `config.exs`
 ```elixir
 # in config/config.exs
 config :my_app, :ash_apis, [..., MyApp.Accounts]
-```
-
-Next, let's define our registry:
-
-```elixir
-# lib/my_app/accounts/registry.ex
-
-defmodule MyApp.Accounts.Registry do
-  use Ash.Registry, extensions: [Ash.Registry.ResourceValidations]
-
-  entries do
-    entry MyApp.Accounts.User
-    entry MyApp.Accounts.Token
-  end
-end
 ```
 
 Next, let's define our `Token` resource.  This resource is needed
@@ -152,7 +138,7 @@ defmodule MyApp.Accounts.Token do
     table "tokens"
     repo MyApp.Repo
   end
-  
+
   # If using policies, add the following bypass:
   # policies do
   #   bypass AshAuthentication.Checks.AshAuthenticationInteraction do
@@ -205,7 +191,7 @@ defmodule MyApp.Accounts.User do
   identities do
     identity :unique_email, [:email]
   end
-  
+
   # If using policies, add the folowing bypass:
   # policies do
   #   bypass AshAuthentication.Checks.AshAuthenticationInteraction do
