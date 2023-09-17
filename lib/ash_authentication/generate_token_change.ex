@@ -14,6 +14,7 @@ defmodule AshAuthentication.GenerateTokenChange do
     changeset
     |> Changeset.after_action(fn changeset, result ->
       {:ok, strategy} = Info.find_strategy(changeset, context, options)
+
       if Info.authentication_tokens_enabled?(result.__struct__) do
         {:ok, generate_token(changeset.context[:token_type] || :user, result, strategy)}
       else
