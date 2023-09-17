@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.9](https://github.com/team-alembic/ash_authentication/compare/v3.11.8...v3.11.9) (2023-09-17)
+
+
+
+
+### Bug Fixes:
+
+* support generating tokens for other strategies.
+
+### Improvements:
+
+* support generating sign in tokens on register (#421)
+
+* support generating sign in tokens on register
+
 ## [v3.11.8](https://github.com/team-alembic/ash_authentication/compare/v3.11.7...v3.11.8) (2023-08-16)
 
 
