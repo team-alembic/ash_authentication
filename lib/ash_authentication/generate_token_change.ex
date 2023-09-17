@@ -23,11 +23,18 @@ defmodule AshAuthentication.GenerateTokenChange do
     end)
   end
 
-  defp generate_token(purpose, record, strategy) when purpose in [:user, :sign_in] do
+  defp generate_token(purpose, record, strategy)
+       when purpose in [:user, :sign_in] and is_integer(strategy.sign_in_token_lifetime) do
     {:ok, token, _claims} =
       Jwt.token_for_user(record, %{"purpose" => to_string(purpose)},
         token_lifetime: strategy.sign_in_token_lifetime
       )
+
+    Ash.Resource.put_metadata(record, :token, token)
+  end
+
+  defp generate_token(purpose, record, _strategy) do
+    {:ok, token, _claims} = Jwt.token_for_user(record, %{"purpose" => to_string(purpose)})
 
     Ash.Resource.put_metadata(record, :token, token)
   end
