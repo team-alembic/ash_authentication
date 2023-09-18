@@ -145,6 +145,14 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
       assert conn.assigns.current_user_with_token_required.id == user.id
+
+      assert {:ok, user_for_token} =
+               AshAuthentication.subject_to_user(
+                 conn.assigns.current_user_with_token_required_token_record.subject,
+                 Example.UserWithTokenRequired
+               )
+
+      assert user_for_token.id == user.id
     end
 
     test "when token presense is required and the token is not present in the token resource it doesn't load the subjects from the authorization header(s)",
@@ -162,6 +170,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
       refute is_map_key(conn.assigns, :current_user_with_token_required)
+      refute is_map_key(conn.assigns, :current_user_with_token_required_token_record)
     end
 
     test "when token presense is required and the token has been revoked it doesn't lkoad the subjects from the authorization header(s)",
