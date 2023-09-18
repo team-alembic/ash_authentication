@@ -295,7 +295,10 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   end
 
   defp build_destroy_action(_dsl_state, action_name) do
-    Transformer.build_entity(Resource.Dsl, [:actions], :destroy, name: action_name, primary?: true)
+    Transformer.build_entity(Resource.Dsl, [:actions], :destroy,
+      name: action_name,
+      primary?: true
+    )
   end
 
   defp validate_destroy_action(dsl_state, action_name) do

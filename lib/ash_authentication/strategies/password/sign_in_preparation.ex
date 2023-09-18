@@ -14,7 +14,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   """
   use Ash.Resource.Preparation
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
-  alias Ash.{Error.Unknown, Query, Resource, Resource.Preparation}
+  alias Ash.{Error.Unknown, Query, Resource.Preparation}
   require Ash.Query
 
   @doc false
@@ -112,14 +112,25 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
   defp maybe_generate_token(purpose, record, strategy) when purpose in [:user, :sign_in] do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
-      {:ok, token, _claims} =
-        Jwt.token_for_user(record, %{"purpose" => to_string(purpose)},
-          token_lifetime: strategy.sign_in_token_lifetime
-        )
-
-      Resource.put_metadata(record, :token, token)
+      generate_token(purpose, record, strategy)
     else
       record
     end
+  end
+
+  defp generate_token(purpose, record, strategy)
+       when is_integer(strategy.sign_in_token_lifetime) and purpose == :sign_in do
+    {:ok, token, _claims} =
+      Jwt.token_for_user(record, %{"purpose" => to_string(purpose)},
+        token_lifetime: strategy.sign_in_token_lifetime
+      )
+
+    Ash.Resource.put_metadata(record, :token, token)
+  end
+
+  defp generate_token(purpose, record, _strategy) do
+    {:ok, token, _claims} = Jwt.token_for_user(record, %{"purpose" => to_string(purpose)})
+
+    Ash.Resource.put_metadata(record, :token, token)
   end
 end
