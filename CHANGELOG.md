@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.10](https://github.com/team-alembic/ash_authentication/compare/v3.11.9...v3.11.10) (2023-09-18)
+
+
+
+
+### Bug Fixes:
+
+* only use sign in token expiration for sign in tokens (#424)
+
 ## [v3.11.9](https://github.com/team-alembic/ash_authentication/compare/v3.11.8...v3.11.9) (2023-09-17)
 
 
