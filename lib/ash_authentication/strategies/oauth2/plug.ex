@@ -5,7 +5,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
   alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.{Errors, Info, Strategy, Strategy.OAuth2}
-  alias Assent.{Config, HTTPAdapter.Mint}
+  alias Assent.{Config, HTTPAdapter.Finch}
   alias Plug.Conn
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
@@ -82,7 +82,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     config =
       strategy
       |> Map.take(@raw_config_attrs)
-      |> Map.put(:http_adapter, Mint)
+      |> Map.put(:http_adapter, {Finch, supervisor: AshAuthentication.Finch})
 
     with {:ok, config} <- add_secret_value(config, strategy, :authorize_url),
          {:ok, config} <- add_secret_value(config, strategy, :client_id),

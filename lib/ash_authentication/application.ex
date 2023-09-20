@@ -11,6 +11,10 @@ defmodule AshAuthentication.Application do
 
     []
     |> maybe_append(
+      true,
+      {Finch, name: AshAuthentication.Finch}
+    )
+    |> maybe_append(
       start_dev_server?(),
       {AshAuthentication.Supervisor, otp_app: :ash_authentication}
     )
