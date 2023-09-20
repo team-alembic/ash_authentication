@@ -120,6 +120,9 @@ defmodule AshAuthentication.Plug.Helpers do
   your request.  If a valid bearer token is present then the subject is loaded
   into the assigns under their subject name (with the prefix `current_`).
 
+  If the authentication token is required to be present in the database, it is
+  loaded into the assigns using `current_\#{subject_name}_token_record`
+
   If there is no user present for a resource then the assign is set to `nil`.
   """
   @spec retrieve_from_bearer(Conn.t(), module) :: Conn.t()
@@ -131,7 +134,8 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
            when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app),
-           :ok <- validate_token(resource, jti),
+           {:ok, token_record} <-
+             validate_token(resource, jti),
            {:ok, user} <-
              AshAuthentication.subject_to_user(subject, resource,
                tenant: Ash.PlugHelpers.get_tenant(conn)
@@ -140,24 +144,40 @@ defmodule AshAuthentication.Plug.Helpers do
            current_subject_name <- current_subject_name(subject_name) do
         conn
         |> Conn.assign(current_subject_name, user)
+        |> maybe_assign_token_record(token_record, subject_name)
       else
         _ -> conn
       end
     end)
   end
 
+  defp maybe_assign_token_record(conn, _token_record, subject_name) when is_nil(subject_name) do
+    conn
+  end
+
+  defp maybe_assign_token_record(conn, token_record, subject_name) do
+    conn
+    |> Conn.assign(
+      current_subject_token_record_name(subject_name),
+      token_record
+    )
+  end
+
   defp validate_token(resource, jti) do
     if Info.authentication_tokens_require_token_presence_for_authentication?(resource) do
-      with {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource),
-           {:ok, [_]} <-
+      with {:ok, token_resource} <-
+             Info.authentication_tokens_token_resource(resource),
+           {:ok, [token_record]} <-
              TokenResource.Actions.get_token(token_resource, %{
                "jti" => jti,
                "purpose" => "user"
              }) do
-        :ok
+        {:ok, token_record}
+      else
+        _ -> :error
       end
     else
-      :ok
+      {:ok, nil}
     end
   end
 
@@ -258,4 +278,8 @@ defmodule AshAuthentication.Plug.Helpers do
   # sobelow_skip ["DOS.StringToAtom"]
   defp current_subject_name(subject_name) when is_atom(subject_name),
     do: String.to_atom("current_#{subject_name}")
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp current_subject_token_record_name(subject_name) when is_atom(subject_name),
+    do: String.to_atom("current_#{subject_name}_token_record")
 end
