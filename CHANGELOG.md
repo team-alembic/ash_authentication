@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.11](https://github.com/team-alembic/ash_authentication/compare/v3.11.10...v3.11.11) (2023-09-20)
+
+
+
+
+### Improvements:
+
+* assign the token record to the connection assigns (#426)
+
 ## [v3.11.10](https://github.com/team-alembic/ash_authentication/compare/v3.11.9...v3.11.10) (2023-09-18)
 
 
