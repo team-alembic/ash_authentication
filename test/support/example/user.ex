@@ -15,7 +15,7 @@ defmodule Example.User do
           id: Ecto.UUID.t(),
           username: String.t(),
           hashed_password: String.t(),
-          created_at: DateTime.t(),
+          inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
 
@@ -27,7 +27,7 @@ defmodule Example.User do
     attribute :not_accepted_extra_stuff, :string
     attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, private?: true
 
-    create_timestamp :created_at
+    create_timestamp :inserted_at
     update_timestamp :updated_at
   end
 

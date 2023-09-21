@@ -63,7 +63,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
              writable?: true
            ),
          {:ok, dsl_state} <-
-           maybe_build_attribute(dsl_state, :created_at, :utc_datetime_usec,
+           maybe_build_attribute(dsl_state, :inserted_at, :utc_datetime_usec,
              allow_nil?: false,
              private?: true,
              default: &DateTime.utc_now/0
@@ -73,6 +73,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
              allow_nil?: false,
              private?: true,
              default: &DateTime.utc_now/0,
+             match_other_defaults?: true,
              update_default: &DateTime.utc_now/0
            ),
          :ok <- validate_extra_data_field(dsl_state),

@@ -7,7 +7,7 @@ defmodule Example.UserWithTokenRequired do
           id: Ecto.UUID.t(),
           email: String.t(),
           hashed_password: String.t(),
-          created_at: DateTime.t(),
+          inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
 
@@ -15,7 +15,7 @@ defmodule Example.UserWithTokenRequired do
     uuid_primary_key :id, writable?: true
     attribute :email, :ci_string, allow_nil?: false
     attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, private?: true
-    create_timestamp :created_at
+    create_timestamp :inserted_at
     update_timestamp :updated_at
   end
 
