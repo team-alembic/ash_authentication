@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.12](https://github.com/team-alembic/ash_authentication/compare/v3.11.11...v3.11.12) (2023-09-21)
+
+
+
+
+### Bug Fixes:
+
+* include `finch` in the dependencies.
+
+* deprecated mint httpadapter (#425)
+
 ## [v3.11.11](https://github.com/team-alembic/ash_authentication/compare/v3.11.10...v3.11.11) (2023-09-21)
 
 
