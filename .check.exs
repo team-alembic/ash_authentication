@@ -30,6 +30,7 @@
     # {:my_tool, ["my_tool", "arg with spaces"]}
     {:credo, "mix credo --strict"},
     {:spark_formatter, "mix spark.formatter --check"},
-    {:spark_cheat_sheets, "mix spark.cheat_sheets --check"}
+    {:spark_cheat_sheets, "mix spark.cheat_sheets --check"},
+    {:generate_migrations, "mix ash_postgres.generate_migrations --check"}
   ]
 ]
