@@ -28,6 +28,8 @@
     ## custom new tools may be added (Mix tasks or arbitrary commands)
     # {:my_task, "mix my_task", env: %{"MIX_ENV" => "prod"}},
     # {:my_tool, ["my_tool", "arg with spaces"]}
-    {:credo, "mix credo --strict"}
+    {:credo, "mix credo --strict"},
+    {:spark_formatter, "mix spark.formatter --check"},
+    {:spark_cheat_sheets, "mix spark.cheat_sheets --check"}
   ]
 ]
