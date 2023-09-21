@@ -188,7 +188,6 @@ defmodule AshAuthentication.MixProject do
       {:finch, "~> 0.16.0"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
-      {:mint, "~> 1.4"},
       {:plug, "~> 1.13"},
       {:spark, "~> 1.1 and >= 1.1.20"},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
