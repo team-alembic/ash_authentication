@@ -118,8 +118,8 @@ defmodule AshAuthentication.MixProject do
   end
 
   defp extra_documentation do
-    (["README.md"] ++
-       Path.wildcard("documentation/**/*.md"))
+    ["README.md"]
+    |> Enum.concat(Path.wildcard("documentation/**/*.{md,livemd,cheatmd}"))
     |> Enum.map(fn
       "README.md" ->
         {:"README.md", title: "Read Me", ash_hq?: false}
@@ -131,6 +131,9 @@ defmodule AshAuthentication.MixProject do
         {String.to_atom(path), []}
 
       "documentation/topics/" <> _ = path ->
+        {String.to_atom(path), []}
+
+      "documentation/dsls/" <> _ = path ->
         {String.to_atom(path), []}
     end)
   end
@@ -189,7 +192,7 @@ defmodule AshAuthentication.MixProject do
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
-      {:spark, "~> 1.1 and >= 1.1.20"},
+      {:spark, "~> 1.1 and >= 1.1.39"},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 0.21", only: [:dev, :test]},
       {:ash_json_api, "~> 0.30", only: [:dev, :test]},
@@ -231,9 +234,8 @@ defmodule AshAuthentication.MixProject do
         "hex.audit",
         "test"
       ],
-      "spark.formatter": [
-        "spark.formatter --extensions #{Enum.join(extensions, ",")}"
-      ],
+      "spark.formatter": "spark.formatter --extensions #{Enum.join(extensions, ",")}",
+      "spark.cheat_sheets": "spark.cheat_sheets --extensions #{Enum.join(extensions, ",")}",
       docs: ["docs", "ash.replace_doc_links"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
