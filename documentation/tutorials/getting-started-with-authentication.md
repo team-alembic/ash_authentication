@@ -303,7 +303,9 @@ a two-arity anonymous function, or a module which implements the
 
 At it's simplest you should so something like this:
 
-```
+```elixir
+# in lib/my_app/accounts/user.ex
+
 signing_secret fn _, _ ->
   Application.fetch_env(:my_app, :token_signing_secret)
 end
