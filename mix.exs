@@ -2,7 +2,7 @@ defmodule AshAuthentication.MixProject do
   @moduledoc false
   use Mix.Project
 
-  @version "3.11.12"
+  @version "3.11.13"
 
   def project do
     [

@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.13](https://github.com/team-alembic/ash_authentication/compare/v3.11.12...v3.11.13) (2023-09-22)
+
+
+
+
+### Improvements:
+
+* Allow all token lifetimes to be specified with a time unit.
+
 ## [v3.11.12](https://github.com/team-alembic/ash_authentication/compare/v3.11.11...v3.11.12) (2023-09-21)
 
 
