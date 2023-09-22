@@ -3,7 +3,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   The code interface for interacting with the token resource.
   """
 
-  alias Ash.{Changeset, DataLayer, Query, Resource}
+  alias Ash.{Changeset, DataLayer, Notifier, Query, Resource}
   alias AshAuthentication.{TokenResource, TokenResource.Info}
 
   import AshAuthentication.Utils
@@ -48,8 +48,12 @@ defmodule AshAuthentication.TokenResource.Actions do
           }
         )
         |> case do
-          {:ok, :ok} -> :ok
-          {:error, reason} -> {:error, reason}
+          {:ok, {:ok, notifications}} ->
+            Notifier.notify(notifications)
+            :ok
+
+          {:error, reason} ->
+            {:error, reason}
         end
 
       :error ->
@@ -203,7 +207,7 @@ defmodule AshAuthentication.TokenResource.Actions do
            resource |> Query.new() |> Query.set_context(%{private: %{ash_authentication?: true}}),
          query <- Query.for_read(query, read_expired_action_name, opts),
          {:ok, expired} <- api.read(query) do
-      Enum.reduce_while(expired, :ok, fn record, :ok ->
+      Enum.reduce_while(expired, {:ok, []}, fn record, {:ok, notifications} ->
         record
         |> Changeset.new()
         |> Changeset.set_context(%{
@@ -212,10 +216,16 @@ defmodule AshAuthentication.TokenResource.Actions do
           }
         })
         |> Changeset.for_destroy(expunge_expired_action_name, opts)
-        |> api.destroy()
+        |> api.destroy(return_notifications?: true)
         |> case do
-          :ok -> {:cont, :ok}
-          {:error, reason} -> {:halt, {:error, reason}}
+          :ok ->
+            {:cont, {:ok, notifications}}
+
+          {:ok, more_notifications} ->
+            {:cont, {:ok, Enum.concat(notifications, more_notifications)}}
+
+          {:error, reason} ->
+            {:halt, {:error, reason}}
         end
       end)
     end
