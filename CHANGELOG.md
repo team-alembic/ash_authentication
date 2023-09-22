@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.15](https://github.com/team-alembic/ash_authentication/compare/v3.11.14...v3.11.15) (2023-09-22)
+
+
+
+
+### Bug Fixes:
+
+* ensure we aren't calling `Map.take` on `nil`
+
 ## [v3.11.14](https://github.com/team-alembic/ash_authentication/compare/v3.11.13...v3.11.14) (2023-09-22)
 
 
