@@ -75,6 +75,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         |> then(fn dsl_state ->
           strategy
           |> Map.get(:resettable, %{})
+          |> Kernel.||(%{})
           |> Map.take(~w[request_password_reset_action_name password_reset_action_name]a)
           |> Map.values()
           |> register_strategy_actions(dsl_state, strategy)
