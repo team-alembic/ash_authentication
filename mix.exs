@@ -148,9 +148,18 @@ defmodule AshAuthentication.MixProject do
         |> Path.basename()
         |> String.split(~r/_+/)
         |> Enum.join(" ")
-        |> String.capitalize()
+        |> capitalize()
 
       {name, dir |> Path.join("**") |> Path.wildcard()}
+    end)
+  end
+
+  defp capitalize(string) do
+    string
+    |> String.split(" ")
+    |> Enum.map(fn string ->
+      [hd | tail] = String.graphemes(string)
+      String.capitalize(hd) <> Enum.join(tail)
     end)
   end
 
