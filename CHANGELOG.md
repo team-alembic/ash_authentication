@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.14](https://github.com/team-alembic/ash_authentication/compare/v3.11.13...v3.11.14) (2023-09-22)
+
+
+
+
+### Bug Fixes:
+
+* TokenResource: don't silently drop notifications about token removal. (#432)
+
 ## [v3.11.13](https://github.com/team-alembic/ash_authentication/compare/v3.11.12...v3.11.13) (2023-09-22)
 
 
