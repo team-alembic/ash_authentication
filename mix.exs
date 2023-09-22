@@ -16,6 +16,7 @@ defmodule AshAuthentication.MixProject do
       deps: deps(),
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
+      consolidate_protocols: Mix.env() == :prod,
       dialyzer: [
         plt_add_apps: [:mix, :ex_unit],
         plt_core_path: "priv/plts",

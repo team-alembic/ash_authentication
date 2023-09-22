@@ -31,12 +31,19 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
           required: true
         ],
         token_lifetime: [
-          type: :pos_integer,
+          type:
+            {:or,
+             [
+               :pos_integer,
+               {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
+             ]},
           doc: """
-          How long should the confirmation token be valid, in hours.
+          How long should the confirmation token be valid.
+          If no unit is provided, then hours is assumed.
+
           Defaults to #{@default_confirmation_lifetime_days} days.
           """,
-          default: @default_confirmation_lifetime_days * 24
+          default: {@default_confirmation_lifetime_days, :days}
         ],
         monitor_fields: [
           type: {:list, :atom},

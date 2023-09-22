@@ -69,7 +69,8 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
 
   defp validate_tokens_enabled_for_sign_in_tokens(_, _), do: :ok
 
-  defp maybe_validate_resettable_sender(dsl_state, %{resettable: [resettable]}) do
+  defp maybe_validate_resettable_sender(dsl_state, %{resettable: resettable})
+       when is_struct(resettable) do
     with {:ok, {sender, _opts}} <- Map.fetch(resettable, :sender),
          :ok <- validate_behaviour(sender, Sender) do
       :ok

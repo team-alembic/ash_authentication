@@ -178,7 +178,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   """
   @spec reset_request(Password.t(), map, keyword) :: :ok | {:error, any}
   def reset_request(
-        %Password{resettable: [%Password.Resettable{} = resettable]} = strategy,
+        %Password{resettable: %Password.Resettable{} = resettable} = strategy,
         params,
         options
       ) do
@@ -209,7 +209,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   """
   @spec reset(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def reset(
-        %Password{resettable: [%Password.Resettable{} = resettable]} = strategy,
+        %Password{resettable: %Password.Resettable{} = resettable} = strategy,
         params,
         options
       ) do

@@ -22,7 +22,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
   def prepare(query, _opts, _context) do
     strategy = Info.strategy_for_action!(query.resource, query.action.name)
 
-    if Enum.any?(strategy.resettable) do
+    if strategy.resettable do
       identity_field = strategy.identity_field
       identity = Query.get_argument(query, identity_field)
       select_for_senders = Info.authentication_select_for_senders!(query.resource)
@@ -38,7 +38,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
     end
   end
 
-  defp after_action(_query, [user], %{resettable: [%{sender: {sender, send_opts}}]} = strategy) do
+  defp after_action(_query, [user], %{resettable: %{sender: {sender, send_opts}}} = strategy) do
     case Password.reset_token_for(strategy, user) do
       {:ok, token} -> sender.send(user, token, send_opts)
       _ -> nil

@@ -34,7 +34,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
     )
     |> maybe_append(strategy.registration_enabled?, :register)
     |> maybe_append(strategy.sign_in_enabled?, :sign_in)
-    |> maybe_concat(Enum.any?(strategy.resettable), [:reset_request, :reset])
+    |> maybe_concat(strategy.resettable, [:reset_request, :reset])
   end
 
   @doc false

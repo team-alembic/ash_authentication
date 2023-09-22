@@ -14,7 +14,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
 
   describe "Strategy.phases/1" do
     test "it returns the correct phases when the strategy supports resetting" do
-      strategy = %Password{resettable: [%Resettable{}]}
+      strategy = %Password{resettable: %Resettable{}}
 
       phases =
         strategy
@@ -38,7 +38,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
 
   describe "Strategy.actions/1" do
     test "it returns the correct actions when the strategy supports resetting" do
-      strategy = %Password{resettable: [%Resettable{}]}
+      strategy = %Password{resettable: %Resettable{}}
 
       actions =
         strategy
@@ -95,7 +95,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
       {:ok, strategy} = Info.strategy(Example.User, :password)
 
       routes =
-        %{strategy | resettable: []}
+        %{strategy | resettable: nil}
         |> Strategy.routes()
         |> MapSet.new()
 

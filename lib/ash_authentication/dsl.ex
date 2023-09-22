@@ -141,17 +141,25 @@ defmodule AshAuthentication.Dsl do
                 default: hd(algorithms())
               ],
               token_lifetime: [
-                type: :pos_integer,
+                type:
+                  {:or,
+                   [
+                     :pos_integer,
+                     {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
+                   ]},
                 doc: """
-                How long a token should be valid, in hours.
+                How long a token should be valid.
 
                 Since refresh tokens are not yet supported, you should
                 probably set this to a reasonably long time to ensure
                 a good user experience.
 
+                You can either provide a tuple with a time unit, or a positive
+                integer, in which case the unit is assumed to be hours.
+
                 Defaults to #{@default_token_lifetime_days} days.
                 """,
-                default: @default_token_lifetime_days * 24
+                default: {@default_token_lifetime_days, :days}
               ],
               token_resource: [
                 type: {:or, [{:behaviour, Resource}, {:in, [false]}]},

@@ -106,7 +106,7 @@ defmodule AshAuthentication.Strategy.Password do
             register_action_accept: [],
             register_action_name: nil,
             registration_enabled?: true,
-            resettable: [],
+            resettable: nil,
             resource: nil,
             sign_in_action_name: nil,
             sign_in_enabled?: true,
@@ -140,7 +140,7 @@ defmodule AshAuthentication.Strategy.Password do
           register_action_accept: [atom],
           register_action_name: atom,
           registration_enabled?: boolean,
-          resettable: [Resettable.t()],
+          resettable: nil | Resettable.t(),
           resource: module,
           sign_in_action_name: atom,
           sign_in_enabled?: boolean,
@@ -161,11 +161,11 @@ defmodule AshAuthentication.Strategy.Password do
   """
   @spec reset_token_for(t(), Resource.record()) :: {:ok, String.t()} | :error
   def reset_token_for(
-        %Password{resettable: [%Resettable{} = resettable]} = _strategy,
+        %Password{resettable: %Resettable{} = resettable} = _strategy,
         user
       ) do
     case Jwt.token_for_user(user, %{"act" => resettable.password_reset_action_name},
-           token_lifetime: resettable.token_lifetime * 3600
+           token_lifetime: resettable.token_lifetime
          ) do
       {:ok, token, _claims} -> {:ok, token}
       :error -> :error

@@ -18,8 +18,8 @@ defmodule AshAuthentication.Strategy.PasswordTest do
   describe "reset_token_for/1" do
     test "it generates a token when resets are enabled" do
       user = build_user()
-      resettable = %Resettable{password_reset_action_name: :reset, token_lifetime: 72}
-      strategy = %Password{resettable: [resettable], resource: user.__struct__}
+      resettable = %Resettable{password_reset_action_name: :reset, token_lifetime: {72, :hours}}
+      strategy = %Password{resettable: resettable, resource: user.__struct__}
 
       assert {:ok, token} = Password.reset_token_for(strategy, user)
       assert {:ok, claims} = Jwt.peek(token)

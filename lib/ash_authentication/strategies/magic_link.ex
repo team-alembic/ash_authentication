@@ -108,7 +108,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
             sign_in_action_name: nil,
             single_use_token?: true,
             strategy_module: __MODULE__,
-            token_lifetime: 10,
+            token_lifetime: {10, :minutes},
             token_param_name: :token
 
   use AshAuthentication.Strategy.Custom, entity: Dsl.dsl()
@@ -141,7 +141,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
   def request_token_for(strategy, user)
       when is_struct(strategy, __MODULE__) and is_struct(user, strategy.resource) do
     case Jwt.token_for_user(user, %{"act" => strategy.sign_in_action_name},
-           token_lifetime: strategy.token_lifetime * 60,
+           token_lifetime: strategy.token_lifetime,
            purpose: :magic_link
          ) do
       {:ok, token, _claims} -> {:ok, token}

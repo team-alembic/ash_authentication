@@ -8,7 +8,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
 
   alias Ash.{Resource, Type}
   alias AshAuthentication.{GenerateTokenChange, Strategy, Strategy.Password}
-  alias Spark.{Dsl.Transformer, Error.DslError}
+  alias Spark.Dsl.Transformer
   import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -21,6 +21,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   def transform(strategy, dsl_state) do
     with :ok <- validate_identity_field(strategy.identity_field, dsl_state),
          :ok <- validate_hashed_password_field(strategy.hashed_password_field, dsl_state),
+         strategy <- maybe_transform_token_lifetime(strategy, :sign_in_token_lifetime, :seconds),
          strategy <-
            maybe_set_field_lazy(strategy, :register_action_name, &:"register_with_#{&1.name}"),
          {:ok, dsl_state} <-
@@ -73,15 +74,20 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         end)
         |> then(fn dsl_state ->
           strategy
-          |> Map.get(:resettable, [])
-          |> Enum.flat_map(fn resettable ->
-            ~w[request_password_reset_action_name password_reset_action_name]a
-            |> Enum.map(&Map.get(resettable, &1))
-          end)
+          |> Map.get(:resettable, %{})
+          |> Map.take(~w[request_password_reset_action_name password_reset_action_name]a)
+          |> Map.values()
           |> register_strategy_actions(dsl_state, strategy)
         end)
 
       {:ok, dsl_state}
+    end
+  end
+
+  defp maybe_transform_token_lifetime(strategy, field, default_unit) do
+    case Map.get(strategy, field) do
+      ttl when is_integer(ttl) -> Map.put(strategy, field, {ttl, default_unit})
+      _ -> strategy
     end
   end
 
@@ -348,11 +354,11 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
 
   defp maybe_maybe_build_action(false, dsl_state, _action_name, _builder), do: {:ok, dsl_state}
 
-  defp maybe_transform_resettable(dsl_state, %{resettable: []} = strategy),
+  defp maybe_transform_resettable(dsl_state, %{resettable: nil} = strategy),
     do: {:ok, dsl_state, strategy}
 
   # sobelow_skip ["DOS.BinToAtom"]
-  defp maybe_transform_resettable(dsl_state, %{resettable: [resettable]} = strategy) do
+  defp maybe_transform_resettable(dsl_state, %{resettable: resettable} = strategy) do
     with resettable <-
            maybe_set_field_lazy(
              resettable,
@@ -378,20 +384,15 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
              resettable.password_reset_action_name,
              &build_reset_action(&1, resettable, strategy)
            ),
-         :ok <- validate_reset_action(dsl_state, resettable, strategy) do
-      {:ok, dsl_state, %{strategy | resettable: [resettable]}}
+         resettable <- maybe_transform_token_lifetime(resettable, :token_lifetime, :hours),
+         :ok <-
+           validate_reset_action(dsl_state, resettable, strategy) do
+      {:ok, dsl_state, %{strategy | resettable: resettable}}
     else
       {:error, reason} ->
         {:error, reason}
     end
   end
-
-  defp maybe_transform_resettable(_dsl_state, %{resettable: [_ | _]}),
-    do:
-      DslError.exception(
-        path: [:authentication, :strategies, :password],
-        message: "Only one `resettable` entity may be present."
-      )
 
   defp build_reset_request_action(dsl_state, resettable, strategy) do
     identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)

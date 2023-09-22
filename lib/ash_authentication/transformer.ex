@@ -33,6 +33,7 @@ defmodule AshAuthentication.Transformer do
     with :ok <- validate_at_least_one_strategy(dsl_state),
          :ok <- validate_unique_strategy_names(dsl_state),
          :ok <- validate_unique_add_on_names(dsl_state),
+         {:ok, dsl_state} <- maybe_transform_token_lifetime(dsl_state),
          {:ok, get_by_subject_action_name} <-
            Info.authentication_get_by_subject_action_name(dsl_state),
          {:ok, dsl_state} <-
@@ -49,6 +50,29 @@ defmodule AshAuthentication.Transformer do
         |> Transformer.set_option([:authentication], :subject_name, subject_name)
 
       {:ok, dsl_state}
+    end
+  end
+
+  defp maybe_transform_token_lifetime(dsl_state) do
+    case Info.authentication_tokens_token_lifetime(dsl_state) do
+      {:ok, {_ttl, unit}} when unit in ~w[days hours minutes seconds]a ->
+        {:ok, dsl_state}
+
+      {:ok, ttl} when is_integer(ttl) and ttl > 0 ->
+        {:ok,
+         Transformer.set_option(
+           dsl_state,
+           [:authentication, :tokens],
+           :token_lifetime,
+           {ttl, :hours}
+         )}
+
+      _ ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :tokens],
+           message: "Invalid token lifetime"
+         )}
     end
   end
 

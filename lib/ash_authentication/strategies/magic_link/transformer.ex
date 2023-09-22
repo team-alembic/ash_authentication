@@ -21,6 +21,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
            ),
          strategy <- maybe_set_sign_in_action_name(strategy),
          strategy <- maybe_set_request_action_name(strategy),
+         strategy <- maybe_transform_token_lifetime(strategy),
          {:ok, dsl_state} <-
            maybe_build_action(
              dsl_state,
@@ -47,6 +48,11 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
       {:ok, dsl_state}
     end
   end
+
+  defp maybe_transform_token_lifetime(strategy) when is_integer(strategy.token_lifetime),
+    do: %{strategy | token_lifetime: {strategy.token_lifetime, :minutes}}
+
+  defp maybe_transform_token_lifetime(strategy), do: strategy
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp maybe_set_sign_in_action_name(strategy) when is_nil(strategy.sign_in_action_name),

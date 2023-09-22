@@ -28,6 +28,7 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
       hide: [:name],
       target: Password,
       modules: [:hash_provider],
+      singleton_entity_keys: [:resettable],
       schema: [
         name: [
           type: :atom,
@@ -148,10 +149,17 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           default: false
         ],
         sign_in_token_lifetime: [
-          type: :pos_integer,
-          default: 60,
+          type:
+            {:or,
+             [
+               :pos_integer,
+               {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
+             ]},
+          default: {60, :seconds},
           doc: """
-          A lifetime (in seconds) for which a generated sign in token will be valid, if `sign_in_tokens_enabled?`.
+          A lifetime for which a generated sign in token will be valid, if `sign_in_tokens_enabled?`.
+
+          If no unit is specified, defaults to `:seconds`.
           """
         ]
       ],
@@ -163,13 +171,20 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
             target: Password.Resettable,
             schema: [
               token_lifetime: [
-                type: :pos_integer,
+                type:
+                  {:or,
+                   [
+                     :pos_integer,
+                     {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
+                   ]},
                 doc: """
-                How long should the reset token be valid, in hours.
+                How long should the reset token be valid.
+
+                If no unit is provided `:hours` is assumed.
 
                 Defaults to #{@default_token_lifetime_days} days.
                 """,
-                default: @default_token_lifetime_days * 24
+                default: {@default_token_lifetime_days, :days}
               ],
               request_password_reset_action_name: [
                 type: :atom,

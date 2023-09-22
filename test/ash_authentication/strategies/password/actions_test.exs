@@ -209,7 +209,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
           params = %{"username" => user.username}
           options = []
           api = Info.authentication_api!(strategy.resource)
-          resettable = strategy.resettable |> Enum.at(0)
+          resettable = strategy.resettable
 
           result =
             strategy.resource
@@ -246,7 +246,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
 
     test "it returns an error when the strategy is not resettable" do
       {:ok, strategy} = Info.strategy(Example.User, :password)
-      strategy = %{strategy | resettable: []}
+      strategy = %{strategy | resettable: nil}
 
       assert {:error, error} = Actions.reset_request(strategy, %{"username" => username()}, [])
       assert Exception.message(error) =~ ~r/no such action/i

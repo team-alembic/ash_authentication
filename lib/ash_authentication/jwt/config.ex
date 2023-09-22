@@ -20,7 +20,7 @@ defmodule AshAuthentication.Jwt.Config do
       opts
       |> Keyword.fetch(:token_lifetime)
       |> case do
-        {:ok, hours} -> hours * 60 * 60
+        {:ok, lifetime} -> lifetime_to_seconds(lifetime)
         :error -> token_lifetime(resource)
       end
 
@@ -157,8 +157,13 @@ defmodule AshAuthentication.Jwt.Config do
     resource
     |> Info.authentication_tokens_token_lifetime()
     |> case do
-      {:ok, hours} -> hours * 60 * 60
+      {:ok, lifetime} -> lifetime_to_seconds(lifetime)
       :error -> Jwt.default_lifetime_hrs() * 60 * 60
     end
   end
+
+  defp lifetime_to_seconds({seconds, :seconds}), do: seconds
+  defp lifetime_to_seconds({minutes, :minutes}), do: minutes * 60
+  defp lifetime_to_seconds({hours, :hours}), do: hours * 60 * 60
+  defp lifetime_to_seconds({days, :days}), do: days * 60 * 60 * 24
 end

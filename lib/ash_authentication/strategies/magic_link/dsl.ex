@@ -29,11 +29,18 @@ defmodule AshAuthentication.Strategy.MagicLink.Dsl do
           default: :username
         ],
         token_lifetime: [
-          type: :pos_integer,
+          type:
+            {:or,
+             [
+               :pos_integer,
+               {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
+             ]},
           doc: """
-          How long the sign in token is valid, in minutes.
+          How long the sign in token is valid.
+
+          If no unit is provided, then `minutes` is assumed.
           """,
-          default: 10
+          default: {10, :minutes}
         ],
         request_action_name: [
           type: :atom,

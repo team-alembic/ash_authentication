@@ -163,11 +163,13 @@ Configure JWT settings for this resource
   Available signing algorithms are;
   EdDSA, Ed448ph, Ed448, Ed25519ph, Ed25519, PS512, PS384, PS256, ES512, ES384, ES256, RS512, RS384, RS256, HS512, HS384 and HS256. The default value is `"HS256"`.
 
-* `:token_lifetime` (`t:pos_integer/0`) - How long a token should be valid, in hours.  
+* `:token_lifetime` - How long a token should be valid.  
   Since refresh tokens are not yet supported, you should
   probably set this to a reasonably long time to ensure
   a good user experience.  
-  Defaults to 14 days. The default value is `336`.
+  You can either provide a tuple with a time unit, or a positive
+  integer, in which case the unit is assumed to be hours.  
+  Defaults to 14 days. The default value is `{14, :days}`.
 
 * `:token_resource` - Required. The resource used to store token information.  
   If token generation is enabled for this resource, we need a place to
@@ -266,7 +268,7 @@ Configure JWT settings for this resource
 | `store_all_tokens?` | `boolean` | `false` | Store all tokens in the `token_resource`? Some applications need to keep track of all tokens issued to any user.  This is optional behaviour with `ash_authentication` in order to preserve as much performance as possible. |
 | `require_token_presence_for_authentication?` | `boolean` | `false` | Require a locally-stored token for authentication? This inverts the token validation behaviour from requiring that tokens are not revoked to requiring any token presented by a client to be present in the token resource to be considered valid. Requires `store_all_tokens?` to be `true`. |
 | `signing_algorithm` | `String.t` | `"HS256"` | The algorithm to use for token signing. Available signing algorithms are; EdDSA, Ed448ph, Ed448, Ed25519ph, Ed25519, PS512, PS384, PS256, ES512, ES384, ES256, RS512, RS384, RS256, HS512, HS384 and HS256. |
-| `token_lifetime` | `pos_integer` | `336` | How long a token should be valid, in hours. Since refresh tokens are not yet supported, you should probably set this to a reasonably long time to ensure a good user experience. Defaults to 14 days. |
+| `token_lifetime` | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{14, :days}` | How long a token should be valid. Since refresh tokens are not yet supported, you should probably set this to a reasonably long time to ensure a good user experience. You can either provide a tuple with a time unit, or a positive integer, in which case the unit is assumed to be hours. Defaults to 14 days. |
 | `signing_secret` | `(any, any -> any) \| module \| String.t` |  | The secret used to sign tokens. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information. |
 
 
