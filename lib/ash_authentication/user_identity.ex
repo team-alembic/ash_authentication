@@ -112,20 +112,6 @@ defmodule AshAuthentication.UserIdentity do
 
   If you intend to operate with multiple user resources, you will need to define
   multiple user identity resources.
-
-  <!--- ash-hq-hide-start --> <!--- -->
-
-  ## Dsl
-
-  ### Index
-
-  #{Spark.Dsl.Extension.doc_index(@dsl)}
-
-  ### Docs
-
-  #{Spark.Dsl.Extension.doc(@dsl)}
-
-  <!--- ash-hq-hide-stop --> <!--- -->
   """
 
   use Spark.Dsl.Extension,

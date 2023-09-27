@@ -81,20 +81,6 @@ defmodule AshAuthentication do
   supervision tree.  See [the Elixir
   docs](https://hexdocs.pm/elixir/Application.html#module-the-application-callback-module)
   for more information.
-
-  <!--- ash-hq-hide-start --> <!--- -->
-
-  ## DSL Documentation
-
-  ### Index
-
-  #{Spark.Dsl.Extension.doc_index(dsl())}
-
-  ### Docs
-
-  #{Spark.Dsl.Extension.doc(dsl())}
-
-  <!--- ash-hq-hide-stop --> <!--- -->
   """
   alias Ash.{
     Api,
