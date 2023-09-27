@@ -296,6 +296,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           user_url: secret
         }
 
+  @doc false
   defdelegate dsl, to: Dsl
   defdelegate transform(strategy, dsl_state), to: Transformer
   defdelegate verify(strategy, dsl_state), to: Verifier

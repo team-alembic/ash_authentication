@@ -89,9 +89,7 @@ here's a brief overview of what each field we've set does:
 
   - `name` is the name for which the helper function will be generated in
     the DSL (ie `only_marty do #... end`).
-  - `describe` and `examples` are used when generating documentation.  Probably
-    worth doing this (and using `Spark.Dsl.Extension.doc_entity/2` to generate
-    your moduledocs if you plan on sharing this strategy with others).
+  - `describe` and `examples` are used when generating documentation.
   - `target` is the name of the module which defines our entity struct.  We've
     set it to `__MODULE__` which means that we'll have to define the struct on
     this module.

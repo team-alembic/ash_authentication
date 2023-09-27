@@ -150,6 +150,7 @@ defmodule AshAuthentication.Strategy.Password do
           strategy_module: __MODULE__
         }
 
+  @doc false
   defdelegate dsl(), to: Dsl
   defdelegate transform(strategy, dsl_state), to: Transformer
   defdelegate verify(strategy, dsl_state), to: Verifier

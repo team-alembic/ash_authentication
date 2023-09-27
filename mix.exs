@@ -211,7 +211,7 @@ defmodule AshAuthentication.MixProject do
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
       {:ex_check, "~> 0.15", only: [:dev, :test]},
-      {:ex_doc, ">= 0.0.0", only: [:dev, :test]},
+      {:ex_doc, github: "elixir-lang/ex_doc", only: [:dev, :test], runtime: false},
       {:faker, "~> 0.17.0", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.7", only: [:dev, :test]},
@@ -246,7 +246,7 @@ defmodule AshAuthentication.MixProject do
       ],
       "spark.formatter": "spark.formatter --extensions #{Enum.join(extensions, ",")}",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions #{Enum.join(extensions, ",")}",
-      docs: ["docs", "ash.replace_doc_links"],
+      docs: ["docs", "spark.replace_doc_links"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
