@@ -246,7 +246,14 @@ defmodule AshAuthentication.MixProject do
       ],
       "spark.formatter": "spark.formatter --extensions #{Enum.join(extensions, ",")}",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions #{Enum.join(extensions, ",")}",
-      docs: ["docs", "spark.replace_doc_links"],
+      "spark.cheat_sheets_in_search":
+        "spark.cheat_sheets_in_search --extensions #{Enum.join(extensions, ",")}",
+      docs: [
+        "spark.cheat_sheets",
+        "docs",
+        "spark.cheat_sheets_in_search",
+        "spark.replace_doc_links"
+      ],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
