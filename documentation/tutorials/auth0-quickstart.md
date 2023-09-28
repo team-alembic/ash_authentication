@@ -117,7 +117,7 @@ defmodule MyApp.Accounts.User do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
       upsert? true
-      upsert_identity :email
+      upsert_identity :unique_email
 
       # Required if you have token generation enabled.
       change AshAuthentication.GenerateTokenChange
