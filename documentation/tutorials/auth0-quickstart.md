@@ -31,7 +31,7 @@ dashboard](https://manage.auth0.com/) using the following steps:
   8. Click "Save Changes".
 
 Next we can configure our resource (assuming you already have everything else
-set up):
+set up from the [AshAuthenticationPhoenix guide](https://hexdocs.pm/ash_authentication_phoenix/getting-started-with-ash-authentication-phoenix.html)):
 
 ```elixir
 defmodule MyApp.Accounts.User do
