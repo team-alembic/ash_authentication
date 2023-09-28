@@ -78,8 +78,9 @@ defmodule MyApp.Secrets do
 
   defp get_config(key) do
     :my_app
-    |> Application.get_env(:auth0, [])
-    |> Keyword.fetch(key)
+    |> Application.fetch_env!(:auth0)
+    |> Keyword.fetch!(key)
+    |> then(&{:ok, &1})
   end
 end
 ```
