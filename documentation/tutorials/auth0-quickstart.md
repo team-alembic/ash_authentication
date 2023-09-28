@@ -3,7 +3,10 @@
 This is a _very quick_ tutorial on how to configure your application to use
 Auth0 for authentication.
 
-First, you need to configure an application in [the Auth0
+Before you start this tutorial, skip the Token resource while following the
+[AshAuthenticationPhoenix guide](https://hexdocs.pm/ash_authentication_phoenix/getting-started-with-ash-authentication-phoenix.html))
+
+Next, you need to configure an application in [the Auth0
 dashboard](https://manage.auth0.com/) using the following steps:
 
   1. Click "Create Application".
@@ -30,8 +33,7 @@ dashboard](https://manage.auth0.com/) using the following steps:
   7. Set "Allowed Web Origins" to your application's base URL.
   8. Click "Save Changes".
 
-Next we can configure our resource (assuming you already have everything else
-set up from the [AshAuthenticationPhoenix guide](https://hexdocs.pm/ash_authentication_phoenix/getting-started-with-ash-authentication-phoenix.html)):
+Next we can configure our resource:
 
 ```elixir
 defmodule MyApp.Accounts.User do
