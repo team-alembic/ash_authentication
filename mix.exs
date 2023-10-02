@@ -28,6 +28,13 @@ defmodule AshAuthentication.MixProject do
         groups_for_extras: extra_documentation_groups(),
         extra_section: "GUIDES",
         formatters: ["html"],
+        before_closing_head_tag: fn type ->
+          if type == :html do
+            """
+            <script defer data-domain="ashhexdocs" src="https://plausible.io/js/script.js"></script>
+            """
+          end
+        end,
         filter_modules: ~r/^Elixir.AshAuthentication/,
         source_url_pattern:
           "https://github.com/team-alembic/ash_authentication/blob/main/%{path}#L%{line}",

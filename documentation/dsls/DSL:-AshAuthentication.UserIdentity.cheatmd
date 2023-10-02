@@ -46,61 +46,6 @@ end
 If you intend to operate with multiple user resources, you will need to define
 multiple user identity resources.
 
-<!--- ash-hq-hide-start --> <!--- -->
-
-## Dsl
-
-### Index
-
-  * user_identity
-
-### Docs
-
-## user_identity
-
-Configure identity options for this resource
-
-
-
-
-
-
-
----
-
-* `:api` (`t:atom/0`) - Required. The Ash API to use to access this resource.
-
-* `:user_resource` (`t:atom/0`) - Required. The user resource to which these identities belong.
-
-* `:uid_attribute_name` (`t:atom/0`) - The name of the `uid` attribute on this resource. The default value is `:uid`.
-
-* `:strategy_attribute_name` (`t:atom/0`) - The name of the `strategy` attribute on this resource. The default value is `:strategy`.
-
-* `:user_id_attribute_name` (`t:atom/0`) - The name of the `user_id` attribute on this resource. The default value is `:user_id`.
-
-* `:access_token_attribute_name` (`t:atom/0`) - The name of the `access_token` attribute on this resource. The default value is `:access_token`.
-
-* `:access_token_expires_at_attribute_name` (`t:atom/0`) - The name of the `access_token_expires_at` attribute on this resource. The default value is `:access_token_expires_at`.
-
-* `:refresh_token_attribute_name` (`t:atom/0`) - The name of the `refresh_token` attribute on this resource. The default value is `:refresh_token`.
-
-* `:upsert_action_name` (`t:atom/0`) - The name of the action used to create and update records. The default value is `:upsert`.
-
-* `:destroy_action_name` (`t:atom/0`) - The name of the action used to destroy records. The default value is `:destroy`.
-
-* `:read_action_name` (`t:atom/0`) - The name of the action used to query identities. The default value is `:read`.
-
-* `:user_relationship_name` (`t:atom/0`) - The name of the belongs-to relationship between identities and users. The default value is `:user`.
-
-
-
-
-
-
-
-
-<!--- ash-hq-hide-stop --> <!--- -->
-
 
 ## user_identity
 Configure identity options for this resource
