@@ -119,6 +119,20 @@ if token generation is enabled for any resources in your application.  Most of
 the contents are auto-generated, so we just need to provide the data layer
 configuration and the API to use.
 
+But before we do, we need to install a postgres extension.
+
+```elixir
+# lib/my_app/repo.ex
+
+defmodule MyApp.Repo do
+  use AshPostgres.Repo, otp_app: :my_app
+  
+  def installed_extensions do
+    ["uuid-ossp", "citext"]
+  end
+end
+```
+
 You can skip this step if you don't want to use tokens, in which case remove the
 `tokens` DSL section in the user resource below.
 
