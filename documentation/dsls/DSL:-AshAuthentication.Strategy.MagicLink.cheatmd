@@ -161,7 +161,7 @@ Strategy for authenticating using local users with a magic link
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-sender" href="#name-sender">
+    <a id="authentication-strategies-magic_link-sender" href="#authentication-strategies-magic_link-sender">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         sender
       </span>
@@ -189,7 +189,7 @@ See `AshAuthentication.Sender` for more information.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-identity_field" href="#name-identity_field">
+    <a id="authentication-strategies-magic_link-identity_field" href="#authentication-strategies-magic_link-identity_field">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity_field
       </span>
@@ -212,7 +212,7 @@ Usually something like `username` or `email_address`.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-token_lifetime" href="#name-token_lifetime">
+    <a id="authentication-strategies-magic_link-token_lifetime" href="#authentication-strategies-magic_link-token_lifetime">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         token_lifetime
       </span>
@@ -235,7 +235,7 @@ If no unit is provided, then `minutes` is assumed.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-request_action_name" href="#name-request_action_name">
+    <a id="authentication-strategies-magic_link-request_action_name" href="#authentication-strategies-magic_link-request_action_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         request_action_name
       </span>
@@ -259,7 +259,7 @@ with `request_`.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-single_use_token?" href="#name-single_use_token?">
+    <a id="authentication-strategies-magic_link-single_use_token?" href="#authentication-strategies-magic_link-single_use_token?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         single_use_token?
       </span>
@@ -280,7 +280,7 @@ with `request_`.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-sign_in_action_name" href="#name-sign_in_action_name">
+    <a id="authentication-strategies-magic_link-sign_in_action_name" href="#authentication-strategies-magic_link-sign_in_action_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         sign_in_action_name
       </span>
@@ -304,7 +304,7 @@ with `sign_in_with_`.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-token_param_name" href="#name-token_param_name">
+    <a id="authentication-strategies-magic_link-token_param_name" href="#authentication-strategies-magic_link-token_param_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         token_param_name
       </span>

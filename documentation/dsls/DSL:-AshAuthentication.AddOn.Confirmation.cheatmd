@@ -164,8 +164,7 @@ User confirmation flow
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -179,7 +178,7 @@ User confirmation flow
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-name" href="#name-name">
+    <a id="authentication-add_ons-confirmation-name" href="#authentication-add_ons-confirmation-name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         name
       </span>
@@ -199,9 +198,23 @@ User confirmation flow
   </td>
 </tr>
 
-<tr>
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
   <td style="text-align: left">
-    <a id="name-monitor_fields" href="#name-monitor_fields">
+    <a id="authentication-add_ons-confirmation-monitor_fields" href="#authentication-add_ons-confirmation-monitor_fields">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         monitor_fields
       </span>
@@ -224,7 +237,7 @@ The confirmation will only be sent when one of these fields are changed.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-sender" href="#name-sender">
+    <a id="authentication-add_ons-confirmation-sender" href="#authentication-add_ons-confirmation-sender">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         sender
       </span>
@@ -257,7 +270,7 @@ See `AshAuthentication.Sender` for more information.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-token_lifetime" href="#name-token_lifetime">
+    <a id="authentication-add_ons-confirmation-token_lifetime" href="#authentication-add_ons-confirmation-token_lifetime">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         token_lifetime
       </span>
@@ -281,7 +294,7 @@ Defaults to 3 days.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-confirmed_at_field" href="#name-confirmed_at_field">
+    <a id="authentication-add_ons-confirmation-confirmed_at_field" href="#authentication-add_ons-confirmation-confirmed_at_field">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         confirmed_at_field
       </span>
@@ -305,7 +318,7 @@ present.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-confirm_on_create?" href="#name-confirm_on_create?">
+    <a id="authentication-add_ons-confirmation-confirm_on_create?" href="#authentication-add_ons-confirmation-confirm_on_create?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         confirm_on_create?
       </span>
@@ -328,7 +341,7 @@ monitored fields is being set.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-confirm_on_update?" href="#name-confirm_on_update?">
+    <a id="authentication-add_ons-confirmation-confirm_on_update?" href="#authentication-add_ons-confirmation-confirm_on_update?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         confirm_on_update?
       </span>
@@ -351,7 +364,7 @@ monitored fields is being set.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-inhibit_updates?" href="#name-inhibit_updates?">
+    <a id="authentication-add_ons-confirmation-inhibit_updates?" href="#authentication-add_ons-confirmation-inhibit_updates?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         inhibit_updates?
       </span>
@@ -380,7 +393,7 @@ to verify that the new contact details are reachable.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-confirm_action_name" href="#name-confirm_action_name">
+    <a id="authentication-add_ons-confirmation-confirm_action_name" href="#authentication-add_ons-confirmation-confirm_action_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         confirm_action_name
       </span>

@@ -266,8 +266,7 @@ all the same configuration options should you need them.
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -281,7 +280,7 @@ all the same configuration options should you need them.
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-name" href="#name-name">
+    <a id="authentication-strategies-oidc-name" href="#authentication-strategies-oidc-name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         name
       </span>
@@ -301,9 +300,23 @@ all the same configuration options should you need them.
   </td>
 </tr>
 
-<tr>
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
   <td style="text-align: left">
-    <a id="name-client_id" href="#name-client_id">
+    <a id="authentication-strategies-oidc-client_id" href="#authentication-strategies-oidc-client_id">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         client_id
       </span>
@@ -342,7 +355,7 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-site" href="#name-site">
+    <a id="authentication-strategies-oidc-site" href="#authentication-strategies-oidc-site">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         site
       </span>
@@ -382,7 +395,7 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-authorize_url" href="#name-authorize_url">
+    <a id="authentication-strategies-oidc-authorize_url" href="#authentication-strategies-oidc-authorize_url">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         authorize_url
       </span>
@@ -419,7 +432,7 @@ authorize_url fn _, _ -> {:ok, "https://exampe.com/authorize"} end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-token_url" href="#name-token_url">
+    <a id="authentication-strategies-oidc-token_url" href="#authentication-strategies-oidc-token_url">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         token_url
       </span>
@@ -456,7 +469,7 @@ token_url fn _, _ -> {:ok, "https://example.com/oauth_token"} end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-redirect_uri" href="#name-redirect_uri">
+    <a id="authentication-strategies-oidc-redirect_uri" href="#authentication-strategies-oidc-redirect_uri">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         redirect_uri
       </span>
@@ -492,7 +505,7 @@ information.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-auth_method" href="#name-auth_method">
+    <a id="authentication-strategies-oidc-auth_method" href="#authentication-strategies-oidc-auth_method">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         auth_method
       </span>
@@ -520,7 +533,7 @@ value may be one of the following:
 
 <tr>
   <td style="text-align: left">
-    <a id="name-client_secret" href="#name-client_secret">
+    <a id="authentication-strategies-oidc-client_secret" href="#authentication-strategies-oidc-client_secret">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         client_secret
       </span>
@@ -561,7 +574,7 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-private_key" href="#name-private_key">
+    <a id="authentication-strategies-oidc-private_key" href="#authentication-strategies-oidc-private_key">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         private_key
       </span>
@@ -589,7 +602,7 @@ information.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-authorization_params" href="#name-authorization_params">
+    <a id="authentication-strategies-oidc-authorization_params" href="#authentication-strategies-oidc-authorization_params">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         authorization_params
       </span>
@@ -612,7 +625,7 @@ eg: `authorization_params scope: "openid profile email"`
 
 <tr>
   <td style="text-align: left">
-    <a id="name-registration_enabled?" href="#name-registration_enabled?">
+    <a id="authentication-strategies-oidc-registration_enabled?" href="#authentication-strategies-oidc-registration_enabled?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         registration_enabled?
       </span>
@@ -638,7 +651,7 @@ If not, then only existing users will be able to authenticate.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-register_action_name" href="#name-register_action_name">
+    <a id="authentication-strategies-oidc-register_action_name" href="#authentication-strategies-oidc-register_action_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         register_action_name
       </span>
@@ -670,7 +683,7 @@ The default is computed from the strategy name eg:
 
 <tr>
   <td style="text-align: left">
-    <a id="name-sign_in_action_name" href="#name-sign_in_action_name">
+    <a id="authentication-strategies-oidc-sign_in_action_name" href="#authentication-strategies-oidc-sign_in_action_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         sign_in_action_name
       </span>
@@ -702,7 +715,7 @@ The default is computed from the strategy name, eg:
 
 <tr>
   <td style="text-align: left">
-    <a id="name-identity_resource" href="#name-identity_resource">
+    <a id="authentication-strategies-oidc-identity_resource" href="#authentication-strategies-oidc-identity_resource">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity_resource
       </span>
@@ -733,7 +746,7 @@ Set to `false` to disable.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-identity_relationship_name" href="#name-identity_relationship_name">
+    <a id="authentication-strategies-oidc-identity_relationship_name" href="#authentication-strategies-oidc-identity_relationship_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity_relationship_name
       </span>
@@ -753,7 +766,7 @@ Set to `false` to disable.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-identity_relationship_user_id_attribute" href="#name-identity_relationship_user_id_attribute">
+    <a id="authentication-strategies-oidc-identity_relationship_user_id_attribute" href="#authentication-strategies-oidc-identity_relationship_user_id_attribute">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity_relationship_user_id_attribute
       </span>
@@ -778,7 +791,7 @@ The only reason to change this would be if you changed the
 
 <tr>
   <td style="text-align: left">
-    <a id="name-icon" href="#name-icon">
+    <a id="authentication-strategies-oidc-icon" href="#authentication-strategies-oidc-icon">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         icon
       </span>
@@ -801,7 +814,7 @@ This is a *hint* for UI generators to use, and not in any way canonical.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-openid_configuration_uri" href="#name-openid_configuration_uri">
+    <a id="authentication-strategies-oidc-openid_configuration_uri" href="#authentication-strategies-oidc-openid_configuration_uri">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         openid_configuration_uri
       </span>
@@ -821,7 +834,7 @@ This is a *hint* for UI generators to use, and not in any way canonical.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-client_authentication_method" href="#name-client_authentication_method">
+    <a id="authentication-strategies-oidc-client_authentication_method" href="#authentication-strategies-oidc-client_authentication_method">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         client_authentication_method
       </span>
@@ -841,7 +854,7 @@ This is a *hint* for UI generators to use, and not in any way canonical.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-openid_configuration" href="#name-openid_configuration">
+    <a id="authentication-strategies-oidc-openid_configuration" href="#authentication-strategies-oidc-openid_configuration">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         openid_configuration
       </span>
@@ -864,7 +877,7 @@ If not set, the configuration will be retrieved from `openid_configuration_uri`.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-id_token_signed_response_alg" href="#name-id_token_signed_response_alg">
+    <a id="authentication-strategies-oidc-id_token_signed_response_alg" href="#authentication-strategies-oidc-id_token_signed_response_alg">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         id_token_signed_response_alg
       </span>
@@ -885,7 +898,7 @@ If not set, the configuration will be retrieved from `openid_configuration_uri`.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-id_token_ttl_seconds" href="#name-id_token_ttl_seconds">
+    <a id="authentication-strategies-oidc-id_token_ttl_seconds" href="#authentication-strategies-oidc-id_token_ttl_seconds">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         id_token_ttl_seconds
       </span>
@@ -906,7 +919,7 @@ If not set, the configuration will be retrieved from `openid_configuration_uri`.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-nonce" href="#name-nonce">
+    <a id="authentication-strategies-oidc-nonce" href="#authentication-strategies-oidc-nonce">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         nonce
       </span>
@@ -948,7 +961,7 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-trusted_audiences" href="#name-trusted_audiences">
+    <a id="authentication-strategies-oidc-trusted_audiences" href="#authentication-strategies-oidc-trusted_audiences">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         trusted_audiences
       </span>

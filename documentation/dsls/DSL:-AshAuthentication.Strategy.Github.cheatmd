@@ -245,8 +245,7 @@ The following defaults are applied:
 
 
 
-
-### Options
+### Arguments
 
 <table>
   <thead>
@@ -260,7 +259,7 @@ The following defaults are applied:
   <tbody>
     <tr>
   <td style="text-align: left">
-    <a id="name-name" href="#name-name">
+    <a id="authentication-strategies-github-name" href="#authentication-strategies-github-name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         name
       </span>
@@ -280,9 +279,23 @@ The following defaults are applied:
   </td>
 </tr>
 
-<tr>
+  </tbody>
+</table>
+### Options
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th colspan=2>Docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
   <td style="text-align: left">
-    <a id="name-client_id" href="#name-client_id">
+    <a id="authentication-strategies-github-client_id" href="#authentication-strategies-github-client_id">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         client_id
       </span>
@@ -321,7 +334,7 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-site" href="#name-site">
+    <a id="authentication-strategies-github-site" href="#authentication-strategies-github-site">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         site
       </span>
@@ -361,7 +374,7 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-authorize_url" href="#name-authorize_url">
+    <a id="authentication-strategies-github-authorize_url" href="#authentication-strategies-github-authorize_url">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         authorize_url
       </span>
@@ -398,7 +411,7 @@ authorize_url fn _, _ -> {:ok, "https://exampe.com/authorize"} end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-token_url" href="#name-token_url">
+    <a id="authentication-strategies-github-token_url" href="#authentication-strategies-github-token_url">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         token_url
       </span>
@@ -435,7 +448,7 @@ token_url fn _, _ -> {:ok, "https://example.com/oauth_token"} end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-user_url" href="#name-user_url">
+    <a id="authentication-strategies-github-user_url" href="#authentication-strategies-github-user_url">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         user_url
       </span>
@@ -472,7 +485,7 @@ user_url fn _, _ -> {:ok, "https://example.com/userinfo"} end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-redirect_uri" href="#name-redirect_uri">
+    <a id="authentication-strategies-github-redirect_uri" href="#authentication-strategies-github-redirect_uri">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         redirect_uri
       </span>
@@ -508,7 +521,7 @@ information.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-auth_method" href="#name-auth_method">
+    <a id="authentication-strategies-github-auth_method" href="#authentication-strategies-github-auth_method">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         auth_method
       </span>
@@ -536,7 +549,7 @@ value may be one of the following:
 
 <tr>
   <td style="text-align: left">
-    <a id="name-client_secret" href="#name-client_secret">
+    <a id="authentication-strategies-github-client_secret" href="#authentication-strategies-github-client_secret">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         client_secret
       </span>
@@ -577,7 +590,7 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="name-private_key" href="#name-private_key">
+    <a id="authentication-strategies-github-private_key" href="#authentication-strategies-github-private_key">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         private_key
       </span>
@@ -605,7 +618,7 @@ information.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-authorization_params" href="#name-authorization_params">
+    <a id="authentication-strategies-github-authorization_params" href="#authentication-strategies-github-authorization_params">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         authorization_params
       </span>
@@ -628,7 +641,7 @@ eg: `authorization_params scope: "openid profile email"`
 
 <tr>
   <td style="text-align: left">
-    <a id="name-registration_enabled?" href="#name-registration_enabled?">
+    <a id="authentication-strategies-github-registration_enabled?" href="#authentication-strategies-github-registration_enabled?">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         registration_enabled?
       </span>
@@ -654,7 +667,7 @@ If not, then only existing users will be able to authenticate.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-register_action_name" href="#name-register_action_name">
+    <a id="authentication-strategies-github-register_action_name" href="#authentication-strategies-github-register_action_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         register_action_name
       </span>
@@ -686,7 +699,7 @@ The default is computed from the strategy name eg:
 
 <tr>
   <td style="text-align: left">
-    <a id="name-sign_in_action_name" href="#name-sign_in_action_name">
+    <a id="authentication-strategies-github-sign_in_action_name" href="#authentication-strategies-github-sign_in_action_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         sign_in_action_name
       </span>
@@ -718,7 +731,7 @@ The default is computed from the strategy name, eg:
 
 <tr>
   <td style="text-align: left">
-    <a id="name-identity_resource" href="#name-identity_resource">
+    <a id="authentication-strategies-github-identity_resource" href="#authentication-strategies-github-identity_resource">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity_resource
       </span>
@@ -749,7 +762,7 @@ Set to `false` to disable.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-identity_relationship_name" href="#name-identity_relationship_name">
+    <a id="authentication-strategies-github-identity_relationship_name" href="#authentication-strategies-github-identity_relationship_name">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity_relationship_name
       </span>
@@ -769,7 +782,7 @@ Set to `false` to disable.
 
 <tr>
   <td style="text-align: left">
-    <a id="name-identity_relationship_user_id_attribute" href="#name-identity_relationship_user_id_attribute">
+    <a id="authentication-strategies-github-identity_relationship_user_id_attribute" href="#authentication-strategies-github-identity_relationship_user_id_attribute">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         identity_relationship_user_id_attribute
       </span>
@@ -794,7 +807,7 @@ The only reason to change this would be if you changed the
 
 <tr>
   <td style="text-align: left">
-    <a id="name-icon" href="#name-icon">
+    <a id="authentication-strategies-github-icon" href="#authentication-strategies-github-icon">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         icon
       </span>
