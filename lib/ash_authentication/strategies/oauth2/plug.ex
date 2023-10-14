@@ -173,8 +173,14 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     with {:ok, subject_name} <- Info.authentication_subject_name(strategy.resource),
          {:ok, redirect_uri} <- fetch_secret(strategy, :redirect_uri),
          {:ok, uri} <- URI.new(redirect_uri) do
+      suffix = Path.join([to_string(subject_name), to_string(strategy.name), "callback"])
+      # Don't append the path if the secret ends with the path already
       path =
-        Path.join([uri.path || "/", to_string(subject_name), to_string(strategy.name), "callback"])
+        if String.ends_with?(uri.path, suffix) do
+          uri.path
+        else
+          Path.join([uri.path || "/", suffix])
+        end
 
       {:ok, to_string(%URI{uri | path: path})}
     else
