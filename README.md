@@ -35,6 +35,7 @@ branch](https://team-alembic.github.io/ash_authentication).
 
   * To contribute updates, fixes or new features please fork and open a
     pull-request against `main`.
+  * To regenerate cheat sheets for the DSLs, run `mix spark.cheat_sheets`. For new strategies ensure you've added them to the extensions and documentation groups in `mix.exs`.
   * Please use [conventional
     commits](https://www.conventionalcommits.org/en/v1.0.0/) - this allows us to
     dynamically generate the changelog.
