@@ -91,6 +91,12 @@ defmodule AshAuthentication.MixProject do
               type: "Authentication Strategy"
             },
             %{
+              module: AshAuthentication.Strategy.Google,
+              name: "Google",
+              target: "Ash.Resource",
+              type: "Authentication Strategy"
+            },
+            %{
               module: AshAuthentication.Strategy.OAuth2,
               name: "OAuth2",
               target: "Ash.Resource",
