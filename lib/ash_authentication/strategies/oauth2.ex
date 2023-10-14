@@ -187,7 +187,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           user_info = Ash.Changeset.get_argument(changeset, :user_info)
 
           changeset
-          |> Changeset.change_attribute(:email, user_info["email"])
+          |> Ash.Changeset.change_attribute(:email, user_info["email"])
         end
       end
     end
