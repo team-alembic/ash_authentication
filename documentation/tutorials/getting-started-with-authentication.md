@@ -15,7 +15,7 @@ Bring in the `ash_authentication` dependency:
 defp deps()
   [
     # ...
-    {:ash_authentication, "~> 3.11.16"}
+    {:ash_authentication, "~> 3.11"}
   ]
 end
 ```
@@ -24,10 +24,8 @@ And add `ash_authentication` to your `.formatter.exs`:
 
 ```elixir
 # .formatter.exs
-
 [
-  # ...
-  import_deps: [:ash_authentication]
+  import_deps: [..., :ash_authentication]
 ]
 ```
 
@@ -111,7 +109,7 @@ Be sure to add it to the `ash_apis` config in your `config.exs`
 
 ```elixir
 # in config/config.exs
-config :my_app, :ash_apis, [..., MyApp.Accounts]
+config :my_app, :ash_apis: [..., MyApp.Accounts]
 ```
 
 Next, let's define our `Token` resource.  This resource is needed
@@ -137,7 +135,7 @@ You can skip this step if you don't want to use tokens, in which case remove the
 `tokens` DSL section in the user resource below.
 
 ```elixir
-# lib/my_app/accounts/token.ex
+# lib/my_app/accounts/resources/token.ex
 
 defmodule MyApp.Accounts.Token do
   use Ash.Resource,
@@ -166,7 +164,7 @@ Lastly let's define our `User` resource, using password authentication and token
 generation enabled.
 
 ```elixir
-# lib/my_app/accounts/user.ex
+# lib/my_app/accounts/resources/user.ex
 
 defmodule MyApp.Accounts.User do
   use Ash.Resource,
@@ -297,10 +295,12 @@ defmodule MyApp.Application do
 
   def start(_type, _args) do
     children = [
+      # ...
+      # add this line -->
       {AshAuthentication.Supervisor, otp_app: :my_app}
+      # <-- add this line
     ]
-
-    Supervisor.start_link(childrem, strategy: :one_for_one, name: MyApp.Supervisor)
+    # ...
   end
 end
 ```
