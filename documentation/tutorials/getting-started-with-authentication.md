@@ -135,7 +135,7 @@ You can skip this step if you don't want to use tokens, in which case remove the
 `tokens` DSL section in the user resource below.
 
 ```elixir
-# lib/my_app/accounts/token.ex
+# lib/my_app/accounts/resources/token.ex
 
 defmodule MyApp.Accounts.Token do
   use Ash.Resource,
@@ -164,7 +164,7 @@ Lastly let's define our `User` resource, using password authentication and token
 generation enabled.
 
 ```elixir
-# lib/my_app/accounts/user.ex
+# lib/my_app/accounts/resources/user.ex
 
 defmodule MyApp.Accounts.User do
   use Ash.Resource,
