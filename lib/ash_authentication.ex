@@ -97,6 +97,7 @@ defmodule AshAuthentication do
     AshAuthentication.AddOn.Confirmation,
     AshAuthentication.Strategy.Auth0,
     AshAuthentication.Strategy.Github,
+    AshAuthentication.Strategy.Google,
     AshAuthentication.Strategy.MagicLink,
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,
