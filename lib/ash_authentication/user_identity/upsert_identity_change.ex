@@ -50,10 +50,20 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
       cfg.access_token_expires_at_attribute_name,
       expires_at(oauth_tokens, "expires_in")
     )
-    |> Changeset.change_attribute(
-      cfg.refresh_token_attribute_name,
-      Map.get(oauth_tokens, "refresh_token")
-    )
+    |> then(fn changeset ->
+      if Map.get(oauth_tokens, "refresh_token") do
+        # A new non-nil refresh_token is always nice
+        Changeset.change_attribute(
+          changeset,
+          cfg.refresh_token_attribute_name,
+          oauth_tokens["refresh_token"] ||
+            Map.get(oauth_tokens, "refresh_token")
+        )
+      else
+        # Do not overwrite refresh_tokens with a new nil
+        changeset
+      end
+    end)
   end
 
   defp expires_at(oauth_tokens, field) do
