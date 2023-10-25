@@ -152,8 +152,8 @@ all the same configuration options should you need them.
   information.
 
 * `:redirect_uri` - Required. The callback URI base.  
-  Not the whole URI back to the callback endpoint, but the URI to your
-  `AuthPlug`.  We can generate the rest.  
+  Either the whole URI back to the callback endpoint or the URI to your
+  `AuthPlug`.
   Whilst not particularly secret, it seemed prudent to allow this to be
   configured dynamically so that you can use different URIs for
   different environments.  
