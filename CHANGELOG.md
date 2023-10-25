@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.11.16](https://github.com/team-alembic/ash_authentication/compare/v3.11.15...v3.11.16) (2023-10-25)
+
+
+
+
+### Bug Fixes:
+
+* Change overwriting of refresh_token to not overwrite them with nil (#483)
+
+### Improvements:
+
+* Add id as an option for sourcing uid for UserIdentity (#481)
+
 ## [v3.11.15](https://github.com/team-alembic/ash_authentication/compare/v3.11.14...v3.11.15) (2023-09-22)
 
 
