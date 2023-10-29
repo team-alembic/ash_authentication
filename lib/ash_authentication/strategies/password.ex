@@ -62,7 +62,7 @@ defmodule AshAuthentication.Strategy.Password do
       ...> marty.username |> to_string()
       "marty"
 
-      ...> {:ok, user} = Strategy.action(strategy, :sign_in, %{"username" => "outatime1985", "password" => "outatime1985"})
+      ...> {:ok, user} = Strategy.action(strategy, :sign_in, %{"username" => "marty", "password" => "outatime1985"})
       ...> user.username |> to_string()
       "marty"
 
