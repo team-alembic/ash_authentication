@@ -39,6 +39,7 @@ defmodule MyApp.Accounts.User do
       end
     end
   end
+end
 ```
 
 ## Secrets and runtime configuration
@@ -165,6 +166,7 @@ defmodule MyApp.Accounts.User do
       end
     end
   end
+end
 ```
 
 Providing registration or sign-in to all comers:
@@ -201,6 +203,7 @@ defmodule MyApp.Accounts.User do
       end
     end
   end
+end
 ```
 
 ## Plugs
