@@ -38,6 +38,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
         end
       end
     end
+  end
   ```
 
   ## Secrets and runtime configuration
@@ -164,6 +165,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
         end
       end
     end
+  end
   ```
 
   Providing registration or sign-in to all comers:
@@ -200,6 +202,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
         end
       end
     end
+  end
   ```
 
   ## Plugs
