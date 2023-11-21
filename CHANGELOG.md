@@ -5,6 +5,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.12.0](https://github.com/team-alembic/ash_authentication/compare/v3.11.16...v3.12.0) (2023-11-21)
+
+
+
+
+### Features:
+
+* Add Google strategy (#474)
+
+* Add Google strategy
+
+### Bug Fixes:
+
+* include Google strategy cheat sheet
+
+* Add documentation grouping for Google strategy
+
+### Improvements:
+
+* Change redirect_uri secret to be more flexible (#473)
+
 ## [v3.11.16](https://github.com/team-alembic/ash_authentication/compare/v3.11.15...v3.11.16) (2023-10-25)
 
 
