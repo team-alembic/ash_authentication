@@ -24,7 +24,7 @@ defmodule MyApp.Accounts.User do
         client_id "123abc..."
         redirect_uri {:ok, "123abc..."}
         client_secret fn -> {:ok, "123abc..."} end
-        site MyApp.Secrets
+        base_url MyApp.Secrets
       end
     end
   end

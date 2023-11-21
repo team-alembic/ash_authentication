@@ -45,7 +45,7 @@ defmodule MyApp.Accounts.User do
         client_id MyApp.Secrets
         redirect_uri MyApp.Secrets
         client_secret MyApp.Secrets
-        site MyApp.Secrets
+        base_url MyApp.Secrets
       end
     end
   end
@@ -74,8 +74,8 @@ defmodule MyApp.Secrets do
     get_config(:client_secret)
   end
 
-  def secret_for([:authentication, :strategies, :auth0, :site], MyApp.Accounts.User, _) do
-    get_config(:site)
+  def secret_for([:authentication, :strategies, :auth0, :base_url], MyApp.Accounts.User, _) do
+    get_config(:base_url)
   end
 
   defp get_config(key) do
@@ -93,7 +93,7 @@ The values for this configuration should be:
   * `redirect_uri` - the URL to the generated auth routes in your application
     (eg `http://localhost:4000/auth`).
   * `client_secret` the client secret copied from the Auth0 settings page.
-  * `site` - the "domain" value copied from the Auth0 settings page prefixed
+  * `base_url` - the "domain" value copied from the Auth0 settings page prefixed
     with `https://` (eg `https://dev-yu30yo5y4tg2hg0y.us.auth0.com`).
 
 Lastly, we need to add a register action to your user resource.  This is defined
