@@ -217,7 +217,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:ash, ash_version("~> 2.5 and >= 2.5.11")},
-      {:assent, "~> 0.2"},
+      {:assent, "~> 0.2 and >= 0.2.8"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
       {:finch, "~> 0.16.0"},

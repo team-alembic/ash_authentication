@@ -19,6 +19,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
       target: OAuth2,
       modules: [
         :authorize_url,
+        :base_url,
         :client_id,
         :client_secret,
         :identity_resource,
@@ -55,7 +56,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           """,
           required: true
         ],
-        site: [
+        base_url: [
           type: secret_type,
           doc: """
           The base URL of the OAuth2 server - including the leading protocol
@@ -66,14 +67,19 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           Example:
 
           ```elixir
-          site fn _, resource ->
+          base_url fn _, resource ->
             :my_app
             |> Application.get_env(resource, [])
             |> Keyword.fetch(:oauth_site)
           end
           ```
           """,
-          required: true
+          required: false
+        ],
+        site: [
+          type: secret_type,
+          doc: "Deprecated: Use `base_url` instead.",
+          required: false
         ],
         auth_method: [
           type:
@@ -296,7 +302,20 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           default: :oauth2
         ]
       ],
-      auto_set_fields: [assent_strategy: Assent.Strategy.OAuth2]
+      deprecations: [site: "As of assent v0.2.8 please use `base_url` instead."],
+      auto_set_fields: [assent_strategy: Assent.Strategy.OAuth2],
+      transform: {__MODULE__, :transform, []}
     }
   end
+
+  @doc false
+  @spec transform(Custom.entity()) :: {:ok, Custom.entity()} | {:error, any}
+  def transform(entity) do
+    handle_site_deprecation(entity)
+  end
+
+  defp handle_site_deprecation(entity) when is_nil(entity.base_url) and not is_nil(entity.site),
+    do: {:ok, %{entity | base_url: entity.site, site: nil}}
+
+  defp handle_site_deprecation(entity), do: {:ok, entity}
 end

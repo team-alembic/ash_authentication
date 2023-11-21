@@ -31,7 +31,7 @@ in our documentation.
 
 The following defaults are applied:
 
-  * `:site` is set to `"https://api.github.com"`.
+  * `:base_url` is set to `"https://api.github.com"`.
   * `:authorize_url` is set to `"https://github.com/login/oauth/authorize"`.
   * `:token_url` is set to `"https://github.com/login/oauth/access_token"`.
   * `:user_url` is set to `"/user"`.
@@ -64,7 +64,7 @@ The following defaults are applied:
   end
   ```
 
-* `:site` - Required. The base URL of the OAuth2 server - including the leading protocol
+* `:base_url` - The base URL of the OAuth2 server - including the leading protocol
   (ie `https://`).  
   Takes either a module which implements the `AshAuthentication.Secret`
   behaviour, a 2 arity anonymous function or a string.  
@@ -73,12 +73,14 @@ The following defaults are applied:
 
   Example:  
   ```elixir
-  site fn _, resource ->
+  base_url fn _, resource ->
     :my_app
     |> Application.get_env(resource, [])
     |> Keyword.fetch(:oauth_site)
   end
   ```
+
+* `:site` - Deprecated: Use `base_url` instead.
 
 * `:auth_method` - The authentication strategy used, optional. If not set, no
   authentication will be used during the access token request. The
@@ -229,7 +231,7 @@ in our documentation.
 
 The following defaults are applied:
 
-* `:site` is set to `"https://api.github.com"`.
+* `:base_url` is set to `"https://api.github.com"`.
 * `:authorize_url` is set to `"https://github.com/login/oauth/authorize"`.
 * `:token_url` is set to `"https://github.com/login/oauth/access_token"`.
 * `:user_url` is set to `"/user"`.
@@ -326,46 +328,6 @@ client_id fn _, resource ->
   :my_app
   |> Application.get_env(resource, [])
   |> Keyword.fetch(:oauth_client_id)
-end
-```
-
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
-    <a id="authentication-strategies-github-site" href="#authentication-strategies-github-site">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        site
-      </span>
-    </a>
-      <sup style="color: red">*</sup>
-
-  </td>
-  <td style="text-align: left">
-    <code class="inline">(any, any -> any) | module | String.t</code>
-  </td>
-  <td style="text-align: left">
-    
-  </td>
-  <td style="text-align: left" colspan=2>
-    The base URL of the OAuth2 server - including the leading protocol
-(ie `https://`).
-
-Takes either a module which implements the `AshAuthentication.Secret`
-behaviour, a 2 arity anonymous function or a string.
-
-See the module documentation for `AshAuthentication.Secret` for more
-information.
-
-
-Example:
-
-```elixir
-site fn _, resource ->
-  :my_app
-  |> Application.get_env(resource, [])
-  |> Keyword.fetch(:oauth_site)
 end
 ```
 
@@ -516,6 +478,65 @@ See the module documentation for `AshAuthentication.Secret` for more
 information.
 
 
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="authentication-strategies-github-base_url" href="#authentication-strategies-github-base_url">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        base_url
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">(any, any -> any) | module | String.t</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    The base URL of the OAuth2 server - including the leading protocol
+(ie `https://`).
+
+Takes either a module which implements the `AshAuthentication.Secret`
+behaviour, a 2 arity anonymous function or a string.
+
+See the module documentation for `AshAuthentication.Secret` for more
+information.
+
+
+Example:
+
+```elixir
+base_url fn _, resource ->
+  :my_app
+  |> Application.get_env(resource, [])
+  |> Keyword.fetch(:oauth_site)
+end
+```
+
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="authentication-strategies-github-site" href="#authentication-strategies-github-site">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        site
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">(any, any -> any) | module | String.t</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    Deprecated: Use `base_url` instead.
   </td>
 </tr>
 

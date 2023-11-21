@@ -87,7 +87,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     with {:ok, config} <- add_secret_value(config, strategy, :authorize_url),
          {:ok, config} <- add_secret_value(config, strategy, :client_id),
          {:ok, config} <- add_secret_value(config, strategy, :client_secret),
-         {:ok, config} <- add_secret_value(config, strategy, :site),
+         {:ok, config} <- add_secret_value(config, strategy, :base_url),
          {:ok, config} <- add_secret_value(config, strategy, :token_url),
          {:ok, config} <- add_secret_value(config, strategy, :user_url, !!strategy.authorize_url),
          {:ok, redirect_uri} <- build_redirect_uri(strategy),

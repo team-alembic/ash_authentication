@@ -63,7 +63,7 @@ The following defaults are applied:
   end
   ```
 
-* `:site` - Required. The base URL of the OAuth2 server - including the leading protocol
+* `:base_url` - The base URL of the OAuth2 server - including the leading protocol
   (ie `https://`).  
   Takes either a module which implements the `AshAuthentication.Secret`
   behaviour, a 2 arity anonymous function or a string.  
@@ -72,12 +72,14 @@ The following defaults are applied:
 
   Example:  
   ```elixir
-  site fn _, resource ->
+  base_url fn _, resource ->
     :my_app
     |> Application.get_env(resource, [])
     |> Keyword.fetch(:oauth_site)
   end
   ```
+
+* `:site` - Deprecated: Use `base_url` instead.
 
 * `:auth_method` - The authentication strategy used, optional. If not set, no
   authentication will be used during the access token request. The
@@ -331,46 +333,6 @@ end
 
 <tr>
   <td style="text-align: left">
-    <a id="authentication-strategies-auth0-site" href="#authentication-strategies-auth0-site">
-      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
-        site
-      </span>
-    </a>
-      <sup style="color: red">*</sup>
-
-  </td>
-  <td style="text-align: left">
-    <code class="inline">(any, any -> any) | module | String.t</code>
-  </td>
-  <td style="text-align: left">
-    
-  </td>
-  <td style="text-align: left" colspan=2>
-    The base URL of the OAuth2 server - including the leading protocol
-(ie `https://`).
-
-Takes either a module which implements the `AshAuthentication.Secret`
-behaviour, a 2 arity anonymous function or a string.
-
-See the module documentation for `AshAuthentication.Secret` for more
-information.
-
-
-Example:
-
-```elixir
-site fn _, resource ->
-  :my_app
-  |> Application.get_env(resource, [])
-  |> Keyword.fetch(:oauth_site)
-end
-```
-
-  </td>
-</tr>
-
-<tr>
-  <td style="text-align: left">
     <a id="authentication-strategies-auth0-authorize_url" href="#authentication-strategies-auth0-authorize_url">
       <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
         authorize_url
@@ -513,6 +475,65 @@ See the module documentation for `AshAuthentication.Secret` for more
 information.
 
 
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="authentication-strategies-auth0-base_url" href="#authentication-strategies-auth0-base_url">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        base_url
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">(any, any -> any) | module | String.t</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    The base URL of the OAuth2 server - including the leading protocol
+(ie `https://`).
+
+Takes either a module which implements the `AshAuthentication.Secret`
+behaviour, a 2 arity anonymous function or a string.
+
+See the module documentation for `AshAuthentication.Secret` for more
+information.
+
+
+Example:
+
+```elixir
+base_url fn _, resource ->
+  :my_app
+  |> Application.get_env(resource, [])
+  |> Keyword.fetch(:oauth_site)
+end
+```
+
+  </td>
+</tr>
+
+<tr>
+  <td style="text-align: left">
+    <a id="authentication-strategies-auth0-site" href="#authentication-strategies-auth0-site">
+      <span style="font-family: Inconsolata, Menlo, Courier, monospace;">
+        site
+      </span>
+    </a>
+      
+  </td>
+  <td style="text-align: left">
+    <code class="inline">(any, any -> any) | module | String.t</code>
+  </td>
+  <td style="text-align: left">
+    
+  </td>
+  <td style="text-align: left" colspan=2>
+    Deprecated: Use `base_url` instead.
   </td>
 </tr>
 
