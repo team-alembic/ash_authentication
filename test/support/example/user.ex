@@ -194,7 +194,7 @@ defmodule Example.User do
         client_id &get_config/2
         redirect_uri &get_config/2
         client_secret &get_config/2
-        site &get_config/2
+        base_url &get_config/2
         authorize_url &get_config/2
         token_url &get_config/2
         user_url &get_config/2
@@ -207,7 +207,7 @@ defmodule Example.User do
         client_id &get_config/2
         redirect_uri &get_config/2
         client_secret &get_config/2
-        site &get_config/2
+        base_url &get_config/2
         authorize_url &get_config/2
         token_url &get_config/2
         user_url &get_config/2
@@ -220,7 +220,7 @@ defmodule Example.User do
         client_id &get_config/2
         redirect_uri &get_config/2
         client_secret &get_config/2
-        site &get_config/2
+        base_url &get_config/2
         authorize_url &get_config/2
         token_url &get_config/2
         user_url &get_config/2
@@ -249,7 +249,7 @@ defmodule Example.User do
         client_id &get_config/2
         client_secret &get_config/2
         redirect_uri &get_config/2
-        site &get_config/2
+        base_url &get_config/2
         token_url &get_config/2
       end
     end

@@ -13,7 +13,7 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
          :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :client_secret),
          :ok <- validate_secret(strategy, :redirect_uri),
-         :ok <- validate_secret(strategy, :site),
+         :ok <- validate_secret(strategy, :base_url),
          :ok <- validate_secret(strategy, :token_url),
          :ok <- validate_secret(strategy, :user_url, [nil]),
          :ok <- validate_secret(strategy, :nonce, [true, false]) do

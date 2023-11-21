@@ -21,7 +21,7 @@ config :ash_authentication,
         client_id: "pretend client id",
         redirect_uri: "http://localhost:4000/auth",
         client_secret: "pretend client secret",
-        site: "https://example.com/",
+        base_url: "https://example.com/",
         authorize_url: "https://example.com/authorize",
         token_url: "https://example.com/oauth/token",
         user_url: "https://example.com/userinfo"

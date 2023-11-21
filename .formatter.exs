@@ -8,6 +8,7 @@ spark_locals_without_parens = [
   auth_method: 1,
   authorization_params: 1,
   authorize_url: 1,
+  base_url: 1,
   client_authentication_method: 1,
   client_id: 1,
   client_secret: 1,
