@@ -90,6 +90,10 @@ defmodule AshAuthentication.Strategy.Password do
       ...> conn = Strategy.plug(strategy, :reset_request, conn)
       ...> {_conn, :ok} = Plug.Helpers.get_authentication_result(conn)
 
+  ## Testing
+
+  See the [Testing guide](/documentation/topics/testing.md) for tips on testing resources using this strategy.
+
   ## DSL Documentation
 
   #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
