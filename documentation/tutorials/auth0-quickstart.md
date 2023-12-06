@@ -6,6 +6,9 @@ Auth0 for authentication.
 Before you start this tutorial, skip the Token resource while following the
 [AshAuthenticationPhoenix guide](https://hexdocs.pm/ash_authentication_phoenix/getting-started-with-ash-authentication-phoenix.html))
 
+> [!WARNING]  
+> Make sure that your `ash_postgres` dependency is `~> 1.3.64`. A bug in previous versions prevents the action shown below from working correctly.
+
 Next, you need to configure an application in [the Auth0
 dashboard](https://manage.auth0.com/) using the following steps:
 
