@@ -1,6 +1,8 @@
 defmodule AshAuthentication.Strategy.Oidc.Dsl do
   @moduledoc false
 
+  import Spark.OptionsHelpers, only: [make_required!: 2]
+
   alias AshAuthentication.Strategy.{Custom, OAuth2}
 
   @doc false
