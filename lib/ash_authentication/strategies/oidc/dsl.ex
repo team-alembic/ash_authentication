@@ -1,6 +1,8 @@
 defmodule AshAuthentication.Strategy.Oidc.Dsl do
   @moduledoc false
 
+  import Spark.Options.Helpers, only: [make_required!: 2]
+
   alias AshAuthentication.Strategy.{Custom, OAuth2}
 
   @doc false
@@ -24,6 +26,9 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
   defp patch_schema do
     OAuth2.dsl()
     |> Map.get(:schema, [])
+    |> make_required!(:base_url)
+    |> Keyword.delete(:authorize_url)
+    |> Keyword.delete(:token_url)
     |> Keyword.delete(:user_url)
     |> Keyword.merge(
       openid_configuration_uri: [

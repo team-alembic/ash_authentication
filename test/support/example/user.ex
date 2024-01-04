@@ -245,12 +245,10 @@ defmodule Example.User do
 
       oidc do
         authorization_params scope: "openid profile email phone address"
-        authorize_url &get_config/2
         client_id &get_config/2
         client_secret &get_config/2
         redirect_uri &get_config/2
         base_url &get_config/2
-        token_url &get_config/2
       end
     end
   end
