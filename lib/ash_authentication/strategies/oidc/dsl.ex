@@ -31,7 +31,6 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
     |> make_required!(:base_url)
     |> Keyword.delete(:authorize_url)
     |> Keyword.delete(:token_url)
-    |> Keyword.delete(:redirect_uri)
     |> Keyword.delete(:user_url)
     |> Keyword.merge(
       openid_configuration_uri: [

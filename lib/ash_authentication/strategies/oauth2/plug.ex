@@ -84,12 +84,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
       |> Map.take(@raw_config_attrs)
       |> Map.put(:http_adapter, {Finch, supervisor: AshAuthentication.Finch})
 
-    with {:ok, config} <- add_secret_value(config, strategy, :authorize_url),
-         {:ok, config} <- add_secret_value(config, strategy, :client_id),
-         {:ok, config} <- add_secret_value(config, strategy, :client_secret),
-         {:ok, config} <- add_secret_value(config, strategy, :base_url),
-         {:ok, config} <- add_secret_value(config, strategy, :token_url),
-         {:ok, config} <- add_secret_value(config, strategy, :user_url, !!strategy.authorize_url),
+    with {:ok, config} <- add_secret_value(config, strategy, :base_url),
+         {:ok, config} <- add_secret_value(config, strategy, :authorize_url, !!strategy.base_url),
+         {:ok, config} <- add_secret_value(config, strategy, :client_id, !!strategy.base_url),
+         {:ok, config} <- add_secret_value(config, strategy, :client_secret, !!strategy.base_url),
+         {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
+         {:ok, config} <- add_secret_value(config, strategy, :user_url, !!strategy.authorize_url || !!strategy.base_url),
          {:ok, redirect_uri} <- build_redirect_uri(strategy),
          {:ok, jwt_algorithm} <-
            Info.authentication_tokens_signing_algorithm(strategy.resource) do
