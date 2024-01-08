@@ -220,7 +220,7 @@ defmodule AshAuthentication.MixProject do
       {:assent, "~> 0.2 and >= 0.2.8"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
-      {:finch, "~> 0.16.0"},
+      {:finch, "~> 0.17.0"},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
