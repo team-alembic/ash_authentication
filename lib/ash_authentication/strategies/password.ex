@@ -93,10 +93,6 @@ defmodule AshAuthentication.Strategy.Password do
   ## Testing
 
   See the [Testing guide](/documentation/topics/testing.md) for tips on testing resources using this strategy.
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   defstruct confirmation_required?: false,

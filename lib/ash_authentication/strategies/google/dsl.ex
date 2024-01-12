@@ -22,8 +22,6 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
       #### Strategy defaults:
 
       #{strategy_override_docs(Assent.Strategy.Google)}
-
-      #### Schema:
       """,
       auto_set_fields: strategy_fields(Assent.Strategy.Google, icon: :google)
     })

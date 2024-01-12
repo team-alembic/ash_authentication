@@ -94,10 +94,6 @@ defmodule AshAuthentication.Strategy.MagicLink do
       ...> {_conn, {:ok, signed_in_user}} = Plug.Helpers.get_authentication_result(conn)
       ...> signed_in_user.id == user.id
       true
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   defstruct identity_field: :username,

@@ -218,179 +218,6 @@ authentication with OAuth 2.0:
    to create a local database record, session, etc.
 
 
-## DSL Documentation
-
-OAuth2 authentication
-
-
-
-
-
-* `:name` (`t:atom/0`) - Required. Uniquely identifies the strategy.
-
-* `:client_id` - Required. The OAuth2 client ID.  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.  
-
-  Example:  
-  ```elixir
-  client_id fn _, resource ->
-    :my_app
-    |> Application.get_env(resource, [])
-    |> Keyword.fetch(:oauth_client_id)
-  end
-  ```
-
-* `:base_url` - The base URL of the OAuth2 server - including the leading protocol
-  (ie `https://`).  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.  
-
-  Example:  
-  ```elixir
-  base_url fn _, resource ->
-    :my_app
-    |> Application.get_env(resource, [])
-    |> Keyword.fetch(:oauth_site)
-  end
-  ```
-
-* `:site` - Deprecated: Use `base_url` instead.
-
-* `:auth_method` - The authentication strategy used, optional. If not set, no
-  authentication will be used during the access token request. The
-  value may be one of the following:  
-  * `:client_secret_basic`
-  * `:client_secret_post`
-  * `:client_secret_jwt`
-  * `:private_key_jwt`
-   Valid values are nil, :client_secret_basic, :client_secret_post, :client_secret_jwt, :private_key_jwt The default value is `:client_secret_post`.
-
-* `:client_secret` - The OAuth2 client secret.  
-  Required if :auth_method is `:client_secret_basic`,
-  `:client_secret_post` or `:client_secret_jwt`.  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.  
-
-  Example:  
-  ```elixir
-  site fn _, resource ->
-    :my_app
-    |> Application.get_env(resource, [])
-    |> Keyword.fetch(:oauth_site)
-  end
-  ```
-
-* `:authorize_url` - Required. The API url to the OAuth2 authorize endpoint.  
-  Relative to the value of `site`.  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.  
-
-  Example:  
-  ```elixir
-  authorize_url fn _, _ -> {:ok, "https://exampe.com/authorize"} end
-  ```
-
-* `:token_url` - Required. The API url to access the token endpoint.  
-  Relative to the value of `site`.  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.  
-
-  Example:  
-  ```elixir
-  token_url fn _, _ -> {:ok, "https://example.com/oauth_token"} end
-  ```
-
-* `:user_url` - Required. The API url to access the user endpoint.  
-  Relative to the value of `site`.  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.  
-
-  Example:  
-  ```elixir
-  user_url fn _, _ -> {:ok, "https://example.com/userinfo"} end
-  ```
-
-* `:private_key` - The private key to use if `:auth_method` is `:private_key_jwt`  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.
-
-* `:redirect_uri` - Required. The callback URI base.  
-  Not the whole URI back to the callback endpoint, but the URI to your
-  `AuthPlug`.  We can generate the rest.  
-  Whilst not particularly secret, it seemed prudent to allow this to be
-  configured dynamically so that you can use different URIs for
-  different environments.  
-  Takes either a module which implements the `AshAuthentication.Secret`
-  behaviour, a 2 arity anonymous function or a string.  
-  See the module documentation for `AshAuthentication.Secret` for more
-  information.
-
-* `:authorization_params` (`t:keyword/0`) - Any additional parameters to encode in the request phase.  
-  eg: `authorization_params scope: "openid profile email"` The default value is `[]`.
-
-* `:registration_enabled?` (`t:boolean/0`) - Is registration enabled for this provider?  
-  If this option is enabled, then new users will be able to register for
-  your site when authenticating and not already present.  
-  If not, then only existing users will be able to authenticate. The default value is `true`.
-
-* `:register_action_name` (`t:atom/0`) - The name of the action to use to register a user.  
-  Only needed if `registration_enabled?` is `true`.  
-  Because we we don't know the response format of the server, you must
-  implement your own registration action of the same name.  
-  See the "Registration and Sign-in" section of the module
-  documentation for more information.  
-  The default is computed from the strategy name eg:
-  `register_with_#{name}`.
-
-* `:sign_in_action_name` (`t:atom/0`) - The name of the action to use to sign in an existing user.  
-  Only needed if `registration_enabled?` is `false`.  
-  Because we don't know the response format of the server, you must
-  implement your own sign-in action of the same name.  
-  See the "Registration and Sign-in" section of the module
-  documentation for more information.  
-  The default is computed from the strategy name, eg:
-  `sign_in_with_#{name}`.
-
-* `:identity_resource` - The resource used to store user identities.  
-  Given that a user can be signed into multiple different
-  authentication providers at once we use the
-  `AshAuthentication.UserIdentity` resource to build a mapping
-  between users, providers and that provider's uid.  
-  See the Identities section of the module documentation for more
-  information.  
-  Set to `false` to disable. The default value is `false`.
-
-* `:identity_relationship_name` (`t:atom/0`) - Name of the relationship to the provider identities resource The default value is `:identities`.
-
-* `:identity_relationship_user_id_attribute` (`t:atom/0`) - The name of the destination (user_id) attribute on your provider
-  identity resource.  
-  The only reason to change this would be if you changed the
-  `user_id_attribute_name` option of the provider identity. The default value is `:user_id`.
-
-* `:icon` (`t:atom/0`) - The name of an icon to use in any potential UI.  
-  This is a *hint* for UI generators to use, and not in any way canonical. The default value is `:oauth2`.
-
-
-
-
-
-
-
 
 ## authentication.strategies.oauth2
 ```elixir
@@ -413,23 +240,23 @@ OAuth2 authentication
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`client_id`](#authentication-strategies-oauth2-client_id){: #authentication-strategies-oauth2-client_id .spark-required} | `(any, any -> any) \| module \| String.t` |  | The OAuth2 client ID. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information.  Example: ```elixir client_id fn _, resource ->   :my_app   \|> Application.get_env(resource, [])   \|> Keyword.fetch(:oauth_client_id) end ``` |
-| [`authorize_url`](#authentication-strategies-oauth2-authorize_url){: #authentication-strategies-oauth2-authorize_url .spark-required} | `(any, any -> any) \| module \| String.t` |  | The API url to the OAuth2 authorize endpoint. Relative to the value of `site`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information.  Example: ```elixir authorize_url fn _, _ -> {:ok, "https://exampe.com/authorize"} end ``` |
-| [`token_url`](#authentication-strategies-oauth2-token_url){: #authentication-strategies-oauth2-token_url .spark-required} | `(any, any -> any) \| module \| String.t` |  | The API url to access the token endpoint. Relative to the value of `site`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information.  Example: ```elixir token_url fn _, _ -> {:ok, "https://example.com/oauth_token"} end ``` |
-| [`user_url`](#authentication-strategies-oauth2-user_url){: #authentication-strategies-oauth2-user_url .spark-required} | `(any, any -> any) \| module \| String.t` |  | The API url to access the user endpoint. Relative to the value of `site`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information.  Example: ```elixir user_url fn _, _ -> {:ok, "https://example.com/userinfo"} end ``` |
-| [`redirect_uri`](#authentication-strategies-oauth2-redirect_uri){: #authentication-strategies-oauth2-redirect_uri .spark-required} | `(any, any -> any) \| module \| String.t` |  | The callback URI base. Not the whole URI back to the callback endpoint, but the URI to your `AuthPlug`.  We can generate the rest. Whilst not particularly secret, it seemed prudent to allow this to be configured dynamically so that you can use different URIs for different environments. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information. |
-| [`base_url`](#authentication-strategies-oauth2-base_url){: #authentication-strategies-oauth2-base_url } | `(any, any -> any) \| module \| String.t` |  | The base URL of the OAuth2 server - including the leading protocol (ie `https://`). Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information.  Example: ```elixir base_url fn _, resource ->   :my_app   \|> Application.get_env(resource, [])   \|> Keyword.fetch(:oauth_site) end ``` |
+| [`client_id`](#authentication-strategies-oauth2-client_id){: #authentication-strategies-oauth2-client_id .spark-required} | `(any, any -> any) \| module \| String.t` |  | The OAuth2 client ID.  Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`authorize_url`](#authentication-strategies-oauth2-authorize_url){: #authentication-strategies-oauth2-authorize_url .spark-required} | `(any, any -> any) \| module \| String.t` |  | The API url to the OAuth2 authorize endpoint, relative to `site`, e.g `authorize_url fn _, _ -> {:ok, "https://exampe.com/authorize"} end`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`token_url`](#authentication-strategies-oauth2-token_url){: #authentication-strategies-oauth2-token_url .spark-required} | `(any, any -> any) \| module \| String.t` |  | The API url to access the token endpoint, relative to `site`, e.g `token_url fn _, _ -> {:ok, "https://example.com/oauth_token"} end`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`user_url`](#authentication-strategies-oauth2-user_url){: #authentication-strategies-oauth2-user_url .spark-required} | `(any, any -> any) \| module \| String.t` |  | The API url to access the user endpoint, relative to `site`, e.g `user_url fn _, _ -> {:ok, "https://example.com/userinfo"} end`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`redirect_uri`](#authentication-strategies-oauth2-redirect_uri){: #authentication-strategies-oauth2-redirect_uri .spark-required} | `(any, any -> any) \| module \| String.t` |  | The callback URI *base*. Not the whole URI back to the callback endpoint, but the URI to your `AuthPlug`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`base_url`](#authentication-strategies-oauth2-base_url){: #authentication-strategies-oauth2-base_url } | `(any, any -> any) \| module \| String.t` |  | The base URL of the OAuth2 server - including the leading protocol (ie `https://`).  Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`site`](#authentication-strategies-oauth2-site){: #authentication-strategies-oauth2-site } | `(any, any -> any) \| module \| String.t` |  | Deprecated: Use `base_url` instead. |
-| [`auth_method`](#authentication-strategies-oauth2-auth_method){: #authentication-strategies-oauth2-auth_method } | `nil \| :client_secret_basic \| :client_secret_post \| :client_secret_jwt \| :private_key_jwt` | `:client_secret_post` | The authentication strategy used, optional. If not set, no authentication will be used during the access token request. The value may be one of the following: * `:client_secret_basic` * `:client_secret_post` * `:client_secret_jwt` * `:private_key_jwt` |
-| [`client_secret`](#authentication-strategies-oauth2-client_secret){: #authentication-strategies-oauth2-client_secret } | `(any, any -> any) \| module \| String.t` |  | The OAuth2 client secret. Required if :auth_method is `:client_secret_basic`, `:client_secret_post` or `:client_secret_jwt`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information.  Example: ```elixir site fn _, resource ->   :my_app   \|> Application.get_env(resource, [])   \|> Keyword.fetch(:oauth_site) end ``` |
-| [`private_key`](#authentication-strategies-oauth2-private_key){: #authentication-strategies-oauth2-private_key } | `(any, any -> any) \| module \| String.t` |  | The private key to use if `:auth_method` is `:private_key_jwt` Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. See the module documentation for `AshAuthentication.Secret` for more information. |
-| [`authorization_params`](#authentication-strategies-oauth2-authorization_params){: #authentication-strategies-oauth2-authorization_params } | `Keyword.t` | `[]` | Any additional parameters to encode in the request phase. eg: `authorization_params scope: "openid profile email"` |
-| [`registration_enabled?`](#authentication-strategies-oauth2-registration_enabled?){: #authentication-strategies-oauth2-registration_enabled? } | `boolean` | `true` | Is registration enabled for this provider? If this option is enabled, then new users will be able to register for your site when authenticating and not already present. If not, then only existing users will be able to authenticate. |
-| [`register_action_name`](#authentication-strategies-oauth2-register_action_name){: #authentication-strategies-oauth2-register_action_name } | `atom` |  | The name of the action to use to register a user. Only needed if `registration_enabled?` is `true`. Because we we don't know the response format of the server, you must implement your own registration action of the same name. See the "Registration and Sign-in" section of the module documentation for more information. The default is computed from the strategy name eg: `register_with_#{name}`. |
-| [`sign_in_action_name`](#authentication-strategies-oauth2-sign_in_action_name){: #authentication-strategies-oauth2-sign_in_action_name } | `atom` |  | The name of the action to use to sign in an existing user. Only needed if `registration_enabled?` is `false`. Because we don't know the response format of the server, you must implement your own sign-in action of the same name. See the "Registration and Sign-in" section of the module documentation for more information. The default is computed from the strategy name, eg: `sign_in_with_#{name}`. |
-| [`identity_resource`](#authentication-strategies-oauth2-identity_resource){: #authentication-strategies-oauth2-identity_resource } | `module \| false` | `false` | The resource used to store user identities. Given that a user can be signed into multiple different authentication providers at once we use the `AshAuthentication.UserIdentity` resource to build a mapping between users, providers and that provider's uid. See the Identities section of the module documentation for more information. Set to `false` to disable. |
+| [`auth_method`](#authentication-strategies-oauth2-auth_method){: #authentication-strategies-oauth2-auth_method } | `nil \| :client_secret_basic \| :client_secret_post \| :client_secret_jwt \| :private_key_jwt` | `:client_secret_post` | The authentication strategy used, optional. If not set, no authentication will be used during the access token request. |
+| [`client_secret`](#authentication-strategies-oauth2-client_secret){: #authentication-strategies-oauth2-client_secret } | `(any, any -> any) \| module \| String.t` |  | The OAuth2 client secret. Required if :auth_method is `:client_secret_basic`, `:client_secret_post` or `:client_secret_jwt`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`private_key`](#authentication-strategies-oauth2-private_key){: #authentication-strategies-oauth2-private_key } | `(any, any -> any) \| module \| String.t` |  | The private key to use if `:auth_method` is `:private_key_jwt`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`authorization_params`](#authentication-strategies-oauth2-authorization_params){: #authentication-strategies-oauth2-authorization_params } | `keyword` | `[]` | Any additional parameters to encode in the request phase. eg: `authorization_params scope: "openid profile email"` |
+| [`registration_enabled?`](#authentication-strategies-oauth2-registration_enabled?){: #authentication-strategies-oauth2-registration_enabled? } | `boolean` | `true` | If enabled, new users will be able to register for your site when authenticating and not already present. If not, only existing users will be able to authenticate. |
+| [`register_action_name`](#authentication-strategies-oauth2-register_action_name){: #authentication-strategies-oauth2-register_action_name } | `atom` |  | The name of the action to use to register a user, if `registration_enabled?` is `true`. Defaults to `register_with_<name>` See the "Registration and Sign-in" section of the strategy docs for more. |
+| [`sign_in_action_name`](#authentication-strategies-oauth2-sign_in_action_name){: #authentication-strategies-oauth2-sign_in_action_name } | `atom` |  | The name of the action to use to sign in an existing user, if `sign_in_enabled?` is `true`. Defaults to `sign_in_with_<strategy>`, which is generated for you by default. See the "Registration and Sign-in" section of the strategy docs for more information. |
+| [`identity_resource`](#authentication-strategies-oauth2-identity_resource){: #authentication-strategies-oauth2-identity_resource } | `module \| false` | `false` | The resource used to store user identities, or `false` to disable. See the User Identities section of the strategy docs for more. |
 | [`identity_relationship_name`](#authentication-strategies-oauth2-identity_relationship_name){: #authentication-strategies-oauth2-identity_relationship_name } | `atom` | `:identities` | Name of the relationship to the provider identities resource |
-| [`identity_relationship_user_id_attribute`](#authentication-strategies-oauth2-identity_relationship_user_id_attribute){: #authentication-strategies-oauth2-identity_relationship_user_id_attribute } | `atom` | `:user_id` | The name of the destination (user_id) attribute on your provider identity resource. The only reason to change this would be if you changed the `user_id_attribute_name` option of the provider identity. |
+| [`identity_relationship_user_id_attribute`](#authentication-strategies-oauth2-identity_relationship_user_id_attribute){: #authentication-strategies-oauth2-identity_relationship_user_id_attribute } | `atom` | `:user_id` | The name of the destination (user_id) attribute on your provider identity resource. Only necessary if you've changed the `user_id_attribute_name` option of the provider identity. |
 | [`icon`](#authentication-strategies-oauth2-icon){: #authentication-strategies-oauth2-icon } | `atom` | `:oauth2` | The name of an icon to use in any potential UI. This is a *hint* for UI generators to use, and not in any way canonical. |
 
 

@@ -88,68 +88,6 @@ to interact with the plugs directly, you can do so via the
     ...> user.confirmed_at >= one_second_ago()
     true
 
-## DSL Documentation
-
-User confirmation flow
-
-
-
-
-
-* `:name` (`t:atom/0`) - Required. Uniquely identifies the add-on.
-
-* `:token_lifetime` - How long should the confirmation token be valid.
-  If no unit is provided, then hours is assumed.  
-  Defaults to 3 days. The default value is `{3, :days}`.
-
-* `:monitor_fields` (list of `t:atom/0`) - Required. A list of fields to monitor for changes (eg `[:email, :phone_number]`).
-  The confirmation will only be sent when one of these fields are changed.
-
-* `:confirmed_at_field` (`t:atom/0`) - The name of a field to store the time that the last confirmation took
-  place.
-  This attribute will be dynamically added to the resource if not already
-  present. The default value is `:confirmed_at`.
-
-* `:confirm_on_create?` (`t:boolean/0`) - Generate and send a confirmation token when a new resource is created?
-  Will only trigger when a create action is executed _and_ one of the
-  monitored fields is being set. The default value is `true`.
-
-* `:confirm_on_update?` (`t:boolean/0`) - Generate and send a confirmation token when a resource is changed?
-  Will only trigger when an update action is executed _and_ one of the
-  monitored fields is being set. The default value is `true`.
-
-* `:inhibit_updates?` (`t:boolean/0`) - Wait until confirmation is received before actually changing a monitored
-  field?
-  If a change to a monitored field is detected, then the change is stored
-  in the token resource and  the changeset updated to not make the
-  requested change.  When the token is confirmed, the change will be
-  applied.
-  This could be potentially weird for your users, but useful in the case
-  of a user changing their email address or phone number where you want
-  to verify that the new contact details are reachable. The default value is `true`.
-
-* `:sender` - Required. How to send the confirmation instructions to the user.
-  Allows you to glue sending of confirmation instructions to
-  [swoosh](https://hex.pm/packages/swoosh),
-  [ex_twilio](https://hex.pm/packages/ex_twilio) or whatever notification
-  system is appropriate for your application.
-  Accepts a module, module and opts, or a function that takes a record,
-  reset token and options.
-  The options will be a keyword list containing the original
-  changeset, before any changes were inhibited.  This allows you
-  to send an email to the user's new email address if it is being
-  changed for example.
-  See `AshAuthentication.Sender` for more information.
-
-* `:confirm_action_name` (`t:atom/0`) - The name of the action to use when performing confirmation.
-  If this action is not already present on the resource, it will be
-  created for you. The default value is `:confirm`.
-
-
-
-
-
-
 
 
 ## authentication.add_ons.confirmation
@@ -173,14 +111,14 @@ User confirmation flow
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`monitor_fields`](#authentication-add_ons-confirmation-monitor_fields){: #authentication-add_ons-confirmation-monitor_fields .spark-required} | `list(atom)` |  | A list of fields to monitor for changes (eg `[:email, :phone_number]`). The confirmation will only be sent when one of these fields are changed. |
-| [`sender`](#authentication-add_ons-confirmation-sender){: #authentication-add_ons-confirmation-sender .spark-required} | `(any, any, any -> any) \| module` |  | How to send the confirmation instructions to the user. Allows you to glue sending of confirmation instructions to [swoosh](https://hex.pm/packages/swoosh), [ex_twilio](https://hex.pm/packages/ex_twilio) or whatever notification system is appropriate for your application. Accepts a module, module and opts, or a function that takes a record, reset token and options. The options will be a keyword list containing the original changeset, before any changes were inhibited.  This allows you to send an email to the user's new email address if it is being changed for example. See `AshAuthentication.Sender` for more information. |
-| [`token_lifetime`](#authentication-add_ons-confirmation-token_lifetime){: #authentication-add_ons-confirmation-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{3, :days}` | How long should the confirmation token be valid. If no unit is provided, then hours is assumed. Defaults to 3 days. |
-| [`confirmed_at_field`](#authentication-add_ons-confirmation-confirmed_at_field){: #authentication-add_ons-confirmation-confirmed_at_field } | `atom` | `:confirmed_at` | The name of a field to store the time that the last confirmation took place. This attribute will be dynamically added to the resource if not already present. |
-| [`confirm_on_create?`](#authentication-add_ons-confirmation-confirm_on_create?){: #authentication-add_ons-confirmation-confirm_on_create? } | `boolean` | `true` | Generate and send a confirmation token when a new resource is created? Will only trigger when a create action is executed _and_ one of the monitored fields is being set. |
-| [`confirm_on_update?`](#authentication-add_ons-confirmation-confirm_on_update?){: #authentication-add_ons-confirmation-confirm_on_update? } | `boolean` | `true` | Generate and send a confirmation token when a resource is changed? Will only trigger when an update action is executed _and_ one of the monitored fields is being set. |
-| [`inhibit_updates?`](#authentication-add_ons-confirmation-inhibit_updates?){: #authentication-add_ons-confirmation-inhibit_updates? } | `boolean` | `true` | Wait until confirmation is received before actually changing a monitored field? If a change to a monitored field is detected, then the change is stored in the token resource and  the changeset updated to not make the requested change.  When the token is confirmed, the change will be applied. This could be potentially weird for your users, but useful in the case of a user changing their email address or phone number where you want to verify that the new contact details are reachable. |
-| [`confirm_action_name`](#authentication-add_ons-confirmation-confirm_action_name){: #authentication-add_ons-confirmation-confirm_action_name } | `atom` | `:confirm` | The name of the action to use when performing confirmation. If this action is not already present on the resource, it will be created for you. |
+| [`monitor_fields`](#authentication-add_ons-confirmation-monitor_fields){: #authentication-add_ons-confirmation-monitor_fields .spark-required} | `list(atom)` |  | A list of fields to monitor for changes. Confirmation will be sent when one of these fields are changed. |
+| [`sender`](#authentication-add_ons-confirmation-sender){: #authentication-add_ons-confirmation-sender .spark-required} | `(any, any, any -> any) \| module` |  | How to send the confirmation instructions to the user. |
+| [`token_lifetime`](#authentication-add_ons-confirmation-token_lifetime){: #authentication-add_ons-confirmation-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{3, :days}` | How long should the confirmation token be valid.  If no unit is provided, then hours is assumed. |
+| [`confirmed_at_field`](#authentication-add_ons-confirmation-confirmed_at_field){: #authentication-add_ons-confirmation-confirmed_at_field } | `atom` | `:confirmed_at` | The name of the field to store the time that the last confirmation took place. Created if it does not exist. |
+| [`confirm_on_create?`](#authentication-add_ons-confirmation-confirm_on_create?){: #authentication-add_ons-confirmation-confirm_on_create? } | `boolean` | `true` | Generate and send a confirmation token when a new resource is created. Triggers when a create action is executed _and_ one of the monitored fields is being set. |
+| [`confirm_on_update?`](#authentication-add_ons-confirmation-confirm_on_update?){: #authentication-add_ons-confirmation-confirm_on_update? } | `boolean` | `true` | Generate and send a confirmation token when a resource is changed.  Triggers when an update action is executed _and_ one of the monitored fields is being set. |
+| [`inhibit_updates?`](#authentication-add_ons-confirmation-inhibit_updates?){: #authentication-add_ons-confirmation-inhibit_updates? } | `boolean` | `true` | Whether or not to wait until confirmation is received before actually changing a monitored field. See [the confirmation guide](/documentation/topics/confirmation.md) for more. |
+| [`confirm_action_name`](#authentication-add_ons-confirmation-confirm_action_name){: #authentication-add_ons-confirmation-confirm_action_name } | `atom` | `:confirm` | The name of the action to use when performing confirmation. Will be created if it does not already exist. |
 
 
 

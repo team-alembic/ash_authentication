@@ -86,10 +86,6 @@ defmodule AshAuthentication.AddOn.Confirmation do
       ...> {_conn, {:ok, user}} = Plug.Helpers.get_authentication_result(conn)
       ...> user.confirmed_at >= one_second_ago()
       true
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   defstruct confirm_action_name: :confirm,

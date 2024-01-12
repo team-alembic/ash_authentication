@@ -16,10 +16,6 @@ defmodule AshAuthentication.Strategy.Google do
 
   See the [Google OAuth 2.0 Overview](https://developers.google.com/identity/protocols/oauth2)
   for Google setup details.
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}

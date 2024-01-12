@@ -46,10 +46,6 @@ defmodule AshAuthentication.Strategy.Oidc do
 
   AshAuthentication will dynamically generate one for the session if `nonce` is
   set to `true`.
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   alias AshAuthentication.Strategy.{Custom, Oidc}
