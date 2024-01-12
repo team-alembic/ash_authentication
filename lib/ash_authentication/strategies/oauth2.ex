@@ -215,11 +215,6 @@ defmodule AshAuthentication.Strategy.OAuth2 do
      authentication provider for authentication.
   2. The callback phase, where the provider redirects the user back to your app
      to create a local database record, session, etc.
-
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   @struct_fields [

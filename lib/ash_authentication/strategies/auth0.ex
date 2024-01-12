@@ -16,10 +16,6 @@ defmodule AshAuthentication.Strategy.Auth0 do
 
   See the [Auth0 quickstart guide](/documentation/tutorials/auth0-quickstart.md)
   for more information.
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}

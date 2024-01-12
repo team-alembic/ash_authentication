@@ -23,38 +23,25 @@ defmodule AshAuthentication.TokenResource do
         ],
         read_expired_action_name: [
           type: :atom,
-          doc: """
-          The name of the action use to find all expired tokens.
-
-          Used internally by the `expunge_expired` action.
-          """,
+          doc: "The name of the action use to find all expired tokens.",
           default: :read_expired
         ],
         expunge_interval: [
           type: :pos_integer,
-          doc: """
-          How often to remove expired records.
-
-          How often to scan this resource for records which have expired, and thus can be removed.
-          """,
+          doc:
+            "How often to scan this resource for records which have expired, and thus can be removed.",
           default: @default_expunge_interval_hrs
         ],
         store_token_action_name: [
           type: :atom,
-          doc: """
-          The name of the action to use to store a token.
-
-          Used if `store_all_tokens?` is enabled in your authentication resource.
-          """,
+          doc:
+            "The name of the action to use to store a token, if `require_tokens_for_authentication?` is enabled in your authentication resource.",
           default: :store_token
         ],
         get_token_action_name: [
           type: :atom,
-          doc: """
-          The name of the action used to retrieve tokens from the store.
-
-          Used if `require_token_presence_for_authentication?` is enabled in your authentication resource.
-          """,
+          doc:
+            "The name of the action used to retrieve tokens from the store, if `require_tokens_for_authentication?` is enabled in your authentication resource.",
           default: :get_token
         ]
       ],

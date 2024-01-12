@@ -22,8 +22,6 @@ defmodule AshAuthentication.Strategy.Github.Dsl do
       #### Strategy defaults:
 
       #{strategy_override_docs(Assent.Strategy.Github)}
-
-      #### Schema:
       """,
       auto_set_fields: strategy_fields(Assent.Strategy.Github, icon: :github)
     })

@@ -22,8 +22,6 @@ defmodule AshAuthentication.Strategy.Auth0.Dsl do
       #### Strategy defaults:
 
       #{strategy_override_docs(Assent.Strategy.Auth0)}
-
-      #### Schema:
       """,
       auto_set_fields: strategy_fields(Assent.Strategy.Auth0, icon: :auth0)
     })

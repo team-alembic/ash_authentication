@@ -24,8 +24,38 @@ defmodule AshAuthentication.MixProject do
       ],
       docs: [
         main: "readme",
-        extras: extra_documentation(),
-        groups_for_extras: extra_documentation_groups(),
+        extras: [
+          {"README.md", name: "READ ME"},
+          "documentation/tutorials/getting-started-with-authentication.md",
+          "documentation/tutorials/auth0-quickstart.md",
+          "documentation/tutorials/github-quickstart.md",
+          "documentation/tutorials/google-quickstart.md",
+          "documentation/tutorials/integrating-ash-authentication-and-phoenix.md",
+          "documentation/tutorials/magic-links-quickstart.md",
+          "documentation/topics/custom-strategy.md",
+          "documentation/topics/policies-on-authentication-resources.md",
+          "documentation/topics/testing.md",
+          "documentation/topics/tokens.md",
+          "documentation/topics/confirmation.md",
+          "documentation/topics/upgrading.md",
+          "documentation/dsls/DSL:-AshAuthentication.md",
+          "documentation/dsls/DSL:-AshAuthentication.AddOn.Confirmation.md",
+          "documentation/dsls/DSL:-AshAuthentication.Strategy.Auth0.md",
+          "documentation/dsls/DSL:-AshAuthentication.Strategy.Github.md",
+          "documentation/dsls/DSL:-AshAuthentication.Strategy.Google.md",
+          "documentation/dsls/DSL:-AshAuthentication.Strategy.MagicLink.md",
+          "documentation/dsls/DSL:-AshAuthentication.Strategy.OAuth2.md",
+          "documentation/dsls/DSL:-AshAuthentication.Strategy.Oidc.md",
+          "documentation/dsls/DSL:-AshAuthentication.Strategy.Password.md",
+          "documentation/dsls/DSL:-AshAuthentication.TokenResource.md",
+          "documentation/dsls/DSL:-AshAuthentication.UserIdentity.md"
+        ],
+        groups_for_extras: [
+          Tutorials: ~r'documentation/tutorials',
+          "How To": ~r'documentation/how_to',
+          Topics: ~r'documentation/topics',
+          DSLs: ~r'documentation/dsls'
+        ],
         extra_section: "GUIDES",
         formatters: ["html"],
         before_closing_head_tag: fn type ->
@@ -46,69 +76,11 @@ defmodule AshAuthentication.MixProject do
         filter_modules: ~r/^Elixir.AshAuthentication/,
         source_url_pattern:
           "https://github.com/team-alembic/ash_authentication/blob/main/%{path}#L%{line}",
-        spark: [
-          extensions: [
-            %{
-              module: AshAuthentication,
-              name: "Authentication",
-              target: "Ash.Resource",
-              type: "Authentication"
-            },
-            %{
-              module: AshAuthentication.TokenResource,
-              name: "Token Resource",
-              target: "Ash.Resource",
-              type: "Token"
-            },
-            %{
-              module: AshAuthentication.UserIdentity,
-              name: "User Identity",
-              target: "Ash.Resource",
-              type: "User identity"
-            },
-            %{
-              module: AshAuthentication.Strategy.MagicLink,
-              name: "Magic Link",
-              target: "Ash.Resource",
-              type: "Authentication Strategy"
-            },
-            %{
-              module: AshAuthentication.AddOn.Confirmation,
-              name: "Confirmation",
-              target: "Ash.Resource",
-              type: "Authentication Add On"
-            },
-            %{
-              module: AshAuthentication.Strategy.Auth0,
-              name: "Auth0",
-              target: "Ash.Resource",
-              type: "Authentication Strategy"
-            },
-            %{
-              module: AshAuthentication.Strategy.Github,
-              name: "Github",
-              target: "Ash.Resource",
-              type: "Authentication Strategy"
-            },
-            %{
-              module: AshAuthentication.Strategy.Google,
-              name: "Google",
-              target: "Ash.Resource",
-              type: "Authentication Strategy"
-            },
-            %{
-              module: AshAuthentication.Strategy.OAuth2,
-              name: "OAuth2",
-              target: "Ash.Resource",
-              type: "Authentication Strategy"
-            },
-            %{
-              module: AshAuthentication.Strategy.Password,
-              name: "Password",
-              target: "Ash.Resource",
-              type: "Authentication Strategy"
-            }
-          ]
+        nest_modules_by_prefix: [
+          AshAuthentication.Strategy,
+          AshAuthentication.AddOn,
+          AshAuthentication.Plug,
+          AshAuthentication.Validations
         ],
         groups_for_modules: [
           Extensions: [
@@ -125,6 +97,9 @@ defmodule AshAuthentication.MixProject do
             AshAuthentication.Strategy.OAuth2,
             AshAuthentication.Strategy.Password
           ],
+          CustomStrategies: [
+            ~r/AshAuthentication.Strategy.Custom/
+          ],
           "Add ons": [
             AshAuthentication.AddOn.Confirmation
           ],
@@ -133,56 +108,38 @@ defmodule AshAuthentication.MixProject do
             AshAuthentication.BcryptProvider,
             AshAuthentication.Jwt
           ],
-          Plug: ~r/^AshAuthentication\.Plug.*/,
-          Internals: ~r/^AshAuthentication.*/
+          Introspection: [
+            AshAuthentication.Info,
+            AshAuthentication.TokenResource.Info,
+            AshAuthentication.UserIdentity.Info
+          ],
+          Utilities: [
+            AshAuthentication.Debug,
+            AshAuthentication.Secret,
+            AshAuthentication.Sender,
+            AshAuthentication.Supervisor,
+            ~r/.*Actions$/,
+            AshAuthentication.Strategy.Password.Actions,
+            AshAuthentication.TokenResource.Expunger
+          ],
+          Plugs: [~r/^AshAuthentication\.Plug.*/, AshAuthentication.Strategy.MagicLink.Plug],
+          "Reusable Components": [
+            AshAuthentication.GenerateTokenChange,
+            AshAuthentication.Strategy.Password.HashPasswordChange,
+            AshAuthentication.Strategy.Password.PasswordConfirmationValidation,
+            AshAuthentication.Strategy.Password.PasswordValidation,
+            AshAuthentication.Checks.AshAuthenticationInteraction,
+            AshAuthentication.Password.Plug,
+            ~r/AshAuthentication.Validations/
+          ],
+          Errors: ~r/AshAuthentication.Errors/,
+          "DSL Transformers": [
+            ~r/Transformer/,
+            ~r/Verifier/
+          ]
         ]
       ]
     ]
-  end
-
-  defp extra_documentation do
-    ["README.md"]
-    |> Enum.concat(Path.wildcard("documentation/**/*.{md,livemd,cheatmd}"))
-    |> Enum.map(fn
-      "README.md" ->
-        {:"README.md", title: "Read Me", ash_hq?: false}
-
-      "documentation/tutorials/integrating-ash-authentication-and-phoenix.md" = name ->
-        {String.to_atom(name), ash_hq?: false}
-
-      "documentation/tutorials/" <> _ = path ->
-        {String.to_atom(path), []}
-
-      "documentation/topics/" <> _ = path ->
-        {String.to_atom(path), []}
-
-      "documentation/dsls/" <> _ = path ->
-        {String.to_atom(path), []}
-    end)
-  end
-
-  defp extra_documentation_groups do
-    "documentation/*"
-    |> Path.wildcard()
-    |> Enum.map(fn dir ->
-      name =
-        dir
-        |> Path.basename()
-        |> String.split(~r/_+/)
-        |> Enum.join(" ")
-        |> capitalize()
-
-      {name, dir |> Path.join("**") |> Path.wildcard()}
-    end)
-  end
-
-  defp capitalize(string) do
-    string
-    |> String.split(" ")
-    |> Enum.map(fn string ->
-      [hd | tail] = String.graphemes(string)
-      String.capitalize(hd) <> Enum.join(tail)
-    end)
   end
 
   def package do

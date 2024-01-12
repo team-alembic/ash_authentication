@@ -72,10 +72,10 @@ Configuration options for this token resource
 |------|------|---------|------|
 | [`api`](#token-api){: #token-api .spark-required} | `module` |  | The Ash API to use to access this resource. |
 | [`expunge_expired_action_name`](#token-expunge_expired_action_name){: #token-expunge_expired_action_name } | `atom` | `:expunge_expired` | The name of the action used to remove expired tokens. |
-| [`read_expired_action_name`](#token-read_expired_action_name){: #token-read_expired_action_name } | `atom` | `:read_expired` | The name of the action use to find all expired tokens. Used internally by the `expunge_expired` action. |
-| [`expunge_interval`](#token-expunge_interval){: #token-expunge_interval } | `pos_integer` | `12` | How often to remove expired records. How often to scan this resource for records which have expired, and thus can be removed. |
-| [`store_token_action_name`](#token-store_token_action_name){: #token-store_token_action_name } | `atom` | `:store_token` | The name of the action to use to store a token. Used if `store_all_tokens?` is enabled in your authentication resource. |
-| [`get_token_action_name`](#token-get_token_action_name){: #token-get_token_action_name } | `atom` | `:get_token` | The name of the action used to retrieve tokens from the store. Used if `require_token_presence_for_authentication?` is enabled in your authentication resource. |
+| [`read_expired_action_name`](#token-read_expired_action_name){: #token-read_expired_action_name } | `atom` | `:read_expired` | The name of the action use to find all expired tokens. |
+| [`expunge_interval`](#token-expunge_interval){: #token-expunge_interval } | `pos_integer` | `12` | How often to scan this resource for records which have expired, and thus can be removed. |
+| [`store_token_action_name`](#token-store_token_action_name){: #token-store_token_action_name } | `atom` | `:store_token` | The name of the action to use to store a token, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
+| [`get_token_action_name`](#token-get_token_action_name){: #token-get_token_action_name } | `atom` | `:get_token` | The name of the action used to retrieve tokens from the store, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
 
 
 ## token.revocation

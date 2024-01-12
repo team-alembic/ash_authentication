@@ -15,8 +15,6 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
 
       This strategy is built using the `:oauth2` strategy, and thus provides
       all the same configuration options should you need them.
-
-      #### Schema:
       """,
       auto_set_fields: [assent_strategy: Assent.Strategy.OIDC, icon: :oidc],
       schema: patch_schema()
@@ -43,11 +41,8 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
       ],
       openid_configuration: [
         type: :map,
-        doc: """
-        The OpenID configuration.
-
-        If not set, the configuration will be retrieved from `openid_configuration_uri`.
-        """,
+        doc:
+          "The OpenID configuration.  If not set, the configuration will be retrieved from `openid_configuration_uri`.",
         required: false,
         default: %{}
       ],
@@ -69,25 +64,8 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
       ],
       nonce: [
         type: {:or, [:boolean, AshAuthentication.Dsl.secret_type()]},
-        doc: """
-        A function for generating the session nonce.
-
-        When set to `true` the nonce will be automatically generated using
-        `AshAuthentication.Strategy.Oidc.NonceGenerator`.  Set to `false`
-        to explicitly disable.
-
-        #{AshAuthentication.Dsl.secret_doc()}
-
-        Example:
-
-        ```elixir
-        nonce fn _, _ ->
-          16
-          |> :crypto.strong_rand_bytes()
-          |> Base.encode64(padding: false)
-        end
-        ```
-        """,
+        doc:
+          "A function for generating the session nonce, `true` to automatically generate it with `AshAuthetnication.Strategy.Oidc.NonceGenerator`, or `false` to disable.",
         default: true,
         required: false
       ],

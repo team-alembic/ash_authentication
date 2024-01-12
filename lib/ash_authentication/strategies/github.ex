@@ -15,10 +15,6 @@ defmodule AshAuthentication.Strategy.Github do
 
   See the [GitHub quickstart guide](/documentation/tutorials/github-quickstart.html)
   for more information.
-
-  ## DSL Documentation
-
-  #{Spark.Dsl.Extension.doc_entity(Dsl.dsl())}
   """
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}
