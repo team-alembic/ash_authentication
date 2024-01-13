@@ -185,7 +185,7 @@ defmodule AshAuthentication.MixProject do
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 0.21", only: [:dev, :test]},
       {:ash_json_api, "~> 0.30", only: [:dev, :test]},
-      {:ash_postgres, "~> 1.3.1", only: [:dev, :test]},
+      {:ash_postgres, "~> 1.4.0", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
