@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.12.1](https://github.com/team-alembic/ash_authentication/compare/v3.12.0...v3.12.1) (2024-01-25)
+
+
+
+
+### Improvements:
+
+* support atom keys for uid in addition to strings (#556)
+
 ## [v3.12.0](https://github.com/team-alembic/ash_authentication/compare/v3.11.16...v3.12.0) (2023-11-21)
 
 
