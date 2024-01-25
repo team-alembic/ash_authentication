@@ -34,7 +34,7 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
       # uid is a convention
       # sub is supposedly from the spec
       # id is from what has been seen from Google
-      |> Map.take(["uid", "sub", "id"])
+      |> Map.take(["uid", "sub", "id", :uid, :sub, :id])
       |> Map.values()
       |> Enum.reject(&is_nil/1)
       |> List.first()
