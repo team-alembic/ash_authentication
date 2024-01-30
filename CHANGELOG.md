@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.12.2](https://github.com/team-alembic/ash_authentication/compare/v3.12.1...v3.12.2) (2024-01-30)
+
+
+
+
+### Bug Fixes:
+
+* deps: mark ash_postgres as optional
+
+### Improvements:
+
+* support atom keys for uid in addition to strings (#556)
+
 ## [v3.12.1](https://github.com/team-alembic/ash_authentication/compare/v3.12.0...v3.12.1) (2024-01-25)
 
 
