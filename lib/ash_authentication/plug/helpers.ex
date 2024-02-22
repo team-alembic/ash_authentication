@@ -221,8 +221,12 @@ defmodule AshAuthentication.Plug.Helpers do
     use Plug.Router
     import MyApp.AuthPlug
 
+    plug :match
+
     plug :retrieve_from_bearer
     plug :set_actor, :user
+
+    plug :dispatch
 
     forward "/gql",
       to: Absinthe.Plug,
