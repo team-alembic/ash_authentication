@@ -174,7 +174,7 @@ defmodule MyApp.Accounts.User do
   attributes do
     uuid_primary_key :id
     attribute :email, :ci_string, allow_nil?: false
-    attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
+    attribute :hashed_password, :string, allow_nil?: false, sensitive?: true, private?: true
   end
 
   authentication do
