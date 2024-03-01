@@ -169,7 +169,8 @@ generation enabled.
 defmodule MyApp.Accounts.User do
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication]
+    extensions: [AshAuthentication],
+    authorizers: [Ash.Policy.Authorizer]
 
   attributes do
     uuid_primary_key :id
@@ -204,12 +205,17 @@ defmodule MyApp.Accounts.User do
     identity :unique_email, [:email]
   end
 
-  # If using policies, add the folowing bypass:
-  # policies do
-  #   bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-  #     authorize_if always()
-  #   end
-  # end
+  # You can customize this if you wish, but this is a safe default that
+  # only allows user data to be interacted with via AshAuthentication.
+  policies do
+    bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+      authorize_if always()
+    end
+
+    policy always() do
+      forbid_if always()
+    end
+  end
 end
 ```
 
