@@ -59,8 +59,8 @@ Configure identity options for this resource
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`api`](#user_identity-api){: #user_identity-api .spark-required} | `module` |  | The Ash API to use to access this resource. |
 | [`user_resource`](#user_identity-user_resource){: #user_identity-user_resource .spark-required} | `module` |  | The user resource to which these identities belong. |
+| [`api`](#user_identity-api){: #user_identity-api } | `module` |  | The Ash API to use to access this resource. |
 | [`uid_attribute_name`](#user_identity-uid_attribute_name){: #user_identity-uid_attribute_name } | `atom` | `:uid` | The name of the `uid` attribute on this resource. |
 | [`strategy_attribute_name`](#user_identity-strategy_attribute_name){: #user_identity-strategy_attribute_name } | `atom` | `:strategy` | The name of the `strategy` attribute on this resource. |
 | [`user_id_attribute_name`](#user_identity-user_id_attribute_name){: #user_identity-user_id_attribute_name } | `atom` | `:user_id` | The name of the `user_id` attribute on this resource. |
