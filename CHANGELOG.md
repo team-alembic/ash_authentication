@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v3.12.4](https://github.com/team-alembic/ash_authentication/compare/v3.12.3...v3.12.4) (2024-03-11)
+
+
+
+
+### Improvements:
+
+* infer `api` from a resource
+
 ## [v3.12.3](https://github.com/team-alembic/ash_authentication/compare/v3.12.2...v3.12.3) (2024-02-20)
 
 
