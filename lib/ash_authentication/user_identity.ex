@@ -7,8 +7,7 @@ defmodule AshAuthentication.UserIdentity do
       schema: [
         api: [
           type: {:behaviour, Ash.Api},
-          doc: "The Ash API to use to access this resource.",
-          required: true
+          doc: "The Ash API to use to access this resource."
         ],
         user_resource: [
           type: {:behaviour, Ash.Resource},

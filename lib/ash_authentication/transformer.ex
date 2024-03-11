@@ -30,7 +30,8 @@ defmodule AshAuthentication.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with :ok <- validate_at_least_one_strategy(dsl_state),
+    with {:ok, dsl_state} <- maybe_set_api(dsl_state, :authentication),
+         :ok <- validate_at_least_one_strategy(dsl_state),
          :ok <- validate_unique_strategy_names(dsl_state),
          :ok <- validate_unique_add_on_names(dsl_state),
          {:ok, dsl_state} <- maybe_transform_token_lifetime(dsl_state),

@@ -80,6 +80,19 @@ defmodule AshAuthentication.Utils do
   def maybe_concat(collection, _test, new_elements), do: Enum.concat(collection, new_elements)
 
   @doc """
+  Used within transformers to infer `api` from a resource if the option is not set.
+  """
+  def maybe_set_api(dsl_state, section) do
+    api = Transformer.get_persisted(dsl_state, :api)
+
+    if api && !Transformer.get_option(dsl_state, [section], :api) do
+      {:ok, Transformer.set_option(dsl_state, [section], :api, api)}
+    else
+      {:ok, dsl_state}
+    end
+  end
+
+  @doc """
   Used within transformers to optionally build actions as needed.
   """
   @spec maybe_build_action(Dsl.t(), atom, (map -> map)) :: {:ok, atom | map} | {:error, any}

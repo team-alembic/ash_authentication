@@ -34,7 +34,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with {:ok, resource} <- persisted_option(dsl_state, :module),
+    with {:ok, dsl_state} <- maybe_set_api(dsl_state, :user_identity),
+         {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :id, Type.UUID,
              allow_nil?: false,
