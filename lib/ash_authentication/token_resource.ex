@@ -11,8 +11,7 @@ defmodule AshAuthentication.TokenResource do
           type: {:behaviour, Ash.Api},
           doc: """
           The Ash API to use to access this resource.
-          """,
-          required: true
+          """
         ],
         expunge_expired_action_name: [
           type: :atom,

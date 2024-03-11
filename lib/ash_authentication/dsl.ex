@@ -51,8 +51,7 @@ defmodule AshAuthentication.Dsl do
           api: [
             type: {:behaviour, Api},
             doc:
-              "The name of the Ash API to use to access this resource when doing anything authenticaiton related.",
-            required: true
+              "The name of the Ash API to use to access this resource when doing anything authenticaiton related."
           ],
           get_by_subject_action_name: [
             type: :atom,
