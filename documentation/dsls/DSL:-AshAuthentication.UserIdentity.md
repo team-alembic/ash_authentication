@@ -29,10 +29,10 @@ unlikely that you will need to customise it.
 defmodule MyApp.Accounts.UserIdentity do
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication.UserIdentity]
+    extensions: [AshAuthentication.UserIdentity],
+    domain: MyApp.Accounts
 
   user_identity do
-    api MyApp.Accounts
     user_resource MyApp.Accounts.User
   end
 
@@ -60,7 +60,7 @@ Configure identity options for this resource
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`user_resource`](#user_identity-user_resource){: #user_identity-user_resource .spark-required} | `module` |  | The user resource to which these identities belong. |
-| [`api`](#user_identity-api){: #user_identity-api } | `module` |  | The Ash API to use to access this resource. |
+| [`domain`](#user_identity-domain){: #user_identity-domain } | `module` |  | The Ash domain to use to access this resource. |
 | [`uid_attribute_name`](#user_identity-uid_attribute_name){: #user_identity-uid_attribute_name } | `atom` | `:uid` | The name of the `uid` attribute on this resource. |
 | [`strategy_attribute_name`](#user_identity-strategy_attribute_name){: #user_identity-strategy_attribute_name } | `atom` | `:strategy` | The name of the `strategy` attribute on this resource. |
 | [`user_id_attribute_name`](#user_identity-user_id_attribute_name){: #user_identity-user_id_attribute_name } | `atom` | `:user_id` | The name of the `user_id` attribute on this resource. |

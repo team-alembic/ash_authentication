@@ -83,6 +83,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
       with {:ok, resource} <- persisted_option(dsl_state, :module),
            {:ok, attribute} <- find_attribute(dsl_state, field),
            :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
+           :ok <- validate_attribute_option(attribute, resource, :public?, [true]),
            :ok <- maybe_validate_eager_checking(dsl_state, strategy, field, resource) do
         {:cont, :ok}
       else
@@ -142,7 +143,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
       accept: strategy.monitor_fields,
       arguments: arguments,
       metadata: metadata,
-      changes: changes
+      changes: changes,
+      require_atomic?: false
     )
   end
 
@@ -150,8 +152,26 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.confirm_action_name),
          :ok <- validate_action_has_change(action, Confirmation.ConfirmChange),
          :ok <- validate_action_argument_option(action, :confirm, :allow_nil?, [false]),
-         :ok <- validate_action_has_change(action, GenerateTokenChange) do
-      validate_action_argument_option(action, :confirm, :type, [Type.String])
+         :ok <- validate_action_argument_option(action, :confirm, :type, [Type.String]),
+         :ok <- validate_action_has_change(action, GenerateTokenChange),
+         :ok <- validate_action_option(action, :require_atomic?, [false]) do
+      accept_fields = MapSet.new(action.accept)
+
+      strategy.monitor_fields
+      |> MapSet.new()
+      |> MapSet.difference(accept_fields)
+      |> Enum.to_list()
+      |> case do
+        [] ->
+          :ok
+
+        _fields ->
+          {:error,
+           DslError.exception(
+             path: [:actions, action.name, :accept],
+             message: "The confirmation action must accept the monitored fields."
+           )}
+      end
     end
   end
 

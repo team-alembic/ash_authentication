@@ -3,7 +3,7 @@ defmodule AshAuthentication.UserIdentity.Actions do
   Code interface for provider identity actions.
 
   Allows you to interact with UserIdentity resources without having to mess
-  around with changesets, apis, etc.  These functions are delegated to from
+  around with changesets, domains, etc.  These functions are delegated to from
   within `AshAuthentication.UserIdentity`.
   """
 
@@ -15,7 +15,7 @@ defmodule AshAuthentication.UserIdentity.Actions do
   """
   @spec upsert(Resource.t(), map) :: {:ok, Resource.record()} | {:error, term}
   def upsert(resource, attributes) do
-    with {:ok, api} <- UserIdentity.Info.user_identity_api(resource),
+    with {:ok, domain} <- UserIdentity.Info.user_identity_domain(resource),
          {:ok, upsert_action_name} <-
            UserIdentity.Info.user_identity_upsert_action_name(resource),
          action when is_map(action) <- Resource.Info.action(resource, upsert_action_name) do
@@ -30,7 +30,7 @@ defmodule AshAuthentication.UserIdentity.Actions do
         upsert?: true,
         upsert_identity: action.upsert_identity
       )
-      |> api.create()
+      |> domain.create()
     end
   end
 end

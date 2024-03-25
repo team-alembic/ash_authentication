@@ -2,14 +2,11 @@ defmodule Example.Token do
   @moduledoc false
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication.TokenResource]
+    extensions: [AshAuthentication.TokenResource],
+    domain: Example
 
   postgres do
     table("tokens")
     repo(Example.Repo)
-  end
-
-  token do
-    api Example
   end
 end

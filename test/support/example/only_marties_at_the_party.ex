@@ -54,6 +54,7 @@ defmodule Example.OnlyMartiesAtTheParty do
     alias AshAuthentication.Errors.AuthenticationFailed
     import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
     require Ash.Query
+    import Ash.Expr
 
     def name(strategy), do: strategy.name
 
@@ -79,18 +80,18 @@ defmodule Example.OnlyMartiesAtTheParty do
     def action(strategy, :sign_in, params, options) do
       name_field = strategy.name_field
       name = Map.get(params, to_string(name_field))
-      api = AshAuthentication.Info.authentication_api!(strategy.resource)
+      domain = AshAuthentication.Info.domain!(strategy.resource)
 
       strategy.resource
-      |> Ash.Query.filter(ref(^name_field) == ^name)
+      |> Ash.Query.filter(expr(^ref(name_field) == ^name))
       |> then(fn query ->
         if strategy.case_sensitive? do
-          Ash.Query.filter(query, like(ref(^name_field), "Marty%"))
+          Ash.Query.filter(query, like(^ref(name_field), "Marty%"))
         else
-          Ash.Query.filter(query, ilike(ref(^name_field), "Marty%"))
+          Ash.Query.filter(query, ilike(^ref(name_field), "Marty%"))
         end
       end)
-      |> api.read(options)
+      |> domain.read(options)
       |> case do
         {:ok, [user]} ->
           {:ok, user}

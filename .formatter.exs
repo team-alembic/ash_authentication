@@ -1,7 +1,6 @@
 spark_locals_without_parens = [
   access_token_attribute_name: 1,
   access_token_expires_at_attribute_name: 1,
-  api: 1,
   auth0: 0,
   auth0: 1,
   auth0: 2,
@@ -21,6 +20,7 @@ spark_locals_without_parens = [
   confirmation_required?: 1,
   confirmed_at_field: 1,
   destroy_action_name: 1,
+  domain: 1,
   enabled?: 1,
   expunge_expired_action_name: 1,
   expunge_interval: 1,
@@ -106,7 +106,8 @@ spark_locals_without_parens = [
 ]
 
 [
-  import_deps: [:ash, :spark, :ash_json_api, :ash_graphql],
+  # , :ash_json_api, :ash_graphql],
+  import_deps: [:ash, :spark],
   inputs: [
     "*.{ex,exs}",
     "{dev,config,lib,test}/**/*.{ex,exs}"

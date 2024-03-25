@@ -4,13 +4,13 @@ defmodule AshAuthentication.Strategy.Password.ResetTokenValidation do
   """
 
   use Ash.Resource.Validation
-  alias Ash.{Changeset, Error.Changes.InvalidArgument}
+  alias Ash.{Changeset, Error.Changes.InvalidArgument, Resource.Validation}
   alias AshAuthentication.{Info, Jwt}
 
   @doc false
   @impl true
-  @spec validate(Changeset.t(), keyword) :: :ok | {:error, Exception.t()}
-  def validate(changeset, _) do
+  @spec validate(Changeset.t(), keyword, Validation.Context.t()) :: :ok | {:error, Exception.t()}
+  def validate(changeset, _, _) do
     with {:ok, strategy} <- Info.strategy_for_action(changeset.resource, changeset.action.name),
          token when is_binary(token) <- Changeset.get_argument(changeset, :reset_token),
          {:ok, %{"act" => token_action}, _} <- Jwt.verify(token, changeset.resource),

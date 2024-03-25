@@ -18,7 +18,7 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, _opts, _context) do
     strategy = Info.strategy_for_action!(query.resource, query.action.name)
 
@@ -27,7 +27,7 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
     select_for_senders = Info.authentication_select_for_senders!(query.resource)
 
     query
-    |> Query.filter(ref(^identity_field) == ^identity)
+    |> Query.filter(^ref(identity_field) == ^identity)
     |> Query.before_action(fn query ->
       Ash.Query.ensure_selected(query, select_for_senders)
     end)

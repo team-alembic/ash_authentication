@@ -18,7 +18,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
   ```elixir
   defmodule MyApp.Accounts.User do
     use Ash.Resource,
-      extensions: [AshAuthentication]
+      extensions: [AshAuthentication],
+      domain: MyApp.Accounts
 
     attributes do
       uuid_primary_key :id
@@ -26,8 +27,6 @@ defmodule AshAuthentication.Strategy.MagicLink do
     end
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         magic_link do
           identity_field :email

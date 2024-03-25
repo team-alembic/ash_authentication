@@ -34,13 +34,14 @@ defmodule AshAuthentication.TokenResource.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with {:ok, dsl_state} <- maybe_set_api(dsl_state, :token),
+    with {:ok, dsl_state} <- maybe_set_domain(dsl_state, :token),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :jti, :string,
              primary_key?: true,
              allow_nil?: false,
              sensitive?: true,
-             writable?: true
+             writable?: true,
+             public?: true
            ),
          :ok <- validate_jti_field(dsl_state),
          {:ok, dsl_state} <-
@@ -55,24 +56,26 @@ defmodule AshAuthentication.TokenResource.Transformer do
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :purpose, :string,
              allow_nil?: false,
-             writable?: true
+             writable?: true,
+             public?: true
            ),
          :ok <- validate_purpose_field(dsl_state),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :extra_data, :map,
              allow_nil?: true,
-             writable?: true
+             writable?: true,
+             public?: true
            ),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :created_at, :utc_datetime_usec,
              allow_nil?: false,
-             private?: true,
+             public?: false,
              default: &DateTime.utc_now/0
            ),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :updated_at, :utc_datetime_usec,
              allow_nil?: false,
-             private?: true,
+             public?: false,
              default: &DateTime.utc_now/0,
              update_default: &DateTime.utc_now/0
            ),
@@ -311,11 +314,16 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp build_read_expired_action(_dsl_state, action_name) do
-    import Ash.Filter.TemplateHelpers
+    import Ash.Expr
+
+    filter =
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :filter,
+        filter: expr(expires_at < now())
+      )
 
     Transformer.build_entity(Resource.Dsl, [:actions], :read,
       name: action_name,
-      filter: expr(expires_at < now())
+      filters: [filter]
     )
   end
 
@@ -421,7 +429,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
          :ok <- validate_attribute_option(attribute, resource, :sensitive?, [true]),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
          :ok <- validate_attribute_option(attribute, resource, :primary_key?, [true]) do
-      validate_attribute_option(attribute, resource, :private?, [false])
+      validate_attribute_option(attribute, resource, :public?, [true])
     end
   end
 
@@ -439,8 +447,9 @@ defmodule AshAuthentication.TokenResource.Transformer do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, :purpose),
          :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]) do
-      validate_attribute_option(attribute, resource, :writable?, [true])
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
+      validate_attribute_option(attribute, resource, :public?, [true])
     end
   end
 
@@ -448,8 +457,9 @@ defmodule AshAuthentication.TokenResource.Transformer do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, :extra_data),
          :ok <- validate_attribute_option(attribute, resource, :type, [Type.Map, :map]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]) do
-      validate_attribute_option(attribute, resource, :writable?, [true])
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
+      validate_attribute_option(attribute, resource, :public?, [true])
     end
   end
 end

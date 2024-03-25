@@ -11,7 +11,7 @@ defmodule AshAuthentication.TokenResource.GetTokenPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, _, _) do
     jti = get_jti(query)
     purpose = Query.get_argument(query, :purpose)

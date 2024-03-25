@@ -49,8 +49,8 @@ used when converting tokens or session information into a resource record.
 ### `AshAuthentication.Strategy.Password`
 
 This authentication strategy provides registration and sign-in for users using a local
-identifier (eg `username`, `email` or `phone_number`) and a password.  It will
-define register and sign-in actions on your "user" resource.  You are welcome to
+identifier (eg `username`, `email` or `phone_number`) and a password. It will
+define register and sign-in actions on your "user" resource. You are welcome to
 define either or both of these actions yourself if you wish to customise them -
 if you do so then the extension will do it's best to validate that all required
 configuration is present.
@@ -60,7 +60,7 @@ The `AshAuthentication.Strategy.Password` DSL allows you to override any of the 
 ### `AshAuthentication.Strategy.OAuth2`
 
 This authentication strategy provides registration and sign-in for users using a
-remote [OAuth 2.0](https://oauth.net/2/) server as the source of truth.  You
+remote [OAuth 2.0](https://oauth.net/2/) server as the source of truth. You
 will be required to provide either a "register" or a "sign-in" action depending
 on your configuration, which the strategy will attempt to validate for common
 misconfigurations.
@@ -74,7 +74,7 @@ change to take place.
 ### `AshAuthentication.TokenResource`
 
 This extension allows you to easily create a resource which will store
-information about tokens that can't be encoded into the tokens themselves.  A
+information about tokens that can't be encoded into the tokens themselves. A
 resource with this extension must be present if token generation is enabled.
 
 ### `AshAuthentication.UserIdentity`
@@ -82,21 +82,21 @@ resource with this extension must be present if token generation is enabled.
 If you plan to support multiple different strategies at once (eg giving your
 users the choice of more than one authentication provider, or signing them into
 multiple services simultaneously) then you will want to create a resource with
-this extension enabled.  It is used to keep track of the links between your
+this extension enabled. It is used to keep track of the links between your
 local user records and their many remote identities.
 
 ## Example
 
-Let's create an `Accounts` API in our application which provides a `User`
+Let's create an `Accounts` domain in our application which provides a `User`
 resource and a `Token` resource.
 
-First, let's define our API:
+First, let's define our domain:
 
 ```elixir
 # lib/my_app/accounts.ex
 
 defmodule MyApp.Accounts do
-  use Ash.Api
+  use Ash.Domain
 
   resources do
     resource MyApp.Accounts.User
@@ -105,15 +105,15 @@ defmodule MyApp.Accounts do
 end
 ```
 
-Be sure to add it to the `ash_apis` config in your `config.exs`
+Be sure to add it to the `ash_domains` config in your `config.exs`
 
 ```elixir
 # in config/config.exs
-config :my_app, :ash_apis: [..., MyApp.Accounts]
+config :my_app, :ash_domains: [..., MyApp.Accounts]
 ```
 
-Next, let's define our `Token` resource.  This resource is needed
-if token generation is enabled for any resources in your application.  Most of
+Next, let's define our `Token` resource. This resource is needed
+if token generation is enabled for any resources in your application. Most of
 the contents are auto-generated, so we just need to provide the data layer
 configuration and the API to use.
 
@@ -124,7 +124,7 @@ But before we do, we need to install a postgres extension.
 
 defmodule MyApp.Repo do
   use AshPostgres.Repo, otp_app: :my_app
-  
+
   def installed_extensions do
     ["uuid-ossp", "citext"]
   end
@@ -140,11 +140,8 @@ You can skip this step if you don't want to use tokens, in which case remove the
 defmodule MyApp.Accounts.Token do
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication.TokenResource]
-
-  token do
-    api MyApp.Accounts
-  end
+    extensions: [AshAuthentication.TokenResource],
+    domain: MyApp.Accounts
 
   postgres do
     table "tokens"
@@ -170,17 +167,16 @@ defmodule MyApp.Accounts.User do
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAuthentication],
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    domain: MyApp.Accounts
 
   attributes do
     uuid_primary_key :id
-    attribute :email, :ci_string, allow_nil?: false
-    attribute :hashed_password, :string, allow_nil?: false, sensitive?: true, private?: true
+    attribute :email, :ci_string, allow_nil?: false, public?: true
+    attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
   end
 
   authentication do
-    api MyApp.Accounts
-
     strategies do
       password :password do
         identity_field :email
@@ -231,8 +227,8 @@ If you're using Phoenix, then you can skip this section and go straight to
 [Integrating Ash Authentication and Phoenix](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix)
 
 In order for your users to be able to sign in, you will likely need to provide
-an HTTP endpoint to submit credentials or OAuth requests to.  Ash Authentication
-provides `AshAuthentication.Plug` for this purposes.  It provides a `use` macro
+an HTTP endpoint to submit credentials or OAuth requests to. Ash Authentication
+provides `AshAuthentication.Plug` for this purposes. It provides a `use` macro
 which handles routing of requests to the correct providers, and defines
 callbacks for successful and unsuccessful outcomes.
 
@@ -290,7 +286,7 @@ based on the contents of the session store or `Authorization` header.
 ## Supervisor
 
 AshAuthentication includes a supervisor which you should add to your
-application's supervisor tree.  This is used to run any periodic jobs related to
+application's supervisor tree. This is used to run any periodic jobs related to
 your authenticated resources (removing expired tokens, for example).
 
 ### Example
@@ -314,9 +310,9 @@ end
 ## Token generation
 
 If you have token generation enabled then you need to provide (at minimum) a
-signing secret.  As the name implies this should be a secret.  AshAuthentication
+signing secret. As the name implies this should be a secret. AshAuthentication
 provides a mechanism for looking up secrets at runtime using the
-`AshAuthentication.Secret` behaviour.  To save you a click, this means that you
+`AshAuthentication.Secret` behaviour. To save you a click, this means that you
 can set your token signing secret using either a static string (please don't!),
 a two-arity anonymous function, or a module which implements the
 `AshAuthentication.Secret` behaviour.

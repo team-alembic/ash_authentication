@@ -10,11 +10,14 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidationTest do
 
       assert :ok =
                user
-               |> Changeset.new(%{})
+               |> Changeset.new()
                |> Changeset.set_argument(:current_password, user.__metadata__.password)
                |> PasswordValidation.validate(
-                 strategy_name: :password,
-                 password_argument: :current_password
+                 [
+                   strategy_name: :password,
+                   password_argument: :current_password
+                 ],
+                 %{}
                )
     end
 
@@ -23,11 +26,14 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidationTest do
 
       assert {:error, %AuthenticationFailed{field: :current_password}} =
                user
-               |> Changeset.new(%{})
+               |> Changeset.new()
                |> Changeset.set_argument(:current_password, password())
                |> PasswordValidation.validate(
-                 strategy_name: :password,
-                 password_argument: :current_password
+                 [
+                   strategy_name: :password,
+                   password_argument: :current_password
+                 ],
+                 %{}
                )
     end
   end

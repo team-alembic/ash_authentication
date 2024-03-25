@@ -42,7 +42,7 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
                "#{user_id_attribute_name}": user.id
              }) do
         user
-        |> changeset.api.load(strategy.identity_relationship_name)
+        |> changeset.domain.load(strategy.identity_relationship_name)
       else
         :error -> :error
         {:error, reason} -> {:error, reason}

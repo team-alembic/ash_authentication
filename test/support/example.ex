@@ -1,6 +1,7 @@
 defmodule Example do
   @moduledoc false
-  use Ash.Api, otp_app: :ash_authentication, extensions: [AshGraphql.Api, AshJsonApi.Api]
+  use Ash.Domain, otp_app: :ash_authentication
+  # , extensions: [AshGraphql.Api, AshJsonApi.Api]
 
   resources do
     resource Example.User
@@ -9,7 +10,7 @@ defmodule Example do
     resource Example.UserIdentity
   end
 
-  json_api do
-    prefix "/api"
-  end
+  # json_api do
+  #   prefix "/api"
+  # end
 end

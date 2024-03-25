@@ -19,14 +19,14 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, options, context) do
     {:ok, strategy} = Info.find_strategy(query, context, options)
     identity_field = strategy.identity_field
     identity = Query.get_argument(query, identity_field)
 
     query
-    |> Query.filter(ref(^identity_field) == ^identity)
+    |> Query.filter(^ref(identity_field) == ^identity)
     |> check_sign_in_token_configuration(strategy)
     |> Query.before_action(fn query ->
       Ash.Query.ensure_selected(query, [strategy.hashed_password_field])

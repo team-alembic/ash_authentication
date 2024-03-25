@@ -12,7 +12,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @spec read_expired(Resource.t(), keyword) :: {:ok, [Resource.record()]} | {:error, any}
   def read_expired(resource, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
+         {:ok, domain} <- Info.token_domain(resource),
          {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource) do
       resource
       |> Query.new()
@@ -22,7 +22,7 @@ defmodule AshAuthentication.TokenResource.Actions do
         }
       })
       |> Query.for_read(read_expired_action_name, opts)
-      |> api.read()
+      |> domain.read()
     end
   end
 
@@ -70,7 +70,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @spec token_revoked?(Resource.t(), String.t(), keyword) :: boolean
   def token_revoked?(resource, token, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
+         {:ok, domain} <- Info.token_domain(resource),
          {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource) do
       resource
       |> Query.new()
@@ -80,7 +80,7 @@ defmodule AshAuthentication.TokenResource.Actions do
         }
       })
       |> Query.for_read(is_revoked_action_name, %{"token" => token}, opts)
-      |> api.read()
+      |> domain.read()
       |> case do
         {:ok, []} -> false
         {:ok, _} -> true
@@ -98,7 +98,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @spec jti_revoked?(Resource.t(), String.t(), keyword) :: boolean
   def jti_revoked?(resource, jti, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
+         {:ok, domain} <- Info.token_domain(resource),
          {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource) do
       resource
       |> Query.new()
@@ -108,7 +108,7 @@ defmodule AshAuthentication.TokenResource.Actions do
         }
       })
       |> Query.for_read(is_revoked_action_name, %{"jti" => jti}, opts)
-      |> api.read()
+      |> domain.read()
       |> case do
         {:ok, []} -> false
         {:ok, _} -> true
@@ -130,7 +130,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @spec revoke(Resource.t(), String.t(), keyword) :: :ok | {:error, any}
   def revoke(resource, token, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
+         {:ok, domain} <- Info.token_domain(resource),
          {:ok, revoke_token_action_name} <-
            Info.token_revocation_revoke_token_action_name(resource) do
       resource
@@ -145,7 +145,7 @@ defmodule AshAuthentication.TokenResource.Actions do
         %{"token" => token},
         Keyword.merge(opts, upsert?: true)
       )
-      |> api.create()
+      |> domain.create()
       |> case do
         {:ok, _} -> :ok
         {:error, reason} -> {:error, reason}
@@ -161,7 +161,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @spec store_token(Resource.t(), map, keyword) :: :ok | {:error, any}
   def store_token(resource, params, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
+         {:ok, domain} <- Info.token_domain(resource),
          {:ok, store_token_action_name} <- Info.token_store_token_action_name(resource) do
       resource
       |> Changeset.new()
@@ -175,7 +175,7 @@ defmodule AshAuthentication.TokenResource.Actions do
         params,
         Keyword.merge(opts, upsert?: true)
       )
-      |> api.create()
+      |> domain.create()
       |> case do
         {:ok, _} -> :ok
         {:error, reason} -> {:error, reason}
@@ -189,45 +189,29 @@ defmodule AshAuthentication.TokenResource.Actions do
   @spec get_token(Resource.t(), map, keyword) :: {:ok, [Resource.record()]} | {:error, any}
   def get_token(resource, params, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
+         {:ok, domain} <- Info.token_domain(resource),
          {:ok, get_token_action_name} <- Info.token_get_token_action_name(resource) do
       resource
       |> Query.new()
       |> Query.set_context(%{private: %{ash_authentication?: true}})
       |> Query.for_read(get_token_action_name, params, opts)
-      |> api.read()
+      |> domain.read()
     end
   end
 
   defp expunge_inside_transaction(resource, expunge_expired_action_name, opts) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, api} <- Info.token_api(resource),
-         {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource),
-         query <-
-           resource |> Query.new() |> Query.set_context(%{private: %{ash_authentication?: true}}),
-         query <- Query.for_read(query, read_expired_action_name, opts),
-         {:ok, expired} <- api.read(query) do
-      Enum.reduce_while(expired, {:ok, []}, fn record, {:ok, notifications} ->
-        record
-        |> Changeset.new()
-        |> Changeset.set_context(%{
-          private: %{
-            ash_authentication?: true
-          }
-        })
-        |> Changeset.for_destroy(expunge_expired_action_name, opts)
-        |> api.destroy(return_notifications?: true)
-        |> case do
-          :ok ->
-            {:cont, {:ok, notifications}}
-
-          {:ok, more_notifications} ->
-            {:cont, {:ok, Enum.concat(notifications, more_notifications)}}
-
-          {:error, reason} ->
-            {:halt, {:error, reason}}
-        end
-      end)
+         {:ok, domain} <- Info.token_domain(resource),
+         {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource) do
+      resource
+      |> Query.new()
+      |> Query.set_context(%{private: %{ash_authentication?: true}})
+      |> Query.for_read(read_expired_action_name, opts)
+      |> domain.bulk_destroy(expunge_expired_action_name, %{}, opts)
+      |> case do
+        %{status: :success, notifications: notifications} -> {:ok, notifications}
+        %{errors: errors} -> {:error, Ash.Error.to_class(errors)}
+      end
     end
   end
 end

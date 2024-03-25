@@ -41,11 +41,11 @@ defmodule AshAuthentication.Sender do
   end
 
   defmodule MyApp.Accounts.User do
-    use Ash.Resource, extensions: [AshAuthentication]
+    use Ash.Resource,
+      extensions: [AshAuthentication],
+      domain: MyApp.Accounts
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         password :password do
           resettable do
@@ -57,15 +57,15 @@ defmodule AshAuthentication.Sender do
   end
   ```
 
-  You can also implment it directly as a function:
+  You can also implement it directly as a function:
 
   ```elixir
   defmodule MyApp.Accounts.User do
-    use Ash.Resource, extensions: [AshAuthentication]
+    use Ash.Resource,
+      extensions: [AshAuthentication],
+      domain: MyApp.Accounts
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         password :password do
           resettable do

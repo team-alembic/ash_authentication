@@ -16,7 +16,8 @@ defmodule AshAuthentication do
   ```elixir
   defmodule MyApp.Accounts.User do
     use Ash.Resource,
-      extensions: [AshAuthentication]
+      extensions: [AshAuthentication],
+      domain: MyApp.Accounts
 
     attributes do
       uuid_primary_key :id
@@ -25,8 +26,6 @@ defmodule AshAuthentication do
     end
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         password :password do
           identity_field :email
@@ -83,7 +82,7 @@ defmodule AshAuthentication do
   for more information.
   """
   alias Ash.{
-    Api,
+    Domain,
     Error.Query.NotFound,
     Query,
     Resource
@@ -120,7 +119,7 @@ defmodule AshAuthentication do
   require Ash.Query
 
   @type resource_config :: %{
-          api: module,
+          domain: module,
           providers: [module],
           resource: module,
           subject_name: atom
@@ -145,8 +144,8 @@ defmodule AshAuthentication do
     |> List.wrap()
     |> Enum.flat_map(fn otp_app ->
       otp_app
-      |> Application.get_env(:ash_apis, [])
-      |> Stream.flat_map(&Api.Info.resources(&1))
+      |> Application.get_env(:ash_domains, [])
+      |> Stream.flat_map(&Domain.Info.resources(&1))
       |> Stream.uniq()
       |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
       |> Enum.to_list()
@@ -185,7 +184,7 @@ defmodule AshAuthentication do
       iex> %{id: user_id} = build_user()
       ...> {:ok, %{id: ^user_id}} = subject_to_user("user?id=#{user_id}", Example.User)
 
-  Any options passed will be passed to the underlying `Api.read/2` callback.
+  Any options passed will be passed to the underlying `Domain.read/2` callback.
   """
   @spec subject_to_user(subject | URI.t(), Resource.t(), keyword) ::
           {:ok, Resource.record()} | {:error, any}
@@ -199,7 +198,7 @@ defmodule AshAuthentication do
     with {:ok, resource_subject_name} <- Info.authentication_subject_name(resource),
          ^subject_name <- to_string(resource_subject_name),
          {:ok, action_name} <- Info.authentication_get_by_subject_action_name(resource),
-         {:ok, api} <- Info.authentication_api(resource) do
+         {:ok, domain} <- Info.domain(resource) do
       primary_key =
         primary_key
         |> URI.decode_query()
@@ -214,7 +213,7 @@ defmodule AshAuthentication do
       })
       |> Query.for_read(action_name, %{})
       |> Query.filter(^primary_key)
-      |> api.read(options)
+      |> domain.read(options)
       |> case do
         {:ok, [user]} -> {:ok, user}
         _ -> {:error, NotFound.exception([])}

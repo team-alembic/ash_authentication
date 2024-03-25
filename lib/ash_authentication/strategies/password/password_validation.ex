@@ -43,14 +43,14 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidation do
 
   """
   use Ash.Resource.Validation
-  alias Ash.Changeset
+  alias Ash.{Changeset, Resource.Validation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info}
   require Logger
 
   @doc false
   @impl true
-  @spec validate(Changeset.t(), keyword) :: :ok | {:error, Exception.t()}
-  def validate(changeset, options) do
+  @spec validate(Changeset.t(), keyword, Validation.Context.t()) :: :ok | {:error, Exception.t()}
+  def validate(changeset, options, _context) do
     {:ok, strategy} = get_strategy(changeset, options)
 
     with {:ok, password_arg} <- get_password_arg(changeset, options, strategy),

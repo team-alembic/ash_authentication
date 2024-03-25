@@ -22,7 +22,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
        )}
 
   def sign_in(%OAuth2{} = strategy, params, options) do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
 
     strategy.resource
     |> Query.new()
@@ -32,7 +32,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       }
     })
     |> Query.for_read(strategy.sign_in_action_name, params)
-    |> api.read(options)
+    |> domain.read(options)
     |> case do
       {:ok, [user]} ->
         {:ok, user}
@@ -90,7 +90,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   """
   @spec register(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def register(%OAuth2{} = strategy, params, options) when strategy.registration_enabled? do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
     action = Resource.Info.action(strategy.resource, strategy.register_action_name, :create)
 
     strategy.resource
@@ -104,7 +104,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       upsert?: true,
       upsert_identity: action.upsert_identity
     )
-    |> api.create(options)
+    |> domain.create(options)
   end
 
   def register(%OAuth2{} = strategy, _params, _options),

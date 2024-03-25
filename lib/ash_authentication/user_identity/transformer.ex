@@ -34,7 +34,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with {:ok, dsl_state} <- maybe_set_api(dsl_state, :user_identity),
+    with {:ok, dsl_state} <- maybe_set_domain(dsl_state, :user_identity),
          {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :id, Type.UUID,
@@ -58,7 +58,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, strategy, Type.String,
              allow_nil?: false,
-             writable?: true
+             writable?: true,
+             public?: true
            ),
          :ok <- validate_strategy_field(dsl_state, strategy),
          {:ok, dsl_state} <-
@@ -134,7 +135,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, attribute} <- find_attribute(dsl_state, field_name),
          :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
          :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
-         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :public?, [true]) do
       :ok
     else
       {:error, reason} -> {:error, reason}
@@ -183,7 +185,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
 
   defp build_user_relationship(dsl_state, name, destination) do
     with {:ok, id_attr} <- find_pk(destination),
-         {:ok, api} <- AshAuthentication.Info.authentication_api(destination),
+         {:ok, domain} <- AshAuthentication.Info.domain(destination),
          {:ok, user_id} <-
            UserIdentity.Info.user_identity_user_id_attribute_name(dsl_state) do
       Transformer.build_entity(Resource.Dsl, [:relationships], :belongs_to,
@@ -193,7 +195,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
         destination_attribute: id_attr.name,
         attribute_type: id_attr.type,
         source_attribute: user_id,
-        api: api,
+        domain: domain,
         attribute_writable?: true,
         writable?: true
       )
@@ -202,14 +204,14 @@ defmodule AshAuthentication.UserIdentity.Transformer do
 
   defp validate_user_relationship(dsl_state, name, destination) do
     with {:ok, id_attr} <- find_pk(destination),
-         {:ok, api} <- AshAuthentication.Info.authentication_api(destination),
+         {:ok, domain} <- AshAuthentication.Info.domain(destination),
          {:ok, relationship} <- find_relationship(dsl_state, name),
          {:ok, user_id} <-
            UserIdentity.Info.user_identity_user_id_attribute_name(dsl_state),
          :ok <- validate_field_in_values(relationship, :destination, [destination]),
          :ok <- validate_field_in_values(relationship, :destination_attribute, [id_attr.name]),
          :ok <- validate_field_in_values(relationship, :source_attribute, [user_id]),
-         :ok <- validate_field_in_values(relationship, :api, [api]) do
+         :ok <- validate_field_in_values(relationship, :domain, [domain]) do
       validate_field_in_values(relationship, :attribute_type, [id_attr.type])
     end
   end

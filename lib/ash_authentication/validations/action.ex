@@ -198,4 +198,52 @@ defmodule AshAuthentication.Validations.Action do
              "The action `#{inspect(action.name)}` should have the `#{inspect(preparation_module)}` preparation present."
          )}
   end
+
+  @doc """
+  Validate the action has the provided option.
+  """
+  @spec validate_action_option(Actions.action(), atom, [any]) :: :ok | {:error, Exception.t()}
+  def validate_action_option(action, field, values) do
+    with {:ok, value} <- Map.fetch(action, field),
+         true <- value in values do
+      :ok
+    else
+      :error ->
+        {:error,
+         DslError.exception(
+           path: [:actions, action.name, field],
+           message:
+             "The action `#{inspect(action.name)}` is missing the `#{inspect(field)}` option set"
+         )}
+
+      false ->
+        case values do
+          [] ->
+            {:error,
+             DslError.exception(
+               path: [:actions, action.name, field],
+               message:
+                 "The action `#{inspect(action.name)}` should not have the `#{inspect(field)}` option set"
+             )}
+
+          [expected] ->
+            {:error,
+             DslError.exception(
+               path: [:actions, action.name, field],
+               message:
+                 "The action `#{inspect(action.name)}` should have the `#{inspect(field)}` option set to `#{inspect(expected)}`"
+             )}
+
+          expected ->
+            expected = expected |> Enum.map(&"`#{inspect(&1)}`") |> to_sentence(final: "or")
+
+            {:error,
+             DslError.exception(
+               path: [:actions, action.name, field],
+               message:
+                 "The action `#{inspect(action.name)}` should have the `#{inspect(field)}` option set to one of #{expected}"
+             )}
+        end
+    end
+  end
 end

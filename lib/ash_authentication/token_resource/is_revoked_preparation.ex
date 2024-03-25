@@ -11,7 +11,7 @@ defmodule AshAuthentication.TokenResource.IsRevokedPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, _opts, _context) do
     case get_jti(query) do
       {:ok, jti} ->

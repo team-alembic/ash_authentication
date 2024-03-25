@@ -8,10 +8,10 @@ defmodule AshAuthentication.TokenResource.Expunger do
   ```elixir
   defmodule MyApp.Accounts.Token do
     use Ash.Resource,
-      extensions: [AshAuthentication.TokenResource]
+      extensions: [AshAuthentication.TokenResource],
+      domain: MyApp.Accounts
 
     token do
-      api MyApp.Accounts
       expunge_interval 12
     end
   end

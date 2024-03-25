@@ -6,37 +6,41 @@ GitHub for authentication.
 First you need to configure an application in your [GitHub developer
 settings](https://github.com/settings/developers):
 
-  1. Click the "New OAuth App" button.
-  2. Set your application name to something that identifies it.  You will likely
-     need separate applications for development and production environments, so
-     keep that in mind.
-  3. Set "Homepage URL" appropriately for your application and environment.
-  4. In the "Authorization callback URL" section,  add your callback URL.  The
-     callback URL is generated from the following information:
-      - The base URL of the application - in development that would be
-        `http://localhost:4000/` but in production will be your application's
-        URL.
-      - The mount point of the auth routes in your router - we'll assume
-        `/auth`.
-      - The "subject name" of the resource being authenticated - we'll assume `user`.
-      - The name of the strategy in your configuration.  By default this is
-        `github`.
+1. Click the "New OAuth App" button.
+2. Set your application name to something that identifies it. You will likely
+   need separate applications for development and production environments, so
+   keep that in mind.
+3. Set "Homepage URL" appropriately for your application and environment.
+4. In the "Authorization callback URL" section, add your callback URL. The
+   callback URL is generated from the following information:
 
-     This means that the callback URL should look something like
-     `http://localhost:4000/auth/user/github/callback`.
-  5. Do not set "Enable Device Flow" unless you know why you want this.
-  6. Click "Register application".
-  7. Click "Generate a new client secret".
-  8. Copy the "Client ID" and "Client secret" somewhere safe, we'll need them
-     soon.
-  9. Click "Update application".
+   - The base URL of the application - in development that would be
+     `http://localhost:4000/` but in production will be your application's
+     URL.
+   - The mount point of the auth routes in your router - we'll assume
+     `/auth`.
+   - The "subject name" of the resource being authenticated - we'll assume `user`.
+   - The name of the strategy in your configuration. By default this is
+     `github`.
+
+   This means that the callback URL should look something like
+   `http://localhost:4000/auth/user/github/callback`.
+
+5. Do not set "Enable Device Flow" unless you know why you want this.
+6. Click "Register application".
+7. Click "Generate a new client secret".
+8. Copy the "Client ID" and "Client secret" somewhere safe, we'll need them
+   soon.
+9. Click "Update application".
 
 Next we can configure our resource (assuming you already have everything else
 set up):
 
 ```elixir
 defmodule MyApp.Accounts.User do
-  use Ash.Resource, extensions: [AshAuthentication]
+  use Ash.Resource,
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
 
   authentication do
     strategies do
@@ -82,28 +86,31 @@ end
 
 The values for this configuration should be:
 
-  * `client_id` - the client ID copied from the GitHub settings page.
-  * `redirect_uri` - the URL to the generated auth routes in your application
-    (eg `http://localhost:4000/auth`).
-  * `client_secret` the client secret copied from the GitHub settings page.
+- `client_id` - the client ID copied from the GitHub settings page.
+- `redirect_uri` - the URL to the generated auth routes in your application
+  (eg `http://localhost:4000/auth`).
+- `client_secret` the client secret copied from the GitHub settings page.
 
-Lastly, we need to add a register action to your user resource.  This is defined
+Lastly, we need to add a register action to your user resource. This is defined
 as an upsert so that it can register new users, or update information for
-returning users.  The default name of the action is `register_with_` followed by
-the strategy name.  In our case that is `register_with_github`.
+returning users. The default name of the action is `register_with_` followed by
+the strategy name. In our case that is `register_with_github`.
 
 The register action takes two arguments, `user_info` and the `oauth_tokens`.
-  - `user_info` contains the [`GET /user` response from
-    GitHub](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user)
-    which you can use to populate your user attributes as needed.
-  - `oauth_tokens` contains the [`POST /login/oauth/access_token` response from
-    GitHub](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#response)
-    - you may want to store these if you intend to call the GitHub API on behalf
+
+- `user_info` contains the [`GET /user` response from
+  GitHub](https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user)
+  which you can use to populate your user attributes as needed.
+- `oauth_tokens` contains the [`POST /login/oauth/access_token` response from
+  GitHub](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#response)
+  - you may want to store these if you intend to call the GitHub API on behalf
     of the user.
 
 ```elixir
 defmodule MyApp.Accounts.User do
-  use Ash.Resource, extensions: [AshAuthentication]
+  use Ash.Resource,
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
 
   # ...
 

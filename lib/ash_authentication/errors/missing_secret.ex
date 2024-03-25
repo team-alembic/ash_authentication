@@ -3,7 +3,11 @@ defmodule AshAuthentication.Errors.MissingSecret do
   A secret is now missing.
   """
   use Ash.Error.Exception
-  def_ash_error([:resource], class: :forbidden)
+  use Splode.Error, fields: [:resource], class: :forbidden
+
+  def message(%{path: path, resource: resource}) do
+    "Secret for `#{Enum.join(path, ".")}` on the `#{inspect(resource)}` resource is not accessible."
+  end
 
   defimpl Ash.ErrorKind do
     @moduledoc false

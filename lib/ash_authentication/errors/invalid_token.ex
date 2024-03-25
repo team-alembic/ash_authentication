@@ -3,7 +3,9 @@ defmodule AshAuthentication.Errors.InvalidToken do
   An invalid token was presented.
   """
   use Ash.Error.Exception
-  def_ash_error([:type], class: :forbidden)
+  use Splode.Error, fields: [:type], class: :forbidden
+
+  def message(%{type: type}), do: "Invalid #{type} token"
 
   defimpl Ash.ErrorKind do
     @moduledoc false

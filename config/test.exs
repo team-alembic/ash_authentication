@@ -1,6 +1,6 @@
 import Config
 
-config :ash_authentication, ecto_repos: [Example.Repo], ash_apis: [Example]
+config :ash_authentication, ecto_repos: [Example.Repo], ash_domains: [Example]
 
 config :ash_authentication, Example.Repo,
   username: "postgres",

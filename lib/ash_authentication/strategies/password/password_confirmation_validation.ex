@@ -28,7 +28,14 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
   """
 
   use Ash.Resource.Validation
-  alias Ash.{Changeset, Error.Changes.InvalidArgument, Error.Framework.AssumptionFailed}
+
+  alias Ash.{
+    Changeset,
+    Error.Changes.InvalidArgument,
+    Error.Framework.AssumptionFailed,
+    Resource.Validation
+  }
+
   alias AshAuthentication.Info
 
   @doc """
@@ -36,8 +43,9 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
   equivalent values - if confirmation is required.
   """
   @impl true
-  @spec validate(Changeset.t(), keyword) :: :ok | {:error, String.t() | Exception.t()}
-  def validate(changeset, options) do
+  @spec validate(Changeset.t(), keyword, Validation.Context.t()) ::
+          :ok | {:error, String.t() | Exception.t()}
+  def validate(changeset, options, _context) do
     case Info.find_strategy(changeset, options) do
       {:ok, %{confirmation_required?: true} = strategy} ->
         validate_password_confirmation(changeset, strategy)

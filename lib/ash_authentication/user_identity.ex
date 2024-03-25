@@ -3,11 +3,12 @@ defmodule AshAuthentication.UserIdentity do
     %Spark.Dsl.Section{
       name: :user_identity,
       describe: "Configure identity options for this resource",
-      modules: [:api, :user_resource],
+      modules: [:domain, :user_resource],
       schema: [
-        api: [
-          type: {:behaviour, Ash.Api},
-          doc: "The Ash API to use to access this resource."
+        domain: [
+          type: {:behaviour, Ash.Domain},
+          doc: "The Ash domain to use to access this resource.",
+          required: false
         ],
         user_resource: [
           type: {:behaviour, Ash.Resource},
@@ -95,10 +96,10 @@ defmodule AshAuthentication.UserIdentity do
   defmodule MyApp.Accounts.UserIdentity do
     use Ash.Resource,
       data_layer: AshPostgres.DataLayer,
-      extensions: [AshAuthentication.UserIdentity]
+      extensions: [AshAuthentication.UserIdentity],
+      domain: MyApp.Accounts
 
     user_identity do
-      api MyApp.Accounts
       user_resource MyApp.Accounts.User
     end
 
