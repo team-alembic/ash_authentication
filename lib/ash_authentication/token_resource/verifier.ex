@@ -28,28 +28,28 @@ defmodule AshAuthentication.TokenResource.Verifier do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    validate_api_presence(dsl_state)
+    validate_domain_presence(dsl_state)
   end
 
-  defp validate_api_presence(dsl_state) do
-    with api when not is_nil(api) <- Transformer.get_option(dsl_state, [:token], :api),
-         :ok <- assert_is_module(api),
-         true <- function_exported?(api, :spark_is, 0),
-         Ash.Api <- api.spark_is() do
-      {:ok, api}
+  defp validate_domain_presence(dsl_state) do
+    with domain when not is_nil(domain) <- Transformer.get_option(dsl_state, [:token], :domain),
+         :ok <- assert_is_module(domain),
+         true <- function_exported?(domain, :spark_is, 0),
+         Ash.Domain <- domain.spark_is() do
+      {:ok, domain}
     else
       nil ->
         {:error,
          DslError.exception(
-           path: [:token, :api],
-           message: "An API module must be present"
+           path: [:token, :domain],
+           message: "A domain module must be present"
          )}
 
       _ ->
         {:error,
          DslError.exception(
-           path: [:token, :api],
-           message: "Module is not an Ash.Api."
+           path: [:token, :domain],
+           message: "Module is not an `Ash.Domain`."
          )}
     end
   end

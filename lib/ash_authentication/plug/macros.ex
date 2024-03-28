@@ -3,7 +3,7 @@ defmodule AshAuthentication.Plug.Macros do
   Generators used within `use AshAuthentication.Plug`.
   """
 
-  alias Ash.Api
+  alias Ash.Domain
   alias AshAuthentication.Plug.Helpers
   alias Plug.Conn
   alias Spark.Dsl.Extension
@@ -14,11 +14,9 @@ defmodule AshAuthentication.Plug.Macros do
   @spec validate_subject_name_uniqueness(atom) :: Macro.t()
   defmacro validate_subject_name_uniqueness(otp_app) do
     quote do
-      require Ash.Api.Info
-
       unquote(otp_app)
-      |> Application.compile_env(:ash_apis, [])
-      |> Stream.flat_map(&Api.Info.depend_on_resources(&1))
+      |> Application.compile_env(:ash_domains, [])
+      |> Stream.flat_map(&Domain.Info.resources(&1))
       |> Stream.map(&{&1, Extension.get_persisted(&1, :authentication)})
       |> Stream.reject(&(elem(&1, 1) == nil))
       |> Stream.map(&{elem(&1, 0), elem(&1, 1).subject_name})

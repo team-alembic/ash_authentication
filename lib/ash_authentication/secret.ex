@@ -15,11 +15,11 @@ defmodule AshAuthentication.Secret do
   end
 
   defmodule MyApp.Accounts.User do
-    use Ash.Resource, extensions: [AshAuthentication]
+    use Ash.Resource,
+      extensions: [AshAuthentication],
+      domain: MyApp.Accounts
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         oauth2 do
           client_id MyApp.GetSecret
@@ -34,11 +34,11 @@ defmodule AshAuthentication.Secret do
 
   ```elixir
   defmodule MyApp.User do
-     use Ash.Resource, extensions: [AshAuthentication]
+     use Ash.Resource,
+      extensions: [AshAuthentication],
+      domain: MyApp.Accounts
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         oauth2 do
           client_id fn _secret, _resource ->

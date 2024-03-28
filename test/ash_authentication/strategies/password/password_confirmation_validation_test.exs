@@ -16,9 +16,9 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidationTest
       }
 
       assert {:error, %InvalidArgument{field: :password_confirmation}} =
-               Changeset.new(strategy.resource, %{})
+               Changeset.new(strategy.resource)
                |> Changeset.for_create(strategy.register_action_name, attrs)
-               |> PasswordConfirmationValidation.validate([])
+               |> PasswordConfirmationValidation.validate([], %{})
     end
   end
 
@@ -33,9 +33,9 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidationTest
     }
 
     assert {:error, %InvalidArgument{field: :password_confirmation}} =
-             Changeset.new(user, %{})
+             Changeset.new(user)
              |> Changeset.set_context(%{strategy_name: Strategy.name(strategy)})
              |> Changeset.for_update(:update, attrs)
-             |> PasswordConfirmationValidation.validate([])
+             |> PasswordConfirmationValidation.validate([], %{})
   end
 end

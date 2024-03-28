@@ -13,7 +13,7 @@ defmodule DevServer.Router do
   forward("/auth", to: Example.AuthPlug)
   get("/clear_session", to: DevServer.ClearSession)
   post("/token_check", to: DevServer.TokenCheck)
-  forward("/api", to: DevServer.ApiRouter)
-  forward("/gql", to: DevServer.GqlRouter)
+  # forward("/api", to: DevServer.ApiRouter)
+  # forward("/gql", to: DevServer.GqlRouter)
   forward("/", to: DevServer.WebRouter)
 end

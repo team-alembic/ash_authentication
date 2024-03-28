@@ -19,6 +19,7 @@ defmodule AshAuthentication.Validations.Attribute do
       :error ->
         {:error,
          DslError.exception(
+           module: resource,
            path: [:actions, :attribute],
            message:
              "The attribute `#{inspect(attribute.name)}` on the `#{inspect(resource)}` resource is missing the `#{inspect(field)}` property"
@@ -29,6 +30,7 @@ defmodule AshAuthentication.Validations.Attribute do
           [] ->
             {:error,
              DslError.exception(
+               module: resource,
                path: [:actions, :attribute],
                message:
                  "The attribute `#{inspect(attribute.name)}` on the `#{inspect(resource)}` resource is should not have `#{inspect(field)}` set"
@@ -37,6 +39,7 @@ defmodule AshAuthentication.Validations.Attribute do
           [expected] ->
             {:error,
              DslError.exception(
+               module: resource,
                path: [:actions, :attribute],
                message:
                  "The attribute `#{inspect(attribute.name)}` on the `#{inspect(resource)}` resource should have `#{inspect(field)}` set to `#{inspect(expected)}`"
@@ -47,6 +50,7 @@ defmodule AshAuthentication.Validations.Attribute do
 
             {:error,
              DslError.exception(
+               module: resource,
                path: [:actions, :attribute],
                message:
                  "The attribute `#{inspect(attribute.name)}` on the `#{inspect(resource)}` resource should have `#{inspect(field)}` set to one of #{expected}"

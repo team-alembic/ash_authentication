@@ -1,6 +1,10 @@
 defmodule Example.UserWithTokenRequired do
   @moduledoc false
-  use Ash.Resource, data_layer: AshPostgres.DataLayer, extensions: [AshAuthentication]
+  use Ash.Resource,
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshAuthentication],
+    domain: Example
+
   require Logger
 
   @type t :: %__MODULE__{
@@ -13,15 +17,13 @@ defmodule Example.UserWithTokenRequired do
 
   attributes do
     uuid_primary_key :id, writable?: true
-    attribute :email, :ci_string, allow_nil?: false
-    attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, private?: true
+    attribute :email, :ci_string, allow_nil?: false, public?: true
+    attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
     create_timestamp :created_at
     update_timestamp :updated_at
   end
 
   authentication do
-    api Example
-
     tokens do
       enabled? true
       store_all_tokens? true

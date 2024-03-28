@@ -5,12 +5,13 @@ defmodule AshAuthentication.TokenResource do
     %Spark.Dsl.Section{
       name: :token,
       describe: "Configuration options for this token resource",
-      modules: [:api],
+      modules: [:domain],
       schema: [
-        api: [
-          type: {:behaviour, Ash.Api},
+        domain: [
+          type: {:behaviour, Ash.Domain},
+          required: false,
           doc: """
-          The Ash API to use to access this resource.
+          The Ash domain to use to access this resource.
           """
         ],
         expunge_expired_action_name: [
@@ -117,11 +118,8 @@ defmodule AshAuthentication.TokenResource do
   defmodule MyApp.Accounts.Token do
     use Ash.Resource,
       data_layer: AshPostgres.DataLayer,
-      extensions: [AshAuthentication.TokenResource]
-
-    token do
-      api MyApp.Accounts
-    end
+      extensions: [AshAuthentication.TokenResource],
+      domain: MyApp.Accounts
 
     postgres do
       table "tokens"

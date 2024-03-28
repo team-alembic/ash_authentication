@@ -120,7 +120,7 @@ defprotocol AshAuthentication.Strategy do
 
   See `actions/1` for a list of actions provided by the strategy.
 
-  Any options passed to the action will be passed to the underlying `Ash.Api` function.
+  Any options passed to the action will be passed to the underlying `Ash.Domain` function.
   """
   @spec action(t, action, params :: map, options :: keyword) ::
           :ok | {:ok, Resource.record()} | {:error, any}

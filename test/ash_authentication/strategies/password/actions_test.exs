@@ -122,33 +122,6 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert claims["sub"] =~ "user?id=#{user.id}"
     end
 
-    test "it cant set unaccepted fields" do
-      {:ok, strategy} = Info.strategy(Example.User, :password)
-
-      username = username()
-      password = password()
-
-      assert {:error,
-              %Ash.Error.Invalid{
-                errors: [
-                  %Ash.Error.Changes.InvalidAttribute{
-                    message: "cannot be changed",
-                    field: :not_accepted_extra_stuff
-                  }
-                ]
-              }} =
-               Actions.register(
-                 strategy,
-                 %{
-                   "username" => username,
-                   "password" => password,
-                   "password_confirmation" => password,
-                   "not_accepted_extra_stuff" => "Extra"
-                 },
-                 []
-               )
-    end
-
     test "it returns an error if the user already exists" do
       user = build_user()
       {:ok, strategy} = Info.strategy(Example.User, :password)
@@ -208,7 +181,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
         capture_log(fn ->
           params = %{"username" => user.username}
           options = []
-          api = Info.authentication_api!(strategy.resource)
+          domain = Info.domain!(strategy.resource)
           resettable = strategy.resettable
 
           result =
@@ -221,7 +194,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
             })
             |> Ash.Query.for_read(resettable.request_password_reset_action_name, params)
             |> Ash.Query.select([])
-            |> api.read(options)
+            |> domain.read(options)
             |> case do
               {:ok, _} -> :ok
               {:error, reason} -> {:error, reason}

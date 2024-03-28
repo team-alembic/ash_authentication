@@ -1,6 +1,6 @@
 defmodule AshAuthentication.Utils do
   @moduledoc false
-  alias Ash.{Api, Resource}
+  alias Ash.{Domain, Resource}
   alias Spark.{Dsl, Dsl.Transformer}
 
   @doc """
@@ -80,13 +80,13 @@ defmodule AshAuthentication.Utils do
   def maybe_concat(collection, _test, new_elements), do: Enum.concat(collection, new_elements)
 
   @doc """
-  Used within transformers to infer `api` from a resource if the option is not set.
+  Used within transformers to infer `domain` from a resource if the option is not set.
   """
-  def maybe_set_api(dsl_state, section) do
-    api = Transformer.get_persisted(dsl_state, :api)
+  def maybe_set_domain(dsl_state, section) do
+    domain = Transformer.get_persisted(dsl_state, :domain)
 
-    if api && !Transformer.get_option(dsl_state, [section], :api) do
-      {:ok, Transformer.set_option(dsl_state, [section], :api, api)}
+    if domain && !Transformer.get_option(dsl_state, [section], :domain) do
+      {:ok, Transformer.set_option(dsl_state, [section], :domain, domain)}
     else
       {:ok, dsl_state}
     end
@@ -209,16 +209,16 @@ defmodule AshAuthentication.Utils do
   end
 
   @doc """
-  Asserts that `module` is actually an Ash API.
+  Asserts that `module` is actually an Ash domain.
   """
-  @spec assert_is_api(Api.t()) :: :ok | {:error, term}
-  def assert_is_api(module) do
+  @spec assert_is_domain(Domain.t()) :: :ok | {:error, term}
+  def assert_is_domain(module) do
     with :ok <- assert_is_module(module),
          true <- function_exported?(module, :spark_is, 0),
-         Api <- module.spark_is() do
+         Domain <- module.spark_is() do
       :ok
     else
-      _ -> {:error, "Module `#{inspect(module)}` is not an Ash API"}
+      _ -> {:error, "Module `#{inspect(module)}` is not an Ash domain"}
     end
   end
 

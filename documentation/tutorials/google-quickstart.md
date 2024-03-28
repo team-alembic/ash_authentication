@@ -10,9 +10,11 @@ First you'll need a registered application in [Google Cloud](https://console.clo
 
 Next we configure our resource to use google credentials:
 
-``` elixir
+```elixir
 defmodule MyApp.Accounts.User do
-  use Ash.Resource, extensions: [AshAuthentication]
+  use Ash.Resource,
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
 
   attributes do
     ...
@@ -34,9 +36,12 @@ end
 Please check the guide on how to properly configure your Secrets
 Then we need to define an action that will handle the oauth2 flow, for the google case it is `:register_with_google` it will handle both cases for our resource, user registration & login.
 
-``` elixir
+```elixir
 defmodule MyApp.Accounts.User do
-  use Ash.Resource, extensions: [AshAuthentication]
+  use Ash.Resource,
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
+
   # ...
   actions do
     create :register_with_google do

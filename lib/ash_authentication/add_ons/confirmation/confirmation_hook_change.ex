@@ -53,15 +53,18 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
   defp do_change(changeset, strategy) do
     changeset
-    |> Changeset.before_action(fn changeset ->
-      changeset
-      |> not_confirm_action(strategy)
-      |> should_confirm_action_type(strategy)
-      |> monitored_field_changing(strategy)
-      |> changes_would_be_valid()
-      |> maybe_inhibit_updates(strategy)
-      |> maybe_perform_confirmation(strategy, changeset)
-    end)
+    |> Changeset.before_action(
+      fn changeset ->
+        changeset
+        |> not_confirm_action(strategy)
+        |> should_confirm_action_type(strategy)
+        |> monitored_field_changing(strategy)
+        |> changes_would_be_valid()
+        |> maybe_inhibit_updates(strategy)
+        |> maybe_perform_confirmation(strategy, changeset)
+      end,
+      prepend?: true
+    )
   end
 
   defp not_confirm_action(%Changeset{} = changeset, strategy)

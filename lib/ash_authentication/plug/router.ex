@@ -22,15 +22,14 @@ defmodule AshAuthentication.Plug.Router do
       |> Macro.expand_once(__CALLER__)
 
     quote do
-      require Ash.Api.Info
       use Plug.Router
       plug(:match)
       plug(:dispatch)
 
       routes =
         unquote(otp_app)
-        |> Application.compile_env(:ash_apis, [])
-        |> Stream.flat_map(&Ash.Api.Info.depend_on_resources(&1))
+        |> Application.compile_env(:ash_domains, [])
+        |> Stream.flat_map(&Ash.Domain.Info.resources(&1))
         |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
         |> Stream.flat_map(&Info.authentication_strategies/1)
         |> Stream.flat_map(fn strategy ->

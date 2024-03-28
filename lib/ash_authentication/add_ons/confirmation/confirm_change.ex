@@ -29,6 +29,11 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
 
   defp do_change(changeset, strategy) do
     changeset
+    |> Changeset.set_context(%{
+      private: %{
+        ash_authentication?: true
+      }
+    })
     |> Changeset.before_action(fn changeset ->
       with token when is_binary(token) <- Changeset.get_argument(changeset, :confirm),
            {:ok, %{"act" => action, "jti" => jti}, _} <-
@@ -41,11 +46,14 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
             else: %{}
 
         changeset
-        |> Changeset.change_attributes(allowed_changes)
+        |> Changeset.force_change_attributes(allowed_changes)
         |> Changeset.change_attribute(strategy.confirmed_at_field, DateTime.utc_now())
       else
         _ ->
-          raise InvalidArgument, field: :confirm, message: "is not valid"
+          changeset
+          |> Changeset.add_error(
+            InvalidArgument.exception(field: :confirm, message: "is not valid")
+          )
       end
     end)
   end

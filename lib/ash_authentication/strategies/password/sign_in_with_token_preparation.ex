@@ -12,7 +12,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, options, context) do
     {:ok, strategy} = Info.find_strategy(query, context, options)
 

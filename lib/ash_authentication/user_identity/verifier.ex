@@ -27,14 +27,14 @@ defmodule AshAuthentication.UserIdentity.Verifier do
   @spec transform(map) ::
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
-    with :ok <- validate_api_presence(dsl_state) do
+    with :ok <- validate_domain_presence(dsl_state) do
       validate_user_resource(dsl_state)
     end
   end
 
-  defp validate_api_presence(dsl_state) do
-    with {:ok, api} <- Info.user_identity_api(dsl_state) do
-      assert_is_api(api)
+  defp validate_domain_presence(dsl_state) do
+    with {:ok, domain} <- Info.user_identity_domain(dsl_state) do
+      assert_is_domain(domain)
     end
   end
 

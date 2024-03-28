@@ -33,6 +33,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
 
     test "it updates the confirmed_at field" do
       {:ok, strategy} = Info.strategy(Example.User, :confirm)
+
       user = build_user()
       new_username = username()
 
@@ -45,11 +46,16 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
       assert {:ok, confirmed_user} = Actions.confirm(strategy, %{"confirm" => token}, [])
 
       assert confirmed_user.id == user.id
-      assert to_string(confirmed_user.username) == new_username
 
       assert_in_delta DateTime.to_unix(confirmed_user.confirmed_at),
                       DateTime.to_unix(DateTime.utc_now()),
                       1.0
+
+      # I don't know why this is failing. I even tried changing
+      # `AshAuthentication.AddOn.Confirmation.ConfirmChange` to use
+      # `Ash.Changeset.force_change_attributes/2` to no avail.
+      # I can see the updated_at being set, but not the new username.
+      assert to_string(confirmed_user.username) == new_username
     end
   end
 

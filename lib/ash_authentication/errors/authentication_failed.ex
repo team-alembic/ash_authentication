@@ -3,16 +3,20 @@ defmodule AshAuthentication.Errors.AuthenticationFailed do
   A generic, authentication failed error.
   """
   use Ash.Error.Exception
-  def_ash_error([:field, :strategy, caused_by: %{}], class: :forbidden)
-  import AshAuthentication.Debug
+
+  use Splode.Error,
+    fields: [
+      caused_by: %{},
+      changeset: nil,
+      field: nil,
+      query: nil,
+      strategy: nil
+    ],
+    class: :forbidden
 
   @type t :: Exception.t()
 
-  def exception(args) do
-    args
-    |> super()
-    |> describe()
-  end
+  def message(_), do: "Authentication failed"
 
   defimpl Ash.ErrorKind do
     @moduledoc false

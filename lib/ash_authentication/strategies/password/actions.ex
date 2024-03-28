@@ -16,7 +16,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
           {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
   def sign_in(strategy, params, options)
       when is_struct(strategy, Password) and strategy.sign_in_enabled? do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
 
     {context, options} = Keyword.pop(options, :context, [])
 
@@ -33,7 +33,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     |> Query.new()
     |> Query.set_context(context)
     |> Query.for_read(strategy.sign_in_action_name, params)
-    |> api.read(options)
+    |> domain.read(options)
     |> case do
       {:ok, [user]} ->
         {:ok, user}
@@ -101,13 +101,13 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   """
   @spec sign_in_with_token(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def sign_in_with_token(strategy, params, options) when is_struct(strategy, Password) do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
 
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
     |> Query.for_read(strategy.sign_in_with_token_action_name, params)
-    |> api.read(options)
+    |> domain.read(options)
     |> case do
       {:ok, [user]} ->
         {:ok, user}
@@ -147,7 +147,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   @spec register(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def register(strategy, params, options)
       when is_struct(strategy, Password) and strategy.registration_enabled? == true do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
 
     strategy.resource
     |> Changeset.new()
@@ -157,7 +157,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       }
     })
     |> Changeset.for_create(strategy.register_action_name, params)
-    |> api.create(options)
+    |> domain.create(options)
   end
 
   def register(strategy, _params, _options) when is_struct(strategy, Password) do
@@ -182,7 +182,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         params,
         options
       ) do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
 
     strategy.resource
     |> Query.new()
@@ -192,7 +192,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       }
     })
     |> Query.for_read(resettable.request_password_reset_action_name, params)
-    |> api.read(options)
+    |> domain.read(options)
     |> case do
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
@@ -216,7 +216,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     with {:ok, token} <- Map.fetch(params, "reset_token"),
          {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, strategy.resource),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, resource, options) do
-      api = Info.authentication_api!(resource)
+      domain = Info.domain!(resource)
 
       user
       |> Changeset.new()
@@ -226,7 +226,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         }
       })
       |> Changeset.for_update(resettable.password_reset_action_name, params)
-      |> api.update(options)
+      |> domain.update(options)
     else
       {:error, %Changeset{} = changeset} -> {:error, changeset}
       _ -> {:error, Errors.InvalidToken.exception(type: :reset)}

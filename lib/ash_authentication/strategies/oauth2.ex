@@ -19,7 +19,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   ```elixir
   defmodule MyApp.Accounts.User do
     use Ash.Resource,
-      extensions: [AshAuthentication]
+      extensions: [AshAuthentication],
+      domain: MyApp.Accounts
 
     attributes do
       uuid_primary_key :id
@@ -27,8 +28,6 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     end
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         oauth2 :example do
           client_id "OAuth Client ID"
@@ -157,8 +156,6 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     end
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         oauth2 :example do
           registration_enabled? false
@@ -195,8 +192,6 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     end
 
     authentication do
-      api MyApp.Accounts
-
       strategies do
         oauth2 :example do
         end

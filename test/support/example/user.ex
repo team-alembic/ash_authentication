@@ -4,10 +4,11 @@ defmodule Example.User do
     data_layer: AshPostgres.DataLayer,
     extensions: [
       AshAuthentication,
-      AshGraphql.Resource,
-      AshJsonApi.Resource,
+      # AshGraphql.Resource,
+      # AshJsonApi.Resource,
       Example.OnlyMartiesAtTheParty
-    ]
+    ],
+    domain: Example
 
   require Logger
 
@@ -22,10 +23,10 @@ defmodule Example.User do
   attributes do
     uuid_primary_key :id, writable?: true
 
-    attribute :username, :ci_string, allow_nil?: false
-    attribute :extra_stuff, :string
+    attribute :username, :ci_string, allow_nil?: false, public?: true
+    attribute :extra_stuff, :string, public?: true
     attribute :not_accepted_extra_stuff, :string
-    attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, private?: true
+    attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
 
     create_timestamp :created_at
     update_timestamp :updated_at
@@ -48,7 +49,9 @@ defmodule Example.User do
     update :update do
       argument :password, :string, allow_nil?: true, sensitive?: true
       argument :password_confirmation, :string, allow_nil?: true, sensitive?: true
+      accept [:username]
       primary? true
+      require_atomic? false
     end
 
     create :register_with_auth0 do
@@ -113,35 +116,34 @@ defmodule Example.User do
   end
 
   code_interface do
-    define_for Example
     define :update_user, action: :update
   end
 
-  graphql do
-    type :user
+  # graphql do
+  #   type :user
 
-    queries do
-      get :get_user, :read
-      list :list_users, :read
-      read_one :current_user, :current_user
-    end
+  #   queries do
+  #     get :get_user, :read
+  #     list :list_users, :read
+  #     read_one :current_user, :current_user
+  #   end
 
-    mutations do
-      create :register, :register_with_password
-    end
-  end
+  #   mutations do
+  #     create :register, :register_with_password
+  #   end
+  # end
 
-  json_api do
-    type "user"
+  # json_api do
+  #   type "user"
 
-    routes do
-      base "/users"
-      get :read
-      get :current_user, route: "/me"
-      index :read
-      post :register_with_password
-    end
-  end
+  #   routes do
+  #     base "/users"
+  #     get :read
+  #     get :current_user, route: "/me"
+  #     index :read
+  #     post :register_with_password
+  #   end
+  # end
 
   postgres do
     table "user"
@@ -149,8 +151,6 @@ defmodule Example.User do
   end
 
   authentication do
-    api Example
-
     select_for_senders([:username])
 
     tokens do

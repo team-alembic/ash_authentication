@@ -14,13 +14,13 @@ defmodule AshAuthentication.Strategy.MagicLink.Actions do
   """
   @spec request(MagicLink.t(), map, keyword) :: :ok | {:error, any}
   def request(strategy, params, options) do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
 
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
     |> Query.for_read(strategy.request_action_name, params)
-    |> api.read(options)
+    |> domain.read(options)
     |> case do
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
@@ -33,13 +33,13 @@ defmodule AshAuthentication.Strategy.MagicLink.Actions do
   @spec sign_in(MagicLink.t(), map, keyword) ::
           {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
   def sign_in(strategy, params, options) do
-    api = Info.authentication_api!(strategy.resource)
+    domain = Info.domain!(strategy.resource)
 
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
     |> Query.for_read(strategy.sign_in_action_name, params)
-    |> api.read(options)
+    |> domain.read(options)
     |> case do
       {:ok, [user]} ->
         {:ok, user}

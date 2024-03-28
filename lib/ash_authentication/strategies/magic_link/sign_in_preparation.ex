@@ -10,7 +10,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, _otps, _context) do
     subject_name =
       query.resource

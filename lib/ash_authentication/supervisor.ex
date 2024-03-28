@@ -41,7 +41,7 @@ defmodule AshAuthentication.Supervisor do
         raise """
         No otp_app provided to AshAuthentication.Supervisor.
 
-        In order to find your Ash APIs and resources you need to provide the
+        In order to find your Ash domains and resources you need to provide the
         name of your OTP application when starting AshAuthentication.Supervisor:
 
         Suggestion, try adding `{AshAuthentication.Supervisor, otp_app: :my_app}`

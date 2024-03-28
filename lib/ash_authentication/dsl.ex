@@ -8,7 +8,7 @@ defmodule AshAuthentication.Dsl do
   import AshAuthentication.Utils, only: [to_sentence: 2]
   import Joken.Signer, only: [algorithms: 0]
 
-  alias Ash.{Api, Resource}
+  alias Ash.{Domain, Resource}
 
   @default_token_lifetime_days 14
 
@@ -41,17 +41,18 @@ defmodule AshAuthentication.Dsl do
       %Section{
         name: :authentication,
         describe: "Configure authentication for this resource",
-        modules: [:api],
+        modules: [:domain],
         schema: [
           subject_name: [
             type: :atom,
             doc:
               "The subject name is used anywhere that a short version of your resource name is needed.  Must be unique system-wide and will be inferred from the resource name by default (ie `MyApp.Accounts.User` -> `user`)."
           ],
-          api: [
-            type: {:behaviour, Api},
+          domain: [
+            type: {:behaviour, Domain},
+            required: false,
             doc:
-              "The name of the Ash API to use to access this resource when doing anything authenticaiton related."
+              "The name of the Ash domain to use to access this resource when doing anything authentication related."
           ],
           get_by_subject_action_name: [
             type: :atom,

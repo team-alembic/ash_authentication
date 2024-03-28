@@ -85,7 +85,7 @@ defmodule DataCase do
       |> Ash.Changeset.new()
       |> Ash.Changeset.for_create(:register_with_password, attrs)
       |> Ash.Changeset.force_change_attributes(force_change_attrs)
-      |> Example.create!()
+      |> Ash.create!()
 
     attrs
     |> Enum.reduce(user, fn {field, value}, user ->
@@ -109,7 +109,7 @@ defmodule DataCase do
       Example.UserWithTokenRequired
       |> Ash.Changeset.new()
       |> Ash.Changeset.for_create(:register_with_password, attrs)
-      |> Example.create!()
+      |> Ash.create!()
 
     attrs
     |> Enum.reduce(user, fn {field, value}, user ->

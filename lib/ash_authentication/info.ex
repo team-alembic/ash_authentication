@@ -7,7 +7,7 @@ defmodule AshAuthentication.Info do
     extension: AshAuthentication,
     sections: [:authentication]
 
-  alias Ash.{Changeset, Query}
+  alias Ash.{Changeset, Domain, Query, Resource}
   alias AshAuthentication.Strategy
   alias Spark.Dsl.Extension
 
@@ -101,6 +101,35 @@ defmodule AshAuthentication.Info do
 
       {:ok, strategy} ->
         {:ok, strategy}
+    end
+  end
+
+  @doc """
+  Retrieve the domain to use for authentication.
+
+  If the `authentication.domain` DSL option is set, it will be used, otherwise
+  it will default to that configured on the resource.
+  """
+  @spec domain(dsl_or_resource) :: {:ok, Domain.t()} | :error
+  def domain(dsl_or_resource) do
+    auth_domain =
+      case authentication_domain(dsl_or_resource) do
+        {:ok, value} -> value
+        :error -> nil
+      end
+
+    resource_domain = Resource.Info.domain(dsl_or_resource)
+
+    domain = auth_domain || resource_domain
+
+    if domain, do: {:ok, domain}, else: :error
+  end
+
+  @doc "Raising version of `domain/1`"
+  def domain!(dsl_or_resource) do
+    case domain(dsl_or_resource) do
+      {:ok, value} -> value
+      :error -> raise "No `domain` configured on resource `#{inspect(dsl_or_resource)}`"
     end
   end
 end

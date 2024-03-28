@@ -96,7 +96,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, identity_field),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]) do
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
+         :ok <- validate_attribute_option(attribute, resource, :public?, [true]) do
       validate_attribute_unique_constraint(dsl_state, [identity_field], resource)
     end
   end
@@ -104,8 +105,9 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   defp validate_hashed_password_field(hashed_password_field, dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, hashed_password_field),
-         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
-      validate_attribute_option(attribute, resource, :sensitive?, [true])
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :sensitive?, [true]) do
+      validate_attribute_option(attribute, resource, :public?, [false])
     end
   end
 
@@ -498,7 +500,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       arguments: arguments,
       changes: changes,
       metadata: metadata,
-      accept: []
+      accept: [],
+      require_atomic?: false
     )
   end
 

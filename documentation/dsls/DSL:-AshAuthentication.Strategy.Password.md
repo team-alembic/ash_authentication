@@ -19,7 +19,8 @@ There are other options documented in the DSL.
 ```elixir
 defmodule MyApp.Accounts.User do
   use Ash.Resource,
-    extensions: [AshAuthentication]
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
 
   attributes do
     uuid_primary_key :id
@@ -28,8 +29,6 @@ defmodule MyApp.Accounts.User do
   end
 
   authentication do
-    api MyApp.Accounts
-
     strategies do
       password :password do
         identity_field :email

@@ -11,7 +11,7 @@ defmodule AshAuthentication.TokenResource.GetConfirmationChangesPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, _, _) do
     jti = Query.get_argument(query, :jti)
     strategy = query.context.strategy

@@ -16,7 +16,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
       }
 
       {:ok, _user, _changeset, _} =
-        Changeset.new(strategy.resource, %{})
+        Changeset.new(strategy.resource)
         |> Changeset.for_create(strategy.register_action_name, attrs)
         |> HashPasswordChange.change([], %{})
         |> Changeset.with_hooks(fn changeset ->
@@ -37,7 +37,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
       }
 
       {:ok, _user, _changeset, _} =
-        Changeset.new(user, %{})
+        Changeset.new(user)
         |> Changeset.set_context(%{strategy_name: Strategy.name(strategy)})
         |> Changeset.for_update(:update, attrs)
         |> HashPasswordChange.change([], %{})
@@ -59,7 +59,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
       }
 
       {:ok, _user, _changeset, _} =
-        Changeset.new(user, %{})
+        Changeset.new(user)
         |> Changeset.for_update(:update, attrs)
         |> HashPasswordChange.change([], %{strategy_name: Strategy.name(strategy)})
         |> Changeset.with_hooks(fn changeset ->
@@ -80,7 +80,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChangeTest do
       }
 
       {:ok, _user, _changeset, _} =
-        Changeset.new(user, %{})
+        Changeset.new(user)
         |> Changeset.for_update(:update, attrs)
         |> HashPasswordChange.change([strategy_name: :password], %{})
         |> Changeset.with_hooks(fn changeset ->

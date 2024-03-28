@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
 
   @doc false
   @impl true
-  @spec prepare(Query.t(), keyword, Preparation.context()) :: Query.t()
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, _opts, _context) do
     case Info.strategy_for_action(query.resource, query.action.name) do
       :error ->
@@ -70,7 +70,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
     |> case do
       {:ok, _identity} ->
         user
-        |> query.api.load(strategy.identity_relationship_name)
+        |> query.domain.load(strategy.identity_relationship_name)
 
       {:error, reason} ->
         {:error, reason}
