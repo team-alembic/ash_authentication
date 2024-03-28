@@ -5,6 +5,13 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.0-rc.0](https://github.com/team-alembic/ash_authentication/compare/v3.12.4...v4.0.0-rc.0) (2024-03-28)
+### Breaking Changes:
+
+* Update to support Ash 3.0. (#599)
+
+
+
 ## [v3.12.4](https://github.com/team-alembic/ash_authentication/compare/v3.12.3...v3.12.4) (2024-03-11)
 
 
