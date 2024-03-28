@@ -30,6 +30,7 @@ defmodule AshAuthentication.Jwt.Config do
       vsn
       |> to_string()
       |> Version.parse!()
+      |> then(&%{&1 | pre: []})
 
     Config.default_claims(default_exp: token_lifetime)
     |> Config.add_claim(
