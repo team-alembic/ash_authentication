@@ -106,8 +106,7 @@ spark_locals_without_parens = [
 ]
 
 [
-  # , :ash_json_api, :ash_graphql],
-  import_deps: [:ash, :spark],
+  import_deps: [:ash, :ash_json_api, :ash_graphql, :spark],
   inputs: [
     "*.{ex,exs}",
     "{dev,config,lib,test}/**/*.{ex,exs}"

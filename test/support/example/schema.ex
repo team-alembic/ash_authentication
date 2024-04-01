@@ -1,9 +1,9 @@
-# defmodule Example.Schema do
-#   @moduledoc false
-#   use Absinthe.Schema
+defmodule Example.Schema do
+  @moduledoc false
+  use Absinthe.Schema
 
-#   use AshGraphql, apis: [Example]
+  use AshGraphql, domains: [Example]
 
-#   query do
-#   end
-# end
+  query do
+  end
+end

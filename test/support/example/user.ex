@@ -4,8 +4,8 @@ defmodule Example.User do
     data_layer: AshPostgres.DataLayer,
     extensions: [
       AshAuthentication,
-      # AshGraphql.Resource,
-      # AshJsonApi.Resource,
+      AshGraphql.Resource,
+      AshJsonApi.Resource,
       Example.OnlyMartiesAtTheParty
     ],
     domain: Example
@@ -119,31 +119,31 @@ defmodule Example.User do
     define :update_user, action: :update
   end
 
-  # graphql do
-  #   type :user
+  graphql do
+    type :user
 
-  #   queries do
-  #     get :get_user, :read
-  #     list :list_users, :read
-  #     read_one :current_user, :current_user
-  #   end
+    queries do
+      get :get_user, :read
+      list :list_users, :read
+      read_one :current_user, :current_user
+    end
 
-  #   mutations do
-  #     create :register, :register_with_password
-  #   end
-  # end
+    mutations do
+      create :register, :register_with_password
+    end
+  end
 
-  # json_api do
-  #   type "user"
+  json_api do
+    type "user"
 
-  #   routes do
-  #     base "/users"
-  #     get :read
-  #     get :current_user, route: "/me"
-  #     index :read
-  #     post :register_with_password
-  #   end
-  # end
+    routes do
+      base "/users"
+      get :read
+      get :current_user, route: "/me"
+      index :read
+      post :register_with_password
+    end
+  end
 
   postgres do
     table "user"
