@@ -173,7 +173,7 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("== 3.0.0-rc.1")},
+      {:ash, ash_version("== 3.0.0-rc.6")},
       {:assent, "~> 0.2 and >= 0.2.8"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
