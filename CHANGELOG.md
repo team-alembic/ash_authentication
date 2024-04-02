@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.0-rc.2](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.1...v4.0.0-rc.2) (2024-04-02)
+### Breaking Changes:
+
+* Update to support Ash 3.0. (#599)
+
+
+
+### Bug Fixes:
+
+* allow future versions of ash rc
+
+* Jwt: Ignore pre-release versions verifying token versions.
+
+### Improvements:
+
+* re-integrate ash_graphql and ash_json_api RCs.
+
 ## [v4.0.0-rc.1](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.0...v4.0.0-rc.1) (2024-04-01)
 
 
