@@ -52,7 +52,7 @@ This authentication strategy provides registration and sign-in for users using a
 identifier (eg `username`, `email` or `phone_number`) and a password. It will
 define register and sign-in actions on your "user" resource. You are welcome to
 define either or both of these actions yourself if you wish to customise them -
-if you do so then the extension will do it's best to validate that all required
+if you do so then the extension will do its best to validate that all required
 configuration is present.
 
 The `AshAuthentication.Strategy.Password` DSL allows you to override any of the default values.
@@ -135,7 +135,7 @@ You can skip this step if you don't want to use tokens, in which case remove the
 `tokens` DSL section in the user resource below.
 
 ```elixir
-# lib/my_app/accounts/resources/token.ex
+# lib/my_app/accounts/token.ex
 
 defmodule MyApp.Accounts.Token do
   use Ash.Resource,
@@ -161,7 +161,7 @@ Lastly let's define our `User` resource, using password authentication and token
 generation enabled.
 
 ```elixir
-# lib/my_app/accounts/resources/user.ex
+# lib/my_app/accounts/user.ex
 
 defmodule MyApp.Accounts.User do
   use Ash.Resource,
@@ -317,7 +317,7 @@ can set your token signing secret using either a static string (please don't!),
 a two-arity anonymous function, or a module which implements the
 `AshAuthentication.Secret` behaviour.
 
-At it's simplest you should so something like this:
+At its simplest you should so something like this:
 
 ```elixir
 # in lib/my_app/accounts/user.ex
