@@ -5,7 +5,14 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
   import Ecto.Query
 
   alias Ash.Changeset
-  alias AshAuthentication.{AddOn.Confirmation, AddOn.Confirmation.Actions, Info, Jwt}
+
+  alias AshAuthentication.{
+    AddOn.Confirmation,
+    AddOn.Confirmation.Actions,
+    Errors.InvalidToken,
+    Info,
+    Jwt
+  }
 
   describe "confirm/2" do
     test "it returns an error when there is no corresponding user" do
@@ -51,11 +58,24 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
                       DateTime.to_unix(DateTime.utc_now()),
                       1.0
 
-      # I don't know why this is failing. I even tried changing
-      # `AshAuthentication.AddOn.Confirmation.ConfirmChange` to use
-      # `Ash.Changeset.force_change_attributes/2` to no avail.
-      # I can see the updated_at being set, but not the new username.
       assert to_string(confirmed_user.username) == new_username
+    end
+
+    test "the same token can't be used more than once" do
+      {:ok, strategy} = Info.strategy(Example.User, :confirm)
+
+      user = build_user()
+      new_username = username()
+
+      changeset =
+        user
+        |> Changeset.for_update(:update, %{"username" => new_username})
+
+      {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
+
+      assert {:ok, _user} = Actions.confirm(strategy, %{"confirm" => token}, [])
+
+      assert {:error, %InvalidToken{}} = Actions.confirm(strategy, %{"confirm" => token}, [])
     end
   end
 
