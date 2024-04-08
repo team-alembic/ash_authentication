@@ -24,7 +24,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
     with {:ok, domain} <- Info.domain(strategy.resource),
          {:ok, token} <- Map.fetch(params, "confirm"),
          {:ok, %{"sub" => subject}, _} <- Jwt.verify(token, strategy.resource),
-         {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource, opts) do
+         {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource, opts),
+         {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource) do
       user
       |> Changeset.new()
       |> Changeset.set_context(%{
@@ -33,6 +34,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
         }
       })
       |> Changeset.for_update(strategy.confirm_action_name, params)
+      |> Changeset.after_action(fn _changeset, record ->
+        case TokenResource.revoke(token_resource, token) do
+          :ok -> {:ok, record}
+          {:error, reason} -> {:error, reason}
+        end
+      end)
       |> domain.update(opts)
     else
       :error -> {:error, InvalidToken.exception(type: :confirmation)}
