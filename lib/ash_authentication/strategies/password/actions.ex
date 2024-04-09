@@ -7,7 +7,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   """
 
   alias Ash.{Changeset, Error.Invalid.NoSuchAction, Query, Resource}
-  alias AshAuthentication.{Errors, Info, Jwt, Strategy.Password}
+  alias AshAuthentication.{Errors, Info, Jwt, Strategy.Password, TokenResource}
 
   @doc """
   Attempt to sign in a user.
@@ -236,6 +236,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         }
       })
       |> Changeset.for_update(resettable.password_reset_action_name, params)
+      |> Changeset.after_action(fn _changeset, record ->
+        token_resource = Info.authentication_tokens_token_resource!(resource)
+        :ok = TokenResource.revoke(token_resource, token)
+        {:ok, record}
+      end)
       |> Ash.update(options)
     else
       {:error, %Changeset{} = changeset} -> {:error, changeset}

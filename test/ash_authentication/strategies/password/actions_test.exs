@@ -5,6 +5,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
 
   alias AshAuthentication.{
     Errors.AuthenticationFailed,
+    Errors.InvalidToken,
     Info,
     Jwt,
     Strategy.Password,
@@ -245,6 +246,23 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert user.id == updated_user.id
       assert user.hashed_password != updated_user.hashed_password
       assert strategy.hash_provider.valid?(new_password, updated_user.hashed_password)
+    end
+
+    test "the token can only be used once" do
+      user = build_user()
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      assert {:ok, token} = Password.reset_token_for(strategy, user)
+
+      new_password = password()
+
+      params = %{
+        "reset_token" => token,
+        "password" => new_password,
+        "password_confirmation" => new_password
+      }
+
+      assert {:ok, _} = Actions.reset(strategy, params, [])
+      assert {:error, %InvalidToken{}} = Actions.reset(strategy, params, [])
     end
   end
 end
