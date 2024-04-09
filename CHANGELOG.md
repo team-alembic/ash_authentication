@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.0-rc.4](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.3...v4.0.0-rc.4) (2024-04-09)
+
+
+
+
+### Improvements:
+
+* Use `Ash` functions instead of generated domain functions.
+
 ## [v4.0.0-rc.3](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.2...v4.0.0-rc.3) (2024-04-08)
 
 
