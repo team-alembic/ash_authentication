@@ -21,11 +21,16 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   """
   @spec confirm(Confirmation.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def confirm(strategy, params, opts \\ []) do
-    with {:ok, domain} <- Info.domain(strategy.resource),
-         {:ok, token} <- Map.fetch(params, "confirm"),
+    with {:ok, token} <- Map.fetch(params, "confirm"),
          {:ok, %{"sub" => subject}, _} <- Jwt.verify(token, strategy.resource),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource, opts),
          {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource) do
+      opts =
+        opts
+        |> Keyword.put_new_lazy(:domain, fn ->
+          Info.domain!(strategy.resource)
+        end)
+
       user
       |> Changeset.new()
       |> Changeset.set_context(%{
@@ -40,7 +45,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
           {:error, reason} -> {:error, reason}
         end
       end)
-      |> domain.update(opts)
+      |> Ash.update(opts)
     else
       :error -> {:error, InvalidToken.exception(type: :confirmation)}
       {:error, reason} -> {:error, reason}
@@ -60,6 +65,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
 
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
          {:ok, domain} <- TokenResource.Info.token_domain(token_resource),
+         opts <- opts |> Keyword.put(:upsert?, true) |> Keyword.put_new(:domain, domain),
          {:ok, store_changes_action} <-
            TokenResource.Info.token_confirmation_store_changes_action_name(token_resource),
          {:ok, _token_record} <-
@@ -75,7 +81,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
              extra_data: changes,
              purpose: to_string(Strategy.name(strategy))
            })
-           |> domain.create(Keyword.merge(opts, upsert?: true)) do
+           |> Ash.create(opts) do
       :ok
     else
       {:error, reason} ->
@@ -95,7 +101,10 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   @spec get_changes(Confirmation.t(), String.t(), keyword) :: {:ok, map} | :error
   def get_changes(strategy, jti, opts \\ []) do
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
-         {:ok, domain} <- TokenResource.Info.token_domain(token_resource),
+         opts <-
+           Keyword.put_new_lazy(opts, :domain, fn ->
+             TokenResource.Info.token_domain!(token_resource)
+           end),
          {:ok, get_changes_action} <-
            TokenResource.Info.token_confirmation_get_changes_action_name(token_resource),
          {:ok, [token_record]} <-
@@ -108,7 +117,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
            })
            |> Query.set_context(%{strategy: strategy})
            |> Query.for_read(get_changes_action, %{"jti" => jti})
-           |> domain.read(opts) do
+           |> Ash.read(opts) do
       changes =
         strategy.monitor_fields
         |> Stream.map(&to_string/1)

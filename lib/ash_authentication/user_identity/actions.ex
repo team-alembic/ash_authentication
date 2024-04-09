@@ -30,7 +30,7 @@ defmodule AshAuthentication.UserIdentity.Actions do
         upsert?: true,
         upsert_identity: action.upsert_identity
       )
-      |> domain.create()
+      |> Ash.create(domain: domain)
     end
   end
 end

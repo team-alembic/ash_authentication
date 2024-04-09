@@ -22,7 +22,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
        )}
 
   def sign_in(%OAuth2{} = strategy, params, options) do
-    domain = Info.domain!(strategy.resource)
+    options =
+      options
+      |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
 
     strategy.resource
     |> Query.new()
@@ -32,7 +34,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       }
     })
     |> Query.for_read(strategy.sign_in_action_name, params)
-    |> domain.read(options)
+    |> Ash.read(options)
     |> case do
       {:ok, [user]} ->
         {:ok, user}
@@ -90,8 +92,11 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   """
   @spec register(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def register(%OAuth2{} = strategy, params, options) when strategy.registration_enabled? do
-    domain = Info.domain!(strategy.resource)
     action = Resource.Info.action(strategy.resource, strategy.register_action_name, :create)
+
+    options =
+      options
+      |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
 
     strategy.resource
     |> Changeset.new()
@@ -104,7 +109,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       upsert?: true,
       upsert_identity: action.upsert_identity
     )
-    |> domain.create(options)
+    |> Ash.create(options)
   end
 
   def register(%OAuth2{} = strategy, _params, _options),

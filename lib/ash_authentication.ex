@@ -197,12 +197,15 @@ defmodule AshAuthentication do
   def subject_to_user(%URI{path: subject_name, query: primary_key} = _subject, resource, options) do
     with {:ok, resource_subject_name} <- Info.authentication_subject_name(resource),
          ^subject_name <- to_string(resource_subject_name),
-         {:ok, action_name} <- Info.authentication_get_by_subject_action_name(resource),
-         {:ok, domain} <- Info.domain(resource) do
+         {:ok, action_name} <- Info.authentication_get_by_subject_action_name(resource) do
       primary_key =
         primary_key
         |> URI.decode_query()
         |> Enum.to_list()
+
+      options =
+        options
+        |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(resource) end)
 
       resource
       |> Query.new()
@@ -213,7 +216,7 @@ defmodule AshAuthentication do
       })
       |> Query.for_read(action_name, %{})
       |> Query.filter(^primary_key)
-      |> domain.read(options)
+      |> Ash.read(options)
       |> case do
         {:ok, [user]} -> {:ok, user}
         _ -> {:error, NotFound.exception([])}
