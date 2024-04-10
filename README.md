@@ -7,7 +7,7 @@
 [![Hex version badge](https://img.shields.io/hexpm/v/ash_authentication.svg)](https://hex.pm/packages/ash_authentication)
 
 AshAuthentication provides drop-in support for user authentication for users of
-the [Ash framework](https://ash-hq.org).  It is designed to be highly
+the [Ash framework](https://ash-hq.org). It is designed to be highly
 configurable, with sensible defaults covering the most common use-cases.
 
 ## Installation
@@ -18,7 +18,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ash_authentication, "~> 4.0.0-rc.4"}
+    {:ash_authentication, "~> 4.0.0-rc.5"}
   ]
 end
 ```
@@ -33,18 +33,18 @@ branch](https://team-alembic.github.io/ash_authentication).
 
 ## Contributing
 
-  * To contribute updates, fixes or new features please fork and open a
-    pull-request against `main`.
-  * To regenerate cheat sheets for the DSLs, run `mix spark.cheat_sheets`. For new strategies ensure you've added them to the extensions and documentation groups in `mix.exs`.
-  * Please use [conventional
-    commits](https://www.conventionalcommits.org/en/v1.0.0/) - this allows us to
-    dynamically generate the changelog.
-  * Feel free to ask any questions on out [GitHub discussions
-    page](https://github.com/team-alembic/ash_authentication/discussions).
+- To contribute updates, fixes or new features please fork and open a
+  pull-request against `main`.
+- To regenerate cheat sheets for the DSLs, run `mix spark.cheat_sheets`. For new strategies ensure you've added them to the extensions and documentation groups in `mix.exs`.
+- Please use [conventional
+  commits](https://www.conventionalcommits.org/en/v1.0.0/) - this allows us to
+  dynamically generate the changelog.
+- Feel free to ask any questions on out [GitHub discussions
+  page](https://github.com/team-alembic/ash_authentication/discussions).
 
 ## Licence
 
 `AshAuthentication` is licensed under the terms of the [MIT
-license](https://opensource.org/licenses/MIT).  See the [`LICENSE` file in this
+license](https://opensource.org/licenses/MIT). See the [`LICENSE` file in this
 repository](https://github.com/team-alembic/ash_authentication/blob/main/LICENSE)
 for details.
