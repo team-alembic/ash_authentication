@@ -23,7 +23,6 @@ defmodule AshAuthentication.Jwt do
 
     authentication do
       tokens do
-        enabled? true
         token_lifetime 32
         signing_secret fn _, _ ->
           System.fetch_env("TOKEN_SIGNING_SECRET")
