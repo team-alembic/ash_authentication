@@ -109,9 +109,9 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
         sign_in_tokens_enabled?: [
           type: :boolean,
           doc:
-            "Whether or not to support generating short lived sign in tokens. Requires the resource to have tokens enabled. There is no drawback to supporting this, and in the future this default will change from `false` to `true`.",
+            "Whether or not to support generating short lived sign in tokens. Requires the resource to have tokens enabled.",
           required: false,
-          default: false
+          default: true
         ],
         sign_in_token_lifetime: [
           type:
