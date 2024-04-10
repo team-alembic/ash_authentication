@@ -184,7 +184,6 @@ defmodule MyApp.Accounts.User do
     end
 
     tokens do
-      enabled? true
       token_resource MyApp.Accounts.Token
       signing_secret fn _, _ ->
         Application.fetch_env(:my_app, :token_signing_secret)
