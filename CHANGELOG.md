@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.0-rc.6](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.5...v4.0.0-rc.6) (2024-04-11)
+
+
+
+
+### Improvements:
+
+* OIDC: Adjust dsl of OIDC reflect assent requirements (#538)
+
 ## [v4.0.0-rc.5](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.4...v4.0.0-rc.5) (2024-04-10)
 
 ### Breaking Changes:
