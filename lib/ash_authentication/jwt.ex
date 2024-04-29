@@ -120,17 +120,18 @@ defmodule AshAuthentication.Jwt do
   defp maybe_store_token(token, resource, user, purpose, opts) do
     if Info.authentication_tokens_store_all_tokens?(resource) do
       with {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
+        context_patch = %{
+          ash_authentication: %{user: user},
+          private: %{ash_authentication?: true}
+        }
+
         TokenResource.Actions.store_token(
           token_resource,
           %{
             "token" => token,
             "purpose" => to_string(purpose)
           },
-          Keyword.put(opts, :context, %{
-            ash_authentication: %{
-              user: user
-            }
-          })
+          Keyword.update(opts, :context, context_patch, &Map.merge(&1, context_patch))
         )
       end
     else
