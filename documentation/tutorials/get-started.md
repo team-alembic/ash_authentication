@@ -1,4 +1,4 @@
-# Getting started with Ash Authentication
+# Get started with Ash Authentication
 
 If you haven't already, read [the getting started guide for
 Ash](https://ash-hq.org/docs/guides/ash/latest/tutorials/get-started.md). This
