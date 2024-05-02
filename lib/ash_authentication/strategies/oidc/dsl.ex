@@ -17,6 +17,9 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
 
       This strategy is built using the `:oauth2` strategy, and thus provides
       all the same configuration options should you need them.
+
+      #### More documentation:
+      - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
       """,
       auto_set_fields: [assent_strategy: Assent.Strategy.OIDC, icon: :oidc],
       schema: patch_schema()

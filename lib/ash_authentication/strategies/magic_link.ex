@@ -93,6 +93,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
       ...> {_conn, {:ok, signed_in_user}} = Plug.Helpers.get_authentication_result(conn)
       ...> signed_in_user.id == user.id
       true
+
+  See the [Magic Link How-To](/documentation/how-to/magic-links.md) for more information.
   """
 
   defstruct identity_field: :username,

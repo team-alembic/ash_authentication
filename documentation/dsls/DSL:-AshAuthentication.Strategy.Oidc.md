@@ -48,6 +48,9 @@ A random value generator can look like this:
 AshAuthentication will dynamically generate one for the session if `nonce` is
 set to `true`.
 
+## More documentation:
+- The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
+
 
 
 ## authentication.strategies.oidc
@@ -60,6 +63,9 @@ Provides an OpenID Connect authentication strategy.
 
 This strategy is built using the `:oauth2` strategy, and thus provides
 all the same configuration options should you need them.
+
+###### More documentation:
+- The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
 
 

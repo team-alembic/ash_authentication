@@ -16,8 +16,10 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
       This strategy is built using the `:oauth2` strategy, and thus provides all the same
       configuration options should you need them.
 
-      See the [Google OAuth 2.0 Overview](https://developers.google.com/identity/protocols/oauth2)
-      for Google setup details.
+      ## More documentation:
+      - The [Google OAuth 2.0 Overview](https://developers.google.com/identity/protocols/oauth2).
+      - The [Google How-To](/documentation/how-to/google.md)
+      - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
       #### Strategy defaults:
 

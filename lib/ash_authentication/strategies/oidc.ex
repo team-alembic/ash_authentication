@@ -46,6 +46,9 @@ defmodule AshAuthentication.Strategy.Oidc do
 
   AshAuthentication will dynamically generate one for the session if `nonce` is
   set to `true`.
+
+  ## More documentation:
+  - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
   """
 
   alias AshAuthentication.Strategy.{Custom, Oidc}

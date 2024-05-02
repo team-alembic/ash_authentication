@@ -13,7 +13,9 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
   def dsl do
     %Entity{
       name: :password,
-      describe: "Strategy for authenticating using local resources as the source of truth.",
+      describe: """
+      Strategy for authenticating using local resources as the source of truth.
+      """,
       examples: [
         """
         password :password do

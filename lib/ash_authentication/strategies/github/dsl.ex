@@ -16,8 +16,9 @@ defmodule AshAuthentication.Strategy.Github.Dsl do
       This strategy is built using the `:oauth2` strategy, and thus provides all the same
       configuration options should you need them.
 
-      For more information see the [Github Quick Start Guide](/documentation/tutorials/github-quickstart.md)
-      in our documentation.
+      #### More documentation:
+      - The [GitHub How-To](/documentation/how-to/github.md).
+      - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
       #### Strategy defaults:
 

@@ -13,8 +13,9 @@ defmodule AshAuthentication.Strategy.Github do
     - `redirect_uri`
     - `client_secret`
 
-  See the [GitHub quickstart guide](/documentation/tutorials/github-quickstart.html)
-  for more information.
+  ## More documentation:
+  - The [GitHub How-To](/documentation/how-to/github.md).
+  - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
   """
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}

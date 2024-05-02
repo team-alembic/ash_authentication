@@ -15,8 +15,9 @@ In order to use Auth0 you need to provide the following minimum configuration:
   - `client_secret`
   - `site`
 
-See the [Auth0 quickstart guide](/documentation/tutorials/auth0-quickstart.md)
-for more information.
+## More documentation:
+- The [Auth0 How-To](/documentation/how-to/auth0.md).
+- The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
 
 
@@ -31,8 +32,9 @@ Provides a pre-configured authentication strategy for [Auth0](https://auth0.com/
 This strategy is built using the `:oauth2` strategy, and thus provides all the same
 configuration options should you need them.
 
-For more information see the [Auth0 Quick Start Guide](/documentation/tutorials/auth0-quickstart.md)
-in our documentation.
+###### More documentation:
+- The [Auth0 How-To](/documentation/how-to/auth0.md).
+- The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
 ###### Strategy defaults:
 
