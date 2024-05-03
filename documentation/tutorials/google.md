@@ -1,4 +1,4 @@
-# Google How-To
+# Google Tutorial
 
 This is a quick tutorial on how to configure Google authentication.
 

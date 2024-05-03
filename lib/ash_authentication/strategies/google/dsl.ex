@@ -18,7 +18,7 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
 
       ## More documentation:
       - The [Google OAuth 2.0 Overview](https://developers.google.com/identity/protocols/oauth2).
-      - The [Google How-To](/documentation/how-to/google.md)
+      - The [Google Tutorial](/documentation/tutorial/google.md)
       - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
       #### Strategy defaults:

@@ -16,7 +16,7 @@ In order to use Auth0 you need to provide the following minimum configuration:
   - `site`
 
 ## More documentation:
-- The [Auth0 How-To](/documentation/how-to/auth0.md).
+- The [Auth0 Tutorial](/documentation/tutorial/auth0.md).
 - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
 
@@ -33,7 +33,7 @@ This strategy is built using the `:oauth2` strategy, and thus provides all the s
 configuration options should you need them.
 
 ###### More documentation:
-- The [Auth0 How-To](/documentation/how-to/auth0.md).
+- The [Auth0 Tutorial](/documentation/tutorial/auth0.md).
 - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
 ###### Strategy defaults:

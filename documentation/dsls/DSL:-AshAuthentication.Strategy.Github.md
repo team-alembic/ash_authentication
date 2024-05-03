@@ -15,7 +15,7 @@ In order to use GitHub you need to provide the following minimum configuration:
   - `client_secret`
 
 ## More documentation:
-- The [GitHub How-To](/documentation/how-to/github.md).
+- The [GitHub Tutorial](/documentation/tutorial/github.md).
 - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
 
@@ -32,7 +32,7 @@ This strategy is built using the `:oauth2` strategy, and thus provides all the s
 configuration options should you need them.
 
 ###### More documentation:
-- The [GitHub How-To](/documentation/how-to/github.md).
+- The [GitHub Tutorial](/documentation/tutorial/github.md).
 - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
 ###### Strategy defaults:

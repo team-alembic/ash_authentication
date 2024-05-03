@@ -15,7 +15,7 @@ defmodule AshAuthentication.Strategy.Auth0 do
     - `site`
 
   ## More documentation:
-  - The [Auth0 How-To](/documentation/how-to/auth0.md).
+  - The [Auth0 Tutorial](/documentation/tutorial/auth0.md).
   - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
   """
 

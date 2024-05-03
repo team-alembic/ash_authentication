@@ -1,4 +1,4 @@
-# Auth0 How-To
+# Auth0 Tutorial
 
 This is a quick tutorial on how to configure your application to use Auth0 for authentication.
 

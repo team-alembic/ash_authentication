@@ -14,7 +14,7 @@ defmodule AshAuthentication.Strategy.Github do
     - `client_secret`
 
   ## More documentation:
-  - The [GitHub How-To](/documentation/how-to/github.md).
+  - The [GitHub Tutorial](/documentation/tutorial/github.md).
   - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
   """
 

@@ -1,4 +1,4 @@
-# Magic Links How-To
+# Magic Links Tutorial
 
 This is a quick tutorial to get you up and running on Magic Links.
 This assumes you've set up `ash_authentication` and [password reset](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix) in your Phoenix project.

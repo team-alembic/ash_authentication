@@ -1,4 +1,4 @@
-# GitHub How-To
+# GitHub Tutorial
 
 This is a quick tutorial on how to configure your application to use GitHub for authentication.
 

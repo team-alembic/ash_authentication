@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.Github.Dsl do
       configuration options should you need them.
 
       #### More documentation:
-      - The [GitHub How-To](/documentation/how-to/github.md).
+      - The [GitHub Tutorial](/documentation/tutorial/github.md).
       - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
 
       #### Strategy defaults:

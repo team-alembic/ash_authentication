@@ -1,8 +1,8 @@
-# Confirmation How-To
+# Confirmation Tutorial
 
 This is a quick tutorial on how to configure your application to enable confirmation.
 
-In this how-to we'll assume that you have a `User` resource which uses `email` as it's user identifier. We'll show you how to confirm a new user on sign-up and also require them to confirm if they wish to change their email address.
+In this tutorial we'll assume that you have a `User` resource which uses `email` as it's user identifier. We'll show you how to confirm a new user on sign-up and also require them to confirm if they wish to change their email address.
 
 Here's the user resource we'll be starting with:
 

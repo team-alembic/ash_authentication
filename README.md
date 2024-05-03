@@ -10,8 +10,6 @@
 
 Welcome! Here you will find everything you need to know to get started with and use Ash Authentication. This documentation is best viewed on [hexdocs](https://hexdocs.pm/ash_authentication).
 
-AshAuthentication provides drop-in support for user authentication for users of the [Ash Framework](https://ash-hq.org). It is designed to be highly configurable, with sensible defaults covering the most common use-cases.
-
 ## About the Documentation
 
 [**Tutorials**](#tutorials) walk you through a series of steps to accomplish a goal. These are **learning-oriented**, and are a great place for beginners to start.
