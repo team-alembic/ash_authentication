@@ -1,5 +1,5 @@
 defmodule AshAuthentication.Sender do
-  @moduledoc ~S"""
+  @moduledoc ~S'''
   A module to implement sending of a token to a user.
 
   Allows you to glue sending of instructions to
@@ -16,7 +16,7 @@ defmodule AshAuthentication.Sender do
 
   ```elixir
   defmodule MyApp.PasswordResetSender do
-    use AshAuthentication.PasswordReset.Sender
+    use AshAuthentication.Sender
     import Swoosh.Email
 
     def send(user, reset_token, _opts) do
@@ -24,7 +24,7 @@ defmodule AshAuthentication.Sender do
       |> to({user.name, user.email})
       |> from({"Doc Brown", "emmet@brown.inc"})
       |> subject("Password reset instructions")
-      |> html_body("
+      |> html_body("""
         <h1>Password reset instructions</h1>
         <p>
           Hi #{user.name},<br />
@@ -32,10 +32,10 @@ defmodule AshAuthentication.Sender do
           Someone (maybe you) has requested a password reset for your account.
           If you did not initiate this request then please ignore this email.
         </p>
-        <a href=\"https://example.com/user/password/reset?#{URI.encode_query(reset_token: reset_token)}\">
+        <a href="https://example.com/user/password/reset?#{URI.encode_query(reset_token: reset_token)}\">
           Click here to reset
         </a>
-      ")
+      """)
       |> MyApp.Mailer.deliver()
     end
   end
@@ -78,7 +78,7 @@ defmodule AshAuthentication.Sender do
     end
   end
   ```
-  """
+  '''
 
   alias Ash.Resource
 

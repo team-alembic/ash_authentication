@@ -1,6 +1,6 @@
-# Google Quick Start Guide
+# Google How-To
 
-This is a _very quick_ tutorial on how to configure Google authentication in your application using the default oauth2 strategy in ash.
+This is a quick tutorial on how to configure Google authentication.
 
 First you'll need a registered application in [Google Cloud](https://console.cloud.google.com/welcome), in order to get your OAuth 2.0 Client credentials.
 
@@ -23,9 +23,9 @@ defmodule MyApp.Accounts.User do
   authentication do
     strategies do
       oauth2 :google do
-        client_id "123abc..."
-        redirect_uri {:ok, "123abc..."}
-        client_secret fn -> {:ok, "123abc..."} end
+        client_id MyApp.Secrets
+        redirect_uri MyApp.Secrets
+        client_secret MyApp.Secrets end
         base_url MyApp.Secrets
       end
     end
@@ -53,19 +53,17 @@ defmodule MyApp.Accounts.User do
       change AshAuthentication.GenerateTokenChange
 
       # Required if you have the `identity_resource` configuration enabled.
-      # change AshAuthentication.Strategy.OAuth2.IdentityChange
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
 
-      change fn changeset, _ctx ->
+      change fn changeset, _ ->
         user_info = Ash.Changeset.get_argument(changeset, :user_info)
-        changeset
-          |> Ash.Changeset.change_attribute(:google_info, user_info)
-          # you could upsert custom user attributes from the given google's user_info
-          # |> Ash.Changeset.change_attribute(:email, user_info["email"])
-          # |> Ash.Changeset.change_attribute(:name, user_info["name"])
-          # |> Ash.Changeset.change_attribute(:portrait, user_info["picture"])
+
+        Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
       end
     end
   end
+
   # ...
+
 end
 ```

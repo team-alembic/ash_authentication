@@ -1,16 +1,8 @@
-# Auth0 Quick Start Guide
+# Auth0 How-To
 
-This is a _very quick_ tutorial on how to configure your application to use
-Auth0 for authentication.
+This is a quick tutorial on how to configure your application to use Auth0 for authentication.
 
-Before you start this tutorial, skip the Token resource while following the
-[AshAuthenticationPhoenix guide](https://hexdocs.pm/ash_authentication_phoenix/getting-started-with-ash-authentication-phoenix.html))
-
-> [!WARNING]
-> Make sure that your `ash_postgres` dependency is `~> 1.3.64`. A bug in previous versions prevents the action shown below from working correctly.
-
-Next, you need to configure an application in [the Auth0
-dashboard](https://manage.auth0.com/) using the following steps:
+First, you need to configure an application in [the Auth0 dashboard](https://manage.auth0.com/) using the following steps:
 
 1. Click "Create Application".
 2. Set your application name to something that identifies it. You will likely
@@ -18,10 +10,8 @@ dashboard](https://manage.auth0.com/) using the following steps:
    keep that in mind.
 3. Select "Regular Web Application" and click "Create".
 4. Switch to the "Settings" tab.
-5. Copy the "Domain", "Client ID" and "Client Secret" somewhere safe - we'll
-   need them soon.
-6. In the "Allowed Callback URLs" section, add your callback URL. The
-   callback URL is generated from the following information:
+5. Copy the "Domain", "Client ID" and "Client Secret" somewhere safe - we'll need them soon.
+6. In the "Allowed Callback URLs" section, add your callback URL. The callback URL is generated from the following information:
 
    - The base URL of the application - in development that would be
      `http://localhost:4000/` but in production will be your application's
@@ -59,11 +49,7 @@ defmodule MyApp.Accounts.User do
 end
 ```
 
-Because all the configuration values should be kept secret (ie the
-`client_secret`) or are likely to be different for each environment we use the
-`AshAuthentication.Secret` behaviour to provide them. In this case we're
-delegating to the OTP application environment, however you may want to use a
-system environment variable or some other secret store (eg Vault).
+Because all the configuration values should be kept secret (ie the `client_secret`) or are likely to be different for each environment we use the `AshAuthentication.Secret` behaviour to provide them. In this case we're delegating to the OTP application environment, however you may want to use a system environment variable or some other secret store (eg Vault).
 
 ```elixir
 defmodule MyApp.Secrets do
@@ -97,25 +83,16 @@ end
 The values for this configuration should be:
 
 - `client_id` - the client ID copied from the Auth0 settings page.
-- `redirect_uri` - the URL to the generated auth routes in your application
-  (eg `http://localhost:4000/auth`).
+- `redirect_uri` - the URL to the generated auth routes in your application (eg `http://localhost:4000/auth`).
 - `client_secret` the client secret copied from the Auth0 settings page.
-- `base_url` - the "domain" value copied from the Auth0 settings page prefixed
-  with `https://` (eg `https://dev-yu30yo5y4tg2hg0y.us.auth0.com`).
+- `base_url` - the "domain" value copied from the Auth0 settings page prefixed with `https://` (eg `https://dev-yu30yo5y4tg2hg0y.us.auth0.com`).
 
-Lastly, we need to add a register action to your user resource. This is defined
-as an upsert so that it can register new users, or update information for
-returning users. The default name of the action is `register_with_` followed by
-the strategy name. In our case that is `register_with_auth0`.
+Lastly, we need to add a register action to your user resource. This is defined as an upsert so that it can register new users, or update information for returning users. The default name of the action is `register_with_` followed by the strategy name. In our case that is `register_with_auth0`.
 
 The register action takes two arguments, `user_info` and the `oauth_tokens`.
 
-- `user_info` contains the [`GET /userinfo` response from
-  Auth0](https://auth0.com/docs/api/authentication#get-user-info) which you
-  can use to populate your user attributes as needed.
-- `oauth_tokens` contains the [`POST /oauth/token` response from
-  Auth0](https://auth0.com/docs/api/authentication#get-token) - you may want
-  to store these if you intend to call the Auth0 API on behalf of the user.
+- `user_info` contains the [`GET /userinfo` response from Auth0](https://auth0.com/docs/api/authentication#get-user-info) which you can use to populate your user attributes as needed.
+- `oauth_tokens` contains the [`POST /oauth/token` response from Auth0](https://auth0.com/docs/api/authentication#get-token) - you may want to store these if you intend to call the Auth0 API on behalf of the user.
 
 ```elixir
 defmodule MyApp.Accounts.User do

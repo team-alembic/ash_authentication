@@ -1,10 +1,8 @@
-# GitHub Quick Start Guide
+# GitHub How-To
 
-This is a _very quick_ tutorial on how to configure your application to use
-GitHub for authentication.
+This is a quick tutorial on how to configure your application to use GitHub for authentication.
 
-First you need to configure an application in your [GitHub developer
-settings](https://github.com/settings/developers):
+First you need to configure an application in your [GitHub developer settings](https://github.com/settings/developers):
 
 1. Click the "New OAuth App" button.
 2. Set your application name to something that identifies it. You will likely
