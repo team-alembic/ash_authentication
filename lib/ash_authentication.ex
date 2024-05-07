@@ -58,8 +58,14 @@ defmodule AshAuthentication do
      - authenticate users against your local database using a unique identity
      (such as username or email address) and a password.
   2. `AshAuthentication.Strategy.OAuth2`
-     - authenticate using local or remote [OAuth 2.0](https://oauth.net/2/)
-     compatible services.
+     - authenticate using local or remote [OAuth 2.0](https://oauth.net/2/) compatible services.
+     - also includes:
+       - `AshAuthentication.Strategy.Auth0`
+       - `AshAuthentication.Strategy.Github`
+       - `AshAuthentication.Strategy.Google`
+       - `AshAuthentication.Strategy.Oidc`
+  3. `AshAuthentication.Strategy.MagicLink`
+     - authenticate by sending a single-use link to the user.
 
   ## Add-ons
 

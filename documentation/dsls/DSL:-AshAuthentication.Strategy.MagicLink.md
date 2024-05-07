@@ -95,6 +95,8 @@ Dispatching to plugs directly:
     ...> signed_in_user.id == user.id
     true
 
+See the [Magic Link Tutorial](/documentation/tutorial/magic-links.md) for more information.
+
 
 
 ## authentication.strategies.magic_link

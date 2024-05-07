@@ -14,8 +14,9 @@ defmodule AshAuthentication.Strategy.Auth0 do
     - `client_secret`
     - `site`
 
-  See the [Auth0 quickstart guide](/documentation/tutorials/auth0-quickstart.md)
-  for more information.
+  ## More documentation:
+  - The [Auth0 Tutorial](/documentation/tutorial/auth0.md).
+  - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
   """
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}

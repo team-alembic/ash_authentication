@@ -117,7 +117,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
       Transformer.build_entity!(Resource.Dsl, [:actions, :update], :argument,
         name: :confirm,
         type: Type.String,
-        allow_nil?: false
+        allow_nil?: false,
+        public?: true
       )
     ]
 

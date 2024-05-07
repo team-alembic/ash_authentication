@@ -14,8 +14,10 @@ defmodule AshAuthentication.Strategy.Google do
     - `client_secret`
     - `site`
 
-  See the [Google OAuth 2.0 Overview](https://developers.google.com/identity/protocols/oauth2)
-  for Google setup details.
+  ## More documentation:
+  - The [Google OAuth 2.0 Overview](https://developers.google.com/identity/protocols/oauth2).
+  - The [Google Tutorial](/documentation/tutorial/google.md)
+  - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
   """
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}

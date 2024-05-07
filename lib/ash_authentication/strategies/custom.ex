@@ -2,7 +2,7 @@ defmodule AshAuthentication.Strategy.Custom do
   @moduledoc """
   Define your own custom authentication strategy.
 
-  See [the Custom Strategies guide](/documentation/topics/custom-strategy.html)
+  See [the Custom Strategies guide](/documentation/topics/custom-strategy.md)
   for more information.
   """
 

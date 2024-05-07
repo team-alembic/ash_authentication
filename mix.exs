@@ -2,143 +2,32 @@ defmodule AshAuthentication.MixProject do
   @moduledoc false
   use Mix.Project
 
+  @description """
+  Authentication extension for the Ash Framework.
+  """
+
   @version "4.0.0-rc.6"
 
   def project do
     [
       app: :ash_authentication,
       version: @version,
-      description: "User authentication support for Ash",
       elixir: "~> 1.13",
-      start_permanent: Mix.env() == :prod,
-      preferred_cli_env: [ci: :test],
-      aliases: aliases(),
-      deps: deps(),
-      package: package(),
-      elixirc_paths: elixirc_paths(Mix.env()),
       consolidate_protocols: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      elixirc_paths: elixirc_paths(Mix.env()),
+      package: package(),
+      deps: deps(),
       dialyzer: [
         plt_add_apps: [:mix, :ex_unit],
         plt_core_path: "priv/plts",
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
       ],
-      docs: [
-        main: "readme",
-        extras: [
-          {"README.md", name: "READ ME"},
-          "documentation/tutorials/getting-started-with-authentication.md",
-          "documentation/tutorials/auth0-quickstart.md",
-          "documentation/tutorials/github-quickstart.md",
-          "documentation/tutorials/google-quickstart.md",
-          "documentation/tutorials/integrating-ash-authentication-and-phoenix.md",
-          "documentation/tutorials/magic-links-quickstart.md",
-          "documentation/topics/custom-strategy.md",
-          "documentation/topics/policies-on-authentication-resources.md",
-          "documentation/topics/testing.md",
-          "documentation/topics/tokens.md",
-          "documentation/topics/confirmation.md",
-          "documentation/topics/upgrading.md",
-          "documentation/dsls/DSL:-AshAuthentication.md",
-          "documentation/dsls/DSL:-AshAuthentication.AddOn.Confirmation.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Auth0.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Github.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Google.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.MagicLink.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.OAuth2.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Oidc.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Password.md",
-          "documentation/dsls/DSL:-AshAuthentication.TokenResource.md",
-          "documentation/dsls/DSL:-AshAuthentication.UserIdentity.md"
-        ],
-        groups_for_extras: [
-          Tutorials: ~r'documentation/tutorials',
-          "How To": ~r'documentation/how_to',
-          Topics: ~r'documentation/topics',
-          DSLs: ~r'documentation/dsls'
-        ],
-        extra_section: "GUIDES",
-        formatters: ["html"],
-        before_closing_head_tag: fn type ->
-          if type == :html do
-            """
-            <script>
-              if (location.hostname === "hexdocs.pm") {
-                var script = document.createElement("script");
-                script.src = "https://plausible.io/js/script.js";
-                script.setAttribute("defer", "defer")
-                script.setAttribute("data-domain", "ashhexdocs")
-                document.head.appendChild(script);
-              }
-            </script>
-            """
-          end
-        end,
-        filter_modules: ~r/^Elixir.AshAuthentication/,
-        source_url_pattern:
-          "https://github.com/team-alembic/ash_authentication/blob/main/%{path}#L%{line}",
-        nest_modules_by_prefix: [
-          AshAuthentication.Strategy,
-          AshAuthentication.AddOn,
-          AshAuthentication.Plug,
-          AshAuthentication.Validations
-        ],
-        groups_for_modules: [
-          Extensions: [
-            AshAuthentication,
-            AshAuthentication.TokenResource,
-            AshAuthentication.UserIdentity
-          ],
-          Strategies: [
-            AshAuthentication.Strategy,
-            AshAuthentication.Strategy.Auth0,
-            AshAuthentication.Strategy.Github,
-            AshAuthentication.Strategy.Google,
-            AshAuthentication.Strategy.MagicLink,
-            AshAuthentication.Strategy.OAuth2,
-            AshAuthentication.Strategy.Password
-          ],
-          CustomStrategies: [
-            ~r/AshAuthentication.Strategy.Custom/
-          ],
-          "Add ons": [
-            AshAuthentication.AddOn.Confirmation
-          ],
-          Cryptography: [
-            AshAuthentication.HashProvider,
-            AshAuthentication.BcryptProvider,
-            AshAuthentication.Jwt
-          ],
-          Introspection: [
-            AshAuthentication.Info,
-            AshAuthentication.TokenResource.Info,
-            AshAuthentication.UserIdentity.Info
-          ],
-          Utilities: [
-            AshAuthentication.Debug,
-            AshAuthentication.Secret,
-            AshAuthentication.Sender,
-            AshAuthentication.Supervisor,
-            ~r/.*Actions$/,
-            AshAuthentication.Strategy.Password.Actions,
-            AshAuthentication.TokenResource.Expunger
-          ],
-          Plugs: [~r/^AshAuthentication\.Plug.*/, AshAuthentication.Strategy.MagicLink.Plug],
-          "Reusable Components": [
-            AshAuthentication.GenerateTokenChange,
-            AshAuthentication.Strategy.Password.HashPasswordChange,
-            AshAuthentication.Strategy.Password.PasswordConfirmationValidation,
-            AshAuthentication.Strategy.Password.PasswordValidation,
-            AshAuthentication.Checks.AshAuthenticationInteraction,
-            AshAuthentication.Password.Plug,
-            ~r/AshAuthentication.Validations/
-          ],
-          Errors: ~r/AshAuthentication.Errors/,
-          "DSL Transformers": [
-            ~r/Transformer/,
-            ~r/Verifier/
-          ]
-        ]
-      ]
+      docs: docs(),
+      aliases: aliases(),
+      description: @description,
+      preferred_cli_env: [ci: :test],
+      consolidate_protocols: Mix.env() == :prod
     ]
   end
 
@@ -169,6 +58,125 @@ defmodule AshAuthentication.MixProject do
   defp extra_applications(:dev), do: [:logger, :bcrypt_elixir]
   defp extra_applications(:test), do: [:logger, :bcrypt_elixir]
   defp extra_applications(_), do: [:logger]
+
+  defp docs do
+    [
+      main: "readme",
+      source_ref: "v#{@version}",
+      logo: "logos/ash-auth-small-logo.png",
+      extra_section: ["GUIDES"],
+      extras: [
+        {"README.md", name: "Home"},
+        "documentation/tutorials/get-started.md",
+        "documentation/tutorials/auth0.md",
+        "documentation/tutorials/github.md",
+        "documentation/tutorials/google.md",
+        "documentation/tutorials/magic-links.md",
+        "documentation/tutorials/confirmation.md",
+        "documentation/topics/custom-strategy.md",
+        "documentation/topics/policies-on-authentication-resources.md",
+        "documentation/topics/testing.md",
+        "documentation/topics/tokens.md",
+        "documentation/topics/upgrading.md",
+        "documentation/dsls/DSL:-AshAuthentication.md",
+        "documentation/dsls/DSL:-AshAuthentication.AddOn.Confirmation.md",
+        "documentation/dsls/DSL:-AshAuthentication.Strategy.Auth0.md",
+        "documentation/dsls/DSL:-AshAuthentication.Strategy.Github.md",
+        "documentation/dsls/DSL:-AshAuthentication.Strategy.Google.md",
+        "documentation/dsls/DSL:-AshAuthentication.Strategy.MagicLink.md",
+        "documentation/dsls/DSL:-AshAuthentication.Strategy.OAuth2.md",
+        "documentation/dsls/DSL:-AshAuthentication.Strategy.Oidc.md",
+        "documentation/dsls/DSL:-AshAuthentication.Strategy.Password.md",
+        "documentation/dsls/DSL:-AshAuthentication.TokenResource.md",
+        "documentation/dsls/DSL:-AshAuthentication.UserIdentity.md",
+        "CHANGELOG.md"
+      ],
+      groups_for_extras: [
+        "Start Here": [
+          "documentation/home.md",
+          "documentation/tutorials/get-started.md"
+        ],
+        Tutorials: ~r"documentation/tutorials",
+        Topics: ~r"documentation/topics",
+        "How To": ~r"documentation/how-to",
+        Reference: ~r"documentation/dsls"
+      ],
+      skip_undefined_reference_warnings_on: [
+        "CHANGELOG.md"
+      ],
+      nest_modules_by_prefix: [],
+      before_closing_head_tag: fn type ->
+        if type == :html do
+          """
+          <script>
+            if (location.hostname === "hexdocs.pm") {
+              var script = document.createElement("script");
+              script.src = "https://plausible.io/js/script.js";
+              script.setAttribute("defer", "defer")
+              script.setAttribute("data-domain", "ashhexdocs")
+              document.head.appendChild(script);
+            }
+          </script>
+          """
+        end
+      end,
+      filter_modules: ~r/^Elixir.AshAuthentication/,
+      source_url_pattern:
+        "https://github.com/team-alembic/ash_authentication/blob/main/%{path}#L%{line}",
+      groups_for_modules: [
+        Extensions: [
+          AshAuthentication,
+          AshAuthentication.TokenResource,
+          AshAuthentication.UserIdentity
+        ],
+        Strategies: [
+          AshAuthentication.Strategy,
+          AshAuthentication.AddOn.Confirmation,
+          AshAuthentication.Strategy.Auth0,
+          AshAuthentication.Strategy.Custom,
+          AshAuthentication.Strategy.Github,
+          AshAuthentication.Strategy.Google,
+          AshAuthentication.Strategy.MagicLink,
+          AshAuthentication.Strategy.OAuth2,
+          AshAuthentication.Strategy.Oidc,
+          AshAuthentication.Strategy.Password
+        ],
+        Cryptography: [
+          AshAuthentication.HashProvider,
+          AshAuthentication.BcryptProvider,
+          AshAuthentication.Jwt
+        ],
+        Introspection: [
+          AshAuthentication.Info,
+          AshAuthentication.TokenResource.Info,
+          AshAuthentication.UserIdentity.Info
+        ],
+        Utilities: [
+          AshAuthentication.Debug,
+          AshAuthentication.Secret,
+          AshAuthentication.Sender,
+          AshAuthentication.Supervisor
+        ],
+        Plugs: [
+          AshAuthentication.Plug,
+          AshAuthentication.Plug.Helpers
+        ],
+        "Reusable Components": [
+          AshAuthentication.GenerateTokenChange,
+          AshAuthentication.Strategy.Password.HashPasswordChange,
+          AshAuthentication.Strategy.Password.PasswordConfirmationValidation,
+          AshAuthentication.Strategy.Password.PasswordValidation,
+          AshAuthentication.Checks.AshAuthenticationInteraction,
+          AshAuthentication.Password.Plug,
+          ~r/AshAuthentication.Validations/
+        ],
+        Errors: [
+          ~r/^AshAuthentication\.Errors/
+        ],
+        Internals: ~r/.*/
+      ]
+    ]
+  end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do

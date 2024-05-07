@@ -104,6 +104,7 @@ password name \\ :password
 
 Strategy for authenticating using local resources as the source of truth.
 
+
 ### Nested DSLs
  * [resettable](#authentication-strategies-password-resettable)
 
