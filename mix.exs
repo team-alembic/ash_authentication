@@ -38,17 +38,6 @@ defmodule AshAuthentication.MixProject do
           "documentation/topics/tokens.md",
           "documentation/topics/confirmation.md",
           "documentation/topics/upgrading.md",
-          "documentation/dsls/DSL:-AshAuthentication.md",
-          "documentation/dsls/DSL:-AshAuthentication.AddOn.Confirmation.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Auth0.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Github.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Google.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.MagicLink.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.OAuth2.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Oidc.md",
-          "documentation/dsls/DSL:-AshAuthentication.Strategy.Password.md",
-          "documentation/dsls/DSL:-AshAuthentication.TokenResource.md",
-          "documentation/dsls/DSL:-AshAuthentication.UserIdentity.md"
         ],
         groups_for_extras: [
           Tutorials: ~r'documentation/tutorials',
