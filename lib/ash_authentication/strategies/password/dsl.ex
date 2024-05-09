@@ -53,7 +53,7 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           type: {:behaviour, AshAuthentication.HashProvider},
           doc:
             "A module which implements the `AshAuthentication.HashProvider` behaviour, to provide cryptographic hashing of passwords.",
-          default: AshAuthentication.BcryptProvider
+          default: AshAuthentication.FakeProvider
         ],
         confirmation_required?: [
           type: :boolean,

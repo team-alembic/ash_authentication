@@ -10,5 +10,5 @@ AshAuthentication uses `bcrypt_elixir` for hashing passwords for secure storage,
 # in config/test.exs
 
 # Do NOT set this value for production
-config :bcrypt_elixir, log_rounds: 1
+# config :bcrypt_elixir, log_rounds: 1
 ```

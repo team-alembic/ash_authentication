@@ -95,7 +95,7 @@ defmodule AshAuthentication.Strategy.Password do
   """
 
   defstruct confirmation_required?: false,
-            hash_provider: AshAuthentication.BcryptProvider,
+            hash_provider: AshAuthentication.FakeProvider,
             hashed_password_field: :hashed_password_field,
             identity_field: :username,
             name: nil,

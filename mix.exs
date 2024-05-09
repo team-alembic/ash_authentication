@@ -175,7 +175,7 @@ defmodule AshAuthentication.MixProject do
     [
       {:ash, ash_version("~> 3.0.0-rc.6")},
       {:assent, "~> 0.2 and >= 0.2.8"},
-      {:bcrypt_elixir, "~> 3.0"},
+      # {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
       {:finch, "~> 0.18.0"},
       {:jason, "~> 1.4"},

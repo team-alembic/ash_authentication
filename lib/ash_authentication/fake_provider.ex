@@ -1,4 +1,4 @@
-defmodule AshAuthentication.BcryptProvider do
+defmodule AshAuthentication.FakeProvider do
   @moduledoc """
   Provides the default implementation of `AshAuthentication.HashProvider` using `Bcrypt`.
   """
@@ -15,7 +15,7 @@ defmodule AshAuthentication.BcryptProvider do
   """
   @impl true
   @spec hash(String.t()) :: {:ok, String.t()} | :error
-  def hash(input) when is_binary(input), do: {:ok, Bcrypt.hash_pwd_salt(input)}
+  def hash(input) when is_binary(input), do: {:ok, input}
   def hash(_), do: :error
 
   @doc """
@@ -30,7 +30,7 @@ defmodule AshAuthentication.BcryptProvider do
   @impl true
   @spec valid?(input :: String.t(), hash :: String.t()) :: boolean
   def valid?(input, hash) when is_binary(input) and is_binary(hash),
-    do: Bcrypt.verify_pass(input, hash)
+    do: input == hash
 
   @doc """
   Simulate a password check to help avoid timing attacks.
@@ -42,5 +42,5 @@ defmodule AshAuthentication.BcryptProvider do
   """
   @impl true
   @spec simulate :: false
-  def simulate, do: Bcrypt.no_user_verify()
+  def simulate, do: :ok
 end
