@@ -84,7 +84,7 @@ defmodule MyApp.NewUserConfirmationSender do
 end
 ```
 
-Provided you have your authentication routes hooked up either via `AshAuthentication.Plug` or [`AshAuthentication.Phoenix.Router`](`e:ash_authentication_phoenix:AshAuthentication.Phoenix.Router.html`) then the user will be confirmed when the token is submitted.
+Provided you have your authentication routes hooked up either via `AshAuthentication.Plug` or [`AshAuthentication.Phoenix.Router`](https://hexdocs.pm/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html) then the user will be confirmed when the token is submitted.
 
 ## Confirming changes to monitored fields
 

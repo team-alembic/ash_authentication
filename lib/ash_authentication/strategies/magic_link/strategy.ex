@@ -45,4 +45,8 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.MagicLink do
 
   def action(strategy, :sign_in, params, options),
     do: MagicLink.Actions.sign_in(strategy, params, options)
+
+  @doc false
+  @spec tokens_required?(MagicLink.t()) :: true
+  def tokens_required?(_), do: true
 end

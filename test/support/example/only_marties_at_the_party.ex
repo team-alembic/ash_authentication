@@ -118,5 +118,7 @@ defmodule Example.OnlyMartiesAtTheParty do
            )}
       end
     end
+
+    def tokens_required?(_), do: false
   end
 end

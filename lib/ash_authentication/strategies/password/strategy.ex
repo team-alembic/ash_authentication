@@ -94,4 +94,10 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
 
   def action(strategy, :sign_in_with_token, params, options),
     do: Password.Actions.sign_in_with_token(strategy, params, options)
+
+  @doc false
+  @spec tokens_required?(Password.t()) :: boolean
+  def tokens_required?(strategy) when strategy.sign_in_tokens_enabled?, do: true
+  def tokens_required?(strategy) when is_map(strategy.resettable), do: true
+  def tokens_required?(_), do: false
 end

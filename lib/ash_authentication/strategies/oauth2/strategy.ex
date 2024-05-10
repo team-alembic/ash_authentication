@@ -66,4 +66,8 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.OAuth2 do
 
   def action(strategy, :sign_in, params, options),
     do: OAuth2.Actions.sign_in(strategy, params, options)
+
+  @doc false
+  @spec tokens_required?(OAuth2.t()) :: boolean
+  def tokens_required?(_), do: false
 end

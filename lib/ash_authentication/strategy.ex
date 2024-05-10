@@ -125,4 +125,10 @@ defprotocol AshAuthentication.Strategy do
   @spec action(t, action, params :: map, options :: keyword) ::
           :ok | {:ok, Resource.record()} | {:error, any}
   def action(strategy, action_name, params, options \\ [])
+
+  @doc """
+  Indicates that the strategy creates or consumes tokens.
+  """
+  @spec tokens_required?(t) :: boolean
+  def tokens_required?(strategy)
 end

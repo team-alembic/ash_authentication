@@ -51,4 +51,8 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.Confirmation do
   @spec action(Confirmation.t(), action, map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def action(strategy, :confirm, params, options),
     do: Confirmation.Actions.confirm(strategy, params, options)
+
+  @doc false
+  @spec tokens_required?(Confirmation.t()) :: true
+  def tokens_required?(_), do: true
 end
