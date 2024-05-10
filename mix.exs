@@ -6,7 +6,7 @@ defmodule AshAuthentication.MixProject do
   Authentication extension for the Ash Framework.
   """
 
-  @version "4.0.0-rc.7"
+  @version "4.0.0"
 
   def project do
     [
@@ -181,7 +181,7 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 3.0.0-rc.6")},
+      {:ash, ash_version("~> 3.0")},
       {:assent, "~> 0.2 and >= 0.2.8"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
@@ -194,7 +194,7 @@ defmodule AshAuthentication.MixProject do
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 1.0.0-rc.1", only: [:dev, :test]},
       {:ash_json_api, "~> 1.0.0-rc.0", only: [:dev, :test]},
-      {:ash_postgres, "~> 2.0.0-rc.5", optional: true},
+      {:ash_postgres, "~> 2.0", optional: true},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},

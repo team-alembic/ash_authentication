@@ -5,6 +5,31 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [4.0.0](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.7...4.0.0) (2024-05-10)
+### Breaking Changes:
+
+* Sign in tokens are enabled by default for the password strategy.
+
+* Tokens are now enabled by default.
+
+
+
+### Bug Fixes:
+
+* Jwt: Include authentication interaction context when storing tokens.
+
+* Strategy.Password: Reset tokens are single use. (#625)
+
+* Confirmation: Only allow the confirmation token to be used once. (#623)
+
+### Improvements:
+
+* Only require tokens to be enabled when using a strategy which needs them.
+
+* OIDC: Adjust dsl of OIDC reflect assent requirements (#538)
+
+* Use `Ash` functions instead of generated domain functions.
+
 ## [v4.0.0-rc.7](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.6...v4.0.0-rc.7) (2024-05-10)
 
 
