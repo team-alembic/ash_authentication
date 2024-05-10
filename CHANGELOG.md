@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.0-rc.7](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.6...v4.0.0-rc.7) (2024-05-10)
+
+
+
+
+### Bug Fixes:
+
+* Jwt: Include authentication interaction context when storing tokens.
+
+### Improvements:
+
+* Only require tokens to be enabled when using a strategy which needs them.
+
 ## [v4.0.0-rc.6](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.5...v4.0.0-rc.6) (2024-04-11)
 
 

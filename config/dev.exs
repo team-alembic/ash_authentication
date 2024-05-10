@@ -7,7 +7,7 @@ config :git_ops,
   manage_mix_version?: true,
   manage_readme_version: [
     "README.md",
-    "documentation/tutorials/getting-started-with-authentication.md"
+    "documentation/tutorials/get-started.md"
   ],
   version_tag_prefix: "v"
 
