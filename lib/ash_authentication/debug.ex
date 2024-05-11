@@ -15,7 +15,7 @@ defmodule AshAuthentication.Debug do
   def start do
     if enabled?() do
       Logger.warning("""
-      Starting AshAuthentication with `debug_authentication_failres?` turned on.
+      Starting AshAuthentication with `debug_authentication_failures?` turned on.
 
       You should only ever do this in your development environment for
       debugging purposes as it will leak PII into your log.
