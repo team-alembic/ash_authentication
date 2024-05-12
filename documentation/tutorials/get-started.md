@@ -15,7 +15,7 @@ Bring in the `ash_authentication` dependency:
 defp deps()
   [
     # ...
-    {:ash_authentication, "~> 3.11"}
+    {:ash_authentication, "~> 4.0"}
   ]
 end
 ```
@@ -126,7 +126,7 @@ defmodule MyApp.Repo do
   use AshPostgres.Repo, otp_app: :my_app
 
   def installed_extensions do
-    ["uuid-ossp", "citext"]
+    ["ash-functions", "uuid-ossp", "citext"]
   end
 end
 ```
