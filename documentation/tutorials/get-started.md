@@ -186,7 +186,7 @@ defmodule MyApp.Accounts.User do
     tokens do
       token_resource MyApp.Accounts.Token
       signing_secret fn _, _ ->
-        Application.fetch_env!(:my_app, :token_signing_secret)
+        Application.fetch_env(:my_app, :token_signing_secret)
       end
     end
   end
@@ -236,7 +236,7 @@ At its simplest you should so something like this:
 # in lib/my_app/accounts/user.ex
 
 signing_secret fn _, _ ->
-  Application.fetch_env!(:my_app, :token_signing_secret)
+  Application.fetch_env(:my_app, :token_signing_secret)
 end
 ```
 
@@ -247,11 +247,10 @@ Then, specify the secret token in the config file:
 config :my_app, :token_signing_secret, "some_super_secret_random_value"
 ```
 
-> **NOTE:** The signing secret should probably not be committed to source
-control (e.g. Git repo). You can, for example, pass in the secret value as an
-environment variable with `System.fetch_env!/1`. Proper management of secrets
-is outside the scope of this tutorial, but is absolutely crucial to the
-security of your application!
+> ### The signing secret must not be committed to source control {: .warning}
+>
+> Proper management of secrets is outside the scope of this tutorial, but is
+> absolutely crucial to the security of your application.
 
 ## Plugs and routing
 
