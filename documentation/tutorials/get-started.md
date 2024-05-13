@@ -109,7 +109,7 @@ Be sure to add it to the `ash_domains` config in your `config.exs`
 
 ```elixir
 # in config/config.exs
-config :my_app, ash_domains: [..., MyApp.Accounts]
+config :my_app, :ash_domains, [..., MyApp.Accounts]
 ```
 
 Next, let's define our `Token` resource. This resource is needed
