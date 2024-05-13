@@ -186,7 +186,7 @@ defmodule MyApp.Accounts.User do
     tokens do
       token_resource MyApp.Accounts.Token
       signing_secret fn _, _ ->
-        Application.fetch_env(:my_app, :token_signing_secret)
+        Application.fetch_env!(:my_app, :token_signing_secret)
       end
     end
   end
@@ -219,6 +219,39 @@ identifier.
 
 Now we have enough in place to register and sign-in users using the
 `AshAuthentication.Strategy` protocol.
+
+## Token generation
+
+If you have token generation enabled then you need to provide (at minimum) a
+signing secret. As the name implies this should be a secret. AshAuthentication
+provides a mechanism for looking up secrets at runtime using the
+`AshAuthentication.Secret` behaviour. To save you a click, this means that you
+can set your token signing secret using either a static string (please don't!),
+a two-arity anonymous function, or a module which implements the
+`AshAuthentication.Secret` behaviour.
+
+At its simplest you should so something like this:
+
+```elixir
+# in lib/my_app/accounts/user.ex
+
+signing_secret fn _, _ ->
+  Application.fetch_env!(:my_app, :token_signing_secret)
+end
+```
+
+Then, specify the secret token in the config file:
+
+```elixir
+# in config/config.exs
+config :my_app, :token_signing_secret, "some_super_secret_random_value"
+```
+
+> **NOTE:** The signing secret should probably not be committed to source
+control (e.g. Git repo). You can, for example, pass in the secret value as an
+environment variable with `System.fetch_env!/1`. Proper management of secrets
+is outside the scope of this tutorial, but is absolutely crucial to the
+security of your application!
 
 ## Plugs and routing
 
@@ -303,26 +336,6 @@ defmodule MyApp.Application do
     ]
     # ...
   end
-end
-```
-
-## Token generation
-
-If you have token generation enabled then you need to provide (at minimum) a
-signing secret. As the name implies this should be a secret. AshAuthentication
-provides a mechanism for looking up secrets at runtime using the
-`AshAuthentication.Secret` behaviour. To save you a click, this means that you
-can set your token signing secret using either a static string (please don't!),
-a two-arity anonymous function, or a module which implements the
-`AshAuthentication.Secret` behaviour.
-
-At its simplest you should so something like this:
-
-```elixir
-# in lib/my_app/accounts/user.ex
-
-signing_secret fn _, _ ->
-  Application.fetch_env(:my_app, :token_signing_secret)
 end
 ```
 
