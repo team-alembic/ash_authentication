@@ -80,7 +80,7 @@ defmodule AshAuthentication.Verifier do
          )}
 
       {[password | _], false}
-      when is_struct(password, Password) and is_map(password.sign_in_tokens_enabled?) ->
+      when is_struct(password, Password) and password.sign_in_tokens_enabled? ->
         {:error,
          DslError.exception(
            path: [:authentication, :tokens, :enabled?],
