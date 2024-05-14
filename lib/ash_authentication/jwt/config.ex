@@ -8,7 +8,7 @@ defmodule AshAuthentication.Jwt.Config do
   """
 
   alias Ash.Resource
-  alias AshAuthentication.{Info, Jwt, TokenResource}
+  alias AshAuthentication.{Info, TokenResource}
   alias Joken.{Config, Signer}
 
   @doc """
@@ -118,12 +118,9 @@ defmodule AshAuthentication.Jwt.Config do
   @spec token_signer(Resource.t(), keyword) :: Signer.t()
   def token_signer(resource, opts \\ []) do
     algorithm =
-      with :error <- Keyword.fetch(opts, :signing_algorithm),
-           :error <- Info.authentication_tokens_signing_algorithm(resource) do
-        Jwt.default_algorithm()
-      else
-        {:ok, algorithm} -> algorithm
-      end
+      Keyword.get_lazy(opts, :signing_algorithm, fn ->
+        Info.authentication_tokens_signing_algorithm!(resource)
+      end)
 
     signing_secret =
       with :error <- Keyword.fetch(opts, :signing_secret),
@@ -156,11 +153,8 @@ defmodule AshAuthentication.Jwt.Config do
 
   defp token_lifetime(resource) do
     resource
-    |> Info.authentication_tokens_token_lifetime()
-    |> case do
-      {:ok, lifetime} -> lifetime_to_seconds(lifetime)
-      :error -> Jwt.default_lifetime_hrs() * 60 * 60
-    end
+    |> Info.authentication_tokens_token_lifetime!()
+    |> lifetime_to_seconds()
   end
 
   defp lifetime_to_seconds({seconds, :seconds}), do: seconds
