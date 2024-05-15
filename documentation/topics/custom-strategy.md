@@ -272,7 +272,7 @@ indicates Ash Authentication whether your strategy creates or consumes any
 tokens. Since our strategy does not, we can simply return false:
 
 ```elixir
-def token_required?(_), do: false
+def tokens_required?(_), do: false
 ```
 
 ## Bonus round - transformers and verifiers
