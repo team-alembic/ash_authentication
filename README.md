@@ -20,7 +20,7 @@ Welcome! Here you will find everything you need to know to get started with and 
 
 ---
 
-[**How-to**](#how-to) guides are **goal-oriented** recipes for accomplishing specific tasks. These are also good to browse to get an idea of how Ash Authentication works and what is possible with it.
+[**How-to**](#how-to) (**WIP**) guides are **goal-oriented** recipes for accomplishing specific tasks. These are also good to browse to get an idea of how Ash Authentication works and what is possible with it.
 
 ---
 
@@ -43,12 +43,13 @@ Welcome! Here you will find everything you need to know to get started with and 
 ---
 
 ## How To
+https://github.com/team-alembic/ash_authentication/blob/main/documentation/tutorials/auth0.md
 
-- [Authenticate with Auth0](documentation/how-to/auth0.md)
-- [Authenticate with GitHub](documentation/how-to/github.md)
-- [Authenticate with Google](documentation/how-to/google.md)
-- [Authenticate with Magic Links](documentation/how-to/magic-links.md)
-- [Confirmation](documentation/how-to/confirmation.md)
+- [Authenticate with Auth0](documentation/tutorials/auth0.md)
+- [Authenticate with GitHub](documentation/tutorials/github.md)
+- [Authenticate with Google](documentation/tutorials/google.md)
+- [Authenticate with Magic Links](documentation/tutorials/magic-links.md)
+- [Confirmation](documentation/tutorials/confirmation.md)
 
 ---
 
