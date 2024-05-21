@@ -38,8 +38,7 @@ Welcome! Here you will find everything you need to know to get started with and 
 
 ---
 
-## How To
-https://github.com/team-alembic/ash_authentication/blob/main/documentation/tutorials/auth0.md
+## Tutorials
 
 - [Authenticate with Auth0](documentation/tutorials/auth0.md)
 - [Authenticate with GitHub](documentation/tutorials/github.md)
