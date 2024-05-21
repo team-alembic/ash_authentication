@@ -20,10 +20,6 @@ Welcome! Here you will find everything you need to know to get started with and 
 
 ---
 
-[**How-to**](#how-to) (**WIP**) guides are **goal-oriented** recipes for accomplishing specific tasks. These are also good to browse to get an idea of how Ash Authentication works and what is possible with it.
-
----
-
 [**Reference**](#reference) documentation is produced automatically from our source code. It comes in the form of module documentation and DSL documentation. This documentation is **information-oriented**. Use the sidebar and the search bar to find relevant reference information.
 
 ## Tutorials
