@@ -24,7 +24,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
       assert MapSet.equal?(phases, MapSet.new(~w[register sign_in reset_request reset]a))
     end
 
-    test "it returns the correct phases when the strategy doesn't suport resetting" do
+    test "it returns the correct phases when the strategy doesn't support resetting" do
       strategy = %Password{}
 
       phases =
@@ -48,7 +48,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
       assert MapSet.equal?(actions, MapSet.new(~w[register sign_in reset_request reset]a))
     end
 
-    test "it returns the correct actions when the strategy doesn't suport resetting" do
+    test "it returns the correct actions when the strategy doesn't support resetting" do
       strategy = %Password{}
 
       actions =

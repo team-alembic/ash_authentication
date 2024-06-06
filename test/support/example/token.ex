@@ -9,4 +9,8 @@ defmodule Example.Token do
     table("tokens")
     repo(Example.Repo)
   end
+
+  actions do
+    defaults [:read, :destroy]
+  end
 end

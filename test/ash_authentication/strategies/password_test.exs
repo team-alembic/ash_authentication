@@ -13,6 +13,8 @@ defmodule AshAuthentication.Strategy.PasswordTest do
     Strategy.Password.Resettable
   }
 
+  alias Example.User
+
   doctest Password
 
   describe "reset_token_for/1" do
@@ -24,6 +26,41 @@ defmodule AshAuthentication.Strategy.PasswordTest do
       assert {:ok, token} = Password.reset_token_for(strategy, user)
       assert {:ok, claims} = Jwt.peek(token)
       assert claims["act"] == to_string(resettable.password_reset_action_name)
+    end
+  end
+
+  describe "regressions" do
+    test "only one user token is generated for a new user registration" do
+      user = build_user()
+      subject = AshAuthentication.user_to_subject(user)
+
+      tokens = Example.Token |> Ash.read!() |> Enum.group_by(& &1.purpose)
+      assert [%{subject: ^subject}] = tokens["user"]
+
+      token_types = tokens |> Map.keys() |> MapSet.new()
+      assert token_types == MapSet.new(["user", "confirm"])
+    end
+
+    test "only one token is generated for a user sign-in" do
+      user = build_user()
+      subject = AshAuthentication.user_to_subject(user)
+
+      Example.Token |> Ash.bulk_destroy!(:destroy, %{})
+
+      strategy = AshAuthentication.Info.strategy!(User, :password)
+
+      {:ok, _signed_in_user} =
+        Strategy.action(
+          strategy,
+          :sign_in,
+          %{
+            username: user.username,
+            password: user.__metadata__.password
+          },
+          context: [token_type: :sign_in]
+        )
+
+      assert [%{subject: ^subject, purpose: "sign_in"}] = Example.Token |> Ash.read!()
     end
   end
 end
