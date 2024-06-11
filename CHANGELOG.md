@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.1](https://github.com/team-alembic/ash_authentication/compare/v4.0.0...v4.0.1) (2024-06-11)
+
+
+
+
+### Bug Fixes:
+
+* no need to `allow_nil_input` for an unaccepted field
+
+* correctly generate sign-in tokens when requested.
+
+* ensure tenant is set when revoking tokens and on changeset for updating
+
+* broken links in readme (#692)
+
+* broken links
+
+* bug in tokens required verifier.
+
 ## [4.0.0](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.7...4.0.0) (2024-05-10)
 ### Breaking Changes:
 
