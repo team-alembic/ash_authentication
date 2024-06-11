@@ -193,7 +193,6 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       arguments: arguments,
       changes: changes,
       metadata: metadata,
-      allow_nil_input: [strategy.hashed_password_field],
       description: "Register a new user with a username and password."
     )
   end
