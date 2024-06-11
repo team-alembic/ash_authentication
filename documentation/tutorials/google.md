@@ -22,11 +22,10 @@ defmodule MyApp.Accounts.User do
 
   authentication do
     strategies do
-      oauth2 :google do
+      google do
         client_id MyApp.Secrets
         redirect_uri MyApp.Secrets
-        client_secret MyApp.Secrets end
-        base_url MyApp.Secrets
+        client_secret MyApp.Secrets
       end
     end
   end
