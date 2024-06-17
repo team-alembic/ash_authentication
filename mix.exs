@@ -192,7 +192,7 @@ defmodule AshAuthentication.MixProject do
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
-      {:ash_graphql, "~> 1.1.0", only: [:dev, :test]},
+      {:ash_graphql, "~> 1.2.0", only: [:dev, :test]},
       {:ash_json_api, "~> 1.2.0", only: [:dev, :test]},
       {:ash_postgres, "~> 2.0", optional: true},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
