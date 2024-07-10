@@ -82,7 +82,7 @@ defmodule MyApp.NewUserConfirmationSender do
         If it was you, then please click the link below to confirm your identity.  If you did not initiate this request then please ignore this email.
       </p>
       <p>
-        <a href="https://myapp.inc/auth/user/confirm_new_user?#{URI.encode_query(token: @token)}">Click here to confirm your account</a>
+        <a href="https://myapp.inc/auth/user/confirm_new_user?#{URI.encode_query(token: token)}">Click here to confirm your account</a>
       </p>
     """)
     |> MyApp.Mailer.deliver()
@@ -141,7 +141,7 @@ defmodule MyApp.NewUserConfirmationSender do
         You recently changed your email address on <a href="https://myapp.inc">MyApp</a>.  Please confirm it.
       </p>
       <p>
-        <a href="https://myapp.inc/auth/user/confirm_change?#{URI.encode_query(token: @token)}">Click here to confirm your new email address</a>
+        <a href="https://myapp.inc/auth/user/confirm_change?#{URI.encode_query(token: token)}">Click here to confirm your new email address</a>
       </p>
     """)
     |> MyApp.Mailer.deliver()
