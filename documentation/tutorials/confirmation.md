@@ -67,6 +67,7 @@ Next we will define our "sender" module using `Swoosh`:
 ```elixir
 defmodule MyApp.NewUserConfirmationSender do
   use AshAuthentication.Sender
+  import Swoosh.Email
 
   def send(user, token, _opts) do
     new()
@@ -126,6 +127,7 @@ Next, let's define our new sender:
 ```elixir
 defmodule MyApp.NewUserConfirmationSender do
   use AshAuthentication.Sender
+  import Swoosh.Email
 
   def send(user, token, _opts) do
     new()
