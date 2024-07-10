@@ -170,7 +170,8 @@ defmodule MyApp.Accounts.User do
 
     update :confirm_change do
       argument :confirm, :string, allow_nil?: false, public?: true
-
+      accept [:email]
+      require_atomic? false
       change AshAuthentication.AddOn.Confirmation.ConfirmChange
       change AshAuthentication.GenerateTokenChange
       change MyApp.UpdateCrmSystem, only_when_valid?: true
