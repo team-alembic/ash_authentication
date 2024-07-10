@@ -71,7 +71,7 @@ defmodule MyApp.NewUserConfirmationSender do
 
   def send(user, token, _opts) do
     new()
-    |> to(user.email)
+    |> to(to_string(user.email))
     |> from({"MyApp Admin", "support@myapp.inc"})
     |> subject("Confirm your email address")
     |> html_body("""
@@ -131,7 +131,7 @@ defmodule MyApp.NewUserConfirmationSender do
 
   def send(user, token, _opts) do
     new()
-    |> to(user.email)
+    |> to(to_string(user.email))
     |> from({"MyApp Admin", "support@myapp.inc"})
     |> subject("Confirm your new email address")
     |> html_body("""
