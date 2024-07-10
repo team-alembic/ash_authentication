@@ -58,29 +58,10 @@ end
 ```
 Next we will have to generate and run migrations to add confirmed_at column to user resource
 
+```bash
+mix ash.codegen account_confirmation
 ```
-~ mix ash.codegen account_confirmation
-Getting extensions in current project...
-Running codegen for AshPostgres.DataLayer...
 
-Extension Migrations:
-No extensions to install
-
-Generating Tenant Migrations:
-
-Generating Migrations:
-* creating priv/repo/migrations/20240630055019_account_confirmation.exs
-~ mix ash.migrate
-Getting extensions in current project...
-Running migration for AshPostgres.DataLayer...
-
-13:51:54.892 [info] == Running 20240630055019 App.Repo.Migrations.AccountConfirmation.up/0 forward
-
-13:51:54.894 [info] alter table users
-
-13:51:54.900 [info] == Migrated 20240630055019 in 0.0s
-
-```
 Next we will define our "sender" module using `Swoosh`:
 
 ```elixir
