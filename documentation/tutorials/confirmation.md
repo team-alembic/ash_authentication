@@ -56,6 +56,11 @@ defmodule MyApp.Accounts.User do
   end
 end
 ```
+Next we will have to generate and run migrations to add confirmed_at column to user resource
+
+```bash
+mix ash.codegen account_confirmation
+```
 
 Next we will define our "sender" module using `Swoosh`:
 
