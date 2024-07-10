@@ -156,7 +156,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
          :ok <- validate_action_argument_option(action, :confirm, :type, [Type.String]),
          :ok <- validate_action_has_change(action, GenerateTokenChange),
          :ok <- validate_action_option(action, :require_atomic?, [false]) do
-      accept_fields = MapSet.new(action.accept)
+      accept_fields = MapSet.new(action.accept || [])
 
       strategy.monitor_fields
       |> MapSet.new()
