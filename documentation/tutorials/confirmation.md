@@ -125,7 +125,7 @@ end
 Next, let's define our new sender:
 
 ```elixir
-defmodule MyApp.NewUserConfirmationSender do
+defmodule MyApp.EmailChangeConfirmationSender do
   use AshAuthentication.Sender
   import Swoosh.Email
 
