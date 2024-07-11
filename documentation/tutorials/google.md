@@ -7,6 +7,7 @@ First you'll need a registered application in [Google Cloud](https://console.clo
 1. On the Cloud's console **Quick access** section select **APIs & Services**, then **Credentials**
 2. Click on **+ CREATE CREDENTIALS** and from the dropdown select **OAuth client ID**
 3. From the google developers console, we will need: `client_id` & `client_secret`
+4. Enter your callback uri under **Authorized redirect URIs**. E.g. `http://localhost:4000/auth/user/google/callback`.
 
 Next we configure our resource to use google credentials:
 
@@ -47,7 +48,7 @@ defmodule MyApp.Accounts.User do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
       upsert? true
-      upsert_identity :email
+      upsert_identity :unique_email
 
       change AshAuthentication.GenerateTokenChange
 
@@ -65,4 +66,24 @@ defmodule MyApp.Accounts.User do
   # ...
 
 end
+```
+
+Ensure you set the `hashed_password` to `allow_nil?` if you are also using the password strategy.
+
+```elixir
+defmodule MyApp.Accounts.User do
+  # ...
+  attributes do
+    # ...
+    attribute :hashed_password, :string, allow_nil?: true, sensitive?: true
+  end
+  # ...
+end
+```
+
+And generate and run migrations in that case.
+
+```bash
+mix ash.codegen make_hashed_password_nullable
+mix ash.migrate
 ```

@@ -117,7 +117,7 @@ defmodule MyApp.Accounts.User do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
       upsert? true
-      upsert_identity :email
+      upsert_identity :unique_email
 
       # Required if you have token generation enabled.
       change AshAuthentication.GenerateTokenChange
@@ -136,4 +136,24 @@ defmodule MyApp.Accounts.User do
   # ...
 
 end
+```
+
+Ensure you set the `hashed_password` to `allow_nil?` if you are also using the password strategy.
+
+```elixir
+defmodule MyApp.Accounts.User do
+  # ...
+  attributes do
+    # ...
+    attribute :hashed_password, :string, allow_nil?: true, sensitive?: true
+  end
+  # ...
+end
+```
+
+And generate and run migrations in that case.
+
+```bash
+mix ash.codegen make_hashed_password_nullable
+mix ash.migrate
 ```
