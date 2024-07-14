@@ -67,10 +67,11 @@ Next we will define our "sender" module using `Swoosh`:
 ```elixir
 defmodule MyApp.NewUserConfirmationSender do
   use AshAuthentication.Sender
+  import Swoosh.Email
 
-  def send(user, token, _opts) do
+  def send(user, confirm, _opts) do
     new()
-    |> to(user.email)
+    |> to(to_string(user.email))
     |> from({"MyApp Admin", "support@myapp.inc"})
     |> subject("Confirm your email address")
     |> html_body("""
@@ -81,7 +82,7 @@ defmodule MyApp.NewUserConfirmationSender do
         If it was you, then please click the link below to confirm your identity.  If you did not initiate this request then please ignore this email.
       </p>
       <p>
-        <a href="https://myapp.inc/auth/user/confirm_new_user?#{URI.encode_query(token: @token)}">Click here to confirm your account</a>
+        <a href="https://myapp.inc/auth/user/confirm_new_user?#{URI.encode_query(confirm: confirm)}">Click here to confirm your account</a>
       </p>
     """)
     |> MyApp.Mailer.deliver()
@@ -124,12 +125,13 @@ end
 Next, let's define our new sender:
 
 ```elixir
-defmodule MyApp.NewUserConfirmationSender do
+defmodule MyApp.EmailChangeConfirmationSender do
   use AshAuthentication.Sender
+  import Swoosh.Email
 
   def send(user, token, _opts) do
     new()
-    |> to(user.email)
+    |> to(to_string(user.email))
     |> from({"MyApp Admin", "support@myapp.inc"})
     |> subject("Confirm your new email address")
     |> html_body("""
@@ -139,7 +141,7 @@ defmodule MyApp.NewUserConfirmationSender do
         You recently changed your email address on <a href="https://myapp.inc">MyApp</a>.  Please confirm it.
       </p>
       <p>
-        <a href="https://myapp.inc/auth/user/confirm_change?#{URI.encode_query(token: @token)}">Click here to confirm your new email address</a>
+        <a href="https://myapp.inc/auth/user/confirm_change?#{URI.encode_query(token: token)}">Click here to confirm your new email address</a>
       </p>
     """)
     |> MyApp.Mailer.deliver()
@@ -168,7 +170,8 @@ defmodule MyApp.Accounts.User do
 
     update :confirm_change do
       argument :confirm, :string, allow_nil?: false, public?: true
-
+      accept [:email]
+      require_atomic? false
       change AshAuthentication.AddOn.Confirmation.ConfirmChange
       change AshAuthentication.GenerateTokenChange
       change MyApp.UpdateCrmSystem, only_when_valid?: true
