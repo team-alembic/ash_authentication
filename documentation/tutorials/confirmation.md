@@ -69,7 +69,7 @@ defmodule MyApp.NewUserConfirmationSender do
   use AshAuthentication.Sender
   import Swoosh.Email
 
-  def send(user, token, _opts) do
+  def send(user, confirm, _opts) do
     new()
     |> to(to_string(user.email))
     |> from({"MyApp Admin", "support@myapp.inc"})
@@ -82,7 +82,7 @@ defmodule MyApp.NewUserConfirmationSender do
         If it was you, then please click the link below to confirm your identity.  If you did not initiate this request then please ignore this email.
       </p>
       <p>
-        <a href="https://myapp.inc/auth/user/confirm_new_user?#{URI.encode_query(token: token)}">Click here to confirm your account</a>
+        <a href="https://myapp.inc/auth/user/confirm_new_user?#{URI.encode_query(confirm: confirm)}">Click here to confirm your account</a>
       </p>
     """)
     |> MyApp.Mailer.deliver()
