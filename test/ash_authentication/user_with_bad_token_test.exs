@@ -13,16 +13,6 @@ defmodule AshAuthentication.UserWithBadTokenTest do
           validate_domain_inclusion?: false,
           domain: Example
 
-        require Logger
-
-        @type t :: %__MODULE__{
-                id: Ecto.UUID.t(),
-                email: String.t(),
-                hashed_password: String.t(),
-                created_at: DateTime.t(),
-                updated_at: DateTime.t()
-              }
-
         attributes do
           uuid_primary_key :id, writable?: true
           attribute :email, :ci_string, allow_nil?: false, public?: true
@@ -34,10 +24,8 @@ defmodule AshAuthentication.UserWithBadTokenTest do
         authentication do
           tokens do
             enabled? true
-            store_all_tokens? true
-            require_token_presence_for_authentication? true
             token_resource BadToken
-            signing_secret &get_config/2
+            signing_secret fn _, _ -> :dummy end
           end
 
           strategies do
@@ -45,11 +33,7 @@ defmodule AshAuthentication.UserWithBadTokenTest do
               identity_field :email
 
               resettable do
-                sender fn user, token, _opts ->
-                  Logger.debug(
-                    "Password reset request for user #{user.username}, token #{inspect(token)}"
-                  )
-                end
+                sender fn _user, _token, _opts -> :noop end
               end
             end
           end
@@ -64,17 +48,8 @@ defmodule AshAuthentication.UserWithBadTokenTest do
         end
 
         postgres do
-          table "user_with_token_required"
-          repo(Example.Repo)
-        end
-
-        def get_config(path, _resource) do
-          value =
-            :ash_authentication
-            |> Application.get_all_env()
-            |> get_in(path)
-
-          {:ok, value}
+          table "user_with_bad_token_required"
+          repo Example.Repo
         end
       end
     end
