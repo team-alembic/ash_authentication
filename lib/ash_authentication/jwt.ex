@@ -54,6 +54,8 @@ defmodule AshAuthentication.Jwt do
   specified in integer positive hours.
   """
 
+  require Logger
+
   alias Ash.Resource
   alias AshAuthentication.{Info, Jwt.Config, TokenResource}
 
@@ -113,7 +115,9 @@ defmodule AshAuthentication.Jwt do
          :ok <- maybe_store_token(token, resource, user, purpose, action_opts) do
       {:ok, token, claims}
     else
-      {:error, _reason} -> :error
+      {:error, reason} ->
+        Logger.error("Failed to generate token for user: #{inspect reason, pretty: true}")
+        :error
     end
   end
 
