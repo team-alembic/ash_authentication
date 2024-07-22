@@ -168,7 +168,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
 
       log =
         capture_log(fn ->
-          assert :ok = Actions.reset_request(strategy, %{"username" => user.username()}, [])
+          assert :ok = Actions.reset_request(strategy, %{"username" => user.username}, [])
         end)
 
       assert log =~ ~r/password reset request for user #{user.username}/i
