@@ -291,7 +291,10 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           strategy_module: module,
           token_url: secret,
           trusted_audiences: nil | [binary],
-          user_url: secret
+          user_url: secret,
+          team_id: secret,
+          private_key_id: secret,
+          private_key_path: secret
         }
 
   @doc false

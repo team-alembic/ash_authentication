@@ -102,7 +102,10 @@ spark_locals_without_parens = [
   user_id_attribute_name: 1,
   user_relationship_name: 1,
   user_resource: 1,
-  user_url: 1
+  user_url: 1,
+  team_id: 1,
+  private_key_id: 1,
+  private_key_path: 1
 ]
 
 [
