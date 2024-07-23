@@ -103,6 +103,7 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.Auth0,
     AshAuthentication.Strategy.Github,
     AshAuthentication.Strategy.Google,
+    AshAuthentication.Strategy.Apple,
     AshAuthentication.Strategy.MagicLink,
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,

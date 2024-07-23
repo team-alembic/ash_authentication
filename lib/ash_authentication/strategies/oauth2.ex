@@ -242,7 +242,10 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     strategy_module: __MODULE__,
     token_url: nil,
     trusted_audiences: nil,
-    user_url: nil
+    user_url: nil,
+    team_id: nil,
+    private_key_id: nil,
+    private_key_path: nil
   ]
 
   defstruct @struct_fields
