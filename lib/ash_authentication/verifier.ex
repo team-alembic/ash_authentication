@@ -109,11 +109,16 @@ defmodule AshAuthentication.Verifier do
     end
   end
 
+  @spec token_resource?(any()) :: {boolean(), any()}
+  defp token_resource?(module) do
+    {Spark.Dsl.is?(module, Ash.Resource), module}
+  end
+
   defp validate_token_resource(dsl_state) do
     if_tokens_enabled(dsl_state, fn dsl_state ->
       with {:ok, resource} when is_truthy(resource) <-
              Info.authentication_tokens_token_resource(dsl_state),
-           true <- is_atom(resource) do
+           {true, _resource} <- token_resource?(resource) do
         :ok
       else
         {:ok, falsy} when is_falsy(falsy) ->
@@ -122,11 +127,11 @@ defmodule AshAuthentication.Verifier do
         {:error, reason} ->
           {:error, reason}
 
-        false ->
+        {false, bad_token_resource} ->
           {:error,
            DslError.exception(
              path: [:authentication, :tokens, :token_resource],
-             message: "is not a valid module name"
+             message: "`#{inspect(bad_token_resource)}` is not a valid token resource module name"
            )}
       end
     end)
