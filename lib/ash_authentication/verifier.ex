@@ -109,23 +109,16 @@ defmodule AshAuthentication.Verifier do
     end
   end
 
-  @spec is_token_resource(any()) :: boolean() | {boolean(), any()}
-  defp is_token_resource(module) when is_atom(module) do
-    with true <- function_exported?(module, :spark_is, 0),
-         Ash.Resource <- module.spark_is() do
-      true
-    else
-      _ ->
-        {false, module}
-    end
+  @spec token_resource?(any()) :: {boolean(), any()}
+  defp token_resource?(module) do
+    {Spark.Dsl.is?(module, Ash.Resource), module}
   end
-  defp is_token_resource(_other), do: false
 
   defp validate_token_resource(dsl_state) do
     if_tokens_enabled(dsl_state, fn dsl_state ->
       with {:ok, resource} when is_truthy(resource) <-
              Info.authentication_tokens_token_resource(dsl_state),
-           true <- is_token_resource(resource) do
+           {true, _resource} <- token_resource?(resource) do
         :ok
       else
         {:ok, falsy} when is_falsy(falsy) ->
@@ -138,7 +131,7 @@ defmodule AshAuthentication.Verifier do
           {:error,
            DslError.exception(
              path: [:authentication, :tokens, :token_resource],
-             message: "`#{bad_token_resource |> bad_token_resource_to_string()}` is not a valid token resource module name"
+             message: "`#{inspect(bad_token_resource)}` is not a valid token resource module name"
            )}
       end
     end)
@@ -150,19 +143,5 @@ defmodule AshAuthentication.Verifier do
     else
       :ok
     end
-  end
-
-  # I'm sure this has already been done somewhere else in the Sparkiverse,
-  # so maybe this can be removed and replaced by whatever Spark usually uses
-  # when logging module names?
-  defp bad_token_resource_to_string(module) when is_atom(module) do
-    module
-    |> to_string()
-    |> String.split(".")
-    |> tl()
-    |> Enum.join(".")
-  end
-  defp bad_token_resource_to_string(module) when is_binary(module) do
-    module
   end
 end
