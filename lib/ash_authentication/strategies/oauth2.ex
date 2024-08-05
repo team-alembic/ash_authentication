@@ -232,6 +232,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     openid_configuration_uri: nil,
     openid_configuration: nil,
     private_key: nil,
+    private_key_id: nil,
+    private_key_path: nil,
     provider: :oauth2,
     redirect_uri: nil,
     register_action_name: nil,
@@ -240,12 +242,10 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     sign_in_action_name: nil,
     site: nil,
     strategy_module: __MODULE__,
+    team_id: nil,
     token_url: nil,
     trusted_audiences: nil,
-    user_url: nil,
-    team_id: nil,
-    private_key_id: nil,
-    private_key_path: nil
+    user_url: nil
   ]
 
   defstruct @struct_fields
