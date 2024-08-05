@@ -116,7 +116,7 @@ defmodule AshAuthentication.Jwt do
       {:ok, token, claims}
     else
       {:error, reason} ->
-        Logger.error("Failed to generate token for user: #{inspect reason, pretty: true}")
+        Logger.error("Failed to generate token for user: #{inspect(reason, pretty: true)}")
         :error
     end
   end
