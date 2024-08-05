@@ -281,6 +281,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           openid_configuration_uri: nil | binary,
           openid_configuration: nil | map,
           private_key: secret,
+          private_key_id: secret,
+          private_key_path: secret,
           provider: atom,
           redirect_uri: secret,
           register_action_name: atom,
@@ -289,12 +291,10 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           sign_in_action_name: atom,
           site: secret,
           strategy_module: module,
+          team_id: secret,
           token_url: secret,
           trusted_audiences: nil | [binary],
-          user_url: secret,
-          team_id: secret,
-          private_key_id: secret,
-          private_key_path: secret
+          user_url: secret
         }
 
   @doc false
