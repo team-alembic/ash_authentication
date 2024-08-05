@@ -82,13 +82,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     config =
       strategy
       |> Map.take(@raw_config_attrs)
-      |> Map.put(:http_adapter, {Finch, supervisor: AshAuthentication.Finch})
 
     with {:ok, config} <- add_secret_value(config, strategy, :base_url),
          {:ok, config} <- add_secret_value(config, strategy, :authorize_url, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :client_id, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :client_secret, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
+         {:ok, config} <- add_http_adapter(config),
          {:ok, config} <-
            add_secret_value(
              config,
@@ -199,5 +199,15 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp add_http_adapter(config) do
+    http_adapter = Application.get_env(
+      :ash_authentication, 
+      :http_adapter, 
+      {Finch, supervisor: AshAuthentication.Finch}
+    )
+
+    {:ok, Map.put(config, :http_adapter, http_adapter)}
   end
 end
