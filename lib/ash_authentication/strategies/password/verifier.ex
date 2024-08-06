@@ -11,7 +11,8 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
   @spec verify(Password.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
     with :ok <- validate_behaviour(strategy.hash_provider, HashProvider),
-         :ok <- validate_tokens_enabled_for_sign_in_tokens(dsl_state, strategy) do
+         :ok <- validate_tokens_enabled_for_sign_in_tokens(dsl_state, strategy),
+         :ok <- validate_tokens_enabled_for_resettable(dsl_state, strategy) do
       maybe_validate_resettable_sender(dsl_state, strategy)
     end
   end
@@ -68,6 +69,41 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
   end
 
   defp validate_tokens_enabled_for_sign_in_tokens(_, _), do: :ok
+
+  defp validate_tokens_enabled_for_resettable(dsl_state, %{resettable: resettable, name: name})
+       when is_struct(resettable) do
+    resource = Verifier.get_persisted(dsl_state, :module)
+
+    if Info.authentication_tokens_enabled?(dsl_state) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         module: resource,
+         path: [
+           :authentication,
+           :strategies,
+           :password,
+           name,
+           :resettable
+         ],
+         message: """
+         The `resettable` option requires that tokens are enabled for your resource. For example:
+
+
+            authentication do
+              ...
+
+              tokens do
+                enabled? true
+              end
+            end
+         """
+       )}
+    end
+  end
+
+  defp validate_tokens_enabled_for_resettable(_, _), do: :ok
 
   defp maybe_validate_resettable_sender(dsl_state, %{resettable: resettable})
        when is_struct(resettable) do

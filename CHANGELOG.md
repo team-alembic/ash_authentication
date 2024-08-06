@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.2](https://github.com/team-alembic/ash_authentication/compare/v4.0.1...v4.0.2) (2024-08-05)
+
+
+
+
+### Bug Fixes:
+
+* only pass the "token" parameter to reset with token action (#748)
+
+* handle case where `action.accept` is `nil`
+
+### Improvements:
+
+* validate that tokens are enabled when password resets are enabled. (#758)
+
+* compile-time check to make sure that the configured `token_resource` is an Ash.Resource (#749)
+
+* Tokens: improved compile-time validation of the token_resource option of the tokens DSL by checking that the passed value is an Ash.Resource.
+
+* Tokens: removed unnecessary stuff from the test file.
+
+* Tokens: fixed credo warning and changed some things after PR feedback
+
 ## [v4.0.1](https://github.com/team-alembic/ash_authentication/compare/v4.0.0...v4.0.1) (2024-06-11)
 
 
