@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
       describe: "OAuth2 authentication",
       args: [{:optional, :name, :oauth2}],
       target: OAuth2,
-      modules: [
+      no_depend_modules: [
         :authorize_url,
         :base_url,
         :client_id,

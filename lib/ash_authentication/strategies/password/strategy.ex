@@ -43,6 +43,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
 
   @doc false
   @spec method_for_phase(Password.t(), phase) :: Strategy.http_method()
+  def method_for_phase(_, phase) when phase in [:sign_in_with_token], do: :get
   def method_for_phase(_, _), do: :post
 
   @doc """

@@ -202,11 +202,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   end
 
   defp add_http_adapter(config) do
-    http_adapter = Application.get_env(
-      :ash_authentication, 
-      :http_adapter, 
-      {Finch, supervisor: AshAuthentication.Finch}
-    )
+    http_adapter =
+      Application.get_env(
+        :ash_authentication,
+        :http_adapter,
+        {Finch, supervisor: AshAuthentication.Finch}
+      )
 
     {:ok, Map.put(config, :http_adapter, http_adapter)}
   end

@@ -41,7 +41,7 @@ defmodule AshAuthentication.Dsl do
       %Section{
         name: :authentication,
         describe: "Configure authentication for this resource",
-        modules: [:domain],
+        no_depend_modules: [:domain],
         schema: [
           subject_name: [
             type: :atom,
@@ -70,7 +70,7 @@ defmodule AshAuthentication.Dsl do
           %Section{
             name: :tokens,
             describe: "Configure JWT settings for this resource",
-            modules: [:token_resource],
+            no_depend_modules: [:token_resource, :signing_secret],
             schema: [
               enabled?: [
                 type: :boolean,
