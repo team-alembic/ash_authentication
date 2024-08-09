@@ -86,11 +86,13 @@ defmodule AshAuthentication.Plug.Helpers do
                    "jti" => jti,
                    "purpose" => "user"
                  },
-                 tenant: Ash.PlugHelpers.get_tenant(conn)
+                 tenant: Ash.PlugHelpers.get_tenant(conn),
+                 context: Ash.PlugHelpers.get_context(conn)
                ),
              {:ok, user} <-
                AshAuthentication.subject_to_user(subject, resource,
-                 tenant: Ash.PlugHelpers.get_tenant(conn)
+                 tenant: Ash.PlugHelpers.get_tenant(conn),
+                 context: Ash.PlugHelpers.get_context(conn)
                ) do
           Conn.assign(conn, current_subject_name, user)
         else
@@ -138,7 +140,8 @@ defmodule AshAuthentication.Plug.Helpers do
              validate_token(resource, jti),
            {:ok, user} <-
              AshAuthentication.subject_to_user(subject, resource,
-               tenant: Ash.PlugHelpers.get_tenant(conn)
+               tenant: Ash.PlugHelpers.get_tenant(conn),
+               context: Ash.PlugHelpers.get_context(conn)
              ),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do
