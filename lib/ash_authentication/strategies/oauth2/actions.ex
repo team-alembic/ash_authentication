@@ -33,8 +33,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
         ash_authentication?: true
       }
     })
-    |> Query.for_read(strategy.sign_in_action_name, params)
-    |> Ash.read(options)
+    |> Query.for_read(strategy.sign_in_action_name, params, options)
+    |> Ash.read()
     |> case do
       {:ok, [user]} ->
         {:ok, user}
@@ -105,11 +105,15 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
         ash_authentication?: true
       }
     })
-    |> Changeset.for_create(strategy.register_action_name, params,
-      upsert?: true,
-      upsert_identity: action.upsert_identity
+    |> Changeset.for_create(
+      strategy.register_action_name,
+      params,
+      Keyword.merge(options,
+        upsert?: true,
+        upsert_identity: action.upsert_identity
+      )
     )
-    |> Ash.create(options)
+    |> Ash.create()
   end
 
   def register(%OAuth2{} = strategy, _params, _options),
