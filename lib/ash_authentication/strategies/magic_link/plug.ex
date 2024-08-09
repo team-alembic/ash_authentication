@@ -55,7 +55,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
   end
 
   defp opts(conn) do
-    [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn)]
+    [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn) || %{}]
     |> Enum.reject(&is_nil(elem(&1, 1)))
   end
 end

@@ -74,7 +74,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   end
 
   defp action_opts(conn) do
-    [actor: get_actor(conn), tenant: get_tenant(conn), get_context(conn)]
+    [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn) || %{}]
     |> Enum.reject(&is_nil(elem(&1, 1)))
   end
 
