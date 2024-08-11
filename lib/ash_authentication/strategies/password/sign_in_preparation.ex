@@ -25,8 +25,11 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     identity_field = strategy.identity_field
     identity = Query.get_argument(query, identity_field)
 
-    query
-    |> Query.filter(^ref(identity_field) == ^identity)
+    if identity == nil do
+      query |> Query.filter(is_nil(^ref(identity_field)))
+    else
+      query |> Query.filter(^ref(identity_field) == ^identity)
+    end
     |> check_sign_in_token_configuration(strategy)
     |> Query.before_action(fn query ->
       Ash.Query.ensure_selected(query, [strategy.hashed_password_field])
