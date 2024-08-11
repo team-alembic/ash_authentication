@@ -109,4 +109,41 @@ defmodule AshAuthentication.Strategy.Custom do
         dsl_patches: [%Dsl.Patch.AddEntity{section_path: path, entity: entity}]
     end
   end
+
+  @doc """
+  Sets default values for a DSL schema based on a set of defaults.
+
+  If a given default is in the schema, it can be overriden, so we just set the default
+  and mark it not required.
+
+  If not, then we add it to `auto_set_fields`, and the user cannot override it.
+  """
+  def set_defaults(dsl, defaults) do
+    Enum.reduce(defaults, dsl, fn {key, value}, dsl ->
+      if dsl.schema[key] do
+        set_default(dsl, key, value)
+      else
+        Map.update!(dsl, :auto_set_fields, &Keyword.put(&1, key, value))
+      end
+    end)
+  end
+
+  defp set_default(dsl, key, value) do
+    Map.update!(dsl, :schema, fn schema ->
+      Keyword.update(
+        schema,
+        key,
+        [
+          type: :any,
+          default: value,
+          hide: true
+        ],
+        fn config ->
+          config
+          |> Keyword.put(:default, value)
+          |> Keyword.delete(:required)
+        end
+      )
+    end)
+  end
 end

@@ -2,6 +2,7 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
   @moduledoc false
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}
+  alias Assent.Strategy.Google
 
   @doc false
   @spec dsl :: Custom.entity()
@@ -23,17 +24,11 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
 
       #### Strategy defaults:
 
-      #{strategy_override_docs(Assent.Strategy.Google)}
+      #{strategy_override_docs(Google)}
       """,
-      auto_set_fields: strategy_fields(Assent.Strategy.Google, icon: :google)
+      auto_set_fields: [icon: :google, assent_strategy: Google]
     })
-  end
-
-  defp strategy_fields(strategy, params) do
-    []
-    |> strategy.default_config()
-    |> Keyword.put(:assent_strategy, strategy)
-    |> Keyword.merge(params)
+    |> Custom.set_defaults(Google.default_config([]))
   end
 
   defp strategy_override_docs(strategy) do

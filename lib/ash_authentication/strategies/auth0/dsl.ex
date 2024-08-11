@@ -2,6 +2,7 @@ defmodule AshAuthentication.Strategy.Auth0.Dsl do
   @moduledoc false
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}
+  alias Assent.Strategy.Auth0
 
   @doc false
   @spec dsl :: Custom.entity()
@@ -22,17 +23,11 @@ defmodule AshAuthentication.Strategy.Auth0.Dsl do
 
       #### Strategy defaults:
 
-      #{strategy_override_docs(Assent.Strategy.Auth0)}
+      #{strategy_override_docs(Auth0)}
       """,
-      auto_set_fields: strategy_fields(Assent.Strategy.Auth0, icon: :auth0)
+      auto_set_fields: [assent_strategy: Auth0, icon: :auth0]
     })
-  end
-
-  defp strategy_fields(strategy, params) do
-    []
-    |> strategy.default_config()
-    |> Keyword.put(:assent_strategy, strategy)
-    |> Keyword.merge(params)
+    |> Custom.set_defaults(Auth0.default_config([]))
   end
 
   defp strategy_override_docs(strategy) do
