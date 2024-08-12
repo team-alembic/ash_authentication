@@ -2,8 +2,6 @@ defmodule AshAuthentication.Errors.AuthenticationFailed do
   @moduledoc """
   A generic, authentication failed error.
   """
-  use Ash.Error.Exception
-
   use Splode.Error,
     fields: [
       caused_by: %{},
@@ -14,14 +12,17 @@ defmodule AshAuthentication.Errors.AuthenticationFailed do
     ],
     class: :forbidden
 
+  alias AshAuthentication.Debug
+
   @type t :: Exception.t()
 
-  def message(_), do: "Authentication failed"
-
-  defimpl Ash.ErrorKind do
-    @moduledoc false
-    def id(_), do: Ecto.UUID.generate()
-    def code(_), do: "authentication_failed"
-    def message(_), do: "Authentication failed"
+  @impl true
+  def exception(args) do
+    args
+    |> super()
+    |> Debug.describe()
   end
+
+  @impl true
+  def message(_), do: "Authentication failed"
 end
