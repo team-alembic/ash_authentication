@@ -88,6 +88,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          {:ok, config} <- add_secret_value(config, strategy, :client_id, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :client_secret, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
+         {:ok, config} <-
+           add_secret_value(config, strategy, :trusted_audiences, true),
          {:ok, config} <- add_http_adapter(config),
          {:ok, config} <-
            add_secret_value(
@@ -153,6 +155,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
       {:ok, value} when is_binary(value) and byte_size(value) > 0 ->
         {:ok, Map.put(config, secret_name, value)}
+
+      {:ok, list} when is_list(list) ->
+        {:ok, Map.put(config, secret_name, list)}
 
       {:error, reason} ->
         {:error, reason}

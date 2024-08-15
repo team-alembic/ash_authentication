@@ -24,7 +24,8 @@ config :ash_authentication,
         base_url: "https://example.com/",
         authorize_url: "https://example.com/authorize",
         token_url: "https://example.com/oauth/token",
-        user_url: "https://example.com/userinfo"
+        user_url: "https://example.com/userinfo",
+        trusted_audiences: ["01234", "56789"]
       ]
     ],
     tokens: [
