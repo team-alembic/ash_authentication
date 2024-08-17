@@ -50,42 +50,86 @@ defmodule MyApp.Accounts.User do
         confirm_on_create? true
         confirm_on_update? false
         confirm_action_name :confirm_new_user
-        sender MyApp.NewUserConfirmationSender
+        sender MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail
       end
     end
   end
 end
 ```
+
 Next we will have to generate and run migrations to add confirmed_at column to user resource
 
 ```bash
 mix ash.codegen account_confirmation
 ```
 
-Next we will define our "sender" module using `Swoosh`:
+To make this work we need to create a new module `MyApp.Accounts.User.Senders.SendPasswordResetEmail`:
 
 ```elixir
-defmodule MyApp.NewUserConfirmationSender do
+defmodule MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail do
+  @moduledoc """
+  Sends an email confirmation email
+  """
   use AshAuthentication.Sender
+  use MyAppWeb, :verified_routes
+
+  @impl AshAuthentication.Sender
+  def send(user, token, _opts) do
+    MyApp.Accounts.Emails.deliver_email_confirmation_instructions(
+      user,
+      url(~p"/auth/user/confirm_new_user?#{[confirm: token]}")
+    )
+  end
+end
+```
+
+We also need to create a new email template:
+
+```elixir
+defmodule Example.Accounts.Emails do
+  @moduledoc """
+  Delivers emails.
+  """
+
   import Swoosh.Email
 
-  def send(user, confirm, _opts) do
-    new()
-    |> to(to_string(user.email))
-    |> from({"MyApp Admin", "support@myapp.inc"})
-    |> subject("Confirm your email address")
-    |> html_body("""
-      <p>
-        Hi!<br />
+  def deliver_email_confirmation_instructions(user, url) do
+    if !url do
+      raise "Cannot deliver confirmation instructions without a url"
+    end
 
-        Someone has tried to register a new account at <a href="https://myapp.inc">MyApp</a>.
-        If it was you, then please click the link below to confirm your identity.  If you did not initiate this request then please ignore this email.
-      </p>
+    deliver(user.email, "Confirm your email address", """
       <p>
-        <a href="https://myapp.inc/auth/user/confirm_new_user?#{URI.encode_query(confirm: confirm)}">Click here to confirm your account</a>
+        Hi #{user.email},
+      </p>
+
+      <p>
+        Someone has tried to register a new account using this email address.
+        If it was you, then please click the link below to confirm your identity. If you did not initiate this request then please ignore this email.
+      </p>
+
+      <p>
+        <a href="#{url}">Click here to confirm your account</a>
       </p>
     """)
-    |> MyApp.Mailer.deliver()
+  end
+
+  # For simplicity, this module simply logs messages to the terminal.
+  # You should replace it by a proper email or notification tool, such as:
+  #
+  #   * Swoosh - https://hexdocs.pm/swoosh
+  #   * Bamboo - https://hexdocs.pm/bamboo
+  #
+  defp deliver(to, subject, body) do
+    IO.puts("Sending email to #{to} with subject #{subject} and body #{body}")
+
+    new()
+    |> from({"Zach", "zach@ash-hq.org"}) # TODO: Replace with your email
+    |> to(to_string(to))
+    |> subject(subject)
+    |> put_provider_option(:track_links, "None")
+    |> html_body(body)
+    |> MyApp.Mailer.deliver!()
   end
 end
 ```
@@ -111,7 +155,7 @@ defmodule MyApp.Accounts.User do
         confirm_on_create? false
         confirm_on_update? true
         confirm_action_name :confirm_change
-        sender MyApp.EmailChangeConfirmationSender
+        sender MyApp.Accounts.User.Senders.SendEmailChangeConfirmationEmail
       end
     end
   end
@@ -125,27 +169,50 @@ end
 Next, let's define our new sender:
 
 ```elixir
-defmodule MyApp.EmailChangeConfirmationSender do
+defmodule MyApp.Accounts.User.Senders.SendEmailChangeConfirmationEmail do
+  @moduledoc """
+  Sends an email change confirmation email
+  """
   use AshAuthentication.Sender
-  import Swoosh.Email
+  use MyAppWeb, :verified_routes
 
+  @impl AshAuthentication.Sender
   def send(user, token, _opts) do
-    new()
-    |> to(to_string(user.email))
-    |> from({"MyApp Admin", "support@myapp.inc"})
-    |> subject("Confirm your new email address")
-    |> html_body("""
-      <p>
-        Hi!<br />
+    MyApp.Accounts.Emails.deliver_email_change_confirmation_instructions(
+      user,
+      url(~p"/auth/user/confirm_change?#{[confirm: token]}")
+    )
+  end
+end
+```
 
-        You recently changed your email address on <a href="https://myapp.inc">MyApp</a>.  Please confirm it.
-      </p>
+And our new email template:
+
+```elixir
+defmodule MyApp.Accounts.Emails do
+  # ...
+
+  def deliver_email_change_confirmation_instructions(user, url) do
+    if !url do
+      raise "Cannot deliver confirmation instructions without a url"
+    end
+
+    deliver(user.email, "Confirm your new email address", """
       <p>
-        <a href="https://myapp.inc/auth/user/confirm_change?#{URI.encode_query(token: token)}">Click here to confirm your new email address</a>
+        Hi #{user.email},
+      </p>
+
+      <p>
+        You recently changed your email address. Please confirm it.
+      </p>
+
+      <p>
+        <a href="#{url}">Click here to confirm your new email address</a>
       </p>
     """)
-    |> MyApp.Mailer.deliver()
   end
+
+  # ...
 end
 ```
 
