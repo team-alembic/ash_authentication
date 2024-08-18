@@ -96,9 +96,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
          :ok <- maybe_validate_action_has_identity_change(action, strategy) do
       :ok
     else
-      :error ->
-        {:error, "Unable to validate register action"}
-
       {:error, reason} when is_binary(reason) ->
         {:error, "`#{inspect(strategy.register_action_name)}` action: #{reason}"}
 
@@ -139,7 +136,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
          :ok <- validate_action_has_preparation(action, OAuth2.SignInPreparation) do
       :ok
     else
-      :error -> {:error, "Unable to validate sign in action"}
       {:error, reason} -> {:error, reason}
     end
   end

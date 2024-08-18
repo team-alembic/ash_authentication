@@ -124,9 +124,6 @@ defmodule AshAuthentication.Verifier do
         {:ok, falsy} when is_falsy(falsy) ->
           :ok
 
-        {:error, reason} ->
-          {:error, reason}
-
         {false, bad_token_resource} ->
           {:error,
            DslError.exception(

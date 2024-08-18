@@ -231,6 +231,7 @@ defmodule Example.User do
         client_id &get_config/2
         redirect_uri &get_config/2
         client_secret &get_config/2
+        authorization_params scope: "openid profile email"
       end
 
       only_marty do

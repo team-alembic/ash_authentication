@@ -2,6 +2,7 @@ defmodule AshAuthentication.Strategy.Github.Dsl do
   @moduledoc false
 
   alias AshAuthentication.Strategy.{Custom, OAuth2}
+  alias Assent.Strategy.Github
 
   @doc false
   @spec dsl :: Custom.entity()
@@ -22,17 +23,11 @@ defmodule AshAuthentication.Strategy.Github.Dsl do
 
       #### Strategy defaults:
 
-      #{strategy_override_docs(Assent.Strategy.Github)}
+      #{strategy_override_docs(Github)}
       """,
-      auto_set_fields: strategy_fields(Assent.Strategy.Github, icon: :github)
+      auto_set_fields: [icon: :github, assent_strategy: Github]
     })
-  end
-
-  defp strategy_fields(strategy, params) do
-    []
-    |> strategy.default_config()
-    |> Keyword.put(:assent_strategy, strategy)
-    |> Keyword.merge(params)
+    |> Custom.set_defaults(Github.default_config([]))
   end
 
   defp strategy_override_docs(strategy) do
