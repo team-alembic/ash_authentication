@@ -21,7 +21,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
       describe: "User confirmation flow",
       args: [{:optional, :name, :confirm}],
       target: Confirmation,
-      modules: [:sender],
+      no_depend_modules: [:sender],
       schema: [
         name: [
           type: :atom,

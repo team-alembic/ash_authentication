@@ -3,7 +3,7 @@ defmodule AshAuthentication.UserIdentity do
     %Spark.Dsl.Section{
       name: :user_identity,
       describe: "Configure identity options for this resource",
-      modules: [:domain, :user_resource],
+      no_depend_modules: [:domain, :user_resource],
       schema: [
         domain: [
           type: {:behaviour, Ash.Domain},

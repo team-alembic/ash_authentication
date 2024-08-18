@@ -76,14 +76,6 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
           "A function for generating the session nonce, `true` to automatically generate it with `AshAuthetnication.Strategy.Oidc.NonceGenerator`, or `false` to disable.",
         default: true,
         required: false
-      ],
-      trusted_audiences: [
-        type: {:or, [nil, {:list, :string}]},
-        doc: """
-        A list of audiences which are trusted.
-        """,
-        default: nil,
-        required: false
       ]
     )
   end

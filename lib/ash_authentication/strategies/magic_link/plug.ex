@@ -7,7 +7,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
 
   alias AshAuthentication.{Info, Strategy, Strategy.MagicLink}
   alias Plug.Conn
-  import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1]
+  import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
 
   @doc """
@@ -55,7 +55,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
   end
 
   defp opts(conn) do
-    [actor: get_actor(conn), tenant: get_tenant(conn)]
+    [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn) || %{}]
     |> Enum.reject(&is_nil(elem(&1, 1)))
   end
 end

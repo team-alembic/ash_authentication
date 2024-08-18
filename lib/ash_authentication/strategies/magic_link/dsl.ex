@@ -13,6 +13,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Dsl do
       args: [{:optional, :name, :magic_link}],
       hide: [:name],
       target: MagicLink,
+      no_depend_modules: [:sender],
       schema: [
         name: [
           type: :atom,

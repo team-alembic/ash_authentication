@@ -29,7 +29,7 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
       args: [{:optional, :name, :password}],
       hide: [:name],
       target: Password,
-      modules: [:hash_provider],
+      no_depend_modules: [:hash_provider],
       singleton_entity_keys: [:resettable],
       schema: [
         name: [
@@ -133,6 +133,7 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
             name: :resettable,
             describe: "Configure password reset options for the resource",
             target: Password.Resettable,
+            no_depend_modules: [:sender],
             schema: [
               token_lifetime: [
                 type:

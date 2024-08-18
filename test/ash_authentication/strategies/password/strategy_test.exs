@@ -68,6 +68,14 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
                  |> Strategy.method_for_phase(unquote(phase))
       end
     end
+
+    for phase <- ~w[sign_in_with_token]a do
+      test "it is get for the #{phase} phase" do
+        assert :get ==
+                 %Password{}
+                 |> Strategy.method_for_phase(unquote(phase))
+      end
+    end
   end
 
   describe "Strategy.routes/1" do

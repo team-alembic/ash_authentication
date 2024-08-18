@@ -26,6 +26,18 @@ defmodule AshAuthentication.Dsl do
        ]}
 
   @doc false
+  @spec secret_list_type :: any
+  def secret_list_type,
+    do:
+      {:or,
+       [
+         {:spark_function_behaviour, AshAuthentication.Secret,
+          {AshAuthentication.SecretFunction, 2}},
+         {:list, :any},
+         nil
+       ]}
+
+  @doc false
   @spec secret_doc :: String.t()
   def secret_doc,
     do:
@@ -41,7 +53,7 @@ defmodule AshAuthentication.Dsl do
       %Section{
         name: :authentication,
         describe: "Configure authentication for this resource",
-        modules: [:domain],
+        no_depend_modules: [:domain],
         schema: [
           subject_name: [
             type: :atom,
@@ -70,7 +82,7 @@ defmodule AshAuthentication.Dsl do
           %Section{
             name: :tokens,
             describe: "Configure JWT settings for this resource",
-            modules: [:token_resource],
+            no_depend_modules: [:token_resource, :signing_secret],
             schema: [
               enabled?: [
                 type: :boolean,

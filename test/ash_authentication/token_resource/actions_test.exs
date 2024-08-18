@@ -46,7 +46,7 @@ defmodule AshAuthentication.TokenResource.ActionsTest do
         DateTime.utc_now()
         |> DateTime.to_unix()
 
-      10..1
+      10..1//-1
       |> Enum.each(fn i ->
         {:ok, token, _} = Jwt.token_for_user(user, %{"exp" => now - i})
         :ok = Actions.revoke(Example.Token, token)

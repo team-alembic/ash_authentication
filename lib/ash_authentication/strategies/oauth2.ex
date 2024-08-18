@@ -256,6 +256,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
 
   @type secret :: nil | String.t() | {module, keyword}
 
+  @type secret_list :: nil | [any()] | {module, keyword}
+
   @type t :: %OAuth2{
           assent_strategy: module,
           auth_method:
@@ -293,7 +295,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           strategy_module: module,
           team_id: secret,
           token_url: secret,
-          trusted_audiences: nil | [binary],
+          trusted_audiences: secret_list,
           user_url: secret
         }
 

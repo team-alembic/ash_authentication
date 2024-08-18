@@ -23,8 +23,8 @@ defmodule AshAuthentication.Strategy.MagicLink.Actions do
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.for_read(strategy.request_action_name, params)
-    |> Ash.read(options)
+    |> Query.for_read(strategy.request_action_name, params, options)
+    |> Ash.read()
     |> case do
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
@@ -44,8 +44,8 @@ defmodule AshAuthentication.Strategy.MagicLink.Actions do
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.for_read(strategy.sign_in_action_name, params)
-    |> Ash.read(options)
+    |> Query.for_read(strategy.sign_in_action_name, params, options)
+    |> Ash.read()
     |> case do
       {:ok, [user]} ->
         {:ok, user}

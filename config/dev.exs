@@ -34,7 +34,8 @@ config :ash_authentication,
         base_url: System.get_env("OAUTH2_SITE"),
         authorize_url: "#{System.get_env("OAUTH2_SITE")}/authorize",
         token_url: "#{System.get_env("OAUTH2_SITE")}/oauth/token",
-        user_url: "#{System.get_env("OAUTH2_SITE")}/userinfo"
+        user_url: "#{System.get_env("OAUTH2_SITE")}/userinfo",
+        trusted_audiences: ["01234", "56789"]
       ],
       auth0: [
         client_id: System.get_env("OAUTH2_CLIENT_ID"),
@@ -53,7 +54,8 @@ config :ash_authentication,
         client_secret: System.get_env("OAUTH2_CLIENT_SECRET"),
         redirect_uri: "http://localhost:4000/auth",
         base_url: System.get_env("OAUTH2_SITE"),
-        token_url: "#{System.get_env("OAUTH2_SITE")}/oauth/token"
+        token_url: "#{System.get_env("OAUTH2_SITE")}/oauth/token",
+        trusted_audiences: ["01234", "56789"]
       ]
     ],
     tokens: [

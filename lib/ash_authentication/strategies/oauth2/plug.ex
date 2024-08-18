@@ -7,7 +7,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   alias AshAuthentication.{Errors, Info, Strategy, Strategy.OAuth2}
   alias Assent.{Config, HTTPAdapter.Finch}
   alias Plug.Conn
-  import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1]
+  import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   import Plug.Conn
 
@@ -74,7 +74,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   end
 
   defp action_opts(conn) do
-    [actor: get_actor(conn), tenant: get_tenant(conn)]
+    [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn) || %{}]
     |> Enum.reject(&is_nil(elem(&1, 1)))
   end
 
@@ -93,6 +93,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
            add_secret_value(config, strategy, :private_key_id, !!strategy.private_key_id),
          {:ok, config} <-
            add_secret_value(config, strategy, :private_key_path, !!strategy.private_key_path),
+         {:ok, config} <-
+           add_secret_value(config, strategy, :trusted_audiences, true),
          {:ok, config} <- add_http_adapter(config),
          {:ok, config} <-
            add_secret_value(
@@ -158,6 +160,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
       {:ok, value} when is_binary(value) and byte_size(value) > 0 ->
         {:ok, Map.put(config, secret_name, value)}
+
+      {:ok, list} when is_list(list) ->
+        {:ok, Map.put(config, secret_name, list)}
 
       {:error, reason} ->
         {:error, reason}
