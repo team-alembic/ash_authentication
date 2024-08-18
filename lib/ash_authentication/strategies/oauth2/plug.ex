@@ -153,6 +153,10 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
       {:ok, nil} when allow_nil? ->
         {:ok, config}
 
+      {:ok, nil} ->
+        path = [:authentication, :strategies, strategy.name, secret_name]
+        {:error, Errors.MissingSecret.exception(path: path, resource: strategy.resource)}
+
       {:ok, value} when is_binary(value) and byte_size(value) > 0 ->
         {:ok, Map.put(config, secret_name, value)}
 
