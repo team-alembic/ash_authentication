@@ -31,11 +31,9 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
     changeset
     |> Changeset.after_action(fn changeset, user ->
       with {:ok, user_id_attribute_name} <-
-             strategy.identity_resource
-             |> UserIdentity.Info.user_identity_user_id_attribute_name(),
+             UserIdentity.Info.user_identity_user_id_attribute_name(strategy.identity_resource),
            {:ok, _identity} <-
-             strategy.identity_resource
-             |> UserIdentity.Actions.upsert(%{
+             UserIdentity.Actions.upsert(strategy.identity_resource, %{
                user_info: Changeset.get_argument(changeset, :user_info),
                oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens),
                strategy: Strategy.name(strategy),
@@ -44,7 +42,6 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
         user
         |> Ash.load(strategy.identity_relationship_name, domain: Info.domain!(strategy.resource))
       else
-        :error -> :error
         {:error, reason} -> {:error, reason}
       end
     end)
