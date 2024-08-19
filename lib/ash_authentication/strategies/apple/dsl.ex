@@ -4,8 +4,8 @@ defmodule AshAuthentication.Strategy.Apple.Dsl do
   alias AshAuthentication.Strategy.{Custom, Oidc}
 
   @doc false
-  @spec dsl() :: Custom.entity()
-  def dsl() do
+  @spec dsl :: Custom.entity()
+  def dsl do
     secret_type = AshAuthentication.Dsl.secret_type()
 
     Oidc.Dsl.dsl()
@@ -57,7 +57,7 @@ defmodule AshAuthentication.Strategy.Apple.Dsl do
     strategy.default_config([])
     |> Enum.map(fn
       {:client_authentication_method, method} ->
-        {:client_authentication_method, String.to_atom(method)}
+        {:client_authentication_method, String.to_existing_atom(method)}
 
       {:openid_configuration, config} ->
         {:openid_configuration, atomize_keys(config)}
@@ -69,6 +69,7 @@ defmodule AshAuthentication.Strategy.Apple.Dsl do
     |> Keyword.merge(params)
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   defp atomize_keys(map) do
     map
     |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
