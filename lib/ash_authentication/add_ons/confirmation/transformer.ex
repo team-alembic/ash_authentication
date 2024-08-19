@@ -189,19 +189,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, strategy.confirmed_at_field),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]),
-         :ok <- validate_attribute_option(attribute, resource, :type, [Type.UtcDatetimeUsec]) do
-      :ok
-    else
-      :error ->
-        {:error,
-         DslError.exception(
-           path: [:confirmation],
-           message: "The `confirmed_at_field` option must be set."
-         )}
-
-      {:error, reason} ->
-        {:error, reason}
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]) do
+      validate_attribute_option(attribute, resource, :type, [Type.UtcDatetimeUsec])
     end
   end
 
