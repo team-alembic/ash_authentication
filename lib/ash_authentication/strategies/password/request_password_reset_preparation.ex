@@ -27,8 +27,11 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
       identity = Query.get_argument(query, identity_field)
       select_for_senders = Info.authentication_select_for_senders!(query.resource)
 
-      query
-      |> Query.filter(^ref(identity_field) == ^identity)
+      if is_nil(identity) do
+        Query.filter(query, false)
+      else
+        Query.filter(query, ^ref(identity_field) == ^identity)
+      end
       |> Query.before_action(fn query ->
         Ash.Query.ensure_selected(query, select_for_senders)
       end)
