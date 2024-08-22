@@ -5,6 +5,31 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.3](https://github.com/team-alembic/ash_authentication/compare/v4.0.2...v4.0.3) (2024-08-22)
+
+
+
+
+### Bug Fixes:
+
+* allow overriding strategy defaults (#766)
+
+* bug where `nil` is not allowed but is returned from secret functions.
+
+* add back in accidentally removed debug errors code (#768)
+
+* set options earlier in magic link/oauth2
+
+### Improvements:
+
+* avoid warning about comparison with `nil`
+
+* set context in addition to tenant
+
+* use `no_depend_modules` for better compile dependencies
+
+* enable custom `http_adapters` (#760)
+
 ## [v4.0.2](https://github.com/team-alembic/ash_authentication/compare/v4.0.1...v4.0.2) (2024-08-05)
 
 
