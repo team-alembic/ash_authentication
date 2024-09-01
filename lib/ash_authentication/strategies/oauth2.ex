@@ -232,6 +232,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     openid_configuration_uri: nil,
     openid_configuration: nil,
     private_key: nil,
+    private_key_id: nil,
+    private_key_path: nil,
     provider: :oauth2,
     redirect_uri: nil,
     register_action_name: nil,
@@ -240,6 +242,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     sign_in_action_name: nil,
     site: nil,
     strategy_module: __MODULE__,
+    team_id: nil,
     token_url: nil,
     trusted_audiences: nil,
     user_url: nil
@@ -280,6 +283,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           openid_configuration_uri: nil | binary,
           openid_configuration: nil | map,
           private_key: secret,
+          private_key_id: secret,
+          private_key_path: secret,
           provider: atom,
           redirect_uri: secret,
           register_action_name: atom,
@@ -288,6 +293,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           sign_in_action_name: atom,
           site: secret,
           strategy_module: module,
+          team_id: secret,
           token_url: secret,
           trusted_audiences: secret_list,
           user_url: secret

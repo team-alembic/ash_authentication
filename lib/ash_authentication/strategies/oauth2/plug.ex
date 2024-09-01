@@ -89,6 +89,27 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          {:ok, config} <- add_secret_value(config, strategy, :client_secret, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
          {:ok, config} <-
+           add_secret_value(
+             config,
+             strategy,
+             :team_id,
+             strategy.assent_strategy != Assent.Strategy.Apple
+           ),
+         {:ok, config} <-
+           add_secret_value(
+             config,
+             strategy,
+             :private_key_id,
+             strategy.assent_strategy != Assent.Strategy.Apple
+           ),
+         {:ok, config} <-
+           add_secret_value(
+             config,
+             strategy,
+             :private_key_path,
+             strategy.assent_strategy != Assent.Strategy.Apple
+           ),
+         {:ok, config} <-
            add_secret_value(config, strategy, :trusted_audiences, true),
          {:ok, config} <- add_http_adapter(config),
          {:ok, config} <-
