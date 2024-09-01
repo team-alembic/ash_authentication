@@ -5,6 +5,31 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.0.4](https://github.com/team-alembic/ash_authentication/compare/v4.0.3...v4.0.4) (2024-09-01)
+
+
+
+
+### Bug Fixes:
+
+* update types and formatter
+
+* add secret values to config
+
+* sort new fields
+
+* sort new types
+
+* properly set allow_nil for apple secrets
+
+* credo and sobelow warnings
+
+### Improvements:
+
+* add apple strategy (#750)
+
+* add apple strategy
+
 ## [v4.0.3](https://github.com/team-alembic/ash_authentication/compare/v4.0.2...v4.0.3) (2024-08-22)
 
 
