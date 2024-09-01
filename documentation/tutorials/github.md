@@ -106,6 +106,7 @@ The register action takes two arguments, `user_info` and the `oauth_tokens`.
 
 ```elixir
 defmodule MyApp.Accounts.User do
+  require Ash.Resource.Change.Builtins
   use Ash.Resource,
     extensions: [AshAuthentication],
     domain: MyApp.Accounts
@@ -130,6 +131,16 @@ defmodule MyApp.Accounts.User do
 
         Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
       end
+
+      # Required if you're using the password & confirmation strategies
+      upsert_fields []
+      change set_attribute(:confirmed_at, &DateTime.utc_now/0)
+      change after_action(fn _changeset, user, _context ->
+        case user.confirmed_at do
+          nil -> {:error, "Unconfirmed user exists already"}
+          _ -> {:ok, user}
+        end
+      end)
     end
   end
 
