@@ -4,4 +4,9 @@ defmodule Example.Repo do
 
   @doc false
   def installed_extensions, do: ["ash-functions", "uuid-ossp", "citext"]
+
+  @doc false
+  def min_pg_version do
+    %Version{major: 16, minor: 0, patch: 0}
+  end
 end
