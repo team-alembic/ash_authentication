@@ -1,6 +1,8 @@
 # Confirmation Tutorial
 
-This is a quick tutorial on how to configure your application to enable confirmation.
+This add-on allows you to confirm changes to a user record by generating and
+sending them a confirmation token which they must submit before allowing the
+change to take place.
 
 In this tutorial we'll assume that you have a `User` resource which uses `email` as it's user identifier. We'll show you how to confirm a new user on sign-up and also require them to confirm if they wish to change their email address.
 

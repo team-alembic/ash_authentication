@@ -5,7 +5,22 @@ Ash](https://ash-hq.org/docs/guides/ash/latest/tutorials/get-started.md). This
 assumes that you already have resources set up, and only gives you the steps to
 add authentication to your resources and APIs.
 
-## Add to your application's dependencies
+<!-- tabs-open -->
+
+### Using Igniter (recommended)
+
+#### Install the extension
+
+```sh
+mix igniter.install ash_authentication
+```
+
+There is not a task(yet) for configuring the strategies and add-ons that you use.
+So continue on below and select your strategies/add-ons and set them up manually.
+
+### Manual
+
+#### Add to your application's dependencies
 
 Bring in the `ash_authentication` dependency:
 
@@ -29,66 +44,10 @@ And add `ash_authentication` to your `.formatter.exs`:
 ]
 ```
 
-## Choosing your extensions, strategies and add-ons
-
-Ash Authentication supports many different features, each configured separately.
-
-### `AshAuthentication`
-
-This is the core extension, and is required. It provides main DSL for working
-with authentication and related features and should be added to your "user"
-resource.
-
-The `AshAuthentication` extension provides configuration and sensible defaults for settings which relate to authentication, regardless of authentication mechanism.
-
-All strategy and add-on configuration is nested inside this DSL block.
-
-It will define a `get_by_subject_name` read action on your resource, which is
-used when converting tokens or session information into a resource record.
-
-### `AshAuthentication.Strategy.Password`
-
-This authentication strategy provides registration and sign-in for users using a local
-identifier (eg `username`, `email` or `phone_number`) and a password. It will
-define register and sign-in actions on your "user" resource. You are welcome to
-define either or both of these actions yourself if you wish to customise them -
-if you do so then the extension will do its best to validate that all required
-configuration is present.
-
-The `AshAuthentication.Strategy.Password` DSL allows you to override any of the default values.
-
-### `AshAuthentication.Strategy.OAuth2`
-
-This authentication strategy provides registration and sign-in for users using a
-remote [OAuth 2.0](https://oauth.net/2/) server as the source of truth. You
-will be required to provide either a "register" or a "sign-in" action depending
-on your configuration, which the strategy will attempt to validate for common
-misconfigurations.
-
-### `AshAuthentication.AddOn.Confirmation`
-
-This add-on allows you to confirm changes to a user record by generating and
-sending them a confirmation token which they must submit before allowing the
-change to take place.
-
-### `AshAuthentication.TokenResource`
-
-This extension allows you to easily create a resource which will store
-information about tokens that can't be encoded into the tokens themselves. A
-resource with this extension must be present if token generation is enabled.
-
-### `AshAuthentication.UserIdentity`
-
-If you plan to support multiple different strategies at once (eg giving your
-users the choice of more than one authentication provider, or signing them into
-multiple services simultaneously) then you will want to create a resource with
-this extension enabled. It is used to keep track of the links between your
-local user records and their many remote identities.
-
-## Example
+#### Create authentication domain and resources
 
 Let's create an `Accounts` domain in our application which provides a `User`
-resource and a `Token` resource.
+resource and a `Token` resource. This tutorial is assuming that you are using `AshPostgres`.
 
 First, let's define our domain:
 
@@ -126,23 +85,21 @@ defmodule MyApp.Repo do
   use AshPostgres.Repo, otp_app: :my_app
 
   def installed_extensions do
-    ["ash-functions", "uuid-ossp", "citext"]
+    ["ash-functions", "citext"]
   end
 end
 ```
 
-You can skip this step if you don't want to use tokens, in which case remove the
-`tokens` DSL section in the user resource below.
+#### Setup Token Resource
 
 ```elixir
 # lib/my_app/accounts/token.ex
-
 defmodule MyApp.Accounts.Token do
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAuthentication.TokenResource],
     # If using policies, enable the policy authorizer:
-    # authorizers: [Ash.Policy.Authorizer],
+    authorizers: [Ash.Policy.Authorizer],
     domain: MyApp.Accounts
 
   postgres do
@@ -150,17 +107,41 @@ defmodule MyApp.Accounts.Token do
     repo MyApp.Repo
   end
 
-  # If using policies, add the following bypass:
-  # policies do
-  #   bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-  #     authorize_if always()
-  #   end
-  # end
+  policies do
+    bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+      authorize_if always()
+    end
+  end
 end
 ```
 
-Lastly let's define our `User` resource, using password authentication and token
-generation enabled.
+#### Supervisor
+
+AshAuthentication includes a supervisor which you should add to your
+application's supervisor tree. This is used to run any periodic jobs related to
+your authenticated resources (removing expired tokens, for example).
+
+### Example
+
+```elixir
+defmodule MyApp.Application do
+  use Application
+
+  def start(_type, _args) do
+    children = [
+      # ...
+      # add this line -->
+      {AshAuthentication.Supervisor, otp_app: :my_app}
+      # <-- add this line
+    ]
+    # ...
+  end
+end
+```
+
+Lastly let's define our `User` resource. Note that we aren't defining any authentication strategies here.
+This setup is used for all strategies. Once you have done this, you can follow one of the strategy specific
+guides at the bottom of this page.
 
 ```elixir
 # lib/my_app/accounts/user.ex
@@ -174,21 +155,14 @@ defmodule MyApp.Accounts.User do
 
   attributes do
     uuid_primary_key :id
-    attribute :email, :ci_string, allow_nil?: false, public?: true
-    attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
   end
 
   authentication do
-    strategies do
-      password :password do
-        identity_field :email
-      end
-    end
-
     tokens do
       enabled? true
       token_resource MyApp.Accounts.Token
       signing_secret fn _, _ ->
+        # This is a secret key used to sign tokens. See the note below on secrets management
         Application.fetch_env(:my_app, :token_signing_secret)
       end
     end
@@ -197,10 +171,6 @@ defmodule MyApp.Accounts.User do
   postgres do
     table "users"
     repo MyApp.Repo
-  end
-
-  identities do
-    identity :unique_email, [:email]
   end
 
   # You can customize this if you wish, but this is a safe default that
@@ -217,47 +187,31 @@ defmodule MyApp.Accounts.User do
 end
 ```
 
-Here we've added password authentication, using an email address as our
-identifier.
-
-Now we have enough in place to register and sign-in users using the
-`AshAuthentication.Strategy` protocol.
-
-## Token generation
-
-If you have token generation enabled then you need to provide (at minimum) a
-signing secret. As the name implies this should be a secret. AshAuthentication
-provides a mechanism for looking up secrets at runtime using the
-`AshAuthentication.Secret` behaviour. To save you a click, this means that you
-can set your token signing secret using either a static string (please don't!),
-a two-arity anonymous function, or a module which implements the
-`AshAuthentication.Secret` behaviour.
-
-At its simplest you should so something like this:
-
-```elixir
-# in lib/my_app/accounts/user.ex
-
-signing_secret fn _, _ ->
-  Application.fetch_env(:my_app, :token_signing_secret)
-end
-```
-
-Then, specify the secret token in the config file:
-
-```elixir
-# in config/config.exs
-config :my_app, :token_signing_secret, "some_super_secret_random_value"
-```
-
 > ### The signing secret must not be committed to source control {: .warning}
 >
 > Proper management of secrets is outside the scope of this tutorial, but is
 > absolutely crucial to the security of your application.
 
-## Plugs and routing
+#### Choose your strategies and add-ons
 
-If you're using Phoenix, then you can skip this section and go straight to
+##### Strategies
+
+- [Password](/documentation/tutorials/password.md)
+- [Github](/documentation/tutorials/github.md)
+- [Google](/documentation/tutorials/google.md)
+- [Magic Links](/documentation/tutorials/magic-links.md)
+- [Auth0](/documentation/tutorials/auth0.md)
+- Open ID: `AshAuthentication.Strategy.Oidc`
+- OAuth2: `AshAuthentication.Strategy.OAuth2`
+
+##### Add-Ons
+
+- [Confirmation](/documentation/tutorials/confirmation.md): confirming changes to user accounts (i.e via email)
+- UserIdentity: `AshAuthentication.UserIdentity`: supporting multiple social sign on identities & refreshing tokens
+
+#### Set up your phoenix or plug application
+
+If you're using Phoenix, skip this section and go to
 [Integrating Ash Authentication and Phoenix](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix)
 
 In order for your users to be able to sign in, you will likely need to provide
@@ -316,30 +270,6 @@ router using `forward "/auth", to: MyApp.AuthPlug` or similar.
 Your generated auth plug module will also contain `load_from_session` and
 `load_from_bearer` function plugs, which can be used to load users into assigns
 based on the contents of the session store or `Authorization` header.
-
-## Supervisor
-
-AshAuthentication includes a supervisor which you should add to your
-application's supervisor tree. This is used to run any periodic jobs related to
-your authenticated resources (removing expired tokens, for example).
-
-### Example
-
-```elixir
-defmodule MyApp.Application do
-  use Application
-
-  def start(_type, _args) do
-    children = [
-      # ...
-      # add this line -->
-      {AshAuthentication.Supervisor, otp_app: :my_app}
-      # <-- add this line
-    ]
-    # ...
-  end
-end
-```
 
 ## Summary
 

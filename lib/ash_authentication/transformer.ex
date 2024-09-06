@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Design.AliasUsage
 defmodule AshAuthentication.Transformer do
   @moduledoc """
   The Authentication transformer
@@ -31,7 +32,6 @@ defmodule AshAuthentication.Transformer do
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
     with {:ok, dsl_state} <- maybe_set_domain(dsl_state, :authentication),
-         :ok <- validate_at_least_one_strategy(dsl_state),
          :ok <- validate_unique_strategy_names(dsl_state),
          :ok <- validate_unique_add_on_names(dsl_state),
          {:ok, dsl_state} <- maybe_transform_token_lifetime(dsl_state),
@@ -80,9 +80,22 @@ defmodule AshAuthentication.Transformer do
   defp build_get_by_subject_action(dsl_state) do
     with {:ok, get_by_subject_action_name} <-
            Info.authentication_get_by_subject_action_name(dsl_state) do
+      {:ok, argument} = Ash.Resource.Builder.build_action_argument(:subject, :string)
+
+      {:ok, preparation} =
+        Ash.Resource.Builder.build_preparation(
+          {AshAuthentication.Preparations.FilterBySubject, []}
+        )
+
       Transformer.build_entity(Resource.Dsl, [:actions], :read,
         name: get_by_subject_action_name,
-        get?: true
+        get?: true,
+        arguments: [
+          argument
+        ],
+        preparations: [
+          preparation
+        ]
       )
     end
   end
@@ -104,22 +117,6 @@ defmodule AshAuthentication.Transformer do
   # sobelow_skip ["DOS.StringToAtom"]
   defp ensure_current_user_atom_exists(subject_name),
     do: String.to_atom("current_#{subject_name}")
-
-  defp validate_at_least_one_strategy(dsl_state) do
-    ok? =
-      dsl_state
-      |> Transformer.get_entities([:authentication, :strategies])
-      |> Enum.any?()
-
-    if ok?,
-      do: :ok,
-      else:
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies],
-           message: "Expected at least one authentication strategy"
-         )}
-  end
 
   defp validate_read_action(dsl_state, action_name) do
     with {:ok, action} <- validate_action_exists(dsl_state, action_name),

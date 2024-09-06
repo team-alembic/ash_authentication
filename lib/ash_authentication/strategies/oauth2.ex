@@ -2,7 +2,13 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   alias __MODULE__.{Dsl, Transformer, Verifier}
 
   @moduledoc """
-  Strategy for authenticating using an OAuth 2.0 server as the source of truth.
+  Strategy for authenticating using any OAuth 2.0 server as the source of truth.
+
+  This authentication strategy provides registration and sign-in for users using a
+  remote [OAuth 2.0](https://oauth.net/2/) server as the source of truth. You
+  will be required to provide either a "register" or a "sign-in" action depending
+  on your configuration, which the strategy will attempt to validate for common
+  misconfigurations.
 
   This strategy wraps the excellent [`assent`](https://hex.pm/packages/assent)
   package, which provides OAuth 2.0 capabilities.
