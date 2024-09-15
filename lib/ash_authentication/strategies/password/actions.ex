@@ -34,8 +34,8 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     strategy.resource
     |> Query.new()
     |> Query.set_context(context)
-    |> Query.for_read(strategy.sign_in_action_name, params)
-    |> Ash.read(options)
+    |> Query.for_read(strategy.sign_in_action_name, params, options)
+    |> Ash.read()
     |> case do
       {:ok, [user]} ->
         {:ok, user}
@@ -162,8 +162,8 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         ash_authentication?: true
       }
     })
-    |> Changeset.for_create(strategy.register_action_name, params)
-    |> Ash.create(options)
+    |> Changeset.for_create(strategy.register_action_name, params, options)
+    |> Ash.create()
   end
 
   def register(strategy, _params, _options) when is_struct(strategy, Password) do
