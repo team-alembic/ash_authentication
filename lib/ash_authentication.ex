@@ -233,9 +233,9 @@ defmodule AshAuthentication do
           ash_authentication?: true
         }
       })
-      |> Query.for_read(action_name, %{})
+      |> Query.for_read(action_name, %{}, options)
       |> Query.filter(^primary_key)
-      |> Ash.read(options)
+      |> Ash.read()
       |> case do
         {:ok, [user]} -> {:ok, user}
         _ -> {:error, NotFound.exception([])}
