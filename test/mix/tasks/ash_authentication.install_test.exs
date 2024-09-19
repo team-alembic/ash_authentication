@@ -97,6 +97,10 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
         repo(AshAuthentication.Repo)
       end
 
+      attributes do
+        uuid_primary_key(:id)
+      end
+
       actions do
         read :get_by_subject do
           description("Get a user by the subject claim in a JWT")
