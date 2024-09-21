@@ -75,7 +75,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
         data_layer: AshPostgres.DataLayer
 
       policies do
-        policy AshAuthentication.Checks.AshAuthenticationInteraction do
+        bypass AshAuthentication.Checks.AshAuthenticationInteraction do
           authorize_if(always())
         end
 
@@ -88,7 +88,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
         tokens do
           enabled?(true)
           token_resource(Test.Accounts.Token)
-          signing_secret(:token_signing_secret)
+          signing_secret(Test.Secrets)
         end
       end
 
@@ -126,7 +126,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
         data_layer: AshPostgres.DataLayer
 
       policies do
-        policy AshAuthentication.Checks.AshAuthenticationInteraction do
+        bypass AshAuthentication.Checks.AshAuthenticationInteraction do
           description("AshAuthentication can interact with the token resource")
           authorize_if(always())
         end

@@ -182,7 +182,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
         |> Spark.Igniter.set_option(
           user_resource,
           [:authentication, :tokens, :signing_secret],
-          :token_signing_secret
+          secrets_module
         )
         |> Igniter.Project.Config.configure_new(
           "dev.exs",
