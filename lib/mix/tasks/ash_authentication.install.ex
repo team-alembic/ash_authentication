@@ -79,7 +79,9 @@ defmodule Mix.Tasks.AshAuthentication.Install do
       [inspect(accounts_domain), "--ignore-if-exists"] ++ argv ++ resource_args
     )
     |> generate_token_resource(token_resource, argv, resource_args)
-    |> Igniter.Project.Application.add_new_child({AshAuthentication.Supervisor, otp_app: otp_app})
+    |> Igniter.Project.Application.add_new_child({AshAuthentication.Supervisor, otp_app: otp_app},
+      after: fn _ -> true end
+    )
     |> setup_data_layer(repo)
     |> generate_user_resource(
       user_resource,
