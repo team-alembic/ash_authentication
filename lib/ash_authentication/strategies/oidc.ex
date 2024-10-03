@@ -54,6 +54,8 @@ defmodule AshAuthentication.Strategy.Oidc do
   alias AshAuthentication.Strategy.{Custom, Oidc}
   use Custom, entity: Dsl.dsl()
 
+  @doc false
+  defdelegate dsl, to: Dsl
   defdelegate transform(strategy, dsl_state), to: Oidc.Transformer
   defdelegate verify(strategy, dsl_state), to: Oidc.Verifier
 end
