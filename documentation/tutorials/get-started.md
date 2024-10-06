@@ -15,6 +15,15 @@ add authentication to your resources and APIs.
 mix igniter.install ash_authentication
 ```
 
+##### Using Phoenix?
+
+Use the following. If you have not yet run the above command, this will prompt you to do so,
+so you can run both or only this one.
+
+```sh
+mix igniter.install ash_authentication_phoenix
+```
+
 There is not a task(yet) for configuring the strategies and add-ons that you use.
 So continue on below and select your strategies/add-ons and set them up manually.
 
