@@ -68,6 +68,7 @@ defmodule AshAuthentication.MixProject do
       extras: [
         {"README.md", name: "Home"},
         "documentation/tutorials/get-started.md",
+        "documentation/tutorials/password.md",
         "documentation/tutorials/auth0.md",
         "documentation/tutorials/github.md",
         "documentation/tutorials/google.md",
@@ -181,7 +182,8 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 3.0")},
+      {:ash, ash_version("~> 3.0 and >= 3.4.14")},
+      {:igniter, "~> 0.3 and >= 0.3.43"},
       {:assent, "~> 0.2 and >= 0.2.8"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
@@ -243,6 +245,7 @@ defmodule AshAuthentication.MixProject do
         "spark.cheat_sheets_in_search",
         "spark.replace_doc_links"
       ],
+      credo: ["credo --strict"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
