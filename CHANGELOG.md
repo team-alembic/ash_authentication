@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.1.0](https://github.com/team-alembic/ash_authentication/compare/v4.0.4...v4.1.0) (2024-10-06)
+
+
+
+
+### Features:
+
+* Add AshAuthentication igniter installer (#782)
+
+### Bug Fixes:
+
+* handle options properly for subect to user (#786)
+
+* setup options properly for ash 3.0 (#785)
+
+### Improvements:
+
+* igniter installer for user & user token resources
+
 ## [v4.0.4](https://github.com/team-alembic/ash_authentication/compare/v4.0.3...v4.0.4) (2024-09-01)
 
 
