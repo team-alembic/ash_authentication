@@ -24,7 +24,6 @@ defmodule Mix.Tasks.AshAuthentication.Install do
   @impl Igniter.Mix.Task
   def info(_argv, _parent) do
     %Igniter.Mix.Task.Info{
-      adds_deps: [{:bcrypt_elixir, "~> 3.0"}],
       schema: [
         accounts: :string,
         user: :string,
@@ -338,7 +337,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
         """)
         |> Ash.Resource.Igniter.add_action(token_resource, """
         destroy :expunge_expired do
-          description "Delete expired tokens. Run periodically by `AshAuthentication.Supervisor`"
+          description "Deletes expired tokens."
           change filter(expr(expires_at < now()))
         end
         """)
