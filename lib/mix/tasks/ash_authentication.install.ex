@@ -359,7 +359,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
   else
     def setup_data_layer(igniter, _), do: igniter
 
-    def data_layer_args(igniter) do
+    def data_layer_args(igniter, _) do
       {igniter, [], nil}
     end
   end
