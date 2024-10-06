@@ -15,7 +15,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "installation creates a secrets module", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install")
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("lib/test/secrets.ex", """
     defmodule Test.Secrets do
       use AshAuthentication.Secret
@@ -29,7 +29,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "installation adds the supervisor to the app", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install")
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_has_patch("lib/test/application.ex", """
     8  |     children = [{AshAuthentication.Supervisor, [otp_app: :test]}]
     """)
@@ -37,7 +37,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "installation adds config files", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install")
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("config/runtime.exs", """
     import Config
 
@@ -64,7 +64,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "installation adds a user resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install")
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("lib/test/accounts/user.ex", """
     defmodule Test.Accounts.User do
       use Ash.Resource,
@@ -94,7 +94,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
       postgres do
         table("users")
-        repo(AshAuthentication.Repo)
+        repo(Test.Repo)
       end
 
       attributes do
@@ -115,7 +115,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "instalation adds a user token resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install")
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("lib/test/accounts/token.ex", """
     defmodule Test.Accounts.Token do
       use Ash.Resource,
@@ -139,7 +139,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
       postgres do
         table("tokens")
-        repo(AshAuthentication.Repo)
+        repo(Test.Repo)
       end
 
       attributes do
@@ -217,7 +217,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
         end
 
         destroy :expunge_expired do
-          description("Delete expired tokens. Run periodically by `AshAuthentication.Supervisor`")
+          description("Deletes expired tokens.")
           change(filter(expr(expires_at < now())))
         end
       end

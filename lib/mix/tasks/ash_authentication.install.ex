@@ -27,12 +27,14 @@ defmodule Mix.Tasks.AshAuthentication.Install do
       schema: [
         accounts: :string,
         user: :string,
-        token: :string
+        token: :string,
+        yes: :boolean
       ],
       aliases: [
         a: :accounts,
         u: :user,
-        t: :token
+        t: :token,
+        y: :yes
       ]
     }
   end
@@ -61,10 +63,10 @@ defmodule Mix.Tasks.AshAuthentication.Install do
     accounts_domain = options[:accounts]
     token_resource = options[:token]
     user_resource = options[:user]
-    secrets_module = Igniter.Code.Module.module_name(igniter, "Secrets")
+    secrets_module = Igniter.Project.Module.module_name(igniter, "Secrets")
     otp_app = Igniter.Project.Application.app_name(igniter)
 
-    {igniter, resource_args, repo} = data_layer_args(igniter)
+    {igniter, resource_args, repo} = data_layer_args(igniter, options)
 
     igniter
     |> Igniter.Project.Formatter.import_dep(:ash_authentication)
@@ -102,7 +104,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
          secrets_module,
          otp_app
        ) do
-    case Igniter.Code.Module.find_module(igniter, user_resource) do
+    case Igniter.Project.Module.find_module(igniter, user_resource) do
       {:ok, {igniter, _, _}} ->
         Igniter.add_warning(
           igniter,
@@ -213,7 +215,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
   end
 
   defp generate_token_resource(igniter, token_resource, argv, resource_args) do
-    case Igniter.Code.Module.find_module(igniter, token_resource) do
+    case Igniter.Project.Module.find_module(igniter, token_resource) do
       {:ok, {igniter, _, _}} ->
         Igniter.add_warning(
           igniter,
@@ -350,8 +352,8 @@ defmodule Mix.Tasks.AshAuthentication.Install do
       |> AshPostgres.Igniter.add_postgres_extension(repo, "citext")
     end
 
-    def data_layer_args(igniter) do
-      {igniter, repo} = AshPostgres.Igniter.select_repo(igniter, generate?: true)
+    def data_layer_args(igniter, opts) do
+      {igniter, repo} = AshPostgres.Igniter.select_repo(igniter, generate?: true, yes: opts[:yes])
       {igniter, ["--repo", inspect(repo)], repo}
     end
   else

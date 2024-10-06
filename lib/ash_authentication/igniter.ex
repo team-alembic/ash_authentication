@@ -21,7 +21,7 @@ defmodule AshAuthentication.Igniter do
       end
       |> Sourceror.to_string()
 
-    Igniter.Code.Module.find_and_update_or_create_module(igniter, module, full, fn zipper ->
+    Igniter.Project.Module.find_and_update_or_create_module(igniter, module, full, fn zipper ->
       {:ok, Igniter.Code.Common.add_code(zipper, func)}
     end)
   end
