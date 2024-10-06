@@ -192,6 +192,8 @@ end
 > Proper management of secrets is outside the scope of this tutorial, but is
 > absolutely crucial to the security of your application.
 
+<!-- tabs-close -->
+
 #### Choose your strategies and add-ons
 
 ##### Strategies
