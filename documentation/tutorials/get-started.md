@@ -205,6 +205,15 @@ end
 
 #### Choose your strategies and add-ons
 
+##### `mix ash_authentication.add_strategy`
+
+A mix task is provided to add strategies and add-ons to your application.
+For now, this only supports the `password` strategy, but more will be added in the future.
+
+```sh
+mix ash_authentication.add_strategy password
+```
+
 ##### Strategies
 
 - [Password](/documentation/tutorials/password.md)

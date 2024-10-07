@@ -93,6 +93,12 @@ defmodule Mix.Tasks.AshAuthentication.Install do
       otp_app
     )
     |> Ash.Igniter.codegen("add_authentication_resources")
+    |> Igniter.add_notice("""
+    Don't forget to add at least one authentication strategy!
+
+    You can use the task `mix ash_authentication.add_strategy`, or
+    view the docs at https://hexdocs.pm/ash_authentication/get-started.html
+    """)
   end
 
   defp generate_user_resource(

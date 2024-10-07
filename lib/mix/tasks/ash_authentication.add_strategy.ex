@@ -69,6 +69,13 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       Mix.shell().error("""
       Invalid strategy provided: `#{invalid_strategy}`
 
+      Not all strategies can be installed using `ash_authentication.add_strategy` yet.
+      Want to see a strategy added? Open an issue (or even better, a PR!) on GitHub.
+
+      See a list of strategies and how to install them here:
+
+      https://hexdocs.pm/ash_authentication/get-started.html
+
       Available Strategies:
 
       #{@strategy_explanation}
