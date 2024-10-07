@@ -130,7 +130,7 @@ AshAuthentication includes a supervisor which you should add to your
 application's supervisor tree. This is used to run any periodic jobs related to
 your authenticated resources (removing expired tokens, for example).
 
-### Example
+##### Example
 
 ```elixir
 defmodule MyApp.Application do
@@ -204,6 +204,15 @@ end
 <!-- tabs-close -->
 
 #### Choose your strategies and add-ons
+
+##### `mix ash_authentication.add_strategy`
+
+A mix task is provided to add strategies and add-ons to your application.
+For now, this only supports the `password` strategy, but more will be added in the future.
+
+```sh
+mix ash_authentication.add_strategy password
+```
 
 ##### Strategies
 

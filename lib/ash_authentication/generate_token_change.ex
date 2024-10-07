@@ -23,6 +23,11 @@ defmodule AshAuthentication.GenerateTokenChange do
     end)
   end
 
+  @impl true
+  def atomic(changeset, options, context) do
+    {:ok, change(changeset, options, context)}
+  end
+
   defp generate_token(purpose, record, strategy)
        when is_integer(strategy.sign_in_token_lifetime) and purpose == :sign_in do
     {:ok, token, _claims} =

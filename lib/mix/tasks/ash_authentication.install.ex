@@ -17,6 +17,9 @@ defmodule Mix.Tasks.AshAuthentication.Install do
   * `--accounts` or `-a` - The domain that contains your resources. Defaults to `YourApp.Accounts`.
   * `--user` or `-u` - The resource that represents a user. Defaults to `<accounts>.User`.
   * `--token` or `-t` - The resource that represents a token. Defaults to `<accounts>.Token`.
+  * `--auth-strategy` - The strategy or strategies to use for authentication.
+    None by default, can be specified multiple times for more than one strategy.
+    To add after installation, use `mix ash_authentication.add_strategy password`
   """
 
   use Igniter.Mix.Task
@@ -28,7 +31,11 @@ defmodule Mix.Tasks.AshAuthentication.Install do
         accounts: :string,
         user: :string,
         token: :string,
-        yes: :boolean
+        yes: :boolean,
+        strategy: :keep
+      ],
+      composes: [
+        "ash_authentication.add_strategy"
       ],
       aliases: [
         a: :accounts,
@@ -59,6 +66,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
       |> parse_module_option(:accounts)
       |> parse_module_option(:user)
       |> parse_module_option(:token)
+      |> csv_option(:auth_strategy)
 
     accounts_domain = options[:accounts]
     token_resource = options[:token]
@@ -93,6 +101,24 @@ defmodule Mix.Tasks.AshAuthentication.Install do
       otp_app
     )
     |> Ash.Igniter.codegen("add_authentication_resources")
+    |> add_strategies(options, argv)
+  end
+
+  defp add_strategies(igniter, options, argv) do
+    case List.wrap(options[:auth_strategy]) do
+      [] ->
+        Igniter.add_notice(igniter, """
+        Don't forget to add at least one authentication strategy!
+
+        You can use the task `mix ash_authentication.add_strategy`, or
+        view the docs at https://hexdocs.pm/ash_authentication/get-started.html
+        """)
+
+      strategies ->
+        Enum.reduce(strategies, igniter, fn strategy, igniter ->
+          Igniter.compose_task(igniter, "ash_authentication.add_strategy", [strategy | argv])
+        end)
+    end
   end
 
   defp generate_user_resource(
@@ -372,5 +398,20 @@ defmodule Mix.Tasks.AshAuthentication.Install do
         value
       end
     end)
+  end
+
+  defp csv_option(options, key, modifier \\ & &1) do
+    values = Keyword.get_values(options, key)
+
+    values =
+      values
+      |> List.wrap()
+      |> Enum.join(",")
+      |> String.split(",", trim: true)
+      |> then(modifier)
+
+    options
+    |> Keyword.delete(key)
+    |> Keyword.put(key, values)
   end
 end

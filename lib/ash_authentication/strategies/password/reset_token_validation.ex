@@ -22,4 +22,9 @@ defmodule AshAuthentication.Strategy.Password.ResetTokenValidation do
         {:error, InvalidArgument.exception(field: :reset_token, message: "is not valid")}
     end
   end
+
+  @impl true
+  def atomic(changeset, opts, context) do
+    validate(changeset, opts, context)
+  end
 end
