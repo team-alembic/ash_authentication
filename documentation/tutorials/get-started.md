@@ -130,7 +130,7 @@ AshAuthentication includes a supervisor which you should add to your
 application's supervisor tree. This is used to run any periodic jobs related to
 your authenticated resources (removing expired tokens, for example).
 
-### Example
+##### Example
 
 ```elixir
 defmodule MyApp.Application do

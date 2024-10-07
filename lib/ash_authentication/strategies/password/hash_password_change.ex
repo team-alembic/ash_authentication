@@ -59,4 +59,31 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
       end
     end)
   end
+
+  @impl true
+  def atomic(changeset, options, context) do
+    with {:ok, strategy} <- Info.find_strategy(changeset, context, options),
+         value when is_binary(value) <-
+           Changeset.get_argument(changeset, strategy.password_field) do
+      {:atomic, changeset,
+       %{
+         strategy.hashed_password_field =>
+           expr(lazy({__MODULE__, :hash_or_raise, [strategy.hash_provider, value]}))
+       }}
+    else
+      _ ->
+        changeset
+    end
+  end
+
+  @doc false
+  def hash_or_raise(hash_provider, value) do
+    case hash_provider.hash(value) do
+      {:ok, hash} ->
+        hash
+
+      :error ->
+        raise AssumptionFailed, message: "Error hashing password."
+    end
+  end
 end
