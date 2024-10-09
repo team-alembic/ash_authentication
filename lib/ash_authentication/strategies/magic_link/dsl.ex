@@ -49,6 +49,13 @@ defmodule AshAuthentication.Strategy.MagicLink.Dsl do
           """,
           default: true
         ],
+        registration_enabled?: [
+          type: :boolean,
+          doc:
+            "If you want new users to be able to register using this strategy, set this to true. This means that requesting a magic link an *upsert* action instead of a read action.",
+          required: false,
+          default: false
+        ],
         sign_in_action_name: [
           type: :atom,
           doc:

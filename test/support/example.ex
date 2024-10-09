@@ -5,6 +5,7 @@ defmodule Example do
   resources do
     resource Example.User
     resource Example.UserWithTokenRequired
+    resource Example.UserWithRegisterMagicLink
     resource Example.Token
     resource Example.UserIdentity
   end

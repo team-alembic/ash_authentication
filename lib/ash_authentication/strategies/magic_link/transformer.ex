@@ -99,26 +99,51 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
   end
 
   defp build_request_action(dsl_state, strategy) do
-    identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
+    # logging in with magic link is an upsert if registration is enabled.
+    if strategy.registration_enabled? do
+      identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
 
-    arguments = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
-        name: strategy.identity_field,
-        type: identity_attribute.type,
-        allow_nil?: false
+      changes = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+          change: MagicLink.RequestChange
+        )
+      ]
+
+      identity =
+        Enum.find(Ash.Resource.Info.identities(dsl_state), fn identity ->
+          identity.keys == [strategy.identity_field]
+        end)
+
+      Transformer.build_entity(Resource.Dsl, [:actions], :create,
+        name: strategy.request_action_name,
+        changes: changes,
+        accept: [identity_attribute.name],
+        upsert?: true,
+        upsert_identity: identity.name,
+        upsert_fields: [identity_attribute.name]
       )
-    ]
+    else
+      identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
 
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: MagicLink.RequestPreparation
+      arguments = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+          name: strategy.identity_field,
+          type: identity_attribute.type,
+          allow_nil?: false
+        )
+      ]
+
+      preparations = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+          preparation: MagicLink.RequestPreparation
+        )
+      ]
+
+      Transformer.build_entity(Resource.Dsl, [:actions], :read,
+        name: strategy.request_action_name,
+        arguments: arguments,
+        preparations: preparations
       )
-    ]
-
-    Transformer.build_entity(Resource.Dsl, [:actions], :read,
-      name: strategy.request_action_name,
-      arguments: arguments,
-      preparations: preparations
-    )
+    end
   end
 end

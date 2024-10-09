@@ -71,6 +71,16 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
             "Whether or not to wait until confirmation is received before actually changing a monitored field. See [the confirmation guide](/documentation/topics/confirmation.md) for more.",
           default: true
         ],
+        ignore_actions: [
+          type: {:list, :atom},
+          doc:
+            "A list of actions that should be ignored by this confirmation strategy. The confirmation sender will not be invoked, and the confirmed_at field will not be altered."
+        ],
+        auto_confirm_actions: [
+          type: {:list, :atom},
+          doc:
+            "A list of actions that should set confirmed_at to `true` automatically. For example, you would likely want to place `:sign_in_with_magic_link` in this list if using magic link."
+        ],
         sender: [
           type: {:spark_function_behaviour, Sender, {SenderFunction, 3}},
           doc: "How to send the confirmation instructions to the user.",

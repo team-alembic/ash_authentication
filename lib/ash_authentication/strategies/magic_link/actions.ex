@@ -6,7 +6,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Actions do
   magic links.
   """
 
-  alias Ash.{Query, Resource}
+  alias Ash.{Changeset, Query, Resource}
   alias AshAuthentication.{Errors, Info, Strategy.MagicLink}
 
   @doc """
@@ -20,14 +20,30 @@ defmodule AshAuthentication.Strategy.MagicLink.Actions do
         Info.domain!(strategy.resource)
       end)
 
-    strategy.resource
-    |> Query.new()
-    |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.for_read(strategy.request_action_name, params, options)
-    |> Ash.read()
-    |> case do
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
+    if strategy.registration_enabled? do
+      strategy.resource
+      |> Changeset.new()
+      |> Changeset.set_context(%{private: %{ash_authentication?: true}})
+      |> Changeset.for_create(
+        strategy.request_action_name,
+        params,
+        options
+      )
+      |> Ash.create()
+      |> case do
+        {:ok, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      strategy.resource
+      |> Query.new()
+      |> Query.set_context(%{private: %{ash_authentication?: true}})
+      |> Query.for_read(strategy.request_action_name, params, options)
+      |> Ash.read()
+      |> case do
+        {:ok, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 

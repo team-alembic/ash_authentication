@@ -1,7 +1,6 @@
 # Magic Links Tutorial
 
-This is a quick tutorial to get you up and running on Magic Links.
-This assumes you've set up `ash_authentication` and [password reset](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix) in your Phoenix project.
+This is a quick tutorial to get you up and running on Magic Links. This assumes you've set up `ash_authentication` already.
 
 ## Add the Magic Link Strategy to the User resource
 
@@ -9,17 +8,11 @@ This assumes you've set up `ash_authentication` and [password reset](https://ash
 # ...
 
 strategies do
-  password :password do
-    identity_field(:email)
-
-    resettable do
-      sender(Example.Accounts.User.Senders.SendPasswordResetEmail)
-    end
-  end
-
   # add these lines -->
   magic_link do
     identity_field :email
+    registration_enabled? true
+
     sender(Example.Accounts.User.Senders.SendMagicLink)
   end
   # <-- add these lines
@@ -28,7 +21,17 @@ end
 # ...
 ```
 
-## Create and email sender and email template
+### Registration Enabled
+
+When registration is enabled, requesting an email is a _create_ action that upserts the user by email.
+This allows a user who does not exist to request a magic link and sign up with one action.
+
+### Registration Disabled (default)
+
+When registration is disabled, requesting an email is a _read_ action that invokes the sender only if a user
+was found.
+
+## Create an email sender and email template
 
 Inside `/lib/example/accounts/user/senders/send_magic_link.ex`
 

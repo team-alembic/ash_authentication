@@ -32,31 +32,59 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
 
   defp validate_request_action(dsl_state, strategy, identity_attribute) do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.request_action_name),
-         :ok <- validate_action_has_argument(action, strategy.identity_field),
          :ok <-
-           validate_action_argument_option(
-             action,
-             strategy.identity_field,
-             :type,
-             [identity_attribute.type]
-           ),
+           validate_has_argument_or_accept(action, identity_attribute, strategy.identity_field),
          :ok <-
-           validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [
-             false
-           ]),
-         :ok <- validate_action_has_preparation(action, MagicLink.RequestPreparation),
-         :ok <- validate_field_in_values(action, :type, [:read]) do
+           validate_field_in_values(action, :type, [:read, :create]),
+         :ok <- validate_request_preparation_or_change(action) do
       :ok
     else
       {:error, message} when is_binary(message) ->
         {:error,
          DslError.exception(
            path: [:actions, :read, strategy.request_action_name, :type],
-           mesasge: message
+           message: message
          )}
 
       {:error, exception} when is_exception(exception) ->
         {:error, exception}
+    end
+  end
+
+  defp validate_has_argument_or_accept(action, identity_attribute, identity_field) do
+    if action.type == :create do
+      if identity_field in action.accept do
+        :ok
+      else
+        {:error,
+         DslError.exception(
+           path: [:actions, :read, action.name, :accept],
+           message: "Action must accept `#{inspect(identity_field)}` as input."
+         )}
+      end
+    else
+      with :ok <- validate_action_has_argument(action, identity_field),
+           :ok <-
+             validate_action_argument_option(action, identity_field, :allow_nil?, [
+               false
+             ]) do
+        validate_action_argument_option(
+          action,
+          identity_field,
+          :type,
+          [identity_attribute.type]
+        )
+      end
+    end
+  end
+
+  defp validate_request_preparation_or_change(action) do
+    case action.type do
+      :create ->
+        validate_action_has_change(action, MagicLink.RequestChange)
+
+      :read ->
+        validate_action_has_preparation(action, MagicLink.RequestPreparation)
     end
   end
 
@@ -78,7 +106,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
         {:error,
          DslError.exception(
            path: [:actions, :read, strategy.sign_in_action_name, :type],
-           mesasge: message
+           message: message
          )}
 
       {:error, exception} when is_exception(exception) ->

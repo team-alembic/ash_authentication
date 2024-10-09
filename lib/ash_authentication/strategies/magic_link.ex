@@ -102,6 +102,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
             request_action_name: nil,
             resource: nil,
             sender: nil,
+            registration_enabled?: false,
             sign_in_action_name: nil,
             single_use_token?: true,
             strategy_module: __MODULE__,
@@ -122,6 +123,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
           single_use_token?: boolean,
           sign_in_action_name: atom,
           strategy_module: module,
+          registration_enabled?: boolean,
           token_lifetime: pos_integer(),
           token_param_name: atom
         }

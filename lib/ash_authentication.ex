@@ -154,7 +154,7 @@ defmodule AshAuthentication do
   ## Example
 
       iex> authenticated_resources(:ash_authentication)
-      [Example.User, Example.UserWithTokenRequired]
+      [Example.User, Example.UserWithTokenRequired, Example.UserWithRegisterMagicLink]
 
   """
   @spec authenticated_resources(atom | [atom]) :: [Resource.t()]
