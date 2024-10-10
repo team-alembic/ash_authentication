@@ -150,12 +150,6 @@ defmodule AshAuthentication do
   Find all resources which support authentication for a given OTP application.
 
   Returns a list of resource modules.
-
-  ## Example
-
-      iex> authenticated_resources(:ash_authentication)
-      [Example.User, Example.UserWithTokenRequired]
-
   """
   @spec authenticated_resources(atom | [atom]) :: [Resource.t()]
   def authenticated_resources(otp_app) do

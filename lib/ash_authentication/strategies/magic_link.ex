@@ -30,8 +30,10 @@ defmodule AshAuthentication.Strategy.MagicLink do
       strategies do
         magic_link do
           identity_field :email
-          sender fn user, token, _opts ->
-            MyApp.Emails.deliver_magic_link(user, token)
+          sender fn user_or_email, token, _opts ->
+            # will be a user if the token relates to an existing user
+            # will be an email if there is no matching user (such as during sign up)
+            MyApp.Emails.deliver_magic_link(user_or_email, token)
           end
         end
       end
@@ -102,6 +104,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
             request_action_name: nil,
             resource: nil,
             sender: nil,
+            prevent_hijacking?: true,
+            registration_enabled?: false,
             sign_in_action_name: nil,
             single_use_token?: true,
             strategy_module: __MODULE__,
@@ -116,6 +120,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
   @type t :: %__MODULE__{
           identity_field: atom,
           name: atom,
+          prevent_hijacking?: boolean,
+          registration_enabled?: boolean,
           request_action_name: atom,
           resource: module,
           sender: {module, keyword},
@@ -137,7 +143,33 @@ defmodule AshAuthentication.Strategy.MagicLink do
   @spec request_token_for(t, Resource.record()) :: {:ok, binary} | :error
   def request_token_for(strategy, user)
       when is_struct(strategy, __MODULE__) and is_struct(user, strategy.resource) do
-    case Jwt.token_for_user(user, %{"act" => strategy.sign_in_action_name},
+    case Jwt.token_for_user(
+           user,
+           %{
+             "act" => strategy.sign_in_action_name,
+             "identity" => Map.get(user, strategy.identity_field)
+           },
+           token_lifetime: strategy.token_lifetime,
+           purpose: :magic_link
+         ) do
+      {:ok, token, _claims} -> {:ok, token}
+      :error -> :error
+    end
+  end
+
+  @doc """
+  Generate a magic link token for an identity field.
+
+  Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
+  """
+  def request_token_for_identity(strategy, identity)
+      when is_struct(strategy, __MODULE__) do
+    case Jwt.token_for_resource(
+           strategy.resource,
+           %{
+             "act" => strategy.sign_in_action_name,
+             "identity" => to_string(identity)
+           },
            token_lifetime: strategy.token_lifetime,
            purpose: :magic_link
          ) do

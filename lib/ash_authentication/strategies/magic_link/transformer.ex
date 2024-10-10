@@ -66,36 +66,75 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
 
   defp maybe_set_request_action_name(strategy), do: strategy
 
-  defp build_sign_in_action(_dsl_state, strategy) do
-    arguments = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
-        name: strategy.token_param_name,
-        type: :string,
-        allow_nil?: false
-      )
-    ]
+  defp build_sign_in_action(dsl_state, strategy) do
+    if strategy.registration_enabled? do
+      arguments = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
+          name: strategy.token_param_name,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
 
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: MagicLink.SignInPreparation
-      )
-    ]
+      changes = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+          change: MagicLink.SignInChange
+        )
+      ]
 
-    metadata = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
-        name: :token,
-        type: :string,
-        allow_nil?: false
-      )
-    ]
+      metadata = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :metadata,
+          name: :token,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
 
-    Transformer.build_entity(Resource.Dsl, [:actions], :read,
-      name: strategy.sign_in_action_name,
-      arguments: arguments,
-      preparations: preparations,
-      metadata: metadata,
-      get?: true
-    )
+      identity =
+        Enum.find(Ash.Resource.Info.identities(dsl_state), fn identity ->
+          identity.keys == [strategy.identity_field]
+        end)
+
+      Transformer.build_entity(Resource.Dsl, [:actions], :create,
+        name: strategy.sign_in_action_name,
+        arguments: arguments,
+        changes: changes,
+        metadata: metadata,
+        upsert?: true,
+        upsert_identity: identity.name,
+        upsert_fields: [strategy.identity_field]
+      )
+    else
+      arguments = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+          name: strategy.token_param_name,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
+
+      preparations = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+          preparation: MagicLink.SignInPreparation
+        )
+      ]
+
+      metadata = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
+          name: :token,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
+
+      Transformer.build_entity(Resource.Dsl, [:actions], :read,
+        name: strategy.sign_in_action_name,
+        arguments: arguments,
+        preparations: preparations,
+        metadata: metadata,
+        get?: true
+      )
+    end
   end
 
   defp build_request_action(dsl_state, strategy) do
