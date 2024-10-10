@@ -72,12 +72,12 @@ Currently supported strategies:
 
 Most of the authentication strategies based on `OAuth2` wrap the [`assent`](https://hex.pm/packages/assent) package.
 
-If you needs to customize the behavior of the http client used by `assent`, define a custom `http_adapter` in the 
+If you needs to customize the behavior of the http client used by `assent`, define a custom `http_adapter` in the
 application settings:
 
 `config :ash_authentication, :http_adapter, {Assent.HTTPAdapter.Finch, supervisor: MyApp.CustomFinch}`
 
-See [`assent's documentation`](https://hexdocs.pm/assent/README.html#http-client) for more details on the supported 
+See [`assent's documentation`](https://hexdocs.pm/assent/README.html#http-client) for more details on the supported
 http clients and their configuration.
 
 ## Add-ons

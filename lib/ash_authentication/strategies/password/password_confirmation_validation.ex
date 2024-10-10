@@ -61,6 +61,11 @@ defmodule AshAuthentication.Strategy.Password.PasswordConfirmationValidation do
     end
   end
 
+  @impl true
+  def atomic(changeset, opts, context) do
+    validate(changeset, opts, context)
+  end
+
   defp validate_password_confirmation(changeset, strategy) do
     password = Changeset.get_argument(changeset, strategy.password_field)
     confirmation = Changeset.get_argument(changeset, strategy.password_confirmation_field)

@@ -10,6 +10,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
   alias Ash.{Resource, Type}
   alias AshAuthentication.{TokenResource, TokenResource.Info}
   alias Spark.Dsl.Transformer
+  alias Spark.Error.DslError
 
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -192,7 +193,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
         name: :jti,
         type: :string,
-        sensitive?: false
+        sensitive?: true
       ),
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
         name: :purpose,
@@ -334,12 +335,31 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_is_revoked_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
-         :ok <-
-           validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_has_preparation(action, TokenResource.IsRevokedPreparation) do
-      validate_field_in_values(action, :type, [:read])
+    case validate_action_exists(dsl_state, action_name) do
+      {:ok, %{type: :read} = action} ->
+        with :ok <-
+               validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
+             :ok <-
+               validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]) do
+          validate_action_has_preparation(action, TokenResource.IsRevokedPreparation)
+        end
+
+      {:ok, %{type: :action} = action} ->
+        with :ok <-
+               validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]) do
+          validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string])
+        end
+
+      {:ok, _} ->
+        {:error,
+         DslError.exception(
+           module: Transformer.get_persisted(dsl_state, :module),
+           path: [:actions, :is_revoked],
+           message: "The action `:is_revoked` must be a read action or a generic action"
+         )}
+
+      _ ->
+        :ok
     end
   end
 
@@ -418,8 +438,20 @@ defmodule AshAuthentication.TokenResource.Transformer do
     end
   end
 
-  defp build_expunge_expired_action(_dsl_state, action_name),
-    do: Transformer.build_entity(Resource.Dsl, [:actions], :destroy, name: action_name)
+  defp build_expunge_expired_action(_dsl_state, action_name) do
+    import Ash.Expr
+
+    changes = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :destroy], :change,
+        change: {Ash.Resource.Change.Filter, filter: expr(expires_at < now())}
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :destroy,
+      name: action_name,
+      changes: changes
+    )
+  end
 
   defp validate_jti_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),

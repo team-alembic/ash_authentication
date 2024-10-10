@@ -42,7 +42,8 @@ defmodule AshAuthentication.Plug.Helpers do
       subject = URI.parse(subject)
 
       with {:ok, resource} <- Map.fetch(resources, subject.path),
-           {:ok, user} <- AshAuthentication.subject_to_user(subject, resource, opts),
+           {:ok, user} <-
+             AshAuthentication.subject_to_user(subject, resource, opts),
            {:ok, subject_name} <- Info.authentication_subject_name(resource) do
         current_subject_name = current_subject_name(subject_name)
 

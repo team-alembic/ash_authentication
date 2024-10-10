@@ -188,22 +188,51 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         params,
         options
       ) do
-    options =
-      options
-      |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
+    case Ash.Resource.Info.action(
+           strategy.resource,
+           resettable.request_password_reset_action_name
+         ) do
+      nil ->
+        {:error,
+         NoSuchAction.exception(resource: strategy.resource, action: :reset_request, type: :read)}
 
-    strategy.resource
-    |> Query.new()
-    |> Query.set_context(%{
-      private: %{
-        ash_authentication?: true
-      }
-    })
-    |> Query.for_read(resettable.request_password_reset_action_name, params)
-    |> Ash.read(options)
-    |> case do
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
+      %{type: :read, name: action_name} ->
+        options =
+          options
+          |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
+
+        strategy.resource
+        |> Query.new()
+        |> Query.set_context(%{
+          private: %{
+            ash_authentication?: true
+          }
+        })
+        |> Query.for_read(action_name, params, options)
+        |> Ash.read()
+        |> case do
+          {:ok, _} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      %{type: :action, name: action_name} ->
+        options =
+          options
+          |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
+
+        strategy.resource
+        |> Ash.ActionInput.new()
+        |> Ash.ActionInput.set_context(%{
+          private: %{
+            ash_authentication?: true
+          }
+        })
+        |> Ash.ActionInput.for_action(action_name, params, options)
+        |> Ash.run_action()
+        |> case do
+          {:ok, _} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
