@@ -102,7 +102,7 @@ defmodule AshAuthentication.Jwt do
       case Map.fetch(user.__metadata__, :tenant) do
         {:ok, tenant} ->
           tenant = to_string(tenant)
-          {Map.put(extra_claims, "tenant", tenant), [tenant: tenant]}
+          {Map.put(extra_claims, "tenant", tenant), Keyword.put(opts, :tenant, tenant)}
 
         :error ->
           {extra_claims, opts}
@@ -117,6 +117,38 @@ defmodule AshAuthentication.Jwt do
     else
       {:error, reason} ->
         Logger.error("Failed to generate token for user: #{inspect(reason, pretty: true)}")
+        :error
+    end
+  end
+
+  @doc """
+  Given a resource, generate a signed JWT with a set of claims.
+  """
+  @spec token_for_resource(Resource.t(), extra_claims :: map, options :: keyword) ::
+          {:ok, token, claims} | :error
+  def token_for_resource(resource, extra_claims, opts \\ []) do
+    {purpose, opts} = Keyword.pop(opts, :purpose, :user)
+
+    default_claims = Config.default_claims(resource, opts)
+    signer = Config.token_signer(resource, opts)
+
+    subject =
+      Info.authentication_subject_name!(resource)
+
+    extra_claims =
+      extra_claims
+      |> Map.put("sub", subject)
+
+    with {:ok, token, claims} <-
+           Joken.generate_and_sign(default_claims, extra_claims, signer),
+         :ok <- maybe_store_token(token, resource, nil, purpose, opts) do
+      {:ok, token, claims}
+    else
+      {:error, reason} ->
+        Logger.error(
+          "Failed to generate token for #{inspect(resource)}: #{inspect(reason, pretty: true)}"
+        )
+
         :error
     end
   end

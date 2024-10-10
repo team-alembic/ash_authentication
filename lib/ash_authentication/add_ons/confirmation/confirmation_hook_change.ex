@@ -37,6 +37,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
   use Ash.Resource.Change
   alias Ash.{Changeset, Resource.Change}
   alias AshAuthentication.{AddOn.Confirmation, Info}
+  import Ash.Expr
 
   @doc false
   @impl true
@@ -52,23 +53,67 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
   end
 
   defp do_change(changeset, strategy) do
-    changeset
-    |> Changeset.before_action(
-      fn changeset ->
+    auto_confirm? = changeset.action.name in strategy.auto_confirm_actions
+
+    changeset =
+      if auto_confirm? do
+        Changeset.change_attribute(changeset, strategy.confirmed_at_field, DateTime.utc_now())
+      else
         changeset
-        |> not_confirm_action(strategy)
-        |> should_confirm_action_type(strategy)
-        |> monitored_field_changing(strategy)
-        |> changes_would_be_valid()
-        |> maybe_inhibit_updates(strategy)
-        |> maybe_perform_confirmation(strategy, changeset)
-      end,
-      prepend?: true
+      end
+
+    changeset
+    |> handle_upserts(
+      strategy,
+      auto_confirm?
     )
+    |> then(fn changeset ->
+      if auto_confirm? do
+        changeset
+      else
+        Ash.Changeset.before_action(changeset, &before_action(&1, strategy))
+      end
+    end)
   end
 
+  defp before_action(changeset, strategy) do
+    changeset
+    |> not_confirm_action(strategy)
+    |> should_confirm_action_type(strategy)
+    |> monitored_field_changing(strategy)
+    |> changes_would_be_valid()
+    |> maybe_inhibit_updates(strategy)
+    |> maybe_perform_confirmation(strategy, changeset)
+  end
+
+  defp handle_upserts(%{action: %{type: :create}} = changeset, strategy, auto_confirm?) do
+    if auto_confirm? || changeset.action.name == strategy.confirm_action_name do
+      if changeset.context[:private][:upsert?] && changeset.context[:private][:upsert_fields] do
+        update_in(
+          changeset.context[:private][:upsert_fields],
+          &(List.wrap(&1) ++ [strategy.confirmed_at_field])
+        )
+      else
+        changeset
+      end
+    else
+      if strategy.prevent_hijacking? &&
+           Enum.any?(strategy.monitor_fields, &Changeset.changing_attribute?(changeset, &1)) do
+        Ash.Changeset.filter(
+          changeset,
+          expr(not is_nil(^ref(strategy.confirmed_at_field)))
+        )
+      else
+        # User accepted the risk 🤷‍♂️
+        changeset
+      end
+    end
+  end
+
+  defp handle_upserts(changeset, _, _), do: changeset
+
   defp not_confirm_action(%Changeset{} = changeset, strategy)
-       when changeset.action != strategy.confirm_action_name,
+       when changeset.action.name != strategy.confirm_action_name,
        do: changeset
 
   defp not_confirm_action(_changeset, _strategy), do: nil

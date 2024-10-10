@@ -25,6 +25,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
              "Token generation must be enabled for password resets to work."
            ),
          :ok <- validate_monitor_fields(dsl_state, strategy),
+         strategy <- maybe_set_confirm_action_name(strategy),
          {:ok, dsl_state} <-
            maybe_build_action(
              dsl_state,
@@ -208,4 +209,21 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp maybe_set_confirm_action_name(strategy)
+       when is_nil(strategy.confirm_action_name),
+       do: %{
+         strategy
+         | confirm_action_name:
+             case strategy.name do
+               :confirm ->
+                 :confirm
+
+               name ->
+                 String.to_atom("confirm_#{String.trim_leading(to_string(name), "confirm_")}")
+             end
+       }
+
+  defp maybe_set_confirm_action_name(strategy), do: strategy
 end
