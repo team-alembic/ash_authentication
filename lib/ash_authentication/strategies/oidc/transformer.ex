@@ -13,6 +13,7 @@ defmodule AshAuthentication.Strategy.Oidc.Transformer do
   def transform(strategy, dsl_state) when strategy.nonce == true do
     strategy
     |> Map.put(:nonce, {NonceGenerator, []})
+    |> Map.put(:provider, :oidc)
     |> OAuth2.transform(dsl_state)
   end
 
