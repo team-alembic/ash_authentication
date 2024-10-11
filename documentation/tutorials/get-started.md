@@ -1,7 +1,7 @@
 # Get started with Ash Authentication
 
 If you haven't already, read [the getting started guide for
-Ash](https://ash-hq.org/docs/guides/ash/latest/tutorials/get-started.md). This
+Ash](https://hexdocs.pm/ash/get-started.html). This
 assumes that you already have resources set up, and only gives you the steps to
 add authentication to your resources and APIs.
 
