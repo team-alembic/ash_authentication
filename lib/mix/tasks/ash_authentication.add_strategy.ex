@@ -2,7 +2,7 @@
 defmodule Mix.Tasks.AshAuthentication.AddStrategy do
   use Igniter.Mix.Task
 
-  @example "mix ash_authentication.patch.add_strategy password"
+  @example "mix ash_authentication.add_strategy password"
 
   @shortdoc "Adds the provided strategy or strategies to your user resource"
 
@@ -33,7 +33,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
 
   * `--user`, `-u` -  The user resource. Defaults to `YourApp.Accounts.User`
   * `--identity-field`, `-i` - The field on the user resource that will be used to identify
-    the user. Defaults to `:email`
+    the user. Defaults to `email`
   """
 
   def info(_argv, _composing_task) do
