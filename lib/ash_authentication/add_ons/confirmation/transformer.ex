@@ -84,33 +84,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
       with {:ok, resource} <- persisted_option(dsl_state, :module),
            {:ok, attribute} <- find_attribute(dsl_state, field),
            :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
-           :ok <- validate_attribute_option(attribute, resource, :public?, [true]),
-           :ok <- maybe_validate_eager_checking(dsl_state, strategy, field, resource) do
+           :ok <- validate_attribute_option(attribute, resource, :public?, [true]) do
         {:cont, :ok}
       else
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
-  end
-
-  defp maybe_validate_eager_checking(_dsl_state, %{inhibit_updates?: false}, _, _), do: :ok
-
-  defp maybe_validate_eager_checking(dsl_state, _strategy, field, resource) do
-    dsl_state
-    |> Resource.Info.identities()
-    |> Enum.find(&(&1.keys == [field]))
-    |> case do
-      %{name: name, eager_check_with: nil} ->
-        {:error,
-         DslError.exception(
-           path: [:identities, :identity],
-           message:
-             "The #{name} identity on the resource `#{inspect(resource)}` needs the `eager_check_with` property set so that inhibited changes are still validated."
-         )}
-
-      _ ->
-        :ok
-    end
   end
 
   defp build_confirm_action(_dsl_state, strategy) do
@@ -155,8 +134,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
          :ok <- validate_action_has_change(action, Confirmation.ConfirmChange),
          :ok <- validate_action_argument_option(action, :confirm, :allow_nil?, [false]),
          :ok <- validate_action_argument_option(action, :confirm, :type, [Type.String]),
-         :ok <- validate_action_has_change(action, GenerateTokenChange),
-         :ok <- validate_action_option(action, :require_atomic?, [false]) do
+         :ok <- validate_action_has_change(action, GenerateTokenChange) do
       accept_fields = MapSet.new(action.accept || [])
 
       strategy.monitor_fields

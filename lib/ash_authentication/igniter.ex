@@ -26,6 +26,88 @@ defmodule AshAuthentication.Igniter do
     end)
   end
 
+  @doc "Adds a new add_on to the authentication.strategies section of a resource"
+  @spec add_new_add_on(
+          Igniter.t(),
+          Ash.Resource.t(),
+          type :: atom,
+          name :: atom,
+          contents :: String.t()
+        ) :: Igniter.t()
+  def add_new_add_on(igniter, resource, type, name, contents) do
+    {igniter, defines?} = defines_add_on(igniter, resource, type, name)
+
+    if defines? do
+      igniter
+    else
+      add_add_on(igniter, resource, contents)
+    end
+  end
+
+  @doc "Adds an add on to the authentication.add_ons section of a resource"
+  @spec add_add_on(
+          Igniter.t(),
+          Ash.Resource.t(),
+          contents :: String.t()
+        ) :: Igniter.t()
+  def add_add_on(igniter, resource, contents) do
+    Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+      with {:authentication, {:ok, zipper}} <-
+             {:authentication, enter_section(zipper, :authentication)},
+           {:add_ons, _authentication_zipper, {:ok, zipper}} <-
+             {:add_ons, zipper, enter_section(zipper, :add_ons)} do
+        {:ok, Igniter.Code.Common.add_code(zipper, contents)}
+      else
+        {:authentication, :error} ->
+          {:ok,
+           Igniter.Code.Common.add_code(zipper, """
+           authentication do
+             add_ons do
+               #{contents}
+             end
+           end
+           """)}
+
+        {:add_ons, zipper, :error} ->
+          {:ok,
+           Igniter.Code.Common.add_code(zipper, """
+           add_ons do
+             #{contents}
+           end
+           """)}
+      end
+    end)
+  end
+
+  @doc "Returns true if the given resource defines an authentication add on with the provided name"
+  @spec defines_add_on(Igniter.t(), Ash.Resource.t(), constructor :: atom(), name :: atom()) ::
+          {Igniter.t(), true | false}
+  def defines_add_on(igniter, resource, constructor, name) do
+    Spark.Igniter.find(igniter, resource, fn _, zipper ->
+      with {:ok, zipper} <- enter_section(zipper, :authentication),
+           {:ok, zipper} <- enter_section(zipper, :add_ons),
+           {:ok, _zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               constructor,
+               [1, 2],
+               &Igniter.Code.Function.argument_equals?(&1, 0, name)
+             ) do
+        {:ok, true}
+      else
+        _ ->
+          :error
+      end
+    end)
+    |> case do
+      {:ok, igniter, _module, _value} ->
+        {igniter, true}
+
+      {:error, igniter} ->
+        {igniter, false}
+    end
+  end
+
   @doc "Adds a new strategy to the authentication.strategies section of a resource"
   @spec add_new_strategy(
           Igniter.t(),
@@ -79,7 +161,7 @@ defmodule AshAuthentication.Igniter do
     end)
   end
 
-  @doc "Returns true if the given resource defines an attribute with the provided name"
+  @doc "Returns true if the given resource defines an authentication strategy with the provided name"
   @spec defines_strategy(Igniter.t(), Ash.Resource.t(), constructor :: atom(), name :: atom()) ::
           {Igniter.t(), true | false}
   def defines_strategy(igniter, resource, constructor, name) do

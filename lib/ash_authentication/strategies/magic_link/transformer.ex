@@ -21,6 +21,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
            ),
          strategy <- maybe_set_sign_in_action_name(strategy),
          strategy <- maybe_set_request_action_name(strategy),
+         strategy <- maybe_set_lookup_action_name(strategy),
          strategy <- maybe_transform_token_lifetime(strategy),
          {:ok, dsl_state} <-
            maybe_build_action(
@@ -38,7 +39,11 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
         dsl_state
         |> then(
           &register_strategy_actions(
-            [strategy.sign_in_action_name, strategy.request_action_name],
+            [
+              strategy.sign_in_action_name,
+              strategy.request_action_name,
+              strategy.lookup_action_name
+            ],
             &1,
             strategy
           )
@@ -65,6 +70,12 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
     do: %{strategy | request_action_name: String.to_atom("request_#{strategy.name}")}
 
   defp maybe_set_request_action_name(strategy), do: strategy
+
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp maybe_set_lookup_action_name(strategy) when is_nil(strategy.lookup_action_name),
+    do: %{strategy | lookup_action_name: String.to_atom("get_by_#{strategy.identity_field}")}
+
+  defp maybe_set_lookup_action_name(strategy), do: strategy
 
   defp build_sign_in_action(dsl_state, strategy) do
     if strategy.registration_enabled? do

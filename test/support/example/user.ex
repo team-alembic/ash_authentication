@@ -257,7 +257,7 @@ defmodule Example.User do
   end
 
   identities do
-    identity :username, [:username], eager_check_with: Example
+    identity :username, [:username]
   end
 
   def get_config(path, _resource) do

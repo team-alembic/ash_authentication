@@ -43,9 +43,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
     end
 
     identities do
-      identity :email, [:email] do
-        eager_check_with MyApp.Accounts
-      end
+      identity :email, [:email]
     end
   end
   ```
@@ -92,7 +90,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
             confirm_on_update?: true,
             prevent_hijacking?: true,
             confirmed_at_field: :confirmed_at,
-            inhibit_updates?: false,
+            inhibit_updates?: true,
             monitor_fields: [],
             auto_confirm_actions: [],
             name: :confirm,

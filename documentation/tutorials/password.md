@@ -1,5 +1,10 @@
 # Password Authentication
 
+## With a mix task
+
+You can use `mix ash_authentication.add_strategy password` to install this strategy.
+The rest of the guide is in the case that you wish to proceed manually.
+
 ## Add Bcrypt To your dependencies
 
 This step is not strictly necessary, but in the next major version of `AshAuthentication`,

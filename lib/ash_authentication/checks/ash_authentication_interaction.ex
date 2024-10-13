@@ -22,7 +22,6 @@ defmodule AshAuthentication.Checks.AshAuthenticationInteraction do
   end
 
   @impl Ash.Policy.SimpleCheck
-  def match?(_, %{query: %{context: %{private: %{ash_authentication?: true}}}}, _), do: true
-  def match?(_, %{changeset: %{context: %{private: %{ash_authentication?: true}}}}, _), do: true
+  def match?(_, %{subject: %{context: %{private: %{ash_authentication?: true}}}}, _), do: true
   def match?(_, _, _), do: false
 end

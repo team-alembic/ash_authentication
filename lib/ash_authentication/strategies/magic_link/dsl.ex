@@ -48,6 +48,11 @@ defmodule AshAuthentication.Strategy.MagicLink.Dsl do
           doc: "The name to use for the request action. Defaults to `request_<strategy_name>`",
           required: false
         ],
+        lookup_action_name: [
+          type: :atom,
+          doc:
+            "The action to use when looking up a user by their identity. Defaults to `get_by_<identity_field>`"
+        ],
         single_use_token?: [
           type: :boolean,
           doc: """

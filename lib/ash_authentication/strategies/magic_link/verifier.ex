@@ -45,14 +45,37 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
            validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [
              false
            ]),
-         :ok <- validate_action_has_preparation(action, MagicLink.RequestPreparation),
-         :ok <- validate_field_in_values(action, :type, [:read]) do
-      :ok
+         :ok <- validate_field_in_values(action, :type, [:read, :action]) do
+      case action.type do
+        :read ->
+          validate_action_has_preparation(action, MagicLink.RequestPreparation)
+
+        _ ->
+          with {:ok, action} <- validate_action_exists(dsl_state, strategy.lookup_action_name),
+               :ok <- validate_action_has_argument(action, identity_attribute.name),
+               :ok <-
+                 validate_action_argument_option(
+                   action,
+                   strategy.identity_field,
+                   :type,
+                   [identity_attribute.type]
+                 ),
+               :ok <-
+                 validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [
+                   false
+                 ]),
+               :ok <- validate_action_option(action, :get?, [true]) do
+            :ok
+          else
+            {:error, error} ->
+              {:error, error}
+          end
+      end
     else
       {:error, message} when is_binary(message) ->
         {:error,
          DslError.exception(
-           path: [:actions, :read, strategy.request_action_name, :type],
+           path: [:actions, strategy.request_action_name],
            message: message
          )}
 

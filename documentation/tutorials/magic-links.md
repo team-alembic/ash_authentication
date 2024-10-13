@@ -1,6 +1,9 @@
 # Magic Links Tutorial
 
-This is a quick tutorial to get you up and running on Magic Links. This assumes you've set up `ash_authentication` already.
+## With a mix task
+
+You can use `mix ash_authentication.add_strategy magic_link` to install this strategy.
+The rest of the guide is in the case that you wish to proceed manually.
 
 ## Add the Magic Link Strategy to the User resource
 

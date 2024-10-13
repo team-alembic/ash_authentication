@@ -35,9 +35,10 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
   """
 
   use Ash.Resource.Change
-  alias Ash.{Changeset, Resource.Change}
+  alias Ash.{Changeset, Error.Changes.InvalidChanges, Query, Resource.Change}
   alias AshAuthentication.{AddOn.Confirmation, Info}
   import Ash.Expr
+  require Logger
 
   @doc false
   @impl true
@@ -74,6 +75,66 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
         Ash.Changeset.before_action(changeset, &before_action(&1, strategy))
       end
     end)
+  end
+
+  @impl true
+  def atomic(changeset, opts, context) do
+    case Info.find_strategy(changeset, context, opts) do
+      {:ok, strategy} ->
+        atomic_confirmation(changeset, strategy)
+
+      :error ->
+        changeset
+    end
+  end
+
+  defp atomic_confirmation(changeset, strategy) do
+    auto_confirm? = changeset.action.name in strategy.auto_confirm_actions
+
+    if auto_confirm? do
+      {:atomic, %{strategy.confirmed_at_field => expr(now())}}
+    else
+      action_types =
+        if strategy.confirm_on_create? do
+          [:create]
+        else
+          []
+        end
+
+      action_types =
+        if strategy.confirm_on_update? do
+          action_types ++ [:update]
+        else
+          action_types
+        end
+
+      cond do
+        changeset.action.type not in action_types ->
+          {:ok, changeset}
+
+        changeset.action.name == strategy.confirm_action_name ->
+          {:ok, changeset}
+
+        !Enum.any?(strategy.monitor_fields, &Changeset.changing_attribute?(changeset, &1)) ->
+          {:ok, changeset}
+
+        identity = cant_atomically_inhibit_updates(changeset.resource, strategy) ->
+          {:not_atomic,
+           "The confirmation strategy `:#{strategy.name}` cannot inhibit updates atomically, because the identity `#{identity.name}` requires checking in advance if the fields have been taken."}
+
+        true ->
+          {:ok,
+           maybe_perform_confirmation(changeset, strategy, changeset)
+           |> validate_identities(strategy, true)}
+      end
+    end
+  end
+
+  defp cant_atomically_inhibit_updates(resource, strategy) do
+    strategy.inhibit_updates? &&
+      Enum.find(Ash.Resource.Info.identities(resource), fn identity ->
+        Enum.any?(strategy.monitor_fields, &(&1 in identity.keys))
+      end)
   end
 
   defp before_action(changeset, strategy) do
@@ -141,11 +202,93 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
   defp maybe_inhibit_updates(%Changeset{} = changeset, strategy)
        when changeset.action_type == :update and strategy.inhibit_updates? do
-    strategy.monitor_fields
-    |> Enum.reduce(changeset, &Changeset.clear_change(&2, &1))
+    changeset
+    |> validate_identities(strategy)
+    |> case do
+      {:error, violated_identity} ->
+        Ash.Changeset.add_error(
+          changeset,
+          InvalidChanges.exception(
+            fields: violated_identity.keys,
+            message: "has already been taken"
+          )
+        )
+
+      changeset ->
+        Enum.reduce(strategy.monitor_fields, changeset, &Changeset.clear_change(&2, &1))
+    end
   end
 
   defp maybe_inhibit_updates(changeset, _strategy), do: changeset
+
+  defp validate_identities(changeset, strategy, after_action? \\ false) do
+    identities =
+      strategy.monitor_fields
+      |> Enum.flat_map(fn field ->
+        changeset.resource
+        |> Ash.Resource.Info.identities()
+        |> Enum.filter(&(field in &1.keys))
+      end)
+
+    cond do
+      identities == [] ->
+        changeset
+
+      after_action? ->
+        do_validate_identities_after_action(identities, changeset)
+
+      true ->
+        do_validate_identities(identities, changeset)
+    end
+  end
+
+  defp do_validate_identities_after_action(identities, changeset) do
+    Ash.Changeset.after_action(changeset, fn _changeset, result ->
+      case do_validate_identities(identities, changeset) do
+        {:error, violated_identity} ->
+          InvalidChanges.exception(
+            fields: violated_identity.keys,
+            message: "has already been taken"
+          )
+
+        _ ->
+          {:ok, result}
+      end
+    end)
+  end
+
+  defp do_validate_identities(identities, changeset) do
+    Enum.reduce_while(identities, changeset, fn identity, changeset ->
+      non_attrs =
+        Enum.reject(identity.keys, &Ash.Resource.Info.attribute(changeset.resource, &1))
+
+      changeset = %{changeset | data: Ash.load!(changeset.data, non_attrs, lazy?: true)}
+
+      filter =
+        Enum.map(identity.keys, &{&1, Ash.Changeset.get_attribute(changeset, &1)})
+
+      has_nil? =
+        Enum.any?(filter, fn {_k, v} -> is_nil(v) end)
+
+      if (identity.nils_distinct? && has_nil?) ||
+           !exists?(changeset.resource, filter) do
+        {:cont, changeset}
+      else
+        {:halt, {:error, identity}}
+      end
+    end)
+  end
+
+  defp exists?(resource, filter) do
+    resource
+    |> Query.do_filter(filter)
+    |> Query.set_context(%{
+      private: %{
+        ash_authentication?: true
+      }
+    })
+    |> Ash.exists?()
+  end
 
   defp maybe_perform_confirmation(%Changeset{} = changeset, strategy, original_changeset) do
     changeset
@@ -164,7 +307,11 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
           {:ok, %{user | __metadata__: metadata}}
 
-        _ ->
+        {:error, error} ->
+          Logger.error(
+            "Failed to generate confirmation token\n: #{Exception.format(:error, error)}"
+          )
+
           {:ok, user}
       end
     end)
