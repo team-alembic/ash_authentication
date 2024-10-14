@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.2.1](https://github.com/team-alembic/ash_authentication/compare/v4.2.0...v4.2.1) (2024-10-14)
+
+
+
+
+### Improvements:
+
+* update igniter
+
 ## [v4.2.0](https://github.com/team-alembic/ash_authentication/compare/v4.1.0...v4.2.0) (2024-10-07)
 
 
