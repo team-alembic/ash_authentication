@@ -38,6 +38,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
 
   def info(_argv, _composing_task) do
     %Igniter.Mix.Task.Info{
+      group: :ash,
       example: @example,
       extra_args?: false,
       # A list of environments that this should be installed in, only relevant if this is an installer.
