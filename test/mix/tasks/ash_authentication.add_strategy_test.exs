@@ -201,7 +201,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       """)
     end
 
-    test "adds the bycrypt dependency", %{igniter: igniter} do
+    test "adds the bcrypt dependency", %{igniter: igniter} do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
       |> assert_has_patch("mix.exs", """
