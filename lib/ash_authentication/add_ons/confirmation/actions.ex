@@ -60,10 +60,19 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
     changes =
       strategy.monitor_fields
       |> Stream.filter(&Changeset.changing_attribute?(changeset, &1))
-      |> Stream.map(&{to_string(&1), to_string(Changeset.get_attribute(changeset, &1))})
-      |> Map.new()
+      |> Enum.reduce_while({:ok, %{}}, fn field, {:ok, acc} ->
+        if Keyword.has_key?(changeset.atomics, field) do
+          {:halt,
+           {:error,
+            "Cannot store the changes to the field #{field} because it is being updated atomically."}}
+        else
+          {:cont,
+           {:ok, Map.put(acc, field, to_string(Changeset.get_attribute(changeset, field)))}}
+        end
+      end)
 
-    with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
+    with {:ok, changes} <- changes,
+         {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
          {:ok, domain} <- TokenResource.Info.token_domain(token_resource),
          opts <- opts |> Keyword.put(:upsert?, true) |> Keyword.put_new(:domain, domain),
          {:ok, store_changes_action} <-

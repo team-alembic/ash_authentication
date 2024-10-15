@@ -1,7 +1,9 @@
 # Magic Links Tutorial
 
-This is a quick tutorial to get you up and running on Magic Links.
-This assumes you've set up `ash_authentication` and [password reset](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix) in your Phoenix project.
+## With a mix task
+
+You can use `mix ash_authentication.add_strategy magic_link` to install this strategy.
+The rest of the guide is in the case that you wish to proceed manually.
 
 ## Add the Magic Link Strategy to the User resource
 
@@ -9,17 +11,11 @@ This assumes you've set up `ash_authentication` and [password reset](https://ash
 # ...
 
 strategies do
-  password :password do
-    identity_field(:email)
-
-    resettable do
-      sender(Example.Accounts.User.Senders.SendPasswordResetEmail)
-    end
-  end
-
   # add these lines -->
   magic_link do
     identity_field :email
+    registration_enabled? true
+
     sender(Example.Accounts.User.Senders.SendMagicLink)
   end
   # <-- add these lines
@@ -28,7 +24,16 @@ end
 # ...
 ```
 
-## Create and email sender and email template
+### Registration Enabled
+
+When registration is enabled, signing in with magic is a _create_ action that upserts the user by email.
+This allows a user who does not exist to request a magic link and sign up with one action.
+
+### Registration Disabled (default)
+
+When registration is disabled, signing in with magic link is a _read_ action.
+
+## Create an email sender and email template
 
 Inside `/lib/example/accounts/user/senders/send_magic_link.ex`
 
@@ -41,9 +46,11 @@ defmodule Example.Accounts.User.Senders.SendMagicLink do
   use ExampleWeb, :verified_routes
 
   @impl AshAuthentication.Sender
-  def send(user, token, _) do
+  def send(user_or_email, token, _) do
+    # will be a user if the token relates to an existing user
+    # will be an email if there is no matching user (such as during sign up)
     Example.Accounts.Emails.deliver_magic_link(
-      user,
+      user_or_email,
       url(~p"/auth/user/magic_link/?token=#{token}")
     )
   end
@@ -60,10 +67,15 @@ def deliver_magic_link(user, url) do
     raise "Cannot deliver reset instructions without a url"
   end
 
-  deliver(user.email, "Magic Link", """
+  email = case user do
+    %{email: email} -> email
+    email -> email
+  end
+
+  deliver(email, "Magic Link", """
   <html>
     <p>
-      Hi #{user.email},
+      Hi #{email},
     </p>
 
     <p>

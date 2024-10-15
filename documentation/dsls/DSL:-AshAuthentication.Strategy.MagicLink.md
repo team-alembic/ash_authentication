@@ -31,8 +31,10 @@ defmodule MyApp.Accounts.User do
     strategies do
       magic_link do
         identity_field :email
-        sender fn user, token, _opts ->
-          MyApp.Emails.deliver_magic_link(user, token)
+        sender fn user_or_email, token, _opts ->
+          # will be a user if the token relates to an existing user
+          # will be an email if there is no matching user (such as during sign up)
+          MyApp.Emails.deliver_magic_link(user_or_email, token)
         end
       end
     end
@@ -119,8 +121,11 @@ Strategy for authenticating using local users with a magic link
 | [`sender`](#authentication-strategies-magic_link-sender){: #authentication-strategies-magic_link-sender .spark-required} | `(any, any, any -> any) \| module` |  | How to send the magic link to the user. |
 | [`identity_field`](#authentication-strategies-magic_link-identity_field){: #authentication-strategies-magic_link-identity_field } | `atom` | `:username` | The name of the attribute which uniquely identifies the user, usually something like `username` or `email_address`. |
 | [`token_lifetime`](#authentication-strategies-magic_link-token_lifetime){: #authentication-strategies-magic_link-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{10, :minutes}` | How long the sign in token is valid.  If no unit is provided, then `minutes` is assumed. |
+| [`prevent_hijacking?`](#authentication-strategies-magic_link-prevent_hijacking?){: #authentication-strategies-magic_link-prevent_hijacking? } | `boolean` | `true` | Requires a confirmation add_on to be present if the password strategy is used with the same identity_field. |
 | [`request_action_name`](#authentication-strategies-magic_link-request_action_name){: #authentication-strategies-magic_link-request_action_name } | `atom` |  | The name to use for the request action. Defaults to `request_<strategy_name>` |
+| [`lookup_action_name`](#authentication-strategies-magic_link-lookup_action_name){: #authentication-strategies-magic_link-lookup_action_name } | `atom` |  | The action to use when looking up a user by their identity. Defaults to `get_by_<identity_field>` |
 | [`single_use_token?`](#authentication-strategies-magic_link-single_use_token?){: #authentication-strategies-magic_link-single_use_token? } | `boolean` | `true` | Automatically revoke the token once it's been used for sign in. |
+| [`registration_enabled?`](#authentication-strategies-magic_link-registration_enabled?){: #authentication-strategies-magic_link-registration_enabled? } | `boolean` |  | Allows registering via magic link. Signing in with magic link becomes an upsert action instead of a read action. |
 | [`sign_in_action_name`](#authentication-strategies-magic_link-sign_in_action_name){: #authentication-strategies-magic_link-sign_in_action_name } | `atom` |  | The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>` |
 | [`token_param_name`](#authentication-strategies-magic_link-token_param_name){: #authentication-strategies-magic_link-token_param_name } | `atom` | `:token` | The name of the token parameter in the incoming sign-in request. |
 

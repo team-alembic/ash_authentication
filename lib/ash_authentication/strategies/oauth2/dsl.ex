@@ -54,6 +54,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           doc: "Deprecated: Use `base_url` instead.",
           required: false
         ],
+        prevent_hijacking?: [
+          type: :boolean,
+          default: true,
+          doc:
+            "Requires a confirmation add_on to be present if the password strategy is used with the same identity_field."
+        ],
         auth_method: [
           type:
             {:in,

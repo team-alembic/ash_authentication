@@ -32,12 +32,14 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
       Query.filter(query, ^ref(identity_field) == ^identity)
     end
     |> Query.before_action(fn query ->
-      Ash.Query.ensure_selected(query, select_for_senders)
+      query
+      |> Ash.Query.ensure_selected(select_for_senders)
+      |> Ash.Query.ensure_selected([identity_field])
     end)
-    |> Query.after_action(&after_action(&1, &2, strategy))
+    |> Query.after_action(&after_action(&1, &2, strategy, identity))
   end
 
-  defp after_action(_query, [user], %{sender: {sender, send_opts}} = strategy) do
+  defp after_action(_query, [user], %{sender: {sender, send_opts}} = strategy, _identity) do
     case MagicLink.request_token_for(strategy, user) do
       {:ok, token} -> sender.send(user, token, send_opts)
       _ -> nil
@@ -46,5 +48,22 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
     {:ok, []}
   end
 
-  defp after_action(_, _, _), do: {:ok, []}
+  defp after_action(
+         _query,
+         _,
+         %{registration_enabled?: true, sender: {sender, send_opts}} = strategy,
+         identity
+       )
+       when not is_nil(identity) do
+    case MagicLink.request_token_for_identity(strategy, identity) do
+      {:ok, token} -> sender.send(to_string(identity), token, send_opts)
+      _ -> nil
+    end
+
+    {:ok, []}
+  end
+
+  defp after_action(_, _, _, _) do
+    {:ok, []}
+  end
 end

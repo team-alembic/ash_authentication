@@ -44,9 +44,7 @@ defmodule MyApp.Accounts.User do
   end
 
   identities do
-    identity :email, [:email] do
-      eager_check_with MyApp.Accounts
-    end
+    identity :email, [:email]
   end
 end
 ```
@@ -113,11 +111,13 @@ User confirmation flow
 | [`monitor_fields`](#authentication-add_ons-confirmation-monitor_fields){: #authentication-add_ons-confirmation-monitor_fields .spark-required} | `list(atom)` |  | A list of fields to monitor for changes. Confirmation will be sent when one of these fields are changed. |
 | [`sender`](#authentication-add_ons-confirmation-sender){: #authentication-add_ons-confirmation-sender .spark-required} | `(any, any, any -> any) \| module` |  | How to send the confirmation instructions to the user. |
 | [`token_lifetime`](#authentication-add_ons-confirmation-token_lifetime){: #authentication-add_ons-confirmation-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{3, :days}` | How long should the confirmation token be valid.  If no unit is provided, then hours is assumed. |
+| [`prevent_hijacking?`](#authentication-add_ons-confirmation-prevent_hijacking?){: #authentication-add_ons-confirmation-prevent_hijacking? } | `boolean` | `true` | Whether or not to prevent upserts over unconfirmed uers. See [the confirmation guide](/documentation/topics/confirmation.md) for more. |
 | [`confirmed_at_field`](#authentication-add_ons-confirmation-confirmed_at_field){: #authentication-add_ons-confirmation-confirmed_at_field } | `atom` | `:confirmed_at` | The name of the field to store the time that the last confirmation took place. Created if it does not exist. |
 | [`confirm_on_create?`](#authentication-add_ons-confirmation-confirm_on_create?){: #authentication-add_ons-confirmation-confirm_on_create? } | `boolean` | `true` | Generate and send a confirmation token when a new resource is created. Triggers when a create action is executed _and_ one of the monitored fields is being set. |
 | [`confirm_on_update?`](#authentication-add_ons-confirmation-confirm_on_update?){: #authentication-add_ons-confirmation-confirm_on_update? } | `boolean` | `true` | Generate and send a confirmation token when a resource is changed.  Triggers when an update action is executed _and_ one of the monitored fields is being set. |
 | [`inhibit_updates?`](#authentication-add_ons-confirmation-inhibit_updates?){: #authentication-add_ons-confirmation-inhibit_updates? } | `boolean` | `true` | Whether or not to wait until confirmation is received before actually changing a monitored field. See [the confirmation guide](/documentation/topics/confirmation.md) for more. |
-| [`confirm_action_name`](#authentication-add_ons-confirmation-confirm_action_name){: #authentication-add_ons-confirmation-confirm_action_name } | `atom` | `:confirm` | The name of the action to use when performing confirmation. Will be created if it does not already exist. |
+| [`auto_confirm_actions`](#authentication-add_ons-confirmation-auto_confirm_actions){: #authentication-add_ons-confirmation-auto_confirm_actions } | `list(atom)` |  | A list of actions that should set confirmed_at to `true` automatically. For example, you would likely want to place `:sign_in_with_magic_link` in this list if using magic link. |
+| [`confirm_action_name`](#authentication-add_ons-confirmation-confirm_action_name){: #authentication-add_ons-confirmation-confirm_action_name } | `atom` |  | The name of the action to use when performing confirmation. Will be created if it does not already exist. Defaults to confirm_<String.trim_leading(strategy_name, "confirm")> |
 
 
 

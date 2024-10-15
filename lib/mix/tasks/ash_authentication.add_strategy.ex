@@ -2,11 +2,14 @@
 defmodule Mix.Tasks.AshAuthentication.AddStrategy do
   use Igniter.Mix.Task
 
-  @example "mix ash_authentication.patch.add_strategy password"
+  @example "mix ash_authentication.add_strategy password"
 
   @shortdoc "Adds the provided strategy or strategies to your user resource"
 
-  @strategies [password: "Register and sign in with a username/email and a password."]
+  @strategies [
+    password: "Register and sign in with a username/email and a password.",
+    magic_link: "Register and sign in with a magic link, sent via email to the user."
+  ]
 
   @strategy_explanation Enum.map_join(@strategies, "\n", fn {name, description} ->
                           "  * `#{name}` - #{description}"
@@ -33,7 +36,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
 
   * `--user`, `-u` -  The user resource. Defaults to `YourApp.Accounts.User`
   * `--identity-field`, `-i` - The field on the user resource that will be used to identify
-    the user. Defaults to `:email`
+    the user. Defaults to `email`
   """
 
   def info(_argv, _composing_task) do
@@ -87,8 +90,12 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
 
     case Igniter.Project.Module.module_exists(igniter, options[:user]) do
       {true, igniter} ->
-        Enum.reduce(strategies, igniter, fn "password", igniter ->
-          password(igniter, options)
+        Enum.reduce(strategies, igniter, fn
+          "password", igniter ->
+            password(igniter, options)
+
+          "magic_link", igniter ->
+            magic_link(igniter, options)
         end)
 
       {false, igniter} ->
@@ -98,6 +105,69 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
         Perhaps you have not yet installed ash_authentication?
         """)
     end
+  end
+
+  defp magic_link(igniter, options) do
+    if options[:identity_field] != :email do
+      Mix.shell().error("""
+      Could not add magic link strategy with identity field #{inspect(options[:identity_field])}.
+
+      Please run `mix ash_authentication.add_strategy magic_link` without specifying a default
+      """)
+
+      exit({:shutdown, 1})
+    end
+
+    sender = Module.concat(options[:user], Senders.SendMagicLinkEmail)
+
+    igniter
+    |> Ash.Resource.Igniter.add_new_attribute(options[:user], options[:identity_field], """
+    attribute :#{options[:identity_field]}, :ci_string do
+      allow_nil? false
+      public? true
+    end
+    """)
+    |> ensure_identity(options)
+    |> ensure_get_by_action(options)
+    |> Ash.Resource.Igniter.add_new_action(options[:user], :sign_in_with_magic_link, """
+    create :sign_in_with_magic_link do
+      description "Sign in or register a user with magic link."
+
+      argument :token, :string do
+        description "The token from the magic link that was sent to the user"
+        allow_nil? false
+      end
+
+      upsert? true
+      upsert_identity :unique_#{options[:identity_field]}
+      upsert_fields [:#{options[:identity_field]}]
+
+      # Uses the information from the token to create or sign in the user
+      change AshAuthentication.Strategy.MagicLink.SignInChange
+
+      metadata :token, :string do
+        allow_nil? false
+      end
+    end
+    """)
+    |> Ash.Resource.Igniter.add_new_action(options[:user], :request_magic_link, """
+    action :request_magic_link do
+      argument :#{options[:identity_field]}, :ci_string do
+        allow_nil? false
+      end
+
+      run AshAuthentication.Strategy.MagicLink.Request
+    end
+    """)
+    |> AshAuthentication.Igniter.add_new_strategy(options[:user], :magic_link, :magic_link, """
+    magic_link do
+      identity_field :#{options[:identity_field]}
+      registration_enabled? true
+
+      sender #{inspect(sender)}
+    end
+    """)
+    |> create_new_magic_link_sender(sender, options)
   end
 
   defp password(igniter, options) do
@@ -117,13 +187,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       sensitive? true
     end
     """)
-    |> Ash.Resource.Igniter.add_new_identity(
-      options[:user],
-      :"unique_#{options[:identity_field]}",
-      """
-      identity :unique_#{options[:identity_field]}, [:#{options[:identity_field]}]
-      """
-    )
+    |> ensure_identity(options)
     |> AshAuthentication.Igniter.add_new_strategy(options[:user], :password, :password, """
     password :password do
       identity_field :#{options[:identity_field]}
@@ -135,7 +199,63 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
     """)
     |> generate_sign_in_and_registration(options)
     |> generate_reset(sender, options)
+    |> add_confirmation(options)
     |> Ash.Igniter.codegen("add_password_authentication")
+  end
+
+  defp ensure_identity(igniter, options) do
+    Ash.Resource.Igniter.add_new_identity(
+      igniter,
+      options[:user],
+      :"unique_#{options[:identity_field]}",
+      """
+      identity :unique_#{options[:identity_field]}, [:#{options[:identity_field]}]
+      """
+    )
+  end
+
+  defp ensure_get_by_action(igniter, options) do
+    Ash.Resource.Igniter.add_new_action(
+      igniter,
+      options[:user],
+      :"get_by_#{options[:identity_field]}",
+      """
+      read :get_by_#{options[:identity_field]} do
+        description "Looks up a user by their #{options[:identity_field]}"
+        get? true
+
+        argument :#{options[:identity_field]}, :ci_string do
+          allow_nil? false
+        end
+
+        filter expr(#{options[:identity_field]} == ^arg(:#{options[:identity_field]}))
+      end
+      """
+    )
+  end
+
+  defp add_confirmation(igniter, options) do
+    sender = Module.concat(options[:user], Senders.SendNewUserConfirmationEmail)
+
+    if options[:identity_field] == :email do
+      AshAuthentication.Igniter.add_new_add_on(
+        igniter,
+        options[:user],
+        :confirm_new_user,
+        :password,
+        """
+        confirmation :confirm_new_user do
+          monitor_fields [:email]
+          confirm_on_create? true
+          confirm_on_update? false
+          sender #{inspect(sender)}
+        end
+        """
+      )
+      |> create_new_user_confirmation_sender(sender, options)
+    else
+      igniter
+    end
   end
 
   defp generate_reset(igniter, sender, options) do
@@ -153,22 +273,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       run {AshAuthentication.Strategy.Password.RequestPasswordReset, action: :get_by_#{options[:identity_field]}}
     end
     """)
-    |> Ash.Resource.Igniter.add_new_action(
-      options[:user],
-      :"get_by_#{options[:identity_field]}",
-      """
-      read :get_by_#{options[:identity_field]} do
-        description "Looks up a user by their #{options[:identity_field]}"
-        get? true
-
-        argument :#{options[:identity_field]}, :ci_string do
-          allow_nil? false
-        end
-
-        filter expr(#{options[:identity_field]} == ^arg(:#{options[:identity_field]}))
-      end
-      """
-    )
+    |> ensure_get_by_action(options)
     |> Ash.Resource.Igniter.add_new_action(options[:user], :reset_password, """
     update :reset_password do
       argument :reset_token, :string do
@@ -202,6 +307,61 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       change AshAuthentication.GenerateTokenChange
     end
     """)
+  end
+
+  defp create_new_magic_link_sender(igniter, sender, options) do
+    web_module = Igniter.Libs.Phoenix.web_module(igniter)
+    {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+
+    use_web_module =
+      if web_module_exists? do
+        "use #{inspect(web_module)}, :verified_routes"
+      end
+
+    example_domain = options[:user] |> Module.split() |> :lists.droplast() |> Module.concat()
+
+    real_example =
+      if web_module_exists? do
+        """
+        # Example of how you might send this email
+        # #{inspect(example_domain)}.Emails.send_magic_link_email(
+        #   user_or_email,
+        #   token
+        # )
+        """
+      end
+
+    Igniter.Project.Module.create_module(
+      igniter,
+      sender,
+      ~s'''
+      @moduledoc """
+      Sends a magic link email
+      """
+
+      use AshAuthentication.Sender
+      #{use_web_module}
+
+      @impl true
+      def send(user_or_email, token, _) do
+        # if you get a user, its for a user that already exists
+        # if you get an email, the user does not exist yet
+        #{real_example}
+
+        email =
+          case user_or_email do
+            %{email: email} -> email
+            email -> email
+          end
+
+        IO.puts("""
+        Hello, \#{email}! Click this link to sign in:
+
+        \#{url(~p"/auth/user/magic_link/?token=\#{token}")}
+        """)
+      end
+      '''
+    )
   end
 
   defp create_reset_sender(igniter, sender, options) do
@@ -244,6 +404,52 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
         Click this link to reset your password:
 
         \#{url(~p"/password-reset/\#{token}")}
+        """)
+      end
+      '''
+    )
+  end
+
+  defp create_new_user_confirmation_sender(igniter, sender, options) do
+    web_module = Igniter.Libs.Phoenix.web_module(igniter)
+    {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+
+    use_web_module =
+      if web_module_exists? do
+        "use #{inspect(web_module)}, :verified_routes"
+      end
+
+    example_domain = options[:user] |> Module.split() |> :lists.droplast() |> Module.concat()
+
+    real_example =
+      if web_module_exists? do
+        """
+        # Example of how you might send this email
+        # #{inspect(example_domain)}.Emails.send_password_reset_email(
+        #   user,
+        #   token
+        # )
+        """
+      end
+
+    Igniter.Project.Module.create_module(
+      igniter,
+      sender,
+      ~s'''
+      @moduledoc """
+      Sends a password reset email
+      """
+
+      use AshAuthentication.Sender
+      #{use_web_module}
+
+      @impl true
+      def send(_user, token, _) do
+        #{real_example}
+        IO.puts("""
+        Click this link to confirm your email:
+
+        \#{url(~p"/auth/user/confirm_new_user?\#{[token: token]}")}
         """)
       end
       '''

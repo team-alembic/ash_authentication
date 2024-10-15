@@ -4,7 +4,40 @@ This add-on allows you to confirm changes to a user record by generating and
 sending them a confirmation token which they must submit before allowing the
 change to take place.
 
-In this tutorial we'll assume that you have a `User` resource which uses `email` as it's user identifier. We'll show you how to confirm a new user on sign-up and also require them to confirm if they wish to change their email address.
+In this tutorial we'll assume that you have a `User` resource which uses `email` as it's user identifier.
+We'll show you how to confirm a new user on sign-up and also require them to confirm if they wish to change their email address.
+
+## Important security notes
+
+If you are using multiple strategies that use emails, where one of the strategy has an upsert registration (like social sign-up, magic link registration),
+then you _must_ use the confirmation add-on to prevent account hijacking, as described below.
+
+Example scenario:
+
+- Attacker signs up with email of their target and a password, but does not confirm their email.
+- Their target signs up with google or magic link, etc, which upserts the user, and sets `confirmed_at` to `true`.
+- Now, the user has created an account but the attacker has access via the password they originally set.
+
+### How to handle this?
+
+#### Automatic Handling
+
+The confirmation add-on prevents this by default by not allowing an upsert action to set `confirmed_at`, if there is
+a matching record that has `confirmed_at` that is currently `nil`. This allows you to show a message to the user like
+"You signed up with a different method. Please sign in with the method you used to sign up."
+
+#### auto_confirming and clearing the password on upsert
+
+You can add the upsert registration action(s) to the `auto_confirm_actions`
+list, and add a change to those actions that sets `hashed_password` to `nil`. This will confirm users, and require them to reset
+heir password before being able to use password authentication again.
+
+#### Opt-out
+
+You can set `prevent_hijacking? false` on the confirmation add-on to disable the automatic handling
+described above. This is not recommended.
+
+## Tutorial
 
 Here's the user resource we'll be starting with:
 
@@ -51,7 +84,6 @@ defmodule MyApp.Accounts.User do
         monitor_fields [:email]
         confirm_on_create? true
         confirm_on_update? false
-        confirm_action_name :confirm_new_user
         sender MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail
       end
     end

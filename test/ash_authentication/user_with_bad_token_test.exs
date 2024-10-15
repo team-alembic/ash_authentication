@@ -51,7 +51,7 @@ defmodule AshAuthentication.UserWithBadTokenTest do
                      end
 
                      identities do
-                       identity :email, [:email], eager_check_with: Example
+                       identity :email, [:email]
                      end
 
                      postgres do

@@ -7,6 +7,7 @@ defmodule Example do
     resource Example.UserWithTokenRequired
     resource Example.Token
     resource Example.UserIdentity
+    resource Example.UserWithRegisterMagicLink
   end
 
   json_api do

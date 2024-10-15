@@ -130,6 +130,8 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
 
       user = build_user()
 
+      Ash.Seed.update!(user, %{confirmed_at: DateTime.utc_now()})
+
       assert {:ok, signed_in_user} =
                Actions.register(
                  strategy,

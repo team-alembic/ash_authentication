@@ -35,10 +35,12 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
       }
     })
     |> Changeset.before_action(fn changeset ->
-      with token when is_binary(token) <- Changeset.get_argument(changeset, :confirm),
+      with token when is_binary(token) <-
+             Changeset.get_argument(changeset, :confirm),
            {:ok, %{"act" => action, "jti" => jti}, _} <-
              Jwt.verify(token, changeset.resource),
-           true <- to_string(strategy.confirm_action_name) == action,
+           true <-
+             to_string(strategy.confirm_action_name) == action,
            {:ok, changes} <- Actions.get_changes(strategy, jti) do
         allowed_changes =
           if strategy.inhibit_updates?,

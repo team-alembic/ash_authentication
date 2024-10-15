@@ -20,5 +20,15 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChangeTest do
       assert capture_log(fn -> Example.User.update_user!(user, %{username: new_username}) end) =~
                ~r/Confirmation request for user #{new_username}/
     end
+
+    test "it creates an error " do
+      user = build_user()
+      new_username = username()
+      build_user(username: new_username)
+
+      assert_raise Ash.Error.Invalid, ~r/username: has already been taken/, fn ->
+        Example.User.update_user!(user, %{username: new_username})
+      end
+    end
   end
 end

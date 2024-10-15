@@ -45,7 +45,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
           {:ok, []}
       end)
     else
-      _ -> Query.limit(query, 0)
+      _ -> Query.do_filter(query, false)
     end
   end
 end

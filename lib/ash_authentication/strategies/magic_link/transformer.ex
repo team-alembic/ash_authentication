@@ -21,6 +21,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
            ),
          strategy <- maybe_set_sign_in_action_name(strategy),
          strategy <- maybe_set_request_action_name(strategy),
+         strategy <- maybe_set_lookup_action_name(strategy),
          strategy <- maybe_transform_token_lifetime(strategy),
          {:ok, dsl_state} <-
            maybe_build_action(
@@ -38,7 +39,11 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
         dsl_state
         |> then(
           &register_strategy_actions(
-            [strategy.sign_in_action_name, strategy.request_action_name],
+            [
+              strategy.sign_in_action_name,
+              strategy.request_action_name,
+              strategy.lookup_action_name
+            ],
             &1,
             strategy
           )
@@ -66,36 +71,81 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
 
   defp maybe_set_request_action_name(strategy), do: strategy
 
-  defp build_sign_in_action(_dsl_state, strategy) do
-    arguments = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
-        name: strategy.token_param_name,
-        type: :string,
-        allow_nil?: false
-      )
-    ]
+  # sobelow_skip ["DOS.StringToAtom"]
+  defp maybe_set_lookup_action_name(strategy) when is_nil(strategy.lookup_action_name),
+    do: %{strategy | lookup_action_name: String.to_atom("get_by_#{strategy.identity_field}")}
 
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: MagicLink.SignInPreparation
-      )
-    ]
+  defp maybe_set_lookup_action_name(strategy), do: strategy
 
-    metadata = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
-        name: :token,
-        type: :string,
-        allow_nil?: false
-      )
-    ]
+  defp build_sign_in_action(dsl_state, strategy) do
+    if strategy.registration_enabled? do
+      arguments = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
+          name: strategy.token_param_name,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
 
-    Transformer.build_entity(Resource.Dsl, [:actions], :read,
-      name: strategy.sign_in_action_name,
-      arguments: arguments,
-      preparations: preparations,
-      metadata: metadata,
-      get?: true
-    )
+      changes = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+          change: MagicLink.SignInChange
+        )
+      ]
+
+      metadata = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :metadata,
+          name: :token,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
+
+      identity =
+        Enum.find(Ash.Resource.Info.identities(dsl_state), fn identity ->
+          identity.keys == [strategy.identity_field]
+        end)
+
+      Transformer.build_entity(Resource.Dsl, [:actions], :create,
+        name: strategy.sign_in_action_name,
+        arguments: arguments,
+        changes: changes,
+        metadata: metadata,
+        upsert?: true,
+        upsert_identity: identity.name,
+        upsert_fields: [strategy.identity_field]
+      )
+    else
+      arguments = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+          name: strategy.token_param_name,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
+
+      preparations = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+          preparation: MagicLink.SignInPreparation
+        )
+      ]
+
+      metadata = [
+        Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
+          name: :token,
+          type: :string,
+          allow_nil?: false
+        )
+      ]
+
+      Transformer.build_entity(Resource.Dsl, [:actions], :read,
+        name: strategy.sign_in_action_name,
+        arguments: arguments,
+        preparations: preparations,
+        metadata: metadata,
+        get?: true
+      )
+    end
   end
 
   defp build_request_action(dsl_state, strategy) do
