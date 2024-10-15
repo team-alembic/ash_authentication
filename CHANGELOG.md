@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.2.2](https://github.com/team-alembic/ash_authentication/compare/v4.2.1...v4.2.2) (2024-10-15)
+
+
+
+
+### Improvements:
+
+* support registration via magic link (#796)
+
+* support registration via magic link
+
+* prevent account takeover hijacking by protecting against upserts against unconfirmed records
+
+* add confirmation add on when identity_field is email
+
+* implement our own identity checking instead of relying on eager_check
+
 ## [v4.2.1](https://github.com/team-alembic/ash_authentication/compare/v4.2.0...v4.2.1) (2024-10-14)
 
 
