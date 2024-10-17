@@ -203,9 +203,9 @@ end
 
 <!-- tabs-close -->
 
-#### Choose your strategies and add-ons
+## Choose your strategies and add-ons
 
-##### `mix ash_authentication.add_strategy`
+### `mix ash_authentication.add_strategy`
 
 A mix task is provided to add strategies and add-ons to your application.
 For now, this only supports the `password` strategy, but more will be added in the future.
@@ -214,7 +214,7 @@ For now, this only supports the `password` strategy, but more will be added in t
 mix ash_authentication.add_strategy password
 ```
 
-##### Strategies
+#### Strategies
 
 - [Password](/documentation/tutorials/password.md)
 - [Github](/documentation/tutorials/github.md)
@@ -224,12 +224,12 @@ mix ash_authentication.add_strategy password
 - Open ID: `AshAuthentication.Strategy.Oidc`
 - OAuth2: `AshAuthentication.Strategy.OAuth2`
 
-##### Add-Ons
+#### Add-Ons
 
 - [Confirmation](/documentation/tutorials/confirmation.md): confirming changes to user accounts (i.e via email)
 - UserIdentity: `AshAuthentication.UserIdentity`: supporting multiple social sign on identities & refreshing tokens
 
-#### Set up your phoenix or plug application
+## Set up your Phoenix or Plug application
 
 If you're using Phoenix, skip this section and go to
 [Integrating Ash Authentication and Phoenix](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix)
