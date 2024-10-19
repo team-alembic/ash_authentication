@@ -33,7 +33,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
         user: :string,
         token: :string,
         yes: :boolean,
-        strategy: :keep
+        auth_strategy: :keep
       ],
       composes: [
         "ash_authentication.add_strategy"
