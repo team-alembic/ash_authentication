@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.2.3](https://github.com/team-alembic/ash_authentication/compare/v4.2.2...v4.2.3) (2024-10-19)
+
+
+
+
+### Bug Fixes:
+
+* respond to `--auth-strategy` option in installer
+
+* issues with OIDC strategy (#800)
+
 ## [v4.2.2](https://github.com/team-alembic/ash_authentication/compare/v4.2.1...v4.2.2) (2024-10-15)
 
 
