@@ -19,7 +19,7 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
-  def prepare(query, _opts, _context) do
+  def prepare(query, _opts, context) do
     strategy = Info.strategy_for_action!(query.resource, query.action.name)
 
     identity_field = strategy.identity_field
@@ -36,12 +36,12 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
       |> Ash.Query.ensure_selected(select_for_senders)
       |> Ash.Query.ensure_selected([identity_field])
     end)
-    |> Query.after_action(&after_action(&1, &2, strategy, identity))
+    |> Query.after_action(&after_action(&1, &2, strategy, identity, context))
   end
 
-  defp after_action(_query, [user], %{sender: {sender, send_opts}} = strategy, _identity) do
+  defp after_action(_query, [user], %{sender: {sender, send_opts}} = strategy, _identity, context) do
     case MagicLink.request_token_for(strategy, user) do
-      {:ok, token} -> sender.send(user, token, send_opts)
+      {:ok, token} -> sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant))
       _ -> nil
     end
 
@@ -52,11 +52,12 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
          _query,
          _,
          %{registration_enabled?: true, sender: {sender, send_opts}} = strategy,
-         identity
+         identity,
+         context
        )
        when not is_nil(identity) do
     case MagicLink.request_token_for_identity(strategy, identity) do
-      {:ok, token} -> sender.send(to_string(identity), token, send_opts)
+      {:ok, token} -> sender.send(to_string(identity), token, Keyword.put(send_opts, :tenant, context.tenant))
       _ -> nil
     end
 
