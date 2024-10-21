@@ -57,7 +57,7 @@ defmodule AshAuthentication.Strategy.Apple.Dsl do
     strategy.default_config([])
     |> Enum.map(fn
       {:client_authentication_method, method} ->
-        {:client_authentication_method, String.to_existing_atom(method)}
+        {:client_authentication_method, method}
 
       {:openid_configuration, config} ->
         {:openid_configuration, atomize_keys(config)}
