@@ -213,8 +213,12 @@ defmodule AshAuthentication do
             ash_authentication?: true
           }
         })
-        |> Query.for_read(action_name, %{subject: to_string(subject)})
-        |> Ash.read_one(Keyword.put(options, :not_found_error?, true))
+        |> Query.for_read(
+          action_name,
+          %{subject: to_string(subject)},
+          Keyword.put(options, :not_found_error?, true)
+        )
+        |> Ash.read_one()
         |> case do
           # This is here for backwards compatibility with the old api
           # when this argument was not added
