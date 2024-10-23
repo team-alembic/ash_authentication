@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.2.4](https://github.com/team-alembic/ash_authentication/compare/v4.2.3...v4.2.4) (2024-10-23)
+
+
+
+
+### Bug Fixes:
+
+* generate link using `confirm` instead of `token` in the generators
+
 ## [v4.2.3](https://github.com/team-alembic/ash_authentication/compare/v4.2.2...v4.2.3) (2024-10-19)
 
 
