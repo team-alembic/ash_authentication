@@ -182,7 +182,7 @@ defmodule MyApp.Accounts.User do
   end
 
   actions do
-    create :register_with_oauth2 do
+    create :register_with_example do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
       upsert? true
