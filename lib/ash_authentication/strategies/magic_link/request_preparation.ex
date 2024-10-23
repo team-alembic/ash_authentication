@@ -57,8 +57,11 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
        )
        when not is_nil(identity) do
     case MagicLink.request_token_for_identity(strategy, identity) do
-      {:ok, token} -> sender.send(to_string(identity), token, Keyword.put(send_opts, :tenant, context.tenant))
-      _ -> nil
+      {:ok, token} ->
+        sender.send(to_string(identity), token, Keyword.put(send_opts, :tenant, context.tenant))
+
+      _ ->
+        nil
     end
 
     {:ok, []}
