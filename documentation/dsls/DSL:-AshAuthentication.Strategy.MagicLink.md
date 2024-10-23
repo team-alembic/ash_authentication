@@ -34,6 +34,8 @@ defmodule MyApp.Accounts.User do
         sender fn user_or_email, token, _opts ->
           # will be a user if the token relates to an existing user
           # will be an email if there is no matching user (such as during sign up)
+          # opts will contain the `tenant` key, use this if you need to alter the link based
+          # on the tenant that requested the token
           MyApp.Emails.deliver_magic_link(user_or_email, token)
         end
       end
@@ -45,6 +47,11 @@ defmodule MyApp.Accounts.User do
   end
 end
 ```
+
+## Tenancy
+
+Note that the tenant is provided to the sender in the `opts` key. Use this if you need
+to modify the url (i.e `tenant.app.com`) based on the tenant that requested the token.
 
 ## Actions
 

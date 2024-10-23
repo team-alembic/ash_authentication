@@ -64,7 +64,7 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
     {:ok, []}
   end
 
-  defp after_action(_, _, _, _) do
+  defp after_action(_, _, _, _, _) do
     {:ok, []}
   end
 end
