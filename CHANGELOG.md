@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.2.5](https://github.com/team-alembic/ash_authentication/compare/v4.2.4...v4.2.5) (2024-10-23)
+
+
+
+
+### Bug Fixes:
+
+* proper error instead of match error on not found user
+
 ## [v4.2.4](https://github.com/team-alembic/ash_authentication/compare/v4.2.3...v4.2.4) (2024-10-23)
 
 
