@@ -449,7 +449,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
         IO.puts("""
         Click this link to confirm your email:
 
-        \#{url(~p"/auth/user/confirm_new_user?\#{[token: token]}")}
+        \#{url(~p"/auth/user/confirm_new_user?\#{[confirm: token]}")}
         """)
       end
       '''
