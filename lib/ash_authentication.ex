@@ -218,7 +218,7 @@ defmodule AshAuthentication do
           %{subject: to_string(subject)},
           Keyword.put(options, :not_found_error?, true)
         )
-        |> Ash.read_one()
+        |> Ash.read_one(not_found_error?: true)
         |> case do
           # This is here for backwards compatibility with the old api
           # when this argument was not added
@@ -266,7 +266,7 @@ defmodule AshAuthentication do
       })
       |> Query.for_read(action_name, %{}, options)
       |> Query.filter(^primary_key)
-      |> Ash.read_one()
+      |> Ash.read_one(not_found_error?: true)
     else
       _ ->
         {:error, Ash.Error.to_error_class(NotFound.exception([]))}

@@ -181,16 +181,12 @@ defmodule MyApp.Accounts.User do
     attribute :email, :ci_string, allow_nil?: false
   end
 
-  identities do
-    identity :unique_email, [:email]
-  end
-
   actions do
-    create :register_with_example do
+    create :register_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
       upsert? true
-      upsert_identity :unique_email
+      upsert_identity :email
 
       change AshAuthentication.GenerateTokenChange
       change fn changeset, _ctx ->
