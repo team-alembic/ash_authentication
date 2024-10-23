@@ -425,7 +425,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       if web_module_exists? do
         """
         # Example of how you might send this email
-        # #{inspect(example_domain)}.Emails.send_password_reset_email(
+        # #{inspect(example_domain)}.Emails.send_new_user_confirmation_email(
         #   user,
         #   token
         # )
@@ -437,7 +437,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       sender,
       ~s'''
       @moduledoc """
-      Sends a password reset email
+      Sends an email for a new user to confirm their email address.
       """
 
       use AshAuthentication.Sender
