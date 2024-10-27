@@ -92,10 +92,14 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       {true, igniter} ->
         Enum.reduce(strategies, igniter, fn
           "password", igniter ->
-            password(igniter, options)
+            igniter
+            |> password(options)
+            |> Ash.Igniter.codegen("add_password_auth")
 
           "magic_link", igniter ->
-            magic_link(igniter, options)
+            igniter
+            |> magic_link(options)
+            |> Ash.Igniter.codegen("add_magic_link_auth")
         end)
 
       {false, igniter} ->
