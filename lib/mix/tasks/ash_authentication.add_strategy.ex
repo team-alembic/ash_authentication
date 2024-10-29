@@ -489,7 +489,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
     """)
     |> Ash.Resource.Igniter.add_new_action(options[:user], :sign_in_with_token, """
     read :sign_in_with_token do
-      # In the generated sign in components, we generate a validate the
+      # In the generated sign in components, we validate the
       # #{options[:identity_field]} and password directly in the LiveView
       # and generate a short-lived token that can be used to sign in over
       # a standard controller action, exchanging it for a standard token.
