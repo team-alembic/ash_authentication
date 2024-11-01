@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.2.7](https://github.com/team-alembic/ash_authentication/compare/v4.2.6...v4.2.7) (2024-11-01)
+
+
+
+
+### Bug Fixes:
+
+* change_attribute -> force_* to eliminate waring
+
 ## [v4.2.6](https://github.com/team-alembic/ash_authentication/compare/v4.2.5...v4.2.6) (2024-10-31)
 
 
