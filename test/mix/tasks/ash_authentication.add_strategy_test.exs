@@ -87,7 +87,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |    end
       + |
       + |    read :sign_in_with_token do
-      + |      # In the generated sign in components, we generate a validate the
+      + |      # In the generated sign in components, we validate the
       + |      # email and password directly in the LiveView
       + |      # and generate a short-lived token that can be used to sign in over
       + |      # a standard controller action, exchanging it for a standard token.
