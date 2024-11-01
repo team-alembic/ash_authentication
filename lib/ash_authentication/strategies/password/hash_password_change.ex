@@ -49,7 +49,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
            value when is_binary(value) <-
              Changeset.get_argument(changeset, strategy.password_field),
            {:ok, hash} <- strategy.hash_provider.hash(value) do
-        Changeset.change_attribute(changeset, strategy.hashed_password_field, hash)
+        Changeset.force_change_attribute(changeset, strategy.hashed_password_field, hash)
       else
         :error ->
           raise AssumptionFailed, message: "Error hashing password."
