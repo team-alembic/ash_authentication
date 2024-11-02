@@ -46,7 +46,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
            maybe_set_field_lazy(
              strategy,
              :sign_in_with_token_action_name,
-             &:"sign_in_with_token_for_#{&1.name}"
+             fn _ -> :sign_in_with_token end
            ),
          {:ok, dsl_state} <-
            maybe_maybe_build_action(
