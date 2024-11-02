@@ -8,14 +8,16 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
     igniter =
       test_project()
       |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
-      |> Igniter.Project.Formatter.add_formatter_plugin(Spark.Formatter)
+      |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+      # This can be removed when https://github.com/hrzndhrn/rewrite/issues/39 is addressed (in igniter too)
+      |> Igniter.Project.Formatter.remove_imported_dep(:ash_authentication)
+      |> Igniter.Project.Formatter.remove_formatter_plugin(Spark.Formatter)
 
     [igniter: igniter]
   end
 
   test "installation creates a secrets module", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("lib/test/secrets.ex", """
     defmodule Test.Secrets do
       use AshAuthentication.Secret
@@ -29,7 +31,6 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "installation adds the supervisor to the app", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_has_patch("lib/test/application.ex", """
     8  |     children = [{AshAuthentication.Supervisor, [otp_app: :test]}]
     """)
@@ -37,7 +38,6 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "installation adds config files", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("config/runtime.exs", """
     import Config
 
@@ -64,7 +64,6 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "installation adds a user resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("lib/test/accounts/user.ex", """
     defmodule Test.Accounts.User do
       use Ash.Resource,
@@ -115,7 +114,6 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   test "instalation adds a user token resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_creates("lib/test/accounts/token.ex", """
     defmodule Test.Accounts.Token do
       use Ash.Resource,

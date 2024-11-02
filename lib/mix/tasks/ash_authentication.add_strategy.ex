@@ -67,7 +67,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
       argv
       |> options!()
       |> Keyword.update(:identity_field, :email, &String.to_atom/1)
-      |> Keyword.update(:user, default_user, &Igniter.Code.Module.parse/1)
+      |> Keyword.update(:user, default_user, &Igniter.Project.Module.parse/1)
 
     if invalid_strategy = Enum.find(strategies, &(&1 not in @strategy_names)) do
       Mix.shell().error("""

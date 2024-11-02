@@ -8,8 +8,10 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
     igniter =
       test_project()
       |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
-      |> Igniter.Project.Formatter.add_formatter_plugin(Spark.Formatter)
       |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+      # These can be removed when https://github.com/hrzndhrn/rewrite/issues/39 is addressed (in igniter too)
+      |> Igniter.Project.Formatter.remove_imported_dep(:ash_authentication)
+      |> Igniter.Project.Formatter.remove_formatter_plugin(Spark.Formatter)
       |> apply_igniter!()
 
     [igniter: igniter]
@@ -205,7 +207,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
       |> assert_has_patch("mix.exs", """
-      25 + |      bcrypt_elixir: "~> 3.0",
+      + |      {:bcrypt_elixir, "~> 3.0"},
       """)
     end
 

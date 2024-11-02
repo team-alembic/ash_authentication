@@ -394,7 +394,7 @@ defmodule Mix.Tasks.AshAuthentication.Install do
   defp parse_module_option(opts, option) do
     Keyword.update(opts, option, nil, fn value ->
       if is_binary(value) do
-        Igniter.Code.Module.parse(value)
+        Igniter.Project.Module.parse(value)
       else
         value
       end
