@@ -9,7 +9,9 @@ defmodule Example.GenericOAuth2Change do
   def change(changeset, _opts, _context) do
     user_info = Changeset.get_argument(changeset, :user_info)
 
-    username = user_info["nickname"] || user_info["login"] || user_info["preferred_username"]
+    username =
+      user_info["nickname"] || user_info["login"] || user_info["preferred_username"] ||
+        user_info["email"]
 
     changeset
     |> Changeset.change_attribute(:username, username)

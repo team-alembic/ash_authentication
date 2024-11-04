@@ -60,10 +60,12 @@ defmodule AshAuthentication do
   2. `AshAuthentication.Strategy.OAuth2`
      - authenticate using local or remote [OAuth 2.0](https://oauth.net/2/) compatible services.
      - also includes:
+       - `AshAuthentication.Strategy.Apple`
        - `AshAuthentication.Strategy.Auth0`
        - `AshAuthentication.Strategy.Github`
        - `AshAuthentication.Strategy.Google`
        - `AshAuthentication.Strategy.Oidc`
+       - `AshAuthentication.Strategy.Slack`
   3. `AshAuthentication.Strategy.MagicLink`
      - authenticate by sending a single-use link to the user.
 
@@ -112,14 +114,15 @@ defmodule AshAuthentication do
 
   @built_in_strategies [
     AshAuthentication.AddOn.Confirmation,
+    AshAuthentication.Strategy.Apple,
     AshAuthentication.Strategy.Auth0,
     AshAuthentication.Strategy.Github,
     AshAuthentication.Strategy.Google,
-    AshAuthentication.Strategy.Apple,
     AshAuthentication.Strategy.MagicLink,
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,
-    AshAuthentication.Strategy.Password
+    AshAuthentication.Strategy.Password,
+    AshAuthentication.Strategy.Slack
   ]
 
   use Spark.Dsl.Extension,

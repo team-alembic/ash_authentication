@@ -74,7 +74,7 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
       nonce: [
         type: {:or, [:boolean, AshAuthentication.Dsl.secret_type()]},
         doc:
-          "A function for generating the session nonce, `true` to automatically generate it with `AshAuthetnication.Strategy.Oidc.NonceGenerator`, or `false` to disable.",
+          "A function for generating the session nonce, `true` to automatically generate it with `AshAuthentication.Strategy.Oidc.NonceGenerator`, or `false` to disable.",
         default: true,
         required: false
       ]

@@ -10,7 +10,7 @@
       <h2>Resources:</h2>
 
       <%= for {resource, options, strategies} <- @resources do %>
-        <h2><%= inspect(options.subject_name) %> - <%= Ash.Domain.Info.short_name(options.api) %> / <%= Ash.Resource.Info.short_name(resource) %></h2>
+        <h2><%= inspect(options.subject_name) %> - <%= Ash.Domain.Info.short_name(options.domain) %> / <%= Ash.Resource.Info.short_name(resource) %></h2>
 
 
         <%= for strategy <- strategies do %>

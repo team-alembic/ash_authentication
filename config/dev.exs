@@ -56,6 +56,11 @@ config :ash_authentication,
         base_url: System.get_env("OAUTH2_SITE"),
         token_url: "#{System.get_env("OAUTH2_SITE")}/oauth/token",
         trusted_audiences: ["01234", "56789"]
+      ],
+      slack: [
+        client_id: System.get_env("SLACK_CLIENT_ID"),
+        client_secret: System.get_env("SLACK_CLIENT_SECRET"),
+        redirect_uri: System.get_env("SLACK_REDIRECT_URI")
       ]
     ],
     tokens: [

@@ -113,6 +113,17 @@ defmodule Example.User do
       change Example.GenericOAuth2Change
       change AshAuthentication.Strategy.OAuth2.IdentityChange
     end
+
+    create :register_with_slack do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+    end
   end
 
   code_interface do
@@ -252,6 +263,14 @@ defmodule Example.User do
         redirect_uri &get_config/2
         base_url &get_config/2
         trusted_audiences &get_config/2
+      end
+
+      slack do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        authorization_params scope: "openid profile email"
+        identity_resource Example.UserIdentity
       end
     end
   end
