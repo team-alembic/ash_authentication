@@ -34,7 +34,7 @@ heir password before being able to use password authentication again.
 
 #### Opt-out
 
-You can set `prevent_hijacking? false` on the confirmation add-on to disable the automatic handling
+You can set `prevent_hijacking? false` on either the confirmation add-on, or your strategy to disable the automatic handling
 described above. This is not recommended.
 
 ## Tutorial
