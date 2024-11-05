@@ -102,7 +102,7 @@ all the same configuration options should you need them.
 | [`openid_configuration`](#authentication-strategies-oidc-openid_configuration){: #authentication-strategies-oidc-openid_configuration } | `map` | `%{}` | The OpenID configuration.  If not set, the configuration will be retrieved from `openid_configuration_uri`. |
 | [`id_token_signed_response_alg`](#authentication-strategies-oidc-id_token_signed_response_alg){: #authentication-strategies-oidc-id_token_signed_response_alg } | `"HS256" \| "HS384" \| "HS512" \| "RS256" \| "RS384" \| "RS512" \| "ES256" \| "ES384" \| "ES512" \| "PS256" \| "PS384" \| "PS512" \| "Ed25519" \| "Ed25519ph" \| "Ed448" \| "Ed448ph" \| "EdDSA"` | `"RS256"` | The `id_token_signed_response_alg` parameter sent by the Client during Registration. |
 | [`id_token_ttl_seconds`](#authentication-strategies-oidc-id_token_ttl_seconds){: #authentication-strategies-oidc-id_token_ttl_seconds } | `nil \| pos_integer` |  | The number of seconds from `iat` that an ID Token will be considered valid. |
-| [`nonce`](#authentication-strategies-oidc-nonce){: #authentication-strategies-oidc-nonce } | `boolean \| (any, any -> any) \| module \| String.t` | `true` | A function for generating the session nonce, `true` to automatically generate it with `AshAuthetnication.Strategy.Oidc.NonceGenerator`, or `false` to disable. |
+| [`nonce`](#authentication-strategies-oidc-nonce){: #authentication-strategies-oidc-nonce } | `boolean \| (any, any -> any) \| module \| String.t` | `true` | A function for generating the session nonce, `true` to automatically generate it with `AshAuthentication.Strategy.Oidc.NonceGenerator`, or `false` to disable. |
 
 
 

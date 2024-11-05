@@ -67,30 +67,33 @@ defmodule AshAuthentication.MixProject do
       extra_section: ["GUIDES"],
       extras: [
         {"README.md", name: "Home"},
-        "documentation/tutorials/get-started.md",
-        "documentation/tutorials/password.md",
-        "documentation/tutorials/auth0.md",
-        "documentation/tutorials/github.md",
-        "documentation/tutorials/google.md",
-        "documentation/tutorials/magic-links.md",
-        "documentation/tutorials/confirmation.md",
+        "CHANGELOG.md",
+        "documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md",
+        "documentation/dsls/DSL-AshAuthentication.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.Apple.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.Auth0.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.Github.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.Google.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.MagicLink.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.OAuth2.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.Oidc.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.Password.md",
+        "documentation/dsls/DSL-AshAuthentication.Strategy.Slack.md",
+        "documentation/dsls/DSL-AshAuthentication.TokenResource.md",
+        "documentation/dsls/DSL-AshAuthentication.UserIdentity.md",
         "documentation/topics/custom-strategy.md",
         "documentation/topics/policies-on-authentication-resources.md",
         "documentation/topics/testing.md",
         "documentation/topics/tokens.md",
         "documentation/topics/upgrading.md",
-        "documentation/dsls/DSL:-AshAuthentication.md",
-        "documentation/dsls/DSL:-AshAuthentication.AddOn.Confirmation.md",
-        "documentation/dsls/DSL:-AshAuthentication.Strategy.Auth0.md",
-        "documentation/dsls/DSL:-AshAuthentication.Strategy.Github.md",
-        "documentation/dsls/DSL:-AshAuthentication.Strategy.Google.md",
-        "documentation/dsls/DSL:-AshAuthentication.Strategy.MagicLink.md",
-        "documentation/dsls/DSL:-AshAuthentication.Strategy.OAuth2.md",
-        "documentation/dsls/DSL:-AshAuthentication.Strategy.Oidc.md",
-        "documentation/dsls/DSL:-AshAuthentication.Strategy.Password.md",
-        "documentation/dsls/DSL:-AshAuthentication.TokenResource.md",
-        "documentation/dsls/DSL:-AshAuthentication.UserIdentity.md",
-        "CHANGELOG.md"
+        "documentation/tutorials/auth0.md",
+        "documentation/tutorials/confirmation.md",
+        "documentation/tutorials/get-started.md",
+        "documentation/tutorials/github.md",
+        "documentation/tutorials/google.md",
+        "documentation/tutorials/magic-links.md",
+        "documentation/tutorials/password.md",
+        "documentation/tutorials/slack.md"
       ],
       groups_for_extras: [
         "Start Here": [
@@ -133,6 +136,7 @@ defmodule AshAuthentication.MixProject do
         Strategies: [
           AshAuthentication.Strategy,
           AshAuthentication.AddOn.Confirmation,
+          AshAuthentication.Strategy.Apple,
           AshAuthentication.Strategy.Auth0,
           AshAuthentication.Strategy.Custom,
           AshAuthentication.Strategy.Github,
@@ -140,7 +144,8 @@ defmodule AshAuthentication.MixProject do
           AshAuthentication.Strategy.MagicLink,
           AshAuthentication.Strategy.OAuth2,
           AshAuthentication.Strategy.Oidc,
-          AshAuthentication.Strategy.Password
+          AshAuthentication.Strategy.Password,
+          AshAuthentication.Strategy.Slack
         ],
         Cryptography: [
           AshAuthentication.HashProvider,
@@ -215,6 +220,7 @@ defmodule AshAuthentication.MixProject do
     extensions = [
       "AshAuthentication",
       "AshAuthentication.AddOn.Confirmation",
+      "AshAuthentication.Strategy.Apple",
       "AshAuthentication.Strategy.Auth0",
       "AshAuthentication.Strategy.Github",
       "AshAuthentication.Strategy.Google",
@@ -222,6 +228,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.OAuth2",
       "AshAuthentication.Strategy.Oidc",
       "AshAuthentication.Strategy.Password",
+      "AshAuthentication.Strategy.Slack",
       "AshAuthentication.TokenResource",
       "AshAuthentication.UserIdentity"
     ]

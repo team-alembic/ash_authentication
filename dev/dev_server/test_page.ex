@@ -1,7 +1,6 @@
 defmodule DevServer.TestPage do
   @moduledoc """
-  Displays a very basic login form according to the currently configured
-  Überauth providers.
+  Displays a very basic login form according to the currently configured providers.
   """
   @behaviour Plug
   alias AshAuthentication.{Info, Strategy}
@@ -168,7 +167,7 @@ defmodule DevServer.TestPage do
   end
 
   defp render_strategy(strategy, phase, _options)
-       when strategy.provider == :oauth2 and phase == :request do
+       when strategy.provider in [:oauth2, :oidc] and phase == :request do
     EEx.eval_string(
       ~s"""
       <a href="<%= @route %>">Sign in with <%= @strategy.name %></a>
@@ -180,7 +179,7 @@ defmodule DevServer.TestPage do
     )
   end
 
-  defp render_strategy(strategy, :callback, _) when strategy.provider == :oauth2, do: ""
+  defp render_strategy(strategy, :callback, _) when strategy.provider in [:oauth2, :oidc], do: ""
 
   defp render_strategy(strategy, :sign_in, _options)
        when is_struct(strategy, Example.OnlyMartiesAtTheParty) do

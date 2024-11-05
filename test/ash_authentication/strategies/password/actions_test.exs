@@ -182,7 +182,6 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
         capture_log(fn ->
           params = %{"username" => user.username}
           options = []
-          domain = Info.domain!(strategy.resource)
           resettable = strategy.resettable
 
           result =
@@ -195,7 +194,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
             })
             |> Ash.Query.for_read(resettable.request_password_reset_action_name, params)
             |> Ash.Query.select([])
-            |> domain.read(options)
+            |> Ash.read(options)
             |> case do
               {:ok, _} -> :ok
               {:error, reason} -> {:error, reason}
