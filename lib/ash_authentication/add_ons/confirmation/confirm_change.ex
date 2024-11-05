@@ -49,7 +49,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
 
         changeset
         |> Changeset.force_change_attributes(allowed_changes)
-        |> Changeset.change_attribute(strategy.confirmed_at_field, DateTime.utc_now())
+        |> Changeset.force_change_attribute(strategy.confirmed_at_field, DateTime.utc_now())
       else
         _ ->
           changeset
