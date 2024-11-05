@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.0](https://github.com/team-alembic/ash_authentication/compare/v4.2.7...v4.3.0) (2024-11-05)
+
+
+
+
+### Features:
+
+* Strategy.Slack: Add direct support for Slack strategy. (#825)
+
+* Strategy.Slack: Add direct support for Slack strategy.
+
+### Bug Fixes:
+
+* handle igniter/rewrite upgrades
+
+* set sign_in_with_token action name properly
+
 ## [v4.2.7](https://github.com/team-alembic/ash_authentication/compare/v4.2.6...v4.2.7) (2024-11-01)
 
 
