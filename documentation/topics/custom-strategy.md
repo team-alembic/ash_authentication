@@ -249,7 +249,7 @@ the resource.
         Ash.Query.filter(query, ilike(^ref(name_field), "Marty%"))
       end
     end)
-    |> domain.read(options)
+    |> Ash.read(options)
     |> case do
       {:ok, [user]} ->
         {:ok, user}

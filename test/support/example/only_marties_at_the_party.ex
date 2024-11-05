@@ -80,7 +80,6 @@ defmodule Example.OnlyMartiesAtTheParty do
     def action(strategy, :sign_in, params, options) do
       name_field = strategy.name_field
       name = Map.get(params, to_string(name_field))
-      domain = AshAuthentication.Info.domain!(strategy.resource)
 
       strategy.resource
       |> Ash.Query.filter(expr(^ref(name_field) == ^name))
@@ -91,7 +90,7 @@ defmodule Example.OnlyMartiesAtTheParty do
           Ash.Query.filter(query, ilike(^ref(name_field), "Marty%"))
         end
       end)
-      |> domain.read(options)
+      |> Ash.read(options)
       |> case do
         {:ok, [user]} ->
           {:ok, user}
