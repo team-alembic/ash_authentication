@@ -265,21 +265,25 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
   defp generate_reset(igniter, sender, options) do
     igniter
     |> create_reset_sender(sender, options)
-    |> Ash.Resource.Igniter.add_new_action(options[:user], :request_password_reset, """
-    action :request_password_reset do
-      description "Send password reset instructions to a user if they exist."
+    |> Ash.Resource.Igniter.add_new_action(
+      options[:user],
+      :request_password_reset_with_password,
+      """
+      action :request_password_reset_with_password do
+        description "Send password reset instructions to a user if they exist."
 
-      argument :#{options[:identity_field]}, :ci_string do
-        allow_nil? false
+        argument :#{options[:identity_field]}, :ci_string do
+          allow_nil? false
+        end
+
+        # creates a reset token and invokes the relevant senders
+        run {AshAuthentication.Strategy.Password.RequestPasswordReset, action: :get_by_#{options[:identity_field]}}
       end
-
-      # creates a reset token and invokes the relevant senders
-      run {AshAuthentication.Strategy.Password.RequestPasswordReset, action: :get_by_#{options[:identity_field]}}
-    end
-    """)
+      """
+    )
     |> ensure_get_by_action(options)
-    |> Ash.Resource.Igniter.add_new_action(options[:user], :reset_password, """
-    update :reset_password do
+    |> Ash.Resource.Igniter.add_new_action(options[:user], :password_reset_with_password, """
+    update :password_reset_with_password do
       argument :reset_token, :string do
         allow_nil? false
         sensitive? true
