@@ -252,9 +252,9 @@ end
 
 > #### Inhibiting changes {: .tip}
 >
-> Depending on whether you want the user's changes to be applied _before_ or _after_ confirmation, you can enable the [`inhibit_updates?` DSL option](documentation/dsls/DSL:-AshAuthentication.AddOn.Confirmation.md#authentication-add_ons-confirmation-inhibit_updates?).
+> Depending on whether you want the user's changes to be applied _before_ or _after_ confirmation, you can enable the [`inhibit_updates?` DSL option](documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md#authentication-add_ons-confirmation-inhibit_updates?).
 >
-> When this option is enabled, then any potential changes to monitored fields are instead temporarily stored in the [token resource](documentation/dsls/DSL:-AshAuthentication.TokenResource.md) and applied when the confirmation action is run.
+> When this option is enabled, then any potential changes to monitored fields are instead temporarily stored in the [token resource](documentation/dsls/DSL-AshAuthentication.TokenResource.md) and applied when the confirmation action is run.
 
 ## Customising the confirmation action
 

@@ -50,17 +50,17 @@ Welcome! Here you will find everything you need to know to get started with and 
 
 ## Reference
 
-- [AshAuthentication DSL](documentation/dsls/DSL:-AshAuthentication.md)
-- [AshAuthentication.AddOn.Confirmation DSL](documentation/dsls/DSL:-AshAuthentication.AddOn.Confirmation.md)
-- [AshAuthentication.Strategy.Auth0](documentation/dsls/DSL:-AshAuthentication.Strategy.Auth0.md)
-- [AshAuthentication.Strategy.Github DSL](documentation/dsls/DSL:-AshAuthentication.Strategy.Github.md)
-- [AshAuthentication.Strategy.Google DSL](documentation/dsls/DSL:-AshAuthentication.Strategy.Google.md)
-- [AshAuthentication.Strategy.MagicLink DSL](documentation/dsls/DSL:-AshAuthentication.Strategy.MagicLink.md)
-- [AshAuthentication.Strategy.OAuth2 DSL](documentation/dsls/DSL:-AshAuthentication.Strategy.OAuth2.md)
-- [AshAuthentication.Strategy.Oidc DSL](documentation/dsls/DSL:-AshAuthentication.Strategy.Oidc.md)
-- [AshAuthentication.Strategy.Password DSL](documentation/dsls/DSL:-AshAuthentication.Strategy.Password.md)
-- [AshAuthentication.TokenResource DSL](documentation/dsls/DSL:-AshAuthentication.TokenResource.md)
-- [AshAuthentication.UserIdentity DSL](documentation/dsls/DSL:-AshAuthentication.UserIdentity.md)
+- [AshAuthentication DSL](documentation/dsls/DSL-AshAuthentication.md)
+- [AshAuthentication.AddOn.Confirmation DSL](documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md)
+- [AshAuthentication.Strategy.Auth0](documentation/dsls/DSL-AshAuthentication.Strategy.Auth0.md)
+- [AshAuthentication.Strategy.Github DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Github.md)
+- [AshAuthentication.Strategy.Google DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Google.md)
+- [AshAuthentication.Strategy.MagicLink DSL](documentation/dsls/DSL-AshAuthentication.Strategy.MagicLink.md)
+- [AshAuthentication.Strategy.OAuth2 DSL](documentation/dsls/DSL-AshAuthentication.Strategy.OAuth2.md)
+- [AshAuthentication.Strategy.Oidc DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Oidc.md)
+- [AshAuthentication.Strategy.Password DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Password.md)
+- [AshAuthentication.TokenResource DSL](documentation/dsls/DSL-AshAuthentication.TokenResource.md)
+- [AshAuthentication.UserIdentity DSL](documentation/dsls/DSL-AshAuthentication.UserIdentity.md)
 - For other reference documentation, see the sidebar & search bar
 
 ## Related packages
