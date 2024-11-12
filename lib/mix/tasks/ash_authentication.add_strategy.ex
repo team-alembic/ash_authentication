@@ -340,15 +340,58 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp create_new_magic_link_sender(igniter, sender, options) do
-      web_module = Igniter.Libs.Phoenix.web_module(igniter)
-      {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+      case Igniter.Libs.Swoosh.list_mailers(igniter) do
+        {igniter, [mailer]} ->
+          {_web_module_exists?, use_web_module, igniter} = create_use_web_module(igniter)
 
-      use_web_module =
-        if web_module_exists? do
-          "use #{inspect(web_module)}, :verified_routes"
-        end
+          Igniter.Project.Module.create_module(igniter, sender, ~s'''
+          @moduledoc """
+          Sends a magic link email
+          """
 
-      example_domain = options[:user] |> Module.split() |> :lists.droplast() |> Module.concat()
+          use AshAuthentication.Sender
+          #{use_web_module}
+
+          import Swoosh.Email
+          alias #{inspect(mailer)}
+
+          @impl true
+          def send(user_or_email, token, _) do
+            # if you get a user, its for a user that already exists.
+            # if you get an email, then the user does not yet exist.
+
+            email =
+              case user_or_email do
+                %{email: email} -> email
+                email -> email
+              end
+
+            new()
+            |> from({"noreply", "noreply@example.com"}) # TODO: replace with your email
+            |> to(to_string(email))
+            |> subject("Your login link")
+            |> html_body(body([token: token, email: email]))
+            |> #{List.last(Module.split(mailer))}.deliver!()
+          end
+
+          defp body(params) do
+            """
+            Hello, \#{params[:email]}! Click this link to sign in:
+
+            \#{url(~p"/auth/user/magic_link/?token=\#{params[:token]}")}
+            """
+          end
+          ''')
+
+        _ ->
+          create_example_new_magic_link_sender(igniter, sender, options)
+      end
+    end
+
+    defp create_example_new_magic_link_sender(igniter, sender, options) do
+      {web_module_exists?, use_web_module, igniter} = create_use_web_module(igniter)
+
+      example_domain = example_domain(options[:user])
 
       real_example =
         if web_module_exists? do
@@ -374,8 +417,8 @@ if Code.ensure_loaded?(Igniter) do
 
         @impl true
         def send(user_or_email, token, _) do
-          # if you get a user, its for a user that already exists
-          # if you get an email, the user does not exist yet
+          # if you get a user, its for a user that already exists.
+          # if you get an email, then the user does not yet exist.
           #{real_example}
 
           email =
@@ -395,15 +438,50 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp create_reset_sender(igniter, sender, options) do
-      web_module = Igniter.Libs.Phoenix.web_module(igniter)
-      {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+      case Igniter.Libs.Swoosh.list_mailers(igniter) do
+        {igniter, [mailer]} ->
+          {_web_module_exists?, use_web_module, igniter} = create_use_web_module(igniter)
 
-      use_web_module =
-        if web_module_exists? do
-          "use #{inspect(web_module)}, :verified_routes"
-        end
+          Igniter.Project.Module.create_module(igniter, sender, ~s'''
+          @moduledoc """
+          Sends a password reset email
+          """
 
-      example_domain = options[:user] |> Module.split() |> :lists.droplast() |> Module.concat()
+          use AshAuthentication.Sender
+          #{use_web_module}
+
+          import Swoosh.Email
+
+          alias #{inspect(mailer)}
+
+          @impl true
+          def send(user, token, _) do
+            new()
+            |> from({"noreply", "noreply@example.com"}) # TODO: replace with your email
+            |> to(to_string(user.email))
+            |> subject("Reset your password")
+            |> html_body(body([token: token]))
+            |> #{List.last(Module.split(mailer))}.deliver!()
+          end
+
+          defp body(params) do
+            """
+            Click this link to reset your password:
+
+            \#{url(~p"/password-reset/\#{params[:token]}")}
+            """
+          end
+          ''')
+
+        _ ->
+          create_example_reset_sender(igniter, sender, options)
+      end
+    end
+
+    defp create_example_reset_sender(igniter, sender, options) do
+      {web_module_exists?, use_web_module, igniter} = create_use_web_module(igniter)
+
+      example_domain = example_domain(options[:user])
 
       real_example =
         if web_module_exists? do
@@ -441,13 +519,52 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp create_new_user_confirmation_sender(igniter, sender, options) do
-      web_module = Igniter.Libs.Phoenix.web_module(igniter)
-      {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+      case Igniter.Libs.Swoosh.list_mailers(igniter) do
+        {igniter, [mailer]} ->
+          {_web_module_exists?, use_web_module, igniter} = create_use_web_module(igniter)
 
-      use_web_module =
-        if web_module_exists? do
-          "use #{inspect(web_module)}, :verified_routes"
-        end
+          Igniter.Project.Module.create_module(
+            igniter,
+            sender,
+            ~s'''
+            @moduledoc """
+            Sends an email for a new user to confirm their email address.
+            """
+
+            use AshAuthentication.Sender
+            #{use_web_module}
+
+            import Swoosh.Email
+
+            alias #{inspect(mailer)}
+
+            @impl true
+            def send(user, token, _) do
+              new()
+              |> from({"noreply", "noreply@example.com"}) # TODO: Replace with your email
+              |> to(to_string(user.email))
+              |> subject("Confirm your email address")
+              |> html_body(body([token: token]))
+              |> #{List.last(Module.split(mailer))}.deliver!()
+            end
+
+            defp body(params) do
+              """
+              Click this link to confirm your email:
+
+              \#{url(~p"/auth/user/confirm_new_user?\#{[confirm: params[:token]]}")}
+              """
+            end
+            '''
+          )
+
+        _ ->
+          create_example_new_user_confirmation_sender(igniter, sender, options)
+      end
+    end
+
+    defp create_example_new_user_confirmation_sender(igniter, sender, options) do
+      {web_module_exists?, use_web_module, igniter} = create_use_web_module(igniter)
 
       example_domain = options[:user] |> Module.split() |> :lists.droplast() |> Module.concat()
 
@@ -484,6 +601,22 @@ if Code.ensure_loaded?(Igniter) do
         end
         '''
       )
+    end
+
+    defp create_use_web_module(igniter) do
+      web_module = Igniter.Libs.Phoenix.web_module(igniter)
+      {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+
+      use_web_module =
+        if web_module_exists? do
+          "use #{inspect(web_module)}, :verified_routes"
+        end
+
+      {web_module_exists?, use_web_module, igniter}
+    end
+
+    defp example_domain(user) do
+      user |> Module.split() |> :lists.droplast() |> Module.concat()
     end
 
     defp generate_sign_in_and_registration(igniter, options) do
