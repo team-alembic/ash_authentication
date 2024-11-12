@@ -15,7 +15,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
 
   @doc false
   @impl true
-  def run(action_input, opts, context) do
+  def run(action_input, opts, _context) do
     read_action = opts[:action]
 
     strategy = Info.strategy_for_action!(action_input.resource, action_input.action.name)
@@ -26,17 +26,10 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
       select_for_senders = Info.authentication_select_for_senders!(action_input.resource)
       {sender, send_opts} = strategy.resettable.sender
 
-      context =
-        if context[:private][:ash_authentication?] do
-          %{private: %{ash_authentication?: true}}
-        else
-          %{}
-        end
-
       query_result =
         action_input.resource
         |> Ash.Query.new()
-        |> Ash.Query.set_context(context)
+        |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
         |> Ash.Query.for_read(read_action, %{
           identity_field => identity
         })
