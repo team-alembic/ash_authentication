@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.1](https://github.com/team-alembic/ash_authentication/compare/v4.3.0...v4.3.1) (2024-11-12)
+
+
+
+
+### Bug Fixes:
+
+* RequestPasswordReset: fails when action called directly. (#833)
+
+* igniter.add_strategy: Generated password reset action names did not match the defaults. (#834)
+
+* confirmation warning 'changeset has already been validated for action'
+
 ## [v4.3.0](https://github.com/team-alembic/ash_authentication/compare/v4.2.7...v4.3.0) (2024-11-05)
 
 
