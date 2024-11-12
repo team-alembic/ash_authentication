@@ -147,7 +147,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |      end
       + |    end
       + |
-      + |    action :request_password_reset do
+      + |    action :request_password_reset_with_password do
       + |      description("Send password reset instructions to a user if they exist.")
       + |
       + |      argument :email, :ci_string do
@@ -169,7 +169,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |      filter(expr(email == ^arg(:email)))
       + |    end
       + |
-      + |    update :reset_password do
+      + |    update :password_reset_with_password do
       + |      argument :reset_token, :string do
       + |        allow_nil?(false)
       + |        sensitive?(true)
