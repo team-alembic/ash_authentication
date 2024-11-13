@@ -85,10 +85,10 @@ defmodule AshAuthentication.Sender do
   @doc """
   Sending callback.
 
-  This function will be called with the user, the token and any options passed
+  This function will be called with a value representing a user, the token and any options passed
   to the module in the DSL.
   """
-  @callback send(user :: Resource.record(), token :: String.t(), opts :: list) :: :ok
+  @callback send(user :: Resource.record() | String.t(), token :: String.t(), opts :: list) :: :ok
 
   @doc false
   @spec __using__(any) :: Macro.t()
