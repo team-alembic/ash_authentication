@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.3](https://github.com/team-alembic/ash_authentication/compare/v4.3.2...v4.3.3) (2024-11-14)
+
+
+
+
+### Bug Fixes:
+
+* Use correct typespec for `AshAuthentication.Sender.send/3` callback (#836)
+
 ## [v4.3.2](https://github.com/team-alembic/ash_authentication/compare/v4.3.1...v4.3.2) (2024-11-13)
 
 
