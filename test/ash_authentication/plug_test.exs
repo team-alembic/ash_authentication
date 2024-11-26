@@ -56,33 +56,35 @@ defmodule AshAuthentication.PlugTest do
     end
   end
 
-  describe "load_from_session/2" do
-    test "it delegates to Helpers.retrieve_from_session/2" do
+  describe "load_from_session/3" do
+    test "it delegates to Helpers.retrieve_from_session/3" do
       conn = conn(:get, "/", %{})
 
       Helpers
-      |> expect(:retrieve_from_session, fn rx_conn, otp_app ->
+      |> expect(:retrieve_from_session, fn rx_conn, otp_app, opts ->
         assert otp_app == :ash_authentication
         assert conn == rx_conn
+        assert opts == [load: [:company]]
       end)
 
       conn
-      |> AuthPlug.load_from_session([])
+      |> AuthPlug.load_from_session(load: [:company])
     end
   end
 
-  describe "load_from_bearer/2" do
-    test "it delegates to Helpers.retrieve_from_bearer/2" do
+  describe "load_from_bearer/3" do
+    test "it delegates to Helpers.retrieve_from_bearer/3" do
       conn = conn(:get, "/", %{})
 
       Helpers
-      |> expect(:retrieve_from_bearer, fn rx_conn, otp_app ->
+      |> expect(:retrieve_from_bearer, fn rx_conn, otp_app, opts ->
         assert otp_app == :ash_authentication
         assert conn == rx_conn
+        assert opts == [load: [:company]]
       end)
 
       conn
-      |> AuthPlug.load_from_bearer([])
+      |> AuthPlug.load_from_bearer(load: [:company])
     end
   end
 

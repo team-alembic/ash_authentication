@@ -49,7 +49,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
     end
   end
 
-  describe "retrieve_from_session/2" do
+  describe "retrieve_from_session/3" do
     test "when token presence is not required it loads any subjects stored in the session", %{
       conn: conn
     } do
@@ -120,9 +120,32 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       refute conn.assigns.current_user_with_token_required
     end
+
+    test "with opts", %{conn: conn} do
+      # without token
+      user = build_user()
+      subject = AshAuthentication.user_to_subject(user)
+
+      conn0 =
+        conn
+        |> Conn.put_session("user", subject)
+        |> Helpers.retrieve_from_session(:ash_authentication, load: [:dummy_calc])
+
+      assert conn0.assigns.current_user.dummy_calc == "dummy"
+
+      # with token
+      user_with_token = build_user_with_token_required()
+
+      conn1 =
+        conn
+        |> Conn.put_session("user_with_token_required_token", user_with_token.__metadata__.token)
+        |> Helpers.retrieve_from_session(:ash_authentication, load: [:dummy_calc])
+
+      assert conn1.assigns.current_user_with_token_required.dummy_calc == "dummy"
+    end
   end
 
-  describe "retrieve_from_bearer/2" do
+  describe "retrieve_from_bearer/3" do
     test "when token presense is not required it loads any subjects from authorization header(s)",
          %{conn: conn} do
       user = build_user()
@@ -199,6 +222,27 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
       refute is_map_key(conn.assigns, :current_user_with_token_required)
+    end
+
+    test "with opts", %{conn: conn} do
+      user = build_user()
+
+      conn0 =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication, load: [:dummy_calc])
+
+      assert conn0.assigns.current_user.dummy_calc == "dummy"
+
+      # with token
+      user_with_token = build_user_with_token_required()
+
+      conn1 =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user_with_token.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication, load: [:dummy_calc])
+
+      assert conn1.assigns.current_user_with_token_required.dummy_calc == "dummy"
     end
   end
 

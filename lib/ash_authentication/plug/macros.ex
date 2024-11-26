@@ -60,12 +60,12 @@ defmodule AshAuthentication.Plug.Macros do
       @doc """
       Attempt to retrieve all users from the connections' session.
 
-      A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_session/2`
+      A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_session/3`
       with the `otp_app` already present.
       """
       @spec load_from_session(Conn.t(), any) :: Conn.t()
-      def load_from_session(conn, _opts),
-        do: Helpers.retrieve_from_session(conn, unquote(otp_app))
+      def load_from_session(conn, opts),
+        do: Helpers.retrieve_from_session(conn, unquote(otp_app), opts)
     end
   end
 
@@ -78,11 +78,11 @@ defmodule AshAuthentication.Plug.Macros do
       @doc """
       Attempt to retrieve users from the `Authorization` header(s).
 
-      A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_bearer/2` with the `otp_app` already present.
+      A wrapper around `AshAuthentication.Plug.Helpers.retrieve_from_bearer/3` with the `otp_app` already present.
       """
       @spec load_from_bearer(Conn.t(), any) :: Conn.t()
-      def load_from_bearer(conn, _opts),
-        do: Helpers.retrieve_from_bearer(conn, unquote(otp_app))
+      def load_from_bearer(conn, opts),
+        do: Helpers.retrieve_from_bearer(conn, unquote(otp_app), opts)
     end
   end
 

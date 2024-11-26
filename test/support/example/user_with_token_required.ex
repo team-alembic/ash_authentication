@@ -51,6 +51,10 @@ defmodule Example.UserWithTokenRequired do
     defaults [:create, :read, :update, :destroy]
   end
 
+  calculations do
+    calculate :dummy_calc, :string, expr("dummy")
+  end
+
   identities do
     identity :email, [:email]
   end

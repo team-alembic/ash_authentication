@@ -126,6 +126,10 @@ defmodule Example.User do
     end
   end
 
+  calculations do
+    calculate :dummy_calc, :string, expr("dummy")
+  end
+
   code_interface do
     define :update_user, action: :update
   end
