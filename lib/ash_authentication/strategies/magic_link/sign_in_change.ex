@@ -16,8 +16,9 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
       |> Info.authentication_subject_name!()
       |> to_string()
 
-    with {:ok, strategy} <- Info.strategy_for_action(changeset.resource, changeset.action.name),
-         token when is_binary(token) <-
+    strategy = Info.strategy_for_action!(changeset.resource, changeset.action.name)
+
+    with token when is_binary(token) <-
            Changeset.get_argument(changeset, strategy.token_param_name),
          {:ok, %{"act" => token_action, "sub" => subject, "identity" => identity}, _} <-
            Jwt.verify(token, changeset.resource),
@@ -40,7 +41,13 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
       end)
     else
       _ ->
-        changeset
+        Ash.Changeset.add_error(
+          changeset,
+          AshAuthentication.Errors.InvalidToken.exception(
+            field: strategy.token_param_name,
+            type: :magic_link
+          )
+        )
     end
   end
 end

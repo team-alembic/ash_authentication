@@ -49,6 +49,34 @@ defmodule AshAuthentication.Strategy.MagicLinkTest do
                MagicLink.Actions.sign_in(strategy, %{"token" => token}, [])
     end
 
+    test "with registration enabled and an invalid token" do
+      strategy =
+        Info.strategy!(Example.UserWithRegisterMagicLink, :magic_link)
+
+      log =
+        capture_log(fn ->
+          MagicLink.Actions.request(
+            strategy,
+            %{"email" => "hello@example.com"},
+            []
+          )
+        end)
+
+      token =
+        log
+        |> String.split("Magic link request for hello@example.com, token \"", parts: 2)
+        |> Enum.at(1)
+        |> String.split("\"", parts: 2)
+        |> Enum.at(0)
+
+      assert {:error,
+              %AshAuthentication.Errors.AuthenticationFailed{
+                caused_by: %Ash.Error.Forbidden{
+                  errors: [%AshAuthentication.Errors.InvalidToken{type: :magic_link}]
+                }
+              }} = MagicLink.Actions.sign_in(strategy, %{"token" => token <> "a"}, [])
+    end
+
     test "cannot upsert against an unconfirmed user by default" do
       strategy =
         Info.strategy!(Example.UserWithRegisterMagicLink, :magic_link)
