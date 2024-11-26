@@ -4,7 +4,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{Info, Jwt, TokenResource}
+  alias AshAuthentication.{Errors.InvalidToken, Info, Jwt, TokenResource}
   alias Ash.{Changeset, Resource, Resource.Change}
 
   @doc false
@@ -43,7 +43,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
       _ ->
         Ash.Changeset.add_error(
           changeset,
-          AshAuthentication.Errors.InvalidToken.exception(
+          InvalidToken.exception(
             field: strategy.token_param_name,
             type: :magic_link
           )
