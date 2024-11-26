@@ -63,8 +63,8 @@ defmodule AshAuthentication.Plug.Helpers do
 
   If there is no user present for a resource then the assign is set to `nil`.
   """
-  @spec retrieve_from_session(Conn.t(), module) :: Conn.t()
-  def retrieve_from_session(conn, otp_app) do
+  @spec retrieve_from_session(Conn.t(), module, keyword) :: Conn.t()
+  def retrieve_from_session(conn, otp_app, opts \\ []) do
     otp_app
     |> AshAuthentication.authenticated_resources()
     |> Stream.map(
@@ -91,9 +91,14 @@ defmodule AshAuthentication.Plug.Helpers do
                  context: Ash.PlugHelpers.get_context(conn) || %{}
                ),
              {:ok, user} <-
-               AshAuthentication.subject_to_user(subject, resource,
-                 tenant: Ash.PlugHelpers.get_tenant(conn),
-                 context: Ash.PlugHelpers.get_context(conn) || %{}
+               AshAuthentication.subject_to_user(
+                 subject,
+                 resource,
+                 [
+                   tenant: Ash.PlugHelpers.get_tenant(conn),
+                   context: Ash.PlugHelpers.get_context(conn) || %{}
+                 ]
+                 |> Keyword.merge(opts)
                ) do
           Conn.assign(conn, current_subject_name, user)
         else
@@ -105,8 +110,10 @@ defmodule AshAuthentication.Plug.Helpers do
 
         with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
              {:ok, user} <-
-               AshAuthentication.subject_to_user(subject, resource,
-                 tenant: Ash.PlugHelpers.get_tenant(conn)
+               AshAuthentication.subject_to_user(
+                 subject,
+                 resource,
+                 [tenant: Ash.PlugHelpers.get_tenant(conn)] |> Keyword.merge(opts)
                ) do
           Conn.assign(conn, current_subject_name, user)
         else
@@ -128,8 +135,8 @@ defmodule AshAuthentication.Plug.Helpers do
 
   If there is no user present for a resource then the assign is set to `nil`.
   """
-  @spec retrieve_from_bearer(Conn.t(), module) :: Conn.t()
-  def retrieve_from_bearer(conn, otp_app) do
+  @spec retrieve_from_bearer(Conn.t(), module, keyword) :: Conn.t()
+  def retrieve_from_bearer(conn, otp_app, opts \\ []) do
     conn
     |> Conn.get_req_header("authorization")
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
@@ -140,9 +147,14 @@ defmodule AshAuthentication.Plug.Helpers do
            {:ok, token_record} <-
              validate_token(resource, jti),
            {:ok, user} <-
-             AshAuthentication.subject_to_user(subject, resource,
-               tenant: Ash.PlugHelpers.get_tenant(conn),
-               context: Ash.PlugHelpers.get_context(conn) || %{}
+             AshAuthentication.subject_to_user(
+               subject,
+               resource,
+               [
+                 tenant: Ash.PlugHelpers.get_tenant(conn),
+                 context: Ash.PlugHelpers.get_context(conn) || %{}
+               ]
+               |> Keyword.merge(opts)
              ),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do
