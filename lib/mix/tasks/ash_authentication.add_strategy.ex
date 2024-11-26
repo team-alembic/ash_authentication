@@ -252,6 +252,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
           monitor_fields [:email]
           confirm_on_create? true
           confirm_on_update? false
+          auto_confirm_actions [:sign_in_with_magic_link]
           sender #{inspect(sender)}
         end
         """
