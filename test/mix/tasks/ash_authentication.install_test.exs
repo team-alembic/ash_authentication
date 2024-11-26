@@ -9,8 +9,6 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
       test_project()
       |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
       |> Igniter.compose_task("ash_authentication.install", ["--yes"])
-      # This can be removed when https://github.com/hrzndhrn/rewrite/issues/39 is addressed (in igniter too)
-      |> Igniter.Project.Formatter.remove_imported_dep(:ash_authentication)
       |> Igniter.Project.Formatter.remove_formatter_plugin(Spark.Formatter)
 
     [igniter: igniter]
