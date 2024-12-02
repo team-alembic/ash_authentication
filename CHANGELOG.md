@@ -5,6 +5,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.4](https://github.com/team-alembic/ash_authentication/compare/v4.3.3...v4.3.4) (2024-12-02)
+
+
+
+
+### Bug Fixes:
+
+* ensure tenant is passed through on password reset request
+
+* invalidate magic link sign in on invalid token
+
+* pass opts to confirm action invocations
+
+### Improvements:
+
+* add primary read action to users resource for atomic upgrade
+
+* auto confirm on sign in with magic link in generators
+
+* Add opts to retrieve funs of AshAuthentication.Plug.Helpers (#847)
+
 ## [v4.3.3](https://github.com/team-alembic/ash_authentication/compare/v4.3.2...v4.3.3) (2024-11-14)
 
 
