@@ -168,6 +168,8 @@ defmodule Mix.Tasks.AshAuthentication.Install do
             inspect(user_resource),
             "--uuid-primary-key",
             "id",
+            "--default-actions",
+            "read",
             "--extend",
             extensions
           ] ++ argv ++ resource_args
