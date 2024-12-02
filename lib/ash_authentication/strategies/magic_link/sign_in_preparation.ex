@@ -7,6 +7,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
   alias AshAuthentication.{Info, Jwt, TokenResource}
   alias Ash.{Query, Resource, Resource.Preparation}
   require Ash.Query
+  import Ash.Expr
 
   @doc false
   @impl true
@@ -19,18 +20,31 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
 
     with {:ok, strategy} <- Info.strategy_for_action(query.resource, query.action.name),
          token when is_binary(token) <- Query.get_argument(query, strategy.token_param_name),
-         {:ok, %{"act" => token_action, "sub" => subject}, _} <-
+         {:ok, %{"act" => token_action, "sub" => subject} = claims, _} <-
            Jwt.verify(token, query.resource),
          ^token_action <- to_string(strategy.sign_in_action_name),
          %URI{path: ^subject_name, query: primary_key} <- URI.parse(subject) do
-      primary_key =
-        primary_key
-        |> URI.decode_query()
-        |> Enum.to_list()
-
       query
       |> Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Query.filter(^primary_key)
+      |> then(fn query ->
+        cond do
+          not is_nil(primary_key) ->
+            primary_key =
+              primary_key
+              |> URI.decode_query()
+              |> Enum.to_list()
+
+            Query.filter(query, ^primary_key)
+
+          identity = claims["identity"] ->
+            identity_field = strategy.identity_field
+
+            Query.filter(query, ^ref(identity_field) == ^identity)
+
+          true ->
+            Query.do_filter(query, false)
+        end
+      end)
       |> Query.after_action(fn
         query, [record] ->
           if strategy.single_use_token? do
