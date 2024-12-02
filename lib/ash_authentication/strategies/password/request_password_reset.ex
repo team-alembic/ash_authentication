@@ -30,9 +30,13 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
         action_input.resource
         |> Ash.Query.new()
         |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
-        |> Ash.Query.for_read(read_action, %{
-          identity_field => identity
-        }, tenant: context.tenant)
+        |> Ash.Query.for_read(
+          read_action,
+          %{
+            identity_field => identity
+          },
+          tenant: context.tenant
+        )
         |> Ash.Query.ensure_selected(select_for_senders)
         |> Ash.read_one()
 

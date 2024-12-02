@@ -99,6 +99,8 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
       end
 
       actions do
+        defaults([:read])
+
         read :get_by_subject do
           description("Get a user by the subject claim in a JWT")
           argument(:subject, :string, allow_nil?: false)
