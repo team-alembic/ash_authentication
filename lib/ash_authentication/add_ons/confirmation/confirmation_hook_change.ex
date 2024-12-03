@@ -271,7 +271,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
         Enum.any?(filter, fn {_k, v} -> is_nil(v) end)
 
       if (identity.nils_distinct? && has_nil?) ||
-           !exists?(changeset.resource, filter) do
+           !exists?(changeset, filter) do
         {:cont, changeset}
       else
         {:halt, {:error, identity}}
@@ -279,15 +279,15 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
     end)
   end
 
-  defp exists?(resource, filter) do
-    resource
+  defp exists?(changeset, filter) do
+    changeset.resource
     |> Query.do_filter(filter)
     |> Query.set_context(%{
       private: %{
         ash_authentication?: true
       }
     })
-    |> Ash.exists?()
+    |> Ash.exists?(tenant: changeset.tenant)
   end
 
   defp maybe_perform_confirmation(%Changeset{} = changeset, strategy, original_changeset) do
