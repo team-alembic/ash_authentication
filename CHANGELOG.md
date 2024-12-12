@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.5](https://github.com/team-alembic/ash_authentication/compare/v4.3.4...v4.3.5) (2024-12-12)
+
+
+
+
+### Bug Fixes:
+
+* ensure that `auto_confirm_actions` does not override
+
+* include tenant when checking identity conflicts
+
+* handle tokens without a primary key encoded in sub, using `identity`
+
+### Improvements:
+
+* allow setting identity field to allow nil with password
+
 ## [v4.3.4](https://github.com/team-alembic/ash_authentication/compare/v4.3.3...v4.3.4) (2024-12-02)
 
 
