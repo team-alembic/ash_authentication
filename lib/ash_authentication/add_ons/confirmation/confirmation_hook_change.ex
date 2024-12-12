@@ -147,31 +147,62 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
     |> maybe_perform_confirmation(strategy, changeset)
   end
 
-  defp handle_upserts(%{action: %{type: :create}} = changeset, strategy, auto_confirm?) do
-    if auto_confirm? || changeset.action.name == strategy.confirm_action_name do
-      if changeset.context[:private][:upsert?] && changeset.context[:private][:upsert_fields] do
-        update_in(
-          changeset.context[:private][:upsert_fields],
-          &(List.wrap(&1) ++ [strategy.confirmed_at_field])
-        )
-      else
-        changeset
-      end
-    else
-      if strategy.prevent_hijacking? &&
-           Enum.any?(strategy.monitor_fields, &Changeset.changing_attribute?(changeset, &1)) do
-        Ash.Changeset.filter(
-          changeset,
-          expr(not is_nil(^ref(strategy.confirmed_at_field)))
-        )
-      else
-        # User accepted the risk 🤷‍♂️
-        changeset
-      end
-    end
+  defp handle_upserts(
+         %{action: %{type: :create}, context: %{private: %{upsert?: true}}} = changeset,
+         strategy,
+         auto_confirm?
+       ) do
+    changeset
+    |> ensure_confirmed_at_is_set(strategy, auto_confirm?)
+    |> prevent_hijacking(strategy)
   end
 
   defp handle_upserts(changeset, _, _), do: changeset
+
+  defp ensure_confirmed_at_is_set(changeset, strategy, auto_confirm?) do
+    if (auto_confirm? || changeset.action.name == strategy.confirm_action_name) &&
+         changeset.context[:private][:upsert_fields] do
+      update_in(
+        changeset.context[:private][:upsert_fields],
+        &(List.wrap(&1) ++ [strategy.confirmed_at_field])
+      )
+    else
+      changeset
+    end
+  end
+
+  defp prevent_hijacking(changeset, strategy) do
+    if strategy.prevent_hijacking? &&
+         Enum.any?(strategy.monitor_fields, &Changeset.changing_attribute?(changeset, &1)) do
+      add_hijack_filter(changeset, strategy)
+    else
+      # User accepted the risk 🤷‍♂️
+      changeset
+    end
+  end
+
+  defp add_hijack_filter(changeset, strategy) do
+    if Ash.DataLayer.data_layer_can?(changeset.resource, :expr_error) do
+      Ash.Changeset.filter(
+        changeset,
+        expr(
+          if is_nil(^ref(strategy.confirmed_at_field)) do
+            error(
+              AshAuthentication.Errors.CannotConfirmUnconfirmedUser,
+              %{resource: ^changeset.resource, confirmation_strategy: ^strategy.name}
+            )
+          else
+            true
+          end
+        )
+      )
+    else
+      Ash.Changeset.filter(
+        changeset,
+        expr(not is_nil(^ref(strategy.confirmed_at_field)))
+      )
+    end
+  end
 
   defp not_confirm_action(%Changeset{} = changeset, strategy)
        when changeset.action.name != strategy.confirm_action_name,

@@ -8,7 +8,7 @@ defmodule AshAuthentication.Errors.CannotConfirmUnconfirmedUser do
 
   See the confirmation tutorial on hexdocs for more.
   """
-  use Splode.Error, fields: [:resource], class: :forbidden
+  use Splode.Error, fields: [:resource, :confirmation_strategy], class: :forbidden
 
   def message(%{resource: resource}) do
     resource =
@@ -18,6 +18,6 @@ defmodule AshAuthentication.Errors.CannotConfirmUnconfirmedUser do
         inspect(resource)
       end
 
-    "Could not confirm unconfirmed `#{resource}`."
+    "Could not confirm unconfirmed `#{resource}`"
   end
 end

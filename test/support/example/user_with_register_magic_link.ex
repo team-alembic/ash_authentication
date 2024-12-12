@@ -57,7 +57,7 @@ defmodule Example.UserWithRegisterMagicLink do
         confirm_on_update? true
         # in a real setup, you should have this
         # but we don't for testing purposes
-        # auto_confirm_actions [:sign_in_with_magic_link]
+        auto_confirm_actions [:sign_in_with_magic_link]
 
         sender fn user, _, _ ->
           Logger.debug("Need to confirm #{inspect(user)}")

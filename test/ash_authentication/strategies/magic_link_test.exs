@@ -123,8 +123,8 @@ defmodule AshAuthentication.Strategy.MagicLinkTest do
 
       assert {:error,
               %AshAuthentication.Errors.AuthenticationFailed{
-                caused_by: %Ash.Error.Invalid{
-                  errors: [%Ash.Error.Changes.StaleRecord{}]
+                caused_by: %Ash.Error.Forbidden{
+                  errors: [%AshAuthentication.Errors.CannotConfirmUnconfirmedUser{}]
                 }
               }} =
                MagicLink.Actions.sign_in(strategy, %{"token" => token}, [])
