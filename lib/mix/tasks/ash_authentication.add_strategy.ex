@@ -523,7 +523,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
     |> Ash.Resource.Igniter.add_new_action(options[:user], :register_with_password, """
     create :register_with_password do
       description "Register a new user with a #{options[:identity_field]} and password."
-      accept [:#{options[:identity_field]}]
+      argument :#{options[:identity_field]}, :string, allow_nil?: false
 
       argument :password, :string do
         description "The proposed password for the user, in plain text."
@@ -537,6 +537,9 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
         allow_nil? false
         sensitive? true
       end
+
+      # Sets the #{options[:identity_field]} from the argument
+      change set_attribute(:#{options[:identity_field]}, arg(:#{options[:identity_field]}))
 
       # Hashes the provided password
       change AshAuthentication.Strategy.Password.HashPasswordChange

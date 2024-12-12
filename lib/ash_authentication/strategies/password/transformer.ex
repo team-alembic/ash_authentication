@@ -96,7 +96,6 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, identity_field),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
          :ok <- validate_attribute_option(attribute, resource, :public?, [true]) do
       validate_attribute_unique_constraint(dsl_state, [identity_field], resource)
     end
@@ -190,6 +189,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     Transformer.build_entity(Resource.Dsl, [:actions], :create,
       name: strategy.register_action_name,
       accept: accept,
+      require_attributes: [strategy.identity_field],
       arguments: arguments,
       changes: changes,
       metadata: metadata,
