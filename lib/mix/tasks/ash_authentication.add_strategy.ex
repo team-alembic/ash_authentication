@@ -252,7 +252,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
           monitor_fields [:email]
           confirm_on_create? true
           confirm_on_update? false
-          auto_confirm_actions [:sign_in_with_magic_link]
+          auto_confirm_actions [:sign_in_with_magic_link, :reset_password_with_password]
           sender #{inspect(sender)}
         end
         """
@@ -523,7 +523,9 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy do
     |> Ash.Resource.Igniter.add_new_action(options[:user], :register_with_password, """
     create :register_with_password do
       description "Register a new user with a #{options[:identity_field]} and password."
-      argument :#{options[:identity_field]}, :string, allow_nil?: false
+      argument :#{options[:identity_field]}, :ci_string do
+        allow_nil? false
+      end
 
       argument :password, :string do
         description "The proposed password for the user, in plain text."

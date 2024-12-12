@@ -117,7 +117,10 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |
       + |    create :register_with_password do
       + |      description("Register a new user with a email and password.")
-      + |      accept([:email])
+      + |
+      + |      argument :email, :ci_string do
+      + |        allow_nil?(false)
+      + |      end
       + |
       + |      argument :password, :string do
       + |        description("The proposed password for the user, in plain text.")
@@ -131,6 +134,9 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |        allow_nil?(false)
       + |        sensitive?(true)
       + |      end
+      + |
+      + |      # Sets the email from the argument
+      + |      change(set_attribute(:email, arg(:email)))
       + |
       + |      # Hashes the provided password
       + |      change(AshAuthentication.Strategy.Password.HashPasswordChange)
