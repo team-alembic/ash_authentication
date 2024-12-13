@@ -22,15 +22,15 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
       |> assert_has_patch("lib/test/accounts/user.ex", """
-      26 + |    strategies do
-      27 + |      password :password do
-      28 + |        identity_field(:email)
-      29 + |
-      30 + |        resettable do
-      31 + |          sender(Test.Accounts.User.Senders.SendPasswordResetEmail)
-      32 + |        end
-      33 + |      end
-      34 + |    end
+      + |    strategies do
+      + |      password :password do
+      + |        identity_field(:email)
+      + |
+      + |        resettable do
+      + |          sender(Test.Accounts.User.Senders.SendPasswordResetEmail)
+      + |        end
+      + |      end
+      + |    end
       """)
     end
 

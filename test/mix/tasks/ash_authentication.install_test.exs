@@ -86,6 +86,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
           enabled?(true)
           token_resource(Test.Accounts.Token)
           signing_secret(Test.Secrets)
+          store_all_tokens?(true)
         end
       end
 

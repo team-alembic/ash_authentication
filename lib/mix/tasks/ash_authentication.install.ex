@@ -216,6 +216,11 @@ defmodule Mix.Tasks.AshAuthentication.Install do
           [:authentication, :tokens, :signing_secret],
           secrets_module
         )
+        |> Spark.Igniter.set_option(
+          user_resource,
+          [:authentication, :tokens, :store_all_tokens?],
+          true
+        )
         |> Igniter.Project.Config.configure_new(
           "dev.exs",
           otp_app,
