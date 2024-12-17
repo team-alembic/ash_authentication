@@ -12,7 +12,7 @@ add authentication to your resources and APIs.
 #### Install the extension
 
 ```sh
-mix igniter.install ash_authentication
+mix igniter.install ash_authentication --auth-strategy magic_link,password
 ```
 
 ##### Using Phoenix?
@@ -21,11 +21,8 @@ Use the following. If you have not yet run the above command, this will prompt y
 so you can run both or only this one.
 
 ```sh
-mix igniter.install ash_authentication_phoenix
+mix igniter.install ash_authentication_phoenix --auth-strategy magic_link,password
 ```
-
-There is not a task(yet) for configuring the strategies and add-ons that you use.
-So continue on below and select your strategies/add-ons and set them up manually.
 
 ### Manual
 

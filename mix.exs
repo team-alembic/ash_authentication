@@ -124,7 +124,10 @@ defmodule AshAuthentication.MixProject do
           """
         end
       end,
-      filter_modules: ~r/^Elixir.AshAuthentication/,
+      filter_modules: fn mod, _ ->
+        String.starts_with?(inspect(mod), "AshAuthentication") ||
+          String.starts_with?(inspect(mod), "Mix.Task")
+      end,
       source_url_pattern:
         "https://github.com/team-alembic/ash_authentication/blob/main/%{path}#L%{line}",
       groups_for_modules: [
