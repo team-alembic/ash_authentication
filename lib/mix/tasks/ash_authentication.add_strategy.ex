@@ -563,8 +563,6 @@ if Code.ensure_loaded?(Igniter) do
   end
 else
   defmodule Mix.Tasks.AshAuthentication.AddStrategy do
-    @example "mix ash_authentication.add_strategy password"
-
     @shortdoc "Adds the provided strategy or strategies to your user resource"
 
     @moduledoc @shortdoc
