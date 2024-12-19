@@ -1,7 +1,7 @@
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshAuthentication.Install do
-    @example "mix igniter.install ash_authentication_phoenix"
+    @example "mix igniter.install ash_authentication"
     @shortdoc "Installs AshAuthentication. Invoke with `mix igniter.install ash_authentication`"
 
     @moduledoc """
@@ -428,10 +428,10 @@ if Code.ensure_loaded?(Igniter) do
     end
   end
 else
-  defmodule Mix.Tasks.Ash.Install do
+  defmodule Mix.Tasks.AshAuthentication.Install do
     use Mix.Task
 
-    @example "mix igniter.install ash_authentication_phoenix"
+    @example "mix igniter.install ash_authentication"
     @shortdoc "Installs AshAuthentication. Invoke with `mix igniter.install ash_authentication`"
 
     @moduledoc @shortdoc
