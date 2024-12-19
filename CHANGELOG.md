@@ -70,7 +70,7 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 * RequestPasswordReset: fails when action called directly. (#833)
 
-* igniter.add_strategy: Generated password reset action names did not match the defaults. (#834)
+* ash_authentication.add_strategy: Generated password reset action names did not match the defaults. (#834)
 
 * confirmation warning 'changeset has already been validated for action'
 

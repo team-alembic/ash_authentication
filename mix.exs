@@ -191,7 +191,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:ash, ash_version("~> 3.0 and >= 3.4.29")},
-      {:igniter, "~> 0.4"},
+      {:igniter, "~> 0.4", optional: true},
       {:assent, "~> 0.2 and >= 0.2.8"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
