@@ -28,6 +28,9 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |
       + |        resettable do
       + |          sender(Test.Accounts.User.Senders.SendPasswordResetEmail)
+      + |          # these configurations will be the default in a future release
+      + |          password_reset_action_name(:reset_password_with_token)
+      + |          request_password_reset_action_name(:request_password_reset_token)
       + |        end
       + |      end
       + |    end
@@ -153,7 +156,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |      end
       + |    end
       + |
-      + |    action :request_password_reset_with_password do
+      + |    action :request_password_reset_token do
       + |      description("Send password reset instructions to a user if they exist.")
       + |
       + |      argument :email, :ci_string do
@@ -175,7 +178,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |      filter(expr(email == ^arg(:email)))
       + |    end
       + |
-      + |    update :password_reset_with_password do
+      + |    update :reset_password_with_token do
       + |      argument :reset_token, :string do
       + |        allow_nil?(false)
       + |        sensitive?(true)

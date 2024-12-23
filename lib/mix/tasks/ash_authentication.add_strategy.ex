@@ -164,6 +164,22 @@ if Code.ensure_loaded?(Igniter) do
         run AshAuthentication.Strategy.MagicLink.Request
       end
       """)
+      |> Ash.Resource.Igniter.add_new_action(options[:user], :change_password, """
+      update :change_password do
+        # Use this action to allow users to change their password by providing
+        # their current password and a new password.
+
+        accept []
+        argument :current_password, :string, sensitive?: true, allow_nil?: false
+        argument :password, :string, sensitive?: true, allow_nil?: false
+        argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
+
+        validate confirm(:password, :password_confirmation)
+        validate {AshAuthentication.Strategy.Password.PasswordValidation, strategy_name: :password, password_argument: :current_password}
+
+        change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+      end
+      """)
       |> AshAuthentication.Igniter.add_new_strategy(options[:user], :magic_link, :magic_link, """
       magic_link do
         identity_field :#{options[:identity_field]}
@@ -199,8 +215,9 @@ if Code.ensure_loaded?(Igniter) do
 
         resettable do
           sender #{inspect(sender)}
-          # this configuration will be the default in a future release
-          passsword_reset_action_name :reset_password_with_token
+          # these configurations will be the default in a future release
+          password_reset_action_name :reset_password_with_token
+          request_password_reset_action_name :request_password_reset_token
         end
       end
       """)
@@ -255,7 +272,7 @@ if Code.ensure_loaded?(Igniter) do
             monitor_fields [:email]
             confirm_on_create? true
             confirm_on_update? false
-            auto_confirm_actions [:sign_in_with_magic_link, :reset_password_with_password]
+            auto_confirm_actions [:sign_in_with_magic_link, :reset_password_with_token]
             sender #{inspect(sender)}
           end
           """
@@ -271,9 +288,9 @@ if Code.ensure_loaded?(Igniter) do
       |> create_reset_sender(sender, options)
       |> Ash.Resource.Igniter.add_new_action(
         options[:user],
-        :request_password_reset_with_password,
+        :request_password_reset_token,
         """
-        action :request_password_reset_with_password do
+        action :request_password_reset_token do
           description "Send password reset instructions to a user if they exist."
 
           argument :#{options[:identity_field]}, :ci_string do
@@ -286,7 +303,7 @@ if Code.ensure_loaded?(Igniter) do
         """
       )
       |> ensure_get_by_action(options)
-      |> Ash.Resource.Igniter.add_new_action(options[:user], :password_reset_with_password, """
+      |> Ash.Resource.Igniter.add_new_action(options[:user], :reset_password_with_token, """
       update :reset_password_with_token do
         argument :reset_token, :string do
           allow_nil? false
