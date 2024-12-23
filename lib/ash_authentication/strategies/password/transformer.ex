@@ -378,6 +378,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
            maybe_set_field_lazy(
              resettable,
              :password_reset_action_name,
+             # Change this default in 5.0
              fn _ -> :"password_reset_with_#{strategy.name}" end
            ),
          {:ok, dsl_state} <-

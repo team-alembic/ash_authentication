@@ -199,6 +199,8 @@ if Code.ensure_loaded?(Igniter) do
 
         resettable do
           sender #{inspect(sender)}
+          # this configuration will be the default in a future release
+          passsword_reset_action_name :reset_password_with_token
         end
       end
       """)
@@ -285,7 +287,7 @@ if Code.ensure_loaded?(Igniter) do
       )
       |> ensure_get_by_action(options)
       |> Ash.Resource.Igniter.add_new_action(options[:user], :password_reset_with_password, """
-      update :password_reset_with_password do
+      update :reset_password_with_token do
         argument :reset_token, :string do
           allow_nil? false
           sensitive? true
