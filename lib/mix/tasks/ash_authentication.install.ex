@@ -390,7 +390,7 @@ if Code.ensure_loaded?(Igniter) do
 
       def data_layer_args(igniter, opts) do
         {igniter, repo} =
-          AshPostgres.Igniter.select_repo(igniter, generate?: true, yes: opts[:yes])
+          AshPostgres.Igniter.select_repo(igniter, yes: opts[:yes])
 
         {igniter, ["--repo", inspect(repo)], repo}
       end
