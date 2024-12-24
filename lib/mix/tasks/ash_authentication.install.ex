@@ -147,7 +147,7 @@ if Code.ensure_loaded?(Igniter) do
             if Code.ensure_loaded?(AshPostgres.DataLayer) do
               "postgres,#{extensions}"
             else
-              "ets,extensions"
+              extensions
             end
 
           dev_secret =
