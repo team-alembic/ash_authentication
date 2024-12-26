@@ -5,6 +5,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.7](https://github.com/team-alembic/ash_authentication/compare/v4.3.6...v4.3.7) (2024-12-26)
+
+
+
+
+### Bug Fixes:
+
+* return an `AuthenticationFailed` error properly
+
+* go back to generating the repo if its unavailable
+
+* don't generate repo if its not present
+
+### Improvements:
+
+* use ets if postgres isn't available
+
+* add `change_password` action to generated code
+
+* use better action name for password reset
+
 ## [v4.3.6](https://github.com/team-alembic/ash_authentication/compare/v4.3.5...v4.3.6) (2024-12-20)
 
 
