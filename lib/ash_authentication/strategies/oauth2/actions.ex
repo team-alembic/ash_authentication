@@ -114,6 +114,17 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       )
     )
     |> Ash.create()
+    |> case do
+      {:error, error} ->
+        {:error,
+         Errors.AuthenticationFailed.exception(
+           strategy: strategy,
+           caused_by: error
+         )}
+
+      other ->
+        other
+    end
   end
 
   def register(%OAuth2{} = strategy, _params, _options),
