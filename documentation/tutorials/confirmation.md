@@ -97,7 +97,7 @@ Next we will have to generate and run migrations to add confirmed_at column to u
 mix ash.codegen account_confirmation
 ```
 
-To make this work we need to create a new module `MyApp.Accounts.User.Senders.SendPasswordResetEmail`:
+To make this work we need to create a new module `MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail`:
 
 ```elixir
 defmodule MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail do
