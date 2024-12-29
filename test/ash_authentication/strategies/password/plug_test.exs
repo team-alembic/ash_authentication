@@ -119,6 +119,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
 
     test "it returns an error when account confirmation is required and it is not" do
       {:ok, strategy} = Info.strategy(Example.User, :password)
+      strategy = %{strategy | require_confirmed_with?: :confirmed_at}
 
       password = password()
       user = build_user(password: password, password_confirmation: password)
@@ -131,9 +132,14 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
       }
 
       assert {_conn,
-              {:error,
-               %AuthenticationFailed{caused_by: %{message: "User must be confirmed to sign in."}} =
-                 error}} =
+              {
+                :error,
+                %AuthenticationFailed{
+                  caused_by: %{
+                    message: "User must be confirmed to sign in."
+                  }
+                } = error
+              }} =
                :post
                |> conn("/", params)
                |> Plug.sign_in(strategy)
@@ -166,7 +172,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
 
     test "it does NOT return an error if the user is confirmed, and the confirmation is required" do
       {:ok, strategy} = Info.strategy(Example.User, :password)
-      strategy = %{strategy | require_confirmed_with?: nil}
+      strategy = %{strategy | require_confirmed_with?: :confirmed_at}
       password = password()
 
       # Need to build a confirmed user
@@ -175,6 +181,9 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
           password: password,
           password_confirmation: password
         )
+
+      user =
+        Ash.Seed.update!(user, %{confirmed_at: DateTime.utc_now()})
 
       params = %{
         "user" => %{
