@@ -5,6 +5,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
   import Plug.Test
 
   alias AshAuthentication.{
+    Errors.AuthenticationFailed,
     Info,
     Plug.Helpers,
     Strategy.Password,
@@ -114,6 +115,81 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
                |> Helpers.get_authentication_result()
 
       assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+
+    test "it returns an error when account confirmation is required and it is not" do
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+
+      password = password()
+      user = build_user(password: password, password_confirmation: password)
+
+      params = %{
+        "user" => %{
+          "username" => user.username,
+          "password" => password
+        }
+      }
+
+      assert {_conn,
+              {:error,
+               %AuthenticationFailed{caused_by: %{message: "User must be confirmed to sign in."}} =
+                 error}} =
+               :post
+               |> conn("/", params)
+               |> Plug.sign_in(strategy)
+               |> Helpers.get_authentication_result()
+
+      assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+
+    test "it does NOT return an error if the user is unconfirmed but the confirmation is not required" do
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      strategy = %{strategy | require_confirmed_with?: nil}
+      password = password()
+      user = build_user(password: password, password_confirmation: password)
+
+      params = %{
+        "user" => %{
+          "username" => user.username,
+          "password" => password
+        }
+      }
+
+      assert {_conn, {:ok, signed_in_user}} =
+               :post
+               |> conn("/", params)
+               |> Plug.sign_in(strategy)
+               |> Helpers.get_authentication_result()
+
+      assert signed_in_user.id == user.id
+    end
+
+    test "it does NOT return an error if the user is confirmed, and the confirmation is required" do
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      strategy = %{strategy | require_confirmed_with?: nil}
+      password = password()
+
+      # Need to build a confirmed user
+      user =
+        build_user(
+          password: password,
+          password_confirmation: password
+        )
+
+      params = %{
+        "user" => %{
+          "username" => user.username,
+          "password" => password
+        }
+      }
+
+      assert {_conn, {:ok, signed_in_user}} =
+               :post
+               |> conn("/", params)
+               |> Plug.sign_in(strategy)
+               |> Helpers.get_authentication_result()
+
+      assert signed_in_user.id == user.id
     end
   end
 

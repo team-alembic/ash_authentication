@@ -38,7 +38,25 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     |> Ash.read()
     |> case do
       {:ok, [user]} ->
-        {:ok, user}
+        case strategy.require_confirmed_with? do
+          nil ->
+            {:ok, user}
+
+          :confirmed_at ->
+            if user.confirmed_at != nil do
+              {:ok, user}
+            else
+              {:error,
+               Errors.AuthenticationFailed.exception(
+                 strategy: strategy,
+                 caused_by: %{
+                   action: :sign_in,
+                   message: "User must be confirmed to sign in.",
+                   module: __MODULE__
+                 }
+               )}
+            end
+        end
 
       {:ok, []} ->
         {:error,
