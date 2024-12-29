@@ -20,17 +20,14 @@ Example scenario:
 
 ### How to handle this?
 
-#### Automatic Handling
-
-The confirmation add-on prevents this by default by not allowing an upsert action to set `confirmed_at`, if there is
+The solution is based on the fact that the confirmation add-on prevents this by not allowing an upsert action to set `confirmed_at`, if there is
 a matching record that has `confirmed_at` that is currently `nil`. This allows you to show a message to the user like
 "You signed up with a different method. Please sign in with the method you used to sign up."
 
-#### auto_confirming and clearing the password on upsert
+So, to handle the scenario you must:
 
-You can add the upsert registration action(s) to the `auto_confirm_actions`
-list, and add a change to those actions that sets `hashed_password` to `nil`. This will confirm users, and require them to reset
-heir password before being able to use password authentication again.
+- add the upsert registration action to the `auto_confirmation_actions` list, as well as the password reset action
+- ensure that the registration action sets the `hashed_password` to `nil`.
 
 #### Opt-out
 
