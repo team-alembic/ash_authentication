@@ -13,7 +13,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   an authentication failed error.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Errors.UnconfirmedUser, Info, Jwt}
   alias Ash.{Error.Unknown, Query, Resource.Preparation}
   require Ash.Query
 
@@ -52,7 +52,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
             {:ok, [maybe_generate_token(token_type, record, strategy)]}
           else
             {:error,
-             AuthenticationFailed.exception(
+             UnconfirmedUser.exception(
                strategy: strategy,
                query: query,
                caused_by: %{
