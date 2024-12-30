@@ -44,11 +44,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
             {:ok, user}
 
           field ->
-            if Map.get(user, field) != nil do
+            if user_confirmed?(user, field) do
               {:ok, user}
             else
               {:error,
-               Errors.AuthenticationFailed.exception(
+               Errors.UnconfirmedUser.exception(
                  strategy: strategy,
                  caused_by: %{
                    action: :sign_in,
@@ -298,4 +298,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
   def reset(strategy, _params, _options) when is_struct(strategy, Password),
     do: {:error, NoSuchAction.exception(resource: strategy.resource, action: :reset, type: :read)}
+
+  defp user_confirmed?(user, field) do
+    case Map.get(user, field) do
+      value when value in [nil, %Ash.NotLoaded{}, %Ash.ForbiddenField{}] -> false
+      _ -> true
+    end
+  end
 end

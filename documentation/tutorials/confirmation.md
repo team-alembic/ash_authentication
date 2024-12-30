@@ -183,6 +183,25 @@ end
 
 Provided you have your authentication routes hooked up either via `AshAuthentication.Plug` or [`AshAuthentication.Phoenix.Router`](https://hexdocs.pm/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html) then the user will be confirmed when the token is submitted.
 
+## Blocking unconfirmed users from logging in
+
+The above section explains how to confirm an user account. There's a new directive in the [dsl](file://wsl$/UbuntuLatest/home/bruno/dev/ash/ash_authentication/doc/dsl-ashauthentication-strategy-password.html#authentication-strategies-password-require_confirmed_with) which can require the user to be confirmed in order to log in.
+
+So:
+
+```
+strategies do
+  strategy :password do
+    ...
+    require_confirmed_with :confirmed_at
+  end
+end
+```
+
+this will make impossible for unconfirmed users to log in. Note that at the moment it is developer responsibility to handle the scenario, for example redirecting the user to a page that gives some context and maybe offers the chance to require a new confirmation email in case the previous one is lost.
+
+If the field value is `nil` or if the field itself is not present, no confirmation check will be enforced.
+
 ## Confirming changes to monitored fields
 
 You may want to require a user to perform a confirmation when a certain field changes. For example if a user changes their email address we can send them a new confirmation request.

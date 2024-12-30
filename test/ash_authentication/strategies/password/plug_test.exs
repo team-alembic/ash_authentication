@@ -5,7 +5,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
   import Plug.Test
 
   alias AshAuthentication.{
-    Errors.AuthenticationFailed,
+    Errors.UnconfirmedUser,
     Info,
     Plug.Helpers,
     Strategy.Password,
@@ -117,7 +117,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
       assert Exception.message(error) =~ ~r/authentication failed/i
     end
 
-    test "it returns an error when account confirmation is required and it is not" do
+    test "it returns an error when account confirmation is required and instead it is not" do
       {:ok, strategy} = Info.strategy(Example.User, :password)
       strategy = %{strategy | require_confirmed_with: :confirmed_at}
 
@@ -134,7 +134,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
       assert {_conn,
               {
                 :error,
-                %AuthenticationFailed{
+                %UnconfirmedUser{
                   caused_by: %{
                     message: "User must be confirmed to sign in."
                   }
@@ -145,7 +145,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
                |> Plug.sign_in(strategy)
                |> Helpers.get_authentication_result()
 
-      assert Exception.message(error) =~ ~r/authentication failed/i
+      assert Exception.message(error) =~ ~r/unconfirmed user/i
     end
 
     test "it does NOT return an error if the user is unconfirmed but the confirmation is not required" do
