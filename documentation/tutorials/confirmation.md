@@ -28,14 +28,27 @@ a matching record that has `confirmed_at` that is currently `nil`. This allows y
 
 #### auto_confirming and clearing the password on upsert
 
-You can add the upsert registration action(s) to the `auto_confirm_actions`
-list, and add a change to those actions that sets `hashed_password` to `nil`. This will confirm users, and require them to reset
-heir password before being able to use password authentication again.
+An alternative is to clear the user's password on upsert. To do this, you would want to ensure the following things are true:
+
+- The upsert registration action(s) are in the `auto_confirm_actions` (which you want anyway)
+- The upsert registration action(s) set `hashed_password` to `nil`, removing any access an attacker may have had
+- The `prevent_hijacking?` option is set to `false` on the confirmation add on and the auth strategies you are using.
+- A user cannot access your application or take any action without a confirmed account. For example, redirecting to a "please confirm your account" page.
+
+Why do you have to ensure that no actions can be taken without a confirmed account?
+
+This does technically remove any access that the attacker may have had from the account, but we don't suggest taking this approach
+unless you are absolutely sure that you know what you are doing. For example, lets say you have an app that shows where the user is
+in the world, or where their friends are in the world. Lets say you also allow configuring a phone number to receive text notifications
+when they are near one of their friends. An attacker could sign up with a password, and configure their phone number. Then, their target
+signs up with Oauth or magic link, adds some friends, but doesn't notice that a phone number is configured.
+
+Now the attacker is getting text messages about where the user and/or their friends are.
 
 #### Opt-out
 
 You can set `prevent_hijacking? false` on either the confirmation add-on, or your strategy to disable the automatic handling
-described above. This is not recommended.
+described above, and not follow the steps recommended in the section section above. This is not recommended.
 
 ## Tutorial
 
