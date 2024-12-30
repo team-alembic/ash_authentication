@@ -33,17 +33,18 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
     strategy.resource
     |> Query.new()
+    |> Query.ensure_selected(List.wrap(strategy.require_confirmed_with))
     |> Query.set_context(context)
     |> Query.for_read(strategy.sign_in_action_name, params, options)
     |> Ash.read()
     |> case do
       {:ok, [user]} ->
-        case strategy.require_confirmed_with? do
+        case strategy.require_confirmed_with do
           nil ->
             {:ok, user}
 
-          :confirmed_at ->
-            if user.confirmed_at != nil do
+          field ->
+            if Map.get(user, field) != nil do
               {:ok, user}
             else
               {:error,

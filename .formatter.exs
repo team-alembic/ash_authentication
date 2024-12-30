@@ -1,7 +1,7 @@
 spark_locals_without_parens = [
   access_token_attribute_name: 1,
   access_token_expires_at_attribute_name: 1,
-  require_confirmed_with?: 1,
+  require_confirmed_with: 1,
   apple: 0,
   apple: 1,
   apple: 2,

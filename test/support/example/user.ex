@@ -195,7 +195,7 @@ defmodule Example.User do
       password do
         register_action_accept [:extra_stuff]
         sign_in_tokens_enabled? true
-        require_confirmed_with? nil
+        require_confirmed_with nil
 
         resettable do
           sender fn user, token, _opts ->

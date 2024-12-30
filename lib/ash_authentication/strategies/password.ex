@@ -94,7 +94,7 @@ defmodule AshAuthentication.Strategy.Password do
   See the [Testing guide](/documentation/topics/testing.md) for tips on testing resources using this strategy.
   """
 
-  defstruct require_confirmed_with?: nil,
+  defstruct require_confirmed_with: nil,
             confirmation_required?: false,
             hash_provider: AshAuthentication.BcryptProvider,
             hashed_password_field: :hashed_password_field,
@@ -129,7 +129,7 @@ defmodule AshAuthentication.Strategy.Password do
   use Custom, entity: Dsl.dsl()
 
   @type t :: %Password{
-          require_confirmed_with?: :atom | nil,
+          require_confirmed_with: :atom | nil,
           confirmation_required?: boolean,
           hash_provider: module,
           hashed_password_field: atom,
