@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.9](https://github.com/team-alembic/ash_authentication/compare/v4.3.8...v4.3.9) (2024-12-31)
+
+
+
+
+### Bug Fixes:
+
+* move change_password action to password strategy setup
+
 ## [v4.3.8](https://github.com/team-alembic/ash_authentication/compare/v4.3.7...v4.3.8) (2024-12-31)
 
 
