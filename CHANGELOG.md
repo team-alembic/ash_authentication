@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.8](https://github.com/team-alembic/ash_authentication/compare/v4.3.7...v4.3.8) (2024-12-31)
+
+
+
+
+### Improvements:
+
+* add `require_confirmed_with` option to password strategy  (#861)
+
 ## [v4.3.7](https://github.com/team-alembic/ash_authentication/compare/v4.3.6...v4.3.7) (2024-12-26)
 
 
