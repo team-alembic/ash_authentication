@@ -13,7 +13,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   an authentication failed error.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Errors.UnconfirmedUser, Info, Jwt}
   alias Ash.{Error.Unknown, Query, Resource.Preparation}
   require Ash.Query
 
@@ -46,9 +46,23 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
              password,
              Map.get(record, strategy.hashed_password_field)
            ) do
-          token_type = query.context[:token_type] || :user
+          if user_confirmed_if_needed(record, strategy) do
+            token_type = query.context[:token_type] || :user
 
-          {:ok, [maybe_generate_token(token_type, record, strategy)]}
+            {:ok, [maybe_generate_token(token_type, record, strategy)]}
+          else
+            {:error,
+             UnconfirmedUser.exception(
+               strategy: strategy,
+               query: query,
+               caused_by: %{
+                 module: __MODULE__,
+                 action: query.action,
+                 resource: query.resource,
+                 message: "User must be confirmed to sign in."
+               }
+             )}
+          end
         else
           {:error,
            AuthenticationFailed.exception(
@@ -135,4 +149,9 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
     Ash.Resource.put_metadata(record, :token, token)
   end
+
+  def user_confirmed_if_needed(_user, %{require_confirmed_with: nil} = _strategy), do: true
+
+  def user_confirmed_if_needed(user, %{require_confirmed_with: field} = _strategy),
+    do: Map.get(user, field) != nil
 end

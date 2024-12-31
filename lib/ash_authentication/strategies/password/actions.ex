@@ -33,12 +33,31 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
     strategy.resource
     |> Query.new()
+    |> Query.ensure_selected(List.wrap(strategy.require_confirmed_with))
     |> Query.set_context(context)
     |> Query.for_read(strategy.sign_in_action_name, params, options)
     |> Ash.read()
     |> case do
       {:ok, [user]} ->
-        {:ok, user}
+        case strategy.require_confirmed_with do
+          nil ->
+            {:ok, user}
+
+          field ->
+            if user_confirmed?(user, field) do
+              {:ok, user}
+            else
+              {:error,
+               Errors.UnconfirmedUser.exception(
+                 strategy: strategy,
+                 caused_by: %{
+                   action: :sign_in,
+                   message: "User must be confirmed to sign in.",
+                   module: __MODULE__
+                 }
+               )}
+            end
+        end
 
       {:ok, []} ->
         {:error,
@@ -279,4 +298,13 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
   def reset(strategy, _params, _options) when is_struct(strategy, Password),
     do: {:error, NoSuchAction.exception(resource: strategy.resource, action: :reset, type: :read)}
+
+  defp user_confirmed?(user, field) do
+    case Map.get(user, field) do
+      %Ash.NotLoaded{} -> false
+      %Ash.ForbiddenField{} -> false
+      nil -> false
+      _ -> true
+    end
+  end
 end

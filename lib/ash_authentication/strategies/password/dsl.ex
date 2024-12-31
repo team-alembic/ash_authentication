@@ -125,6 +125,12 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           default: {60, :seconds},
           doc:
             "A lifetime for which a generated sign in token will be valid, if `sign_in_tokens_enabled?`. Unit defaults to `:seconds`."
+        ],
+        require_confirmed_with: [
+          type: {:or, [:atom, nil]},
+          required: false,
+          doc: "Whether a new account must be confirmed in order to log in.",
+          default: nil
         ]
       ],
       entities: [
