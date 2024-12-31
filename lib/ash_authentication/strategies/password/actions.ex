@@ -301,7 +301,9 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
   defp user_confirmed?(user, field) do
     case Map.get(user, field) do
-      value when value in [nil, %Ash.NotLoaded{}, %Ash.ForbiddenField{}] -> false
+      %Ash.NotLoaded{} -> false
+      %Ash.ForbiddenField{} -> false
+      nil -> false
       _ -> true
     end
   end
