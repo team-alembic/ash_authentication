@@ -31,33 +31,18 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       options
       |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
 
-    strategy.resource
-    |> Query.new()
-    |> Query.ensure_selected(List.wrap(strategy.require_confirmed_with))
-    |> Query.set_context(context)
-    |> Query.for_read(strategy.sign_in_action_name, params, options)
+    query =
+      strategy.resource
+      |> Query.new()
+      |> Query.ensure_selected(List.wrap(strategy.require_confirmed_with))
+      |> Query.set_context(context)
+      |> Query.for_read(strategy.sign_in_action_name, params, options)
+
+    query
     |> Ash.read()
     |> case do
       {:ok, [user]} ->
-        case strategy.require_confirmed_with do
-          nil ->
-            {:ok, user}
-
-          field ->
-            if user_confirmed?(user, field) do
-              {:ok, user}
-            else
-              {:error,
-               Errors.UnconfirmedUser.exception(
-                 strategy: strategy,
-                 caused_by: %{
-                   action: :sign_in,
-                   message: "User must be confirmed to sign in.",
-                   module: __MODULE__
-                 }
-               )}
-            end
-        end
+        check_confirmation(user, strategy, query)
 
       {:ok, []} ->
         {:error,
@@ -115,6 +100,29 @@ defmodule AshAuthentication.Strategy.Password.Actions do
          message: "Attempt to sign in with sign in disabled."
        }
      )}
+  end
+
+  defp check_confirmation(user, strategy, query) do
+    case strategy.require_confirmed_with do
+      nil ->
+        {:ok, user}
+
+      field ->
+        if user_confirmed?(user, field) do
+          {:ok, user}
+        else
+          {:error,
+           Errors.AuthenticationFailed.exception(
+             strategy: strategy,
+             query: query,
+             caused_by:
+               Errors.UnconfirmedUser.exception(
+                 resource: strategy.resource,
+                 field: strategy.require_confirmed_with
+               )
+           )}
+        end
+    end
   end
 
   @doc """

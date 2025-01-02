@@ -42,40 +42,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
       query, [record] when is_binary(:erlang.map_get(strategy.hashed_password_field, record)) ->
         password = Query.get_argument(query, strategy.password_field)
 
-        if strategy.hash_provider.valid?(
-             password,
-             Map.get(record, strategy.hashed_password_field)
-           ) do
-          if user_confirmed_if_needed(record, strategy) do
-            token_type = query.context[:token_type] || :user
-
-            {:ok, [maybe_generate_token(token_type, record, strategy)]}
-          else
-            {:error,
-             UnconfirmedUser.exception(
-               strategy: strategy,
-               query: query,
-               caused_by: %{
-                 module: __MODULE__,
-                 action: query.action,
-                 resource: query.resource,
-                 message: "User must be confirmed to sign in."
-               }
-             )}
-          end
-        else
-          {:error,
-           AuthenticationFailed.exception(
-             strategy: strategy,
-             query: query,
-             caused_by: %{
-               module: __MODULE__,
-               action: query.action,
-               resource: query.resource,
-               message: "Password is not valid"
-             }
-           )}
-        end
+        check_password_and_confirmation(strategy, password, record, query)
 
       query, [] ->
         strategy.hash_provider.simulate()
@@ -107,6 +74,42 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
            }
          )}
     end)
+  end
+
+  defp check_password_and_confirmation(strategy, password, record, query) do
+    if strategy.hash_provider.valid?(
+         password,
+         Map.get(record, strategy.hashed_password_field)
+       ) do
+      if user_confirmed_if_needed(record, strategy) do
+        token_type = query.context[:token_type] || :user
+
+        {:ok, [maybe_generate_token(token_type, record, strategy)]}
+      else
+        {:error,
+         AuthenticationFailed.exception(
+           strategy: strategy,
+           query: query,
+           caused_by:
+             UnconfirmedUser.exception(
+               resource: query.resource,
+               field: strategy.require_confirmed_with
+             )
+         )}
+      end
+    else
+      {:error,
+       AuthenticationFailed.exception(
+         strategy: strategy,
+         query: query,
+         caused_by: %{
+           module: __MODULE__,
+           action: query.action,
+           resource: query.resource,
+           message: "Password is not valid"
+         }
+       )}
+    end
   end
 
   defp check_sign_in_token_configuration(query, strategy)

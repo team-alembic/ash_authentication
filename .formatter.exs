@@ -1,7 +1,6 @@
 spark_locals_without_parens = [
   access_token_attribute_name: 1,
   access_token_expires_at_attribute_name: 1,
-  require_confirmed_with: 1,
   apple: 0,
   apple: 1,
   apple: 2,
@@ -83,6 +82,7 @@ spark_locals_without_parens = [
   registration_enabled?: 1,
   request_action_name: 1,
   request_password_reset_action_name: 1,
+  require_confirmed_with: 1,
   require_token_presence_for_authentication?: 1,
   resettable: 0,
   resettable: 1,
