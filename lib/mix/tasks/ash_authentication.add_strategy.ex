@@ -210,6 +210,7 @@ if Code.ensure_loaded?(Igniter) do
         # Use this action to allow users to change their password by providing
         # their current password and a new password.
 
+        require_atomic? false
         accept []
         argument :current_password, :string, sensitive?: true, allow_nil?: false
         argument :password, :string, sensitive?: true, allow_nil?: false
