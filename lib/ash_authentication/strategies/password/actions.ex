@@ -118,7 +118,8 @@ defmodule AshAuthentication.Strategy.Password.Actions do
              caused_by:
                Errors.UnconfirmedUser.exception(
                  resource: strategy.resource,
-                 field: strategy.require_confirmed_with
+                 field: strategy.identity_field,
+                 confirmation_field: strategy.require_confirmed_with
                )
            )}
         end

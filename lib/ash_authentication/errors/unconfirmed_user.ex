@@ -2,7 +2,7 @@ defmodule AshAuthentication.Errors.UnconfirmedUser do
   @moduledoc """
   The user is unconfirmed and so the operation cannot be executed.
   """
-  use Splode.Error, fields: [:resource, :field], class: :forbidden
+  use Splode.Error, fields: [:resource, :field, :confirmation_field], class: :forbidden
 
   def message(%{resource: resource}) do
     resource =

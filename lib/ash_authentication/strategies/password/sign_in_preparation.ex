@@ -93,7 +93,8 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
            caused_by:
              UnconfirmedUser.exception(
                resource: query.resource,
-               field: strategy.require_confirmed_with
+               field: strategy.identity_field,
+               confirmation_field: strategy.require_confirmed_with
              )
          )}
       end
