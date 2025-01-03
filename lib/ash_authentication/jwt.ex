@@ -101,7 +101,7 @@ defmodule AshAuthentication.Jwt do
     {extra_claims, action_opts} =
       case Map.fetch(user.__metadata__, :tenant) do
         {:ok, tenant} ->
-          tenant = to_string(tenant)
+          tenant = to_string(Ash.ToTenant.to_tenant(tenant, resource))
           {Map.put(extra_claims, "tenant", tenant), Keyword.put(opts, :tenant, tenant)}
 
         :error ->
