@@ -76,8 +76,7 @@ defmodule AshAuthentication.Validations.Attribute do
       |> Info.primary_key()
       |> MapSet.new()
 
-    identities
-    |> Enum.concat(primary_key)
+    [primary_key | identities]
     |> Enum.find(&MapSet.equal?(&1, fields))
     |> case do
       nil ->
