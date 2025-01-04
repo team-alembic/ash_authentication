@@ -7,321 +7,400 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 ## [v4.3.10](https://github.com/team-alembic/ash_authentication/compare/v4.3.9...v4.3.10) (2025-01-02)
 
+
+
+
 ### Bug Fixes:
 
-- generate change_password action with `require_atomic? false`
+* generate change_password action with `require_atomic? false`
 
 ### Improvements:
 
-- make unconfirmed user error like other errors
+* make unconfirmed user error like other errors
 
 ## [v4.3.9](https://github.com/team-alembic/ash_authentication/compare/v4.3.8...v4.3.9) (2024-12-31)
 
+
+
+
 ### Bug Fixes:
 
-- move change_password action to password strategy setup
+* move change_password action to password strategy setup
 
 ## [v4.3.8](https://github.com/team-alembic/ash_authentication/compare/v4.3.7...v4.3.8) (2024-12-31)
 
+
+
+
 ### Improvements:
 
-- add `require_confirmed_with` option to password strategy (#861)
+* add `require_confirmed_with` option to password strategy  (#861)
 
 ## [v4.3.7](https://github.com/team-alembic/ash_authentication/compare/v4.3.6...v4.3.7) (2024-12-26)
 
+
+
+
 ### Bug Fixes:
 
-- return an `AuthenticationFailed` error properly
+* return an `AuthenticationFailed` error properly
 
-- go back to generating the repo if its unavailable
+* go back to generating the repo if its unavailable
 
-- don't generate repo if its not present
+* don't generate repo if its not present
 
 ### Improvements:
 
-- use ets if postgres isn't available
+* use ets if postgres isn't available
 
-- add `change_password` action to generated code
+* add `change_password` action to generated code
 
-- use better action name for password reset
+* use better action name for password reset
 
 ## [v4.3.6](https://github.com/team-alembic/ash_authentication/compare/v4.3.5...v4.3.6) (2024-12-20)
 
+
+
+
 ### Improvements:
 
-- make igniter optional
+* make igniter optional
 
-- store all tokens by default in generators
+* store all tokens by default in generators
 
 ## [v4.3.5](https://github.com/team-alembic/ash_authentication/compare/v4.3.4...v4.3.5) (2024-12-12)
 
+
+
+
 ### Bug Fixes:
 
-- ensure that `auto_confirm_actions` does not override
+* ensure that `auto_confirm_actions` does not override
 
-- include tenant when checking identity conflicts
+* include tenant when checking identity conflicts
 
-- handle tokens without a primary key encoded in sub, using `identity`
+* handle tokens without a primary key encoded in sub, using `identity`
 
 ### Improvements:
 
-- allow setting identity field to allow nil with password
+* allow setting identity field to allow nil with password
 
 ## [v4.3.4](https://github.com/team-alembic/ash_authentication/compare/v4.3.3...v4.3.4) (2024-12-02)
 
+
+
+
 ### Bug Fixes:
 
-- ensure tenant is passed through on password reset request
+* ensure tenant is passed through on password reset request
 
-- invalidate magic link sign in on invalid token
+* invalidate magic link sign in on invalid token
 
-- pass opts to confirm action invocations
+* pass opts to confirm action invocations
 
 ### Improvements:
 
-- add primary read action to users resource for atomic upgrade
+* add primary read action to users resource for atomic upgrade
 
-- auto confirm on sign in with magic link in generators
+* auto confirm on sign in with magic link in generators
 
-- Add opts to retrieve funs of AshAuthentication.Plug.Helpers (#847)
+* Add opts to retrieve funs of AshAuthentication.Plug.Helpers (#847)
 
 ## [v4.3.3](https://github.com/team-alembic/ash_authentication/compare/v4.3.2...v4.3.3) (2024-11-14)
 
+
+
+
 ### Bug Fixes:
 
-- Use correct typespec for `AshAuthentication.Sender.send/3` callback (#836)
+* Use correct typespec for `AshAuthentication.Sender.send/3` callback (#836)
 
 ## [v4.3.2](https://github.com/team-alembic/ash_authentication/compare/v4.3.1...v4.3.2) (2024-11-13)
 
+
+
+
 ### Bug Fixes:
 
-- The documentation says that we ignore sender returns, so we need to ignore them. (#838)
+* The documentation says that we ignore sender returns, so we need to ignore them. (#838)
 
 ## [v4.3.1](https://github.com/team-alembic/ash_authentication/compare/v4.3.0...v4.3.1) (2024-11-12)
 
+
+
+
 ### Bug Fixes:
 
-- RequestPasswordReset: fails when action called directly. (#833)
+* RequestPasswordReset: fails when action called directly. (#833)
 
-- ash_authentication.add_strategy: Generated password reset action names did not match the defaults. (#834)
+* ash_authentication.add_strategy: Generated password reset action names did not match the defaults. (#834)
 
-- confirmation warning 'changeset has already been validated for action'
+* confirmation warning 'changeset has already been validated for action'
 
 ## [v4.3.0](https://github.com/team-alembic/ash_authentication/compare/v4.2.7...v4.3.0) (2024-11-05)
 
+
+
+
 ### Features:
 
-- Strategy.Slack: Add direct support for Slack strategy. (#825)
+* Strategy.Slack: Add direct support for Slack strategy. (#825)
 
-- Strategy.Slack: Add direct support for Slack strategy.
+* Strategy.Slack: Add direct support for Slack strategy.
 
 ### Bug Fixes:
 
-- handle igniter/rewrite upgrades
+* handle igniter/rewrite upgrades
 
-- set sign_in_with_token action name properly
+* set sign_in_with_token action name properly
 
 ## [v4.2.7](https://github.com/team-alembic/ash_authentication/compare/v4.2.6...v4.2.7) (2024-11-01)
 
+
+
+
 ### Bug Fixes:
 
-- change*attribute -> force*\* to eliminate waring
+* change_attribute -> force_* to eliminate waring
 
 ## [v4.2.6](https://github.com/team-alembic/ash_authentication/compare/v4.2.5...v4.2.6) (2024-10-31)
 
+
+
+
 ### Improvements:
 
-- run codegen after adding an auth strategy
+* run codegen after adding an auth strategy
 
 ## [v4.2.5](https://github.com/team-alembic/ash_authentication/compare/v4.2.4...v4.2.5) (2024-10-23)
 
+
+
+
 ### Bug Fixes:
 
-- proper error instead of match error on not found user
+* proper error instead of match error on not found user
 
 ## [v4.2.4](https://github.com/team-alembic/ash_authentication/compare/v4.2.3...v4.2.4) (2024-10-23)
 
+
+
+
 ### Bug Fixes:
 
-- generate link using `confirm` instead of `token` in the generators
+* generate link using `confirm` instead of `token` in the generators
 
 ## [v4.2.3](https://github.com/team-alembic/ash_authentication/compare/v4.2.2...v4.2.3) (2024-10-19)
 
+
+
+
 ### Bug Fixes:
 
-- respond to `--auth-strategy` option in installer
+* respond to `--auth-strategy` option in installer
 
-- issues with OIDC strategy (#800)
+* issues with OIDC strategy (#800)
 
 ## [v4.2.2](https://github.com/team-alembic/ash_authentication/compare/v4.2.1...v4.2.2) (2024-10-15)
 
+
+
+
 ### Improvements:
 
-- support registration via magic link (#796)
+* support registration via magic link (#796)
 
-- support registration via magic link
+* support registration via magic link
 
-- prevent account takeover hijacking by protecting against upserts against unconfirmed records
+* prevent account takeover hijacking by protecting against upserts against unconfirmed records
 
-- add confirmation add on when identity_field is email
+* add confirmation add on when identity_field is email
 
-- implement our own identity checking instead of relying on eager_check
+* implement our own identity checking instead of relying on eager_check
 
 ## [v4.2.1](https://github.com/team-alembic/ash_authentication/compare/v4.2.0...v4.2.1) (2024-10-14)
 
+
+
+
 ### Improvements:
 
-- update igniter
+* update igniter
 
 ## [v4.2.0](https://github.com/team-alembic/ash_authentication/compare/v4.1.0...v4.2.0) (2024-10-07)
 
+
+
+
 ### Features:
 
-- add_strategy task (#794)
+* add_strategy task (#794)
 
 ### Improvements:
 
-- add `ash_authentication.add_strategy` task
+* add `ash_authentication.add_strategy` task
 
-- add atomic implementations for various changes/validations
+* add atomic implementations for various changes/validations
 
-- support `--auth-strategy` option when installing
+* support `--auth-strategy` option when installing
 
 ## [v4.1.0](https://github.com/team-alembic/ash_authentication/compare/v4.0.4...v4.1.0) (2024-10-06)
 
+
+
+
 ### Features:
 
-- Add AshAuthentication igniter installer (#782)
+* Add AshAuthentication igniter installer (#782)
 
 ### Bug Fixes:
 
-- handle options properly for subect to user (#786)
+* handle options properly for subect to user (#786)
 
-- setup options properly for ash 3.0 (#785)
+* setup options properly for ash 3.0 (#785)
 
 ### Improvements:
 
-- igniter installer for user & user token resources
+* igniter installer for user & user token resources
 
 ## [v4.0.4](https://github.com/team-alembic/ash_authentication/compare/v4.0.3...v4.0.4) (2024-09-01)
 
+
+
+
 ### Bug Fixes:
 
-- update types and formatter
+* update types and formatter
 
-- add secret values to config
+* add secret values to config
 
-- sort new fields
+* sort new fields
 
-- sort new types
+* sort new types
 
-- properly set allow_nil for apple secrets
+* properly set allow_nil for apple secrets
 
-- credo and sobelow warnings
+* credo and sobelow warnings
 
 ### Improvements:
 
-- add apple strategy (#750)
+* add apple strategy (#750)
 
-- add apple strategy
+* add apple strategy
 
 ## [v4.0.3](https://github.com/team-alembic/ash_authentication/compare/v4.0.2...v4.0.3) (2024-08-22)
 
+
+
+
 ### Bug Fixes:
 
-- allow overriding strategy defaults (#766)
+* allow overriding strategy defaults (#766)
 
-- bug where `nil` is not allowed but is returned from secret functions.
+* bug where `nil` is not allowed but is returned from secret functions.
 
-- add back in accidentally removed debug errors code (#768)
+* add back in accidentally removed debug errors code (#768)
 
-- set options earlier in magic link/oauth2
+* set options earlier in magic link/oauth2
 
 ### Improvements:
 
-- avoid warning about comparison with `nil`
+* avoid warning about comparison with `nil`
 
-- set context in addition to tenant
+* set context in addition to tenant
 
-- use `no_depend_modules` for better compile dependencies
+* use `no_depend_modules` for better compile dependencies
 
-- enable custom `http_adapters` (#760)
+* enable custom `http_adapters` (#760)
 
 ## [v4.0.2](https://github.com/team-alembic/ash_authentication/compare/v4.0.1...v4.0.2) (2024-08-05)
 
+
+
+
 ### Bug Fixes:
 
-- only pass the "token" parameter to reset with token action (#748)
+* only pass the "token" parameter to reset with token action (#748)
 
-- handle case where `action.accept` is `nil`
+* handle case where `action.accept` is `nil`
 
 ### Improvements:
 
-- validate that tokens are enabled when password resets are enabled. (#758)
+* validate that tokens are enabled when password resets are enabled. (#758)
 
-- compile-time check to make sure that the configured `token_resource` is an Ash.Resource (#749)
+* compile-time check to make sure that the configured `token_resource` is an Ash.Resource (#749)
 
-- Tokens: improved compile-time validation of the token_resource option of the tokens DSL by checking that the passed value is an Ash.Resource.
+* Tokens: improved compile-time validation of the token_resource option of the tokens DSL by checking that the passed value is an Ash.Resource.
 
-- Tokens: removed unnecessary stuff from the test file.
+* Tokens: removed unnecessary stuff from the test file.
 
-- Tokens: fixed credo warning and changed some things after PR feedback
+* Tokens: fixed credo warning and changed some things after PR feedback
 
 ## [v4.0.1](https://github.com/team-alembic/ash_authentication/compare/v4.0.0...v4.0.1) (2024-06-11)
 
+
+
+
 ### Bug Fixes:
 
-- no need to `allow_nil_input` for an unaccepted field
+* no need to `allow_nil_input` for an unaccepted field
 
-- correctly generate sign-in tokens when requested.
+* correctly generate sign-in tokens when requested.
 
-- ensure tenant is set when revoking tokens and on changeset for updating
+* ensure tenant is set when revoking tokens and on changeset for updating
 
-- broken links in readme (#692)
+* broken links in readme (#692)
 
-- broken links
+* broken links
 
-- bug in tokens required verifier.
+* bug in tokens required verifier.
 
 ## [4.0.0](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.7...4.0.0) (2024-05-10)
-
 ### Breaking Changes:
 
-- Sign in tokens are enabled by default for the password strategy.
+* Sign in tokens are enabled by default for the password strategy.
 
-- Tokens are now enabled by default.
+* Tokens are now enabled by default.
+
+
 
 ### Bug Fixes:
 
-- Jwt: Include authentication interaction context when storing tokens.
+* Jwt: Include authentication interaction context when storing tokens.
 
-- Strategy.Password: Reset tokens are single use. (#625)
+* Strategy.Password: Reset tokens are single use. (#625)
 
-- Confirmation: Only allow the confirmation token to be used once. (#623)
+* Confirmation: Only allow the confirmation token to be used once. (#623)
 
 ### Improvements:
 
-- Only require tokens to be enabled when using a strategy which needs them.
+* Only require tokens to be enabled when using a strategy which needs them.
 
-- OIDC: Adjust dsl of OIDC reflect assent requirements (#538)
+* OIDC: Adjust dsl of OIDC reflect assent requirements (#538)
 
-- Use `Ash` functions instead of generated domain functions.
+* Use `Ash` functions instead of generated domain functions.
 
 ## [v4.0.0-rc.7](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.6...v4.0.0-rc.7) (2024-05-10)
 
+
+
+
 ### Bug Fixes:
 
-- Jwt: Include authentication interaction context when storing tokens.
+* Jwt: Include authentication interaction context when storing tokens.
 
 ### Improvements:
 
-- Only require tokens to be enabled when using a strategy which needs them.
+* Only require tokens to be enabled when using a strategy which needs them.
 
 ## [v4.0.0-rc.6](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.5...v4.0.0-rc.6) (2024-04-11)
 
+
+
+
 ### Improvements:
 
-- OIDC: Adjust dsl of OIDC reflect assent requirements (#538)
+* OIDC: Adjust dsl of OIDC reflect assent requirements (#538)
 
 ## [v4.0.0-rc.5](https://github.com/team-alembic/ash_authentication/compare/v4.0.0-rc.4...v4.0.0-rc.5) (2024-04-10)
 
