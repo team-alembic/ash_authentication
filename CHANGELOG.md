@@ -5,14 +5,6 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
-## [v4.3.11](https://github.com/team-alembic/ash_authentication/compare/v4.3.10...v4.3.11) (2025-01-04)
-
-### Bug Fixes:
-
-- `AshAuthentication.UserIdentity.UpsertIdentityChange` will now convert the `sub` field value to `:string` as some providers (eg: Github) provide an integer value.
-
-### Improvements:
-
 ## [v4.3.10](https://github.com/team-alembic/ash_authentication/compare/v4.3.9...v4.3.10) (2025-01-02)
 
 ### Bug Fixes:
