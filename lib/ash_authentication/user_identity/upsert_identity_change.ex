@@ -38,7 +38,7 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
       |> Map.values()
       |> Enum.reject(&is_nil/1)
       |> List.first()
-      |> convert()
+      |> to_string()
 
     changeset
     |> Changeset.change_attribute(cfg.user_id_attribute_name, user_id)
@@ -89,7 +89,4 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
     DateTime.utc_now()
     |> DateTime.add(seconds, :second)
   end
-
-  defp convert(v) when not is_binary(v), do: to_string(v)
-  defp convert(v), do: v
 end

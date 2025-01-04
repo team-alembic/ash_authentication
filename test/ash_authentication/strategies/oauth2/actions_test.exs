@@ -69,10 +69,6 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
 
       assert {:ok, _claims} =
                Jwt.peek(signed_in_user.__metadata__.token)
-
-      # I need to manipulate the token generation to make this work
-      # Is there a proper way instead of mocking stuff around ?
-      # assert claims["sub"] =~ 1234
     end
 
     test "it signs in an existing user when registration and identity are disabled" do
