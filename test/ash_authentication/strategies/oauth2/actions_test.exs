@@ -42,6 +42,39 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
       assert claims["sub"] =~ "user?id=#{user.id}"
     end
 
+    test "it signs in an existing user when registration is disabled and sub is an integer" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | registration_enabled?: false}
+      user = build_user()
+
+      assert {:ok, signed_in_user} =
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   "user_info" => %{
+                     "nickname" => user.username,
+                     "uid" => user.id,
+                     "sub" => 1234
+                   },
+                   "oauth_tokens" => %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+
+      assert signed_in_user.id == user.id
+
+      assert {:ok, _claims} =
+               Jwt.peek(signed_in_user.__metadata__.token)
+
+      # I need to manipulate the token generation to make this work
+      # Is there a proper way instead of mocking stuff around ?
+      # assert claims["sub"] =~ 1234
+    end
+
     test "it signs in an existing user when registration and identity are disabled" do
       {:ok, strategy} = Info.strategy(Example.User, :oauth2_without_identity)
       user = build_user()
