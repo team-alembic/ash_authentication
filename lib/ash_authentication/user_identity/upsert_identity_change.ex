@@ -38,6 +38,7 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
       |> Map.values()
       |> Enum.reject(&is_nil/1)
       |> List.first()
+      |> to_string()
 
     changeset
     |> Changeset.change_attribute(cfg.user_id_attribute_name, user_id)
