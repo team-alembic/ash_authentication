@@ -17,6 +17,12 @@ defmodule AshAuthentication.TokenResourceTest do
     end
   end
 
+  test "uses custom create timestamp" do
+    attribute = Ash.Resource.Info.attribute(Example.TokenWithCustomCreateTimestamp, :created_at)
+
+    assert :inserted_at = attribute.source
+  end
+
   def build_token do
     {:ok, token, claims} =
       build_user()
