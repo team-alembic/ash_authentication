@@ -23,6 +23,7 @@ spark_locals_without_parens = [
   confirmation: 2,
   confirmation_required?: 1,
   confirmed_at_field: 1,
+  created_at_attribute_name: 1,
   destroy_action_name: 1,
   domain: 1,
   enabled?: 1,
