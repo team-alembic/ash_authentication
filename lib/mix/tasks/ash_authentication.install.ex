@@ -250,7 +250,7 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp generate_token_resource(igniter, token_resource, argv, resource_args) do
+    defp generate_token_resource(igniter, token_resource, _argv, resource_args) do
       case Igniter.Project.Module.find_module(igniter, token_resource) do
         {:ok, {igniter, _, _}} ->
           Igniter.add_warning(
@@ -290,7 +290,7 @@ if Code.ensure_loaded?(Igniter) do
               "--attribute",
               "extra_data:map:public",
               "--timestamps"
-            ] ++ argv ++ resource_args
+            ] ++ resource_args
           )
           # Consider moving to the extension's `install/5` callback, but we need
           # to only run it if the resource is being created which we can't
