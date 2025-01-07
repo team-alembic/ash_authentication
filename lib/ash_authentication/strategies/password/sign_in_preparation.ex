@@ -76,11 +76,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     end)
   end
 
-  require Logger
-
   defp check_password_and_confirmation(strategy, password, record, query) do
-    Logger.critical("Check password and confirm")
-
     if strategy.hash_provider.valid?(
          password,
          Map.get(record, strategy.hashed_password_field)
