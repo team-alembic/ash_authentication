@@ -142,7 +142,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     |> Ash.read(options)
     |> case do
       {:ok, [user]} ->
-        {:ok, user}
+        check_user(user, strategy)
 
       {:error, error} when is_struct(error, Errors.AuthenticationFailed) ->
         {:error, error}
@@ -314,6 +314,26 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       %Ash.ForbiddenField{} -> false
       nil -> false
       _ -> true
+    end
+  end
+
+  defp check_user(user, %Password{require_confirmed_with: nil}) do
+    {:ok, user}
+  end
+
+  defp check_user(user, %Password{require_confirmed_with: _value} = strategy) do
+    if is_nil(user.confirmed_at) do
+      {:error,
+       Errors.AuthenticationFailed.exception(
+         strategy: strategy,
+         caused_by: %Ash.Error.Forbidden{
+           errors: [
+             %Errors.CannotConfirmUnconfirmedUser{}
+           ]
+         }
+       )}
+    else
+      {:ok, user}
     end
   end
 end
