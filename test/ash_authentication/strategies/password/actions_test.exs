@@ -71,6 +71,23 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert {:ok, _user} =
                Actions.sign_in_with_token(strategy, %{"token" => user.__metadata__.token}, [])
     end
+
+    test "it cannot sign in a user with a sign-in token confirmation is required and account is not confirmed" do
+      password = password()
+
+      user =
+        build_user(password: password, password_confirmation: password)
+
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      strategy = %{strategy | require_confirmed_with: :confirmed_at}
+
+      {:error, %AuthenticationFailed{caused_by: %AshAuthentication.Errors.UnconfirmedUser{}}} =
+        Actions.sign_in(
+          strategy,
+          %{"username" => user.username, "password" => user.__metadata__.password},
+          context: %{token_type: :sign_in}
+        )
+    end
   end
 
   describe "register/2" do
