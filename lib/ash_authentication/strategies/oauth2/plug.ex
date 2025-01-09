@@ -5,7 +5,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
   alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.{Errors, Info, Strategy, Strategy.OAuth2}
-  alias Assent.{Config, HTTPAdapter.Finch}
+  alias Assent.HTTPAdapter.Finch
   alias Plug.Conn
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
@@ -56,7 +56,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          {:ok, config} <- config_for(strategy),
          session_params when is_map(session_params) <- get_session(conn, session_key),
          conn <- delete_session(conn, session_key),
-         config <- Config.put(config, :session_params, session_params),
+         config <- Keyword.put(config, :session_params, session_params),
          {:ok, %{user: user, token: token}} <-
            strategy.assent_strategy.callback(config, conn.params),
          action_opts <- action_opts(conn),
