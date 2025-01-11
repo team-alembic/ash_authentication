@@ -28,7 +28,17 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
       """,
       auto_set_fields: [icon: :google, assent_strategy: Google]
     })
-    |> Custom.set_defaults(Google.default_config([]))
+    |> Custom.set_defaults(
+      base_url: "https://www.googleapis.com",
+      authorize_url: "https://accounts.google.com/o/oauth2/v2/auth",
+      token_url: "/oauth2/v4/token",
+      user_url: "/oauth2/v3/userinfo",
+      authorization_params: [
+        scope:
+          "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
+      ],
+      auth_method: :client_secret_post
+    )
   end
 
   defp strategy_override_docs(strategy) do
