@@ -12,6 +12,8 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 ### Bug Fixes:
 
+* fix google strategy dependency was requiring options it should not
+
 * fixed `:sign_in_with_token` that was logging in user automatically even if confirmation is required and account is not confirmed (#875)
 
 * don't pass argv through to resource generator
