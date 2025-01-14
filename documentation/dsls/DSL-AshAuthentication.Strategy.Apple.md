@@ -45,7 +45,7 @@ The following defaults are applied:
 * `:openid_configuration` is set to `%{"authorization_endpoint" => "https://appleid.apple.com/auth/authorize", "issuer" => "https://appleid.apple.com", "jwks_uri" => "https://appleid.apple.com/auth/keys", "token_endpoint" => "https://appleid.apple.com/auth/token", "token_endpoint_auth_methods_supported" => ["client_secret_post"]}`.
 * `:authorization_params` is set to `[scope: "email", response_mode: "form_post"]`.
 * `:client_authentication_method` is set to `"client_secret_post"`.
-* `:openid_default_scope` is set to `""`.
+* `:openid_default_scope` is set to `nil`.
 
 
 
