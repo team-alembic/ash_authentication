@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.3.12](https://github.com/team-alembic/ash_authentication/compare/v4.3.11...v4.3.12) (2025-01-14)
+
+
+
+
+### Bug Fixes:
+
+* Fixed a link in the docs and pinned `Assent` to `0.2` (#884)
+
 ## [v4.3.11](https://github.com/team-alembic/ash_authentication/compare/v4.3.10...v4.3.11) (2025-01-13)
 
 
