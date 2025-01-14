@@ -185,7 +185,7 @@ Provided you have your authentication routes hooked up either via `AshAuthentica
 
 ## Blocking unconfirmed users from logging in
 
-The above section explains how to confirm an user account. There's a new directive in the [dsl](file://wsl$/UbuntuLatest/home/bruno/dev/ash/ash_authentication/doc/dsl-ashauthentication-strategy-password.html#authentication-strategies-password-require_confirmed_with) which can require the user to be confirmed in order to log in.
+The above section explains how to confirm an user account. There's a new directive in the [dsl](https://hexdocs.pm/ash_authentication/dsl-ashauthentication-strategy-password.html#authentication-strategies-password-require_confirmed_with) which can require the user to be confirmed in order to log in.
 
 So:
 
