@@ -267,7 +267,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
           IO.puts(\"\"\"
           Click this link to reset your password:
 
-          \#{url(~p"/password-reset/\#{token}")}
+          /password-reset/\#{token}
           \"\"\")
         end
       end

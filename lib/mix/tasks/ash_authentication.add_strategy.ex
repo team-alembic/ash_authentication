@@ -404,6 +404,13 @@ if Code.ensure_loaded?(Igniter) do
           """
         end
 
+      url =
+        if use_web_module do
+          "\#{url(~p\"/auth/user/magic_link/?token=\#{token}\")}"
+        else
+          "/auth/user/magic_link/?token=\#{token}"
+        end
+
       Igniter.Project.Module.create_module(
         igniter,
         sender,
@@ -430,7 +437,7 @@ if Code.ensure_loaded?(Igniter) do
           IO.puts("""
           Hello, \#{email}! Click this link to sign in:
 
-          \#{url(~p"/auth/user/magic_link/?token=\#{token}")}
+          #{url}
           """)
         end
         '''
@@ -494,6 +501,14 @@ if Code.ensure_loaded?(Igniter) do
           """
         end
 
+      url =
+        if use_web_module do
+          "\#{url(~p\"/password-reset/\#{token}\")}"
+
+        else
+          "/password-reset/\#{token}"
+        end
+
       Igniter.Project.Module.create_module(
         igniter,
         sender,
@@ -511,7 +526,7 @@ if Code.ensure_loaded?(Igniter) do
           IO.puts("""
           Click this link to reset your password:
 
-          \#{url(~p"/password-reset/\#{token}")}
+          #{url}
           """)
         end
         '''
@@ -579,6 +594,13 @@ if Code.ensure_loaded?(Igniter) do
           """
         end
 
+      url =
+        if use_web_module do
+          "\#{url(~p\"/auth/user/confirm_new_user?\#{[confirm: token]}\")}"
+        else
+          "/auth/user/confirm_new_user?confirm=\#{token}"
+        end
+
       Igniter.Project.Module.create_module(
         igniter,
         sender,
@@ -596,7 +618,7 @@ if Code.ensure_loaded?(Igniter) do
           IO.puts("""
           Click this link to confirm your email:
 
-          \#{url(~p"/auth/user/confirm_new_user?\#{[confirm: token]}")}
+          #{url}
           """)
         end
         '''
