@@ -1,4 +1,4 @@
-# credo:disable-for-this-file Credo.Check.Design.AliasUsageinstall.ex
+# credo:disable-for-this-file Credo.Check.Design.AliasUsage
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshAuthentication.Install do
     @example "mix igniter.install ash_authentication"
