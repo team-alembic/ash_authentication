@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.0](https://github.com/team-alembic/ash_authentication/compare/v4.3.12...v4.4.0) (2025-01-16)
+
+
+
+
+### Features:
+
+* add email sender igniters for swoosh (#835)
+
+### Bug Fixes:
+
+* properly parse multiple authentication strategies
+
 ## [v4.3.12](https://github.com/team-alembic/ash_authentication/compare/v4.3.11...v4.3.12) (2025-01-14)
 
 
