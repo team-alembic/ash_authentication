@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.1](https://github.com/team-alembic/ash_authentication/compare/v4.4.0...v4.4.1) (2025-01-16)
+
+
+
+
+### Bug Fixes:
+
+* without phoenix, don't use verified routes
+
 ## [v4.4.0](https://github.com/team-alembic/ash_authentication/compare/v4.3.12...v4.4.0) (2025-01-16)
 
 
