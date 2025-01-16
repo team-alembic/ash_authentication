@@ -1,4 +1,4 @@
-# credo:disable-for-this-file Credo.Check.Design.AliasUsage
+# credo:disable-for-this-file Credo.Check.Design.AliasUsageinstall.ex
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshAuthentication.Install do
     @example "mix igniter.install ash_authentication"
@@ -34,7 +34,7 @@ if Code.ensure_loaded?(Igniter) do
           user: :string,
           token: :string,
           yes: :boolean,
-          auth_strategy: :keep
+          auth_strategy: :csv
         ],
         composes: [
           "ash_authentication.add_strategy"
@@ -68,7 +68,6 @@ if Code.ensure_loaded?(Igniter) do
         |> parse_module_option(:accounts)
         |> parse_module_option(:user)
         |> parse_module_option(:token)
-        |> csv_option(:auth_strategy)
 
       accounts_domain = options[:accounts]
       token_resource = options[:token]
@@ -410,21 +409,6 @@ if Code.ensure_loaded?(Igniter) do
           value
         end
       end)
-    end
-
-    defp csv_option(options, key, modifier \\ & &1) do
-      values = Keyword.get_values(options, key)
-
-      values =
-        values
-        |> List.wrap()
-        |> Enum.join(",")
-        |> String.split(",", trim: true)
-        |> then(modifier)
-
-      options
-      |> Keyword.delete(key)
-      |> Keyword.put(key, values)
     end
   end
 else
