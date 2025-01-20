@@ -504,7 +504,6 @@ if Code.ensure_loaded?(Igniter) do
       url =
         if use_web_module do
           "\#{url(~p\"/password-reset/\#{token}\")}"
-
         else
           "/password-reset/\#{token}"
         end
