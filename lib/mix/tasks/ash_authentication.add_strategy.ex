@@ -367,7 +367,8 @@ if Code.ensure_loaded?(Igniter) do
               end
 
             new()
-            |> from({"noreply", "noreply@example.com"}) # TODO: replace with your email
+            # TODO: Replace with your email
+            |> from({"noreply", "noreply@example.com"})
             |> to(to_string(email))
             |> subject("Your login link")
             |> html_body(body([token: token, email: email]))
@@ -375,10 +376,11 @@ if Code.ensure_loaded?(Igniter) do
           end
 
           defp body(params) do
-            """
-            Hello, \#{params[:email]}! Click this link to sign in:
+            url = url(~p"/auth/user/magic_link/?token=\#{params[:token]}")
 
-            \#{url(~p"/auth/user/magic_link/?token=\#{params[:token]}")}
+            """
+            <p>Hello, \#{params[:email]}! Click this link to sign in:</p>
+            <p><a href="\#{url}">\#{url}</a></p>
             """
           end
           ''')
@@ -464,7 +466,8 @@ if Code.ensure_loaded?(Igniter) do
           @impl true
           def send(user, token, _) do
             new()
-            |> from({"noreply", "noreply@example.com"}) # TODO: replace with your email
+            # TODO: Replace with your email
+            |> from({"noreply", "noreply@example.com"})
             |> to(to_string(user.email))
             |> subject("Reset your password")
             |> html_body(body([token: token]))
@@ -472,10 +475,11 @@ if Code.ensure_loaded?(Igniter) do
           end
 
           defp body(params) do
-            """
-            Click this link to reset your password:
+            url = url(~p"/password-reset/\#{params[:token]}")
 
-            \#{url(~p"/password-reset/\#{params[:token]}")}
+            """
+            <p>Click this link to reset your password:</p>
+            <p><a href="\#{url}">\#{url}</a></p>
             """
           end
           ''')
@@ -555,7 +559,8 @@ if Code.ensure_loaded?(Igniter) do
             @impl true
             def send(user, token, _) do
               new()
-              |> from({"noreply", "noreply@example.com"}) # TODO: Replace with your email
+              # TODO: Replace with your email
+              |> from({"noreply", "noreply@example.com"})
               |> to(to_string(user.email))
               |> subject("Confirm your email address")
               |> html_body(body([token: token]))
@@ -563,10 +568,11 @@ if Code.ensure_loaded?(Igniter) do
             end
 
             defp body(params) do
-              """
-              Click this link to confirm your email:
+              url = url(~p"/auth/user/confirm_new_user?\#{[confirm: params[:token]]}")
 
-              \#{url(~p"/auth/user/confirm_new_user?\#{[confirm: params[:token]]}")}
+              """
+              <p>Click this link to confirm your email:</p>
+              <p><a href="\#{url}">\#{url}</a></p>
               """
             end
             '''
