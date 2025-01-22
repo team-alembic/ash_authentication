@@ -143,10 +143,15 @@ if Code.ensure_loaded?(Igniter) do
           extensions = "AshAuthentication,Ash.Policy.Authorizer"
 
           extensions =
-            if Code.ensure_loaded?(AshPostgres.DataLayer) do
-              "postgres,#{extensions}"
-            else
-              extensions
+            cond do
+              Code.ensure_loaded?(AshPostgres.DataLayer) ->
+                "postgres,#{extensions}"
+
+              Code.ensure_loaded?(AshSqlite.DataLayer) ->
+                "sqlite,#{extensions}"
+
+              true ->
+                extensions
             end
 
           dev_secret =
@@ -261,10 +266,15 @@ if Code.ensure_loaded?(Igniter) do
           extensions = "AshAuthentication.TokenResource,Ash.Policy.Authorizer"
 
           extensions =
-            if Code.ensure_loaded?(AshPostgres.DataLayer) do
-              "postgres,#{extensions}"
-            else
-              extensions
+            cond do
+              Code.ensure_loaded?(AshPostgres.DataLayer) ->
+                "postgres,#{extensions}"
+
+              Code.ensure_loaded?(AshSqlite.DataLayer) ->
+                "sqlite,#{extensions}"
+
+              true ->
+                extensions
             end
 
           igniter
@@ -381,24 +391,38 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    if Code.ensure_loaded?(AshPostgres.Igniter) do
-      def setup_data_layer(igniter, repo) do
-        igniter
-        |> AshPostgres.Igniter.add_postgres_extension(repo, "citext")
-      end
+    cond do
+      Code.ensure_loaded?(AshPostgres.Igniter) ->
+        def setup_data_layer(igniter, repo) do
+          igniter
+          |> AshPostgres.Igniter.add_postgres_extension(repo, "citext")
+        end
 
-      def data_layer_args(igniter, opts) do
-        {igniter, repo} =
-          AshPostgres.Igniter.select_repo(igniter, generate?: true, yes: opts[:yes])
+        def data_layer_args(igniter, opts) do
+          {igniter, repo} =
+            AshPostgres.Igniter.select_repo(igniter, generate?: true, yes: opts[:yes])
 
-        {igniter, ["--repo", inspect(repo)], repo}
-      end
-    else
-      def setup_data_layer(igniter, _), do: igniter
+          {igniter, ["--repo", inspect(repo)], repo}
+        end
 
-      def data_layer_args(igniter, _) do
-        {igniter, [], nil}
-      end
+      Code.ensure_loaded?(AshSqlite.Igniter) ->
+        def setup_data_layer(igniter, _repo) do
+          igniter
+        end
+
+        def data_layer_args(igniter, opts) do
+          {igniter, repo} =
+            AshSqlite.Igniter.select_repo(igniter, generate?: true, yes: opts[:yes])
+
+          {igniter, ["--repo", inspect(repo)], repo}
+        end
+
+      true ->
+        def setup_data_layer(igniter, _), do: igniter
+
+        def data_layer_args(igniter, _) do
+          {igniter, [], nil}
+        end
     end
 
     defp parse_module_option(opts, option) do
