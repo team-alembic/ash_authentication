@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.2](https://github.com/team-alembic/ash_authentication/compare/v4.4.1...v4.4.2) (2025-01-22)
+
+
+
+
+### Bug Fixes:
+
+* Format code and update cheat sheets (both part of currently failing build)
+
+### Improvements:
+
+* support sqlite in the installer
+
+* Make the links in generated emails, clickable links (#890)
+
 ## [v4.4.1](https://github.com/team-alembic/ash_authentication/compare/v4.4.0...v4.4.1) (2025-01-16)
 
 
