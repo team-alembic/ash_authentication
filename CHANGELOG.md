@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.4](https://github.com/team-alembic/ash_authentication/compare/v4.4.3...v4.4.4) (2025-01-23)
+
+
+
+
+### Improvements:
+
+* make `hashed_password` optional if magic_link is also used
+
 ## [v4.4.3](https://github.com/team-alembic/ash_authentication/compare/v4.4.2...v4.4.3) (2025-01-23)
 
 
