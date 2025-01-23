@@ -132,6 +132,7 @@ if Code.ensure_loaded?(Igniter) do
         public? true
       end
       """)
+      |> make_hashed_password_optional(options)
       |> ensure_identity(options)
       |> ensure_get_by_action(options)
       |> Ash.Resource.Igniter.add_new_action(options[:user], :sign_in_with_magic_link, """
@@ -175,8 +176,42 @@ if Code.ensure_loaded?(Igniter) do
       |> create_new_magic_link_sender(sender, options)
     end
 
+    defp make_hashed_password_optional(igniter, options) do
+      Igniter.Project.Module.find_and_update_module!(igniter, options[:user], fn zipper ->
+        with {:ok, zipper} <- Igniter.Code.Function.move_to_function_call(zipper, :strategies, 1),
+             {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
+             {:ok, zipper} <-
+               Igniter.Code.Function.move_to_function_call(zipper, :password, [1, 2]),
+             {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
+             {:ok, zipper} <-
+               Igniter.Code.Function.move_to_function_call(
+                 zipper,
+                 :allow_nil?,
+                 1,
+                 &Igniter.Code.Function.argument_equals?(&1, 0, false)
+               ) do
+          {:ok, Sourceror.Zipper.remove(zipper)}
+        else
+          _ ->
+            {:ok, zipper}
+        end
+      end)
+    end
+
     defp password(igniter, options) do
       sender = Module.concat(options[:user], Senders.SendPasswordResetEmail)
+
+      {igniter, _, zipper} =
+        igniter
+        |> Igniter.Project.Module.find_module!(options[:user])
+
+      allow_nil_line =
+        zipper
+        |> Igniter.Code.Function.move_to_function_call(:magic_link, [1, 2])
+        |> case do
+          {:ok, _} -> ""
+          _ -> "allow_nil? false"
+        end
 
       igniter
       |> Igniter.Project.Deps.add_dep({:bcrypt_elixir, "~> 3.0"})
@@ -188,7 +223,7 @@ if Code.ensure_loaded?(Igniter) do
       """)
       |> Ash.Resource.Igniter.add_new_attribute(options[:user], :hashed_password, """
       attribute :hashed_password, :string do
-        allow_nil? false
+        #{allow_nil_line}
         sensitive? true
       end
       """)
