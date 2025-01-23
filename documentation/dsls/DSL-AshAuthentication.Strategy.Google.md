@@ -42,9 +42,12 @@ configuration options should you need them.
 
 The following defaults are applied:
 
-* `:base_url` is set to `"https://accounts.google.com/"`.
-* `:authorization_params` is set to `[scope: "email profile"]`.
-* `:client_authentication_method` is set to `"client_secret_post"`.
+* `:base_url` is set to `"https://www.googleapis.com"`.
+* `:authorize_url` is set to `"https://accounts.google.com/o/oauth2/v2/auth"`.
+* `:token_url` is set to `"/oauth2/v4/token"`.
+* `:user_url` is set to `"/oauth2/v3/userinfo"`.
+* `:authorization_params` is set to `[scope: "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"]`.
+* `:auth_method` is set to `:client_secret_post`.
 
 
 
