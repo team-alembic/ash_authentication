@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.3](https://github.com/team-alembic/ash_authentication/compare/v4.4.2...v4.4.3) (2025-01-23)
+
+
+
+
+### Bug Fixes:
+
+* downgrade assent and upgrade markdown files
+
 ## [v4.4.2](https://github.com/team-alembic/ash_authentication/compare/v4.4.1...v4.4.2) (2025-01-22)
 
 
