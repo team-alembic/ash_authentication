@@ -70,6 +70,6 @@ Welcome! Here you will find everything you need to know to get started with and 
 
 ---
 
-[![Alembic](logos/alembic.png)](https://alembic.com.au)
+[![Alembic](logos/alembic.svg)](https://alembic.com.au)
 
 Proudly written and maintained by the team at [Alembic](https://alembic.com.au) for the Ash community.

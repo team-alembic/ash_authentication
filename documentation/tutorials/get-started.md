@@ -229,7 +229,7 @@ mix ash_authentication.add_strategy password
 ## Set up your Phoenix or Plug application
 
 If you're using Phoenix, skip this section and go to
-[Integrating Ash Authentication and Phoenix](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix)
+[Integrating Ash Authentication and Phoenix](https://hexdocs.pm/ash_authentication_phoenix/get-started.html)
 
 In order for your users to be able to sign in, you will likely need to provide
 an HTTP endpoint to submit credentials or OAuth requests to. Ash Authentication
@@ -295,4 +295,4 @@ resources and handle authentication HTTP requests.
 
 You should now have an Ash application with working user authentication.
 
-Up next, [Using with Phoenix](https://ash-hq.org/docs/guides/ash_authentication_phoenix/latest/tutorials/getting-started-with-ash-authentication-phoenix).
+Up next, [Using with Phoenix](https://hexdocs.pm/ash_authentication_phoenix/get-started.html)
