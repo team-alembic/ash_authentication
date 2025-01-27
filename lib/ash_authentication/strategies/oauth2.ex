@@ -277,7 +277,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           authorization_params: keyword,
           authorize_url: secret,
           base_url: secret,
-          client_authentication_method: nil | atom,
+          client_authentication_method: nil | binary,
           client_id: secret,
           client_secret: secret,
           icon: nil | atom,
