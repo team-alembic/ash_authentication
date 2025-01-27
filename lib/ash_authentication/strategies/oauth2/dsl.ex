@@ -28,7 +28,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
         :redirect_uri,
         :site,
         :token_url,
-        :user_url
+        :user_url,
+        :code_verifier
       ],
       schema: [
         name: [
@@ -116,6 +117,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           doc:
             "The callback URI *base*. Not the whole URI back to the callback endpoint, but the URI to your `AuthPlug`. #{secret_doc}",
           required: true
+        ],
+        code_verifier: [
+          type: :boolean,
+          doc:
+            "Boolean to generate and use a random 128 byte long url safe code verifier for PKCE flow, optional, defaults to false. When set to true the session params will contain :code_verifier, :code_challenge, and :code_challenge_method params",
+          default: false
         ],
         authorization_params: [
           type: :keyword_list,

@@ -88,6 +88,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          {:ok, config} <- add_secret_value(config, strategy, :client_id, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :client_secret, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
+         {:ok, config} <- add_secret_value(config, strategy, :code_verifier, !!strategy.code_verifier),
          {:ok, config} <-
            add_secret_value(
              config,
@@ -183,6 +184,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
       {:ok, list} when is_list(list) ->
         {:ok, Map.put(config, secret_name, list)}
+
+      {:ok, boolean} when is_boolean(boolean) ->
+        {:ok, Map.put(config, secret_name, boolean)}
 
       {:error, reason} ->
         {:error, reason}

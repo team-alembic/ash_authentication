@@ -252,7 +252,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     team_id: nil,
     token_url: nil,
     trusted_audiences: nil,
-    user_url: nil
+    user_url: nil,
+    code_verifier: false
   ]
 
   defstruct @struct_fields
@@ -304,7 +305,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           team_id: secret,
           token_url: secret,
           trusted_audiences: secret_list,
-          user_url: secret
+          user_url: secret,
+          code_verifier: secret
         }
 
   @doc false
