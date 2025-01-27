@@ -68,8 +68,11 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
            ) do
       store_authentication_result(conn, {:ok, user})
     else
-      nil -> store_authentication_result(conn, {:error, nil})
-      {:error, reason} -> store_authentication_result(conn, {:error, reason})
+      nil ->
+        store_authentication_result(conn, {:error, nil})
+
+      {:error, reason} ->
+        store_authentication_result(conn, {:error, reason})
     end
   end
 
@@ -88,6 +91,15 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          {:ok, config} <- add_secret_value(config, strategy, :client_id, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :client_secret, !!strategy.base_url),
          {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
+         {:ok, config} <-
+           add_secret_value(config, strategy, :code_verifier, !!strategy.code_verifier),
+         {:ok, config} <-
+           add_secret_value(
+             config,
+             strategy,
+             :openid_configuration,
+             !!strategy.openid_configuration
+           ),
          {:ok, config} <-
            add_secret_value(
              config,
@@ -183,6 +195,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
       {:ok, list} when is_list(list) ->
         {:ok, Map.put(config, secret_name, list)}
+
+      {:ok, map} when is_map(map) ->
+        {:ok, Map.put(config, secret_name, map)}
+
+      {:ok, boolean} when is_boolean(boolean) ->
+        {:ok, Map.put(config, secret_name, boolean)}
 
       {:error, reason} ->
         {:error, reason}

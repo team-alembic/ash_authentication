@@ -10,7 +10,7 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
   @spec verify(OAuth2.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, _dsl_state) do
     with :ok <- validate_secret(strategy, :client_id),
-         :ok <- validate_secret(strategy, :client_secret),
+         :ok <- validate_secret(strategy, :client_secret, [nil]),
          :ok <- validate_secret(strategy, :base_url),
          :ok <- validate_secret(strategy, :nonce, [true, false]) do
       if strategy.auth_method == :private_key_jwt do

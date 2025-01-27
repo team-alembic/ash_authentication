@@ -43,13 +43,19 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
       client_authentication_method: [
         type:
           {:in,
-           ["client_secret_basic", "client_secret_post", "client_secret_jwt", "private_key_jwt"]},
+           [
+             "client_secret_basic",
+             "client_secret_post",
+             "client_secret_jwt",
+             "private_key_jwt",
+             "none"
+           ]},
         default: "client_secret_basic",
         doc: "The client authentication method to use.",
         required: false
       ],
       openid_configuration: [
-        type: :map,
+        type: {:map, :string, :any},
         doc:
           "The OpenID configuration.  If not set, the configuration will be retrieved from `openid_configuration_uri`.",
         required: false,
