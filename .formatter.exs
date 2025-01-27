@@ -15,6 +15,7 @@ spark_locals_without_parens = [
   client_authentication_method: 1,
   client_id: 1,
   client_secret: 1,
+  code_verifier: 1,
   confirm_action_name: 1,
   confirm_on_create?: 1,
   confirm_on_update?: 1,
@@ -116,8 +117,7 @@ spark_locals_without_parens = [
   user_id_attribute_name: 1,
   user_relationship_name: 1,
   user_resource: 1,
-  user_url: 1,
-  code_verifier: 1
+  user_url: 1
 ]
 
 [

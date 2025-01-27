@@ -98,7 +98,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
              config,
              strategy,
              :openid_configuration,
-             !!strategy.openid_configuration
+             !strategy.openid_configuration
            ),
          {:ok, config} <-
            add_secret_value(
