@@ -38,6 +38,18 @@ defmodule AshAuthentication.Dsl do
        ]}
 
   @doc false
+  @spec secret_keyword_type :: any
+  def secret_keyword_type,
+    do:
+      {:or,
+       [
+         {:spark_function_behaviour, AshAuthentication.Secret,
+          {AshAuthentication.SecretFunction, 2}},
+         :keyword_list,
+         nil
+       ]}
+
+  @doc false
   @spec secret_doc :: String.t()
   def secret_doc,
     do:

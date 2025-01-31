@@ -11,6 +11,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
   def dsl do
     secret_type = AshAuthentication.Dsl.secret_type()
     secret_list_type = AshAuthentication.Dsl.secret_list_type()
+    secret_keyword_type = AshAuthentication.Dsl.secret_keyword_type()
     secret_doc = AshAuthentication.Dsl.secret_doc()
 
     %Entity{
@@ -125,7 +126,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           default: false
         ],
         authorization_params: [
-          type: :keyword_list,
+          type: secret_keyword_type,
           doc:
             "Any additional parameters to encode in the request phase. eg: `authorization_params scope: \"openid profile email\"`",
           default: []
