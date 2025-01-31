@@ -55,11 +55,11 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
         required: false
       ],
       openid_configuration: [
-        type: {:map, :string, :any},
+        type: {:or, [nil, {:map, :string, :any}]},
         doc:
           "The OpenID configuration.  If not set, the configuration will be retrieved from `openid_configuration_uri`.",
         required: false,
-        default: %{}
+        default: nil
       ],
       id_token_signed_response_alg: [
         type: {:in, Joken.Signer.algorithms()},
