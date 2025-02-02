@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.7](https://github.com/team-alembic/ash_authentication/compare/v4.4.6...v4.4.7) (2025-02-02)
+
+
+
+
+### Bug Fixes:
+
+* downgrade assent
+
+* OIDC: Not retrieving remote OIDC configuration.
+
 ## [v4.4.6](https://github.com/team-alembic/ash_authentication/compare/v4.4.5...v4.4.6) (2025-02-01)
 
 
