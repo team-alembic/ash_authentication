@@ -13,6 +13,8 @@ updates:
   - package-ecosystem: mix
     directory: "/"
     versioning-strategy: lockfile-only
+    ignore:
+      - dependency-name: "assent"
     schedule:
       interval: weekly
       day: thursday
