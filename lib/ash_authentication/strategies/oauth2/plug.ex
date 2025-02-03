@@ -13,7 +13,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
   @raw_config_attrs [
     :auth_method,
-    :authorization_params,
     :client_authentication_method,
     :id_token_signed_response_alg,
     :id_token_ttl_seconds,
@@ -93,6 +92,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
          {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
          {:ok, config} <-
            add_secret_value(config, strategy, :code_verifier, !!strategy.code_verifier),
+         {:ok, config} <-
+           add_secret_value(
+             config,
+             strategy,
+             :authorization_params,
+             !!strategy.authorization_params
+           ),
          {:ok, config} <-
            add_secret_value(
              config,

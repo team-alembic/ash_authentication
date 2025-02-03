@@ -266,6 +266,8 @@ defmodule AshAuthentication.Strategy.OAuth2 do
 
   @type secret_list :: nil | [any()] | {module, keyword}
 
+  @type secret_keyword :: nil | Keyword.t() | {module, keyword}
+
   @type t :: %OAuth2{
           assent_strategy: module,
           auth_method:
@@ -274,7 +276,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
             | :client_secret_post
             | :client_secret_jwt
             | :private_key_jwt,
-          authorization_params: keyword,
+          authorization_params: secret_keyword,
           authorize_url: secret,
           base_url: secret,
           client_authentication_method: nil | binary,
