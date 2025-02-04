@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.8](https://github.com/team-alembic/ash_authentication/compare/v4.4.7...v4.4.8) (2025-02-04)
+
+
+
+
+### Bug Fixes:
+
+* fix marking hashed_password as `allow_nil?` in magic link installer
+
+### Improvements:
+
+* Allow authorization params to be defined using secret module (#900)
+
 ## [v4.4.7](https://github.com/team-alembic/ash_authentication/compare/v4.4.6...v4.4.7) (2025-02-02)
 
 
