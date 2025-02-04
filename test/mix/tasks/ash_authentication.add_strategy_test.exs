@@ -274,4 +274,19 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       """)
     end
   end
+
+  describe "magic_link" do
+    test "makes hashed_password optional", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
+      |> apply_igniter!()
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["magic_link"])
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+        |    attribute :hashed_password, :string do
+      - |      allow_nil?(false)
+        |      sensitive?(true)
+        |    end
+      """)
+    end
+  end
 end

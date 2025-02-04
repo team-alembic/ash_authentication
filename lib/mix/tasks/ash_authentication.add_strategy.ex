@@ -178,13 +178,23 @@ if Code.ensure_loaded?(Igniter) do
 
     defp make_hashed_password_optional(igniter, options) do
       Igniter.Project.Module.find_and_update_module!(igniter, options[:user], fn zipper ->
-        with {:ok, zipper} <- Igniter.Code.Function.move_to_function_call(zipper, :strategies, 1),
+        with {:ok, zipper} <-
+               Igniter.Code.Function.move_to_function_call_in_current_scope(
+                 zipper,
+                 :attributes,
+                 1
+               ),
              {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
              {:ok, zipper} <-
-               Igniter.Code.Function.move_to_function_call(zipper, :password, [1, 2]),
+               Igniter.Code.Function.move_to_function_call_in_current_scope(
+                 zipper,
+                 :attribute,
+                 [1, 2, 3],
+                 &Igniter.Code.Function.argument_equals?(&1, 0, :hashed_password)
+               ),
              {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
              {:ok, zipper} <-
-               Igniter.Code.Function.move_to_function_call(
+               Igniter.Code.Function.move_to_function_call_in_current_scope(
                  zipper,
                  :allow_nil?,
                  1,
