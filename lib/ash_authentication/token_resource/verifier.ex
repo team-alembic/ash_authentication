@@ -33,40 +33,43 @@ defmodule AshAuthentication.TokenResource.Verifier do
   end
 
   defp validate_is_revoked_action(dsl_state, action) do
-    with :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [true]),
-         :ok <- validate_action_argument_option(action, :token, :allow_nil?, [true]),
-         :ok <- validate_action_option(action, :returns, [:boolean, Ash.Type.Boolean]) do
-      :ok
+    if action.type == :action do
+      with :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [true]),
+           :ok <- validate_action_argument_option(action, :token, :allow_nil?, [true]),
+           :ok <- validate_action_option(action, :returns, [:boolean, Ash.Type.Boolean]) do
+      else
+        {:error, _} ->
+          Logger.warning("""
+          Warning while compiling #{inspect(Verifier.get_persisted(dsl_state, :module))}:
+
+          The `:jti` and `:token` options to the `#{inspect(action.name)}` action must allow nil values and it must return a `:boolean`.
+
+          This was an error in our igniter installer previous to version 4.4.9, which allowed revoked tokens to be reused.
+
+          To fix this, run the following command in your shell:
+
+              mix ash_authentication.upgrade 4.4.8 4.4.9
+
+          Or:
+
+            - remove `allow_nil?: false` from these action arguments, and
+            - ensure that the action returns `:boolean`.
+
+            like so:
+
+              action :revoked?, :boolean do
+                description "Returns true if a revocation token is found for the provided token"
+                argument :token, :string, sensitive?: true
+                argument :jti, :string, sensitive?: true
+
+                run AshAuthentication.TokenResource.IsRevoked
+              end
+          """)
+
+          :ok
+      end
     else
-      {:error, _} ->
-        Logger.warning("""
-        Warning while compiling #{inspect(Verifier.get_persisted(dsl_state, :module))}:
-
-        The `:jti` and `:token` options to the `#{inspect(action.name)}` action must allow nil values and it must return a `:boolean`.
-
-        This was an error in our igniter installer previous to version 4.4.9, which allowed revoked tokens to be reused.
-
-        To fix this, run the following command in your shell:
-
-            mix ash_authentication.upgrade 4.4.8 4.4.9
-
-        Or:
-
-          - remove `allow_nil?: false` from these action arguments, and
-          - ensure that the action returns `:boolean`.
-
-          like so:
-
-            action :revoked?, :boolean do
-              description "Returns true if a revocation token is found for the provided token"
-              argument :token, :string, sensitive?: true
-              argument :jti, :string, sensitive?: true
-
-              run AshAuthentication.TokenResource.IsRevoked
-            end
-        """)
-
-        :ok
+      :ok
     end
   end
 
