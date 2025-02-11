@@ -20,12 +20,12 @@ defmodule AshAuthentication.TokenResource.Transformer do
   @doc false
   @impl true
   @spec after?(any) :: boolean()
-  def after?(Resource.Transformers.ValidatePrimaryActions), do: true
   def after?(_), do: false
 
   @doc false
   @impl true
   @spec before?(any) :: boolean
+  def before?(Resource.Transformers.SetPrimaryActions), do: true
   def before?(Resource.Transformers.CachePrimaryKey), do: true
   def before?(Resource.Transformers.DefaultAccept), do: true
   def before?(_), do: false
@@ -36,6 +36,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
     with {:ok, dsl_state} <- maybe_set_domain(dsl_state, :token),
+         {:ok, dsl_state} <- maybe_add_default_create(dsl_state),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :jti, :string,
              primary_key?: true,
@@ -46,12 +47,17 @@ defmodule AshAuthentication.TokenResource.Transformer do
            ),
          :ok <- validate_jti_field(dsl_state),
          {:ok, dsl_state} <-
-           maybe_build_attribute(dsl_state, :subject, :string, allow_nil?: false, writable?: true),
+           maybe_build_attribute(dsl_state, :subject, :string,
+             allow_nil?: false,
+             writable?: true,
+             public?: true
+           ),
          :ok <- validate_subject_field(dsl_state),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :expires_at, :utc_datetime,
              allow_nil?: false,
-             writable?: true
+             writable?: true,
+             public?: true
            ),
          :ok <- validate_expires_at_field(dsl_state),
          {:ok, dsl_state} <-
@@ -223,11 +229,25 @@ defmodule AshAuthentication.TokenResource.Transformer do
     end
   end
 
+  defp maybe_add_default_create(dsl_state) do
+    defaults =
+      dsl_state
+      |> Transformer.get_option([:actions], :defaults, [])
+      |> Enum.reject(fn
+        {:create, _} -> true
+        _ -> false
+      end)
+      |> Enum.concat([{:create, [:*]}])
+
+    {:ok, Transformer.set_option(dsl_state, [:actions], :defaults, defaults)}
+  end
+
   defp validate_subject_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, :subject),
-         :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]) do
-      validate_attribute_option(attribute, resource, :writable?, [true])
+         :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
+      validate_attribute_option(attribute, resource, :public?, [true])
     end
   end
 
@@ -533,8 +553,9 @@ defmodule AshAuthentication.TokenResource.Transformer do
          {:ok, attribute} <- find_attribute(dsl_state, :expires_at),
          :ok <-
            validate_attribute_option(attribute, resource, :type, [Type.UtcDatetime, :utc_datetime]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]) do
-      validate_attribute_option(attribute, resource, :writable?, [true])
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
+      validate_attribute_option(attribute, resource, :public?, [true])
     end
   end
 

@@ -1,6 +1,6 @@
 defmodule AshAuthentication.TokenResource.ActionsTest do
   @moduledoc false
-  use DataCase, async: true
+  use DataCase, async: false
   alias AshAuthentication.{Jwt, TokenResource.Actions}
 
   describe "read_expired/1..2" do

@@ -4,12 +4,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Verifier do
   """
 
   alias AshAuthentication.{AddOn.Confirmation, Sender}
-  alias Spark.Error.DslError
+  alias Spark.{Dsl.Verifier, Error.DslError}
   import AshAuthentication.Validations
 
   @doc false
   @spec verify(Confirmation.t(), map) :: :ok | {:error, Exception.t()}
-  def verify(strategy, _dsl_state) do
+  def verify(strategy, dsl_state) do
     case Map.fetch(strategy, :sender) do
       {:ok, {sender, _opts}} ->
         validate_behaviour(sender, Sender)
@@ -17,6 +17,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Verifier do
       :error ->
         {:error,
          DslError.exception(
+           module: Verifier.get_persisted(dsl_state, :module),
            path: [:authentication, :add_ons, :confirmation],
            message: "Configuration error"
          )}

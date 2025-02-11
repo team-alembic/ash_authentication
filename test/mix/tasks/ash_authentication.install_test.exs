@@ -151,10 +151,12 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
         attribute :subject, :string do
           allow_nil?(false)
+          public?(true)
         end
 
         attribute :expires_at, :utc_datetime do
           allow_nil?(false)
+          public?(true)
         end
 
         attribute :purpose, :string do
