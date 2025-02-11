@@ -37,6 +37,7 @@ defmodule AshAuthentication.TokenResource.Verifier do
       with :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [true]),
            :ok <- validate_action_argument_option(action, :token, :allow_nil?, [true]),
            :ok <- validate_action_option(action, :returns, [:boolean, Ash.Type.Boolean]) do
+        :ok
       else
         {:error, _} ->
           Logger.warning("""
