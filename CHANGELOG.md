@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.4.9](https://github.com/team-alembic/ash_authentication/compare/v4.4.8...v4.4.9) (2025-02-11)
+
+
+
+
+### Bug Fixes:
+
+* Ensure that installer generated token revocation checking action is correct. (#905)
+
 ## [v4.4.8](https://github.com/team-alembic/ash_authentication/compare/v4.4.7...v4.4.8) (2025-02-04)
 
 
