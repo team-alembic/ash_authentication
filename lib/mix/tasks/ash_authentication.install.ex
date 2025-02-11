@@ -342,10 +342,10 @@ if Code.ensure_loaded?(Igniter) do
           end
           """)
           |> Ash.Resource.Igniter.add_action(token_resource, """
-          action :revoked? do
+          action :revoked?, :boolean do
             description "Returns true if a revocation token is found for the provided token"
-            argument :token, :string, sensitive?: true, allow_nil?: false
-            argument :jti, :string, sensitive?: true, allow_nil?: false
+            argument :token, :string, sensitive?: true
+            argument :jti, :string, sensitive?: true
 
             run AshAuthentication.TokenResource.IsRevoked
           end
