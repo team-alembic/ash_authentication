@@ -145,7 +145,8 @@ defmodule AshAuthentication.TokenResource do
 
   use Spark.Dsl.Extension,
     sections: @dsl,
-    transformers: [TokenResource.Transformer, TokenResource.Verifier]
+    transformers: [TokenResource.Transformer],
+    verifiers: [TokenResource.Verifier]
 
   @doc """
   Has the token been revoked?

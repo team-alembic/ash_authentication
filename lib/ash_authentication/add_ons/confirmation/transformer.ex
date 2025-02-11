@@ -22,7 +22,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
     with :ok <-
            validate_token_generation_enabled(
              dsl_state,
-             "Token generation must be enabled for password resets to work."
+             "Token generation must be enabled for confirmation to work."
            ),
          :ok <- validate_monitor_fields(dsl_state, strategy),
          strategy <- maybe_set_confirm_action_name(strategy),

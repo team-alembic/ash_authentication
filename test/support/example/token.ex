@@ -12,5 +12,14 @@ defmodule Example.Token do
 
   actions do
     defaults [:read, :destroy]
+
+    action :revoked? do
+      description "Returns true if a revocation token is found for the provided token"
+      argument :token, :string, sensitive?: true
+      argument :jti, :string, sensitive?: true
+
+      run AshAuthentication.TokenResource.IsRevoked
+      returns :boolean
+    end
   end
 end
