@@ -6,7 +6,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   from it and constrains the query to a matching user.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
   alias Ash.{Error.Unknown, Query, Resource, Resource.Preparation}
   require Ash.Query
 
@@ -19,6 +19,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     query
     |> check_sign_in_token_configuration(strategy)
     |> Query.before_action(&verify_token_and_constrain_query(&1, strategy))
+    |> Query.after_action(&revoke_sign_in_token(&1, &2, strategy))
     |> Query.after_action(&verify_result(&1, &2, strategy))
   end
 
@@ -28,7 +29,8 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     with {:ok, claims, _} <- Jwt.verify(token, strategy.resource),
          :ok <- verify_sign_in_token_purpose(claims),
          {:ok, primary_keys} <- extract_primary_keys_from_subject(claims, strategy.resource) do
-      Query.filter(query, ^primary_keys)
+      query
+      |> Query.filter(^primary_keys)
     else
       :error ->
         Query.add_error(
@@ -60,6 +62,24 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
             }
           )
         )
+    end
+  end
+
+  defp revoke_sign_in_token(query, [user], strategy) do
+    token_resource = Info.authentication_tokens_token_resource!(strategy.resource)
+    token = Query.get_argument(query, :token)
+
+    case TokenResource.revoke(token_resource, token) do
+      :ok ->
+        {:ok, [user]}
+
+      {:error, reason} ->
+        {:error,
+         AuthenticationFailed.exception(
+           strategy: strategy,
+           query: query,
+           caused_by: reason
+         )}
     end
   end
 

@@ -62,5 +62,44 @@ defmodule AshAuthentication.Strategy.PasswordTest do
 
       assert [%{subject: ^subject, purpose: "sign_in"}] = Example.Token |> Ash.read!()
     end
+
+    test "sign in tokens can only be used once" do
+      user = build_user()
+      strategy = AshAuthentication.Info.strategy!(User, :password)
+
+      {:ok, valid_user} =
+        Strategy.action(
+          strategy,
+          :sign_in,
+          %{
+            username: user.username,
+            password: user.__metadata__.password
+          },
+          context: [token_type: :sign_in]
+        )
+
+      assert valid_user.id == user.id
+      assert {:ok, %{"purpose" => "sign_in"}} = Jwt.peek(valid_user.__metadata__.token)
+
+      assert {:ok, valid_user2} =
+               Strategy.action(
+                 strategy,
+                 :sign_in_with_token,
+                 %{
+                   token: valid_user.__metadata__.token
+                 }
+               )
+
+      assert valid_user.id == valid_user2.id
+
+      assert {:error, _error} =
+               Strategy.action(
+                 strategy,
+                 :sign_in_with_token,
+                 %{
+                   token: valid_user.__metadata__.token
+                 }
+               )
+    end
   end
 end
