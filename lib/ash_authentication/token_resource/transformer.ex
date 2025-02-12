@@ -204,7 +204,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
                    HAVING COUNT(*) > 1
                ),
                revocation_tokens AS (
-                   SELECT t.jti
+                   SELECT DISTINCT ON (t.jti) t.id
                    FROM tokens t
                    JOIN duplicate_tokens d ON t.jti = d.jti
                    WHERE t.purpose = 'revocation' 
@@ -213,10 +213,10 @@ defmodule AshAuthentication.TokenResource.Transformer do
                    SELECT t.*
                    FROM tokens t
                    JOIN duplicate_tokens d ON t.jti = d.jti
-                   WHERE t.jti NOT IN (SELECT jti FROM revocation_tokens)
+                   WHERE t.id NOT IN (SELECT id FROM revocation_tokens)
                )
                DELETE FROM tokens
-               WHERE jti IN (SELECT jti FROM other_tokens);
+               WHERE id IN (SELECT id FROM other_tokens);
                \""")
            """
          )}
