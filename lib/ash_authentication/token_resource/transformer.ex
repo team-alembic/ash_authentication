@@ -156,8 +156,70 @@ defmodule AshAuthentication.TokenResource.Transformer do
              get_token_action_name,
              &build_get_token_action(&1, get_token_action_name)
            ),
-         :ok <- validate_get_token_action(dsl_state, get_token_action_name) do
+         :ok <- validate_get_token_action(dsl_state, get_token_action_name),
+         :ok <- validate_primary_key(dsl_state) do
       {:ok, dsl_state}
+    end
+  end
+
+  defp validate_primary_key(dsl_state) do
+    dsl_state
+    |> Ash.Resource.Info.attributes()
+    |> Enum.filter(& &1.primary_key?)
+    |> Enum.map(& &1.name)
+    |> case do
+      [:jti] ->
+        :ok
+
+      fields ->
+        module = Transformer.get_persisted(dsl_state, :module)
+
+        {:error,
+         DslError.exception(
+           module: module,
+           path: [:primary_key],
+           message: """
+           The token resource must only have `:jti` as a primary key attribute.
+           Found: #{inspect(fields)}
+
+           You are likely seeing this as a by-product of an error with the generators 
+           that added a `uuid_primary_key :id` to the token resource.
+
+           This is **not a security issue**, because previous versions of AshAuthentication 
+           checked for revocation tokens as a separate check. In the future, however,
+           we will not perform this check, which means that all tokens must be guaranteed
+           to be unique on `jti`.
+
+           To address this:
+
+           1. remove `uuid_primary_key :id` from `#{inspect(module)}`
+           2. run `mix ash.codegen remove_id_from_tokens`
+           3. Add the following code to the *top* of the `up` function in the generated migration.
+
+               execute(\"""
+               WITH duplicate_tokens AS (
+                   SELECT jti
+                   FROM tokens
+                   GROUP BY jti
+                   HAVING COUNT(*) > 1
+               ),
+               revocation_tokens AS (
+                   SELECT t.jti
+                   FROM tokens t
+                   JOIN duplicate_tokens d ON t.jti = d.jti
+                   WHERE t.purpose = 'revocation' 
+               ),
+               other_tokens AS (
+                   SELECT t.*
+                   FROM tokens t
+                   JOIN duplicate_tokens d ON t.jti = d.jti
+                   WHERE t.jti NOT IN (SELECT jti FROM revocation_tokens)
+               )
+               DELETE FROM tokens
+               WHERE jti IN (SELECT jti FROM other_tokens);
+               \""")
+           """
+         )}
     end
   end
 
@@ -428,6 +490,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
       name: action_name,
       arguments: arguments,
       changes: changes,
+      upsert?: true,
       accept: [:extra_data]
     )
   end

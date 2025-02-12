@@ -286,8 +286,6 @@ if Code.ensure_loaded?(Igniter) do
               "read",
               "--extend",
               extensions,
-              "--uuid-primary-key",
-              "id",
               "--attribute",
               "jti:string:primary_key:public:required:sensitive",
               "--attribute",
