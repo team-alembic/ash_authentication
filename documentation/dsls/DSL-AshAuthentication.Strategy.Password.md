@@ -140,6 +140,7 @@ end
 | [`sign_in_enabled?`](#authentication-strategies-password-sign_in_enabled?){: #authentication-strategies-password-sign_in_enabled? } | `boolean` | `true` | If you do not want new users to be able to sign in using this strategy, set this to false. |
 | [`sign_in_tokens_enabled?`](#authentication-strategies-password-sign_in_tokens_enabled?){: #authentication-strategies-password-sign_in_tokens_enabled? } | `boolean` | `true` | Whether or not to support generating short lived sign in tokens. Requires the resource to have tokens enabled. |
 | [`sign_in_token_lifetime`](#authentication-strategies-password-sign_in_token_lifetime){: #authentication-strategies-password-sign_in_token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{60, :seconds}` | A lifetime for which a generated sign in token will be valid, if `sign_in_tokens_enabled?`. Unit defaults to `:seconds`. |
+| [`sign_in_with_token_action_name`](#authentication-strategies-password-sign_in_with_token_action_name){: #authentication-strategies-password-sign_in_with_token_action_name } | `atom` | `:sign_in_with_token` | The name to use for the sign in action. |
 | [`require_confirmed_with`](#authentication-strategies-password-require_confirmed_with){: #authentication-strategies-password-require_confirmed_with } | `atom \| nil` |  | Whether a new account must be confirmed in order to log in. |
 
 
