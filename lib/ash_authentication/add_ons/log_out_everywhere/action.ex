@@ -63,8 +63,8 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
   end
 
   defp exclude_purposes(query, strategy) do
-    if strategy.include_purposes do
-      Ash.Query.filter(query, purpose not in strategy.include_purposes)
+    if strategy.exclude_purposes do
+      Ash.Query.filter(query, purpose not in strategy.exclude_purposes)
     else
       query
     end
