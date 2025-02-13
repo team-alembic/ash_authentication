@@ -54,6 +54,8 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere do
             apply_on_password_change?: false,
             argument_name: nil,
             name: :log_out_everywhere,
+            include_purposes: nil,
+            exclude_purposes: ["revocation"],
             provider: :log_out_everywhere,
             resource: nil,
             strategy_module: __MODULE__

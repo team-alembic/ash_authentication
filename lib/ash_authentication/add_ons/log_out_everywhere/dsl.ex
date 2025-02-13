@@ -37,6 +37,21 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Dsl do
           The name of the user argument to the `:log_out_everywhere` action.
           """
         ],
+        include_purposes: [
+          type: {:list, :string},
+          required: false,
+          doc: """
+          Limit the list of token purposes for which tokens will be revoked to those in this list, except those in `exclude_token_purposes`.
+          """
+        ],
+        exclude_purposes: [
+          type: {:list, :string},
+          required: false,
+          default: ["revocation"],
+          doc: """
+          Don't revoke tokens with these purposes when logging a user out everywhere.
+          """
+        ],
         apply_on_password_change?: [
           type: :boolean,
           default: false,

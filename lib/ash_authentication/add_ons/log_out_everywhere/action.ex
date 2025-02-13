@@ -8,6 +8,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
   alias AshAuthentication.Info
 
   alias AshAuthentication.TokenResource.Info, as: TokenResourceInfo
+  require Ash.Query
 
   @doc false
   @impl true
@@ -35,6 +36,8 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
              token_resource
            ) do
       token_resource
+      |> include_purposes(strategy)
+      |> exclude_purposes(strategy)
       |> Ash.bulk_update(revoke_all_tokens_action_name, %{subject: subject},
         strategy: [:atomic, :atomic_batches, :stream],
         context: %{private: %{ash_authentication?: true}},
@@ -48,6 +51,22 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
         %{errors: errors} ->
           {:error, errors}
       end
+    end
+  end
+
+  defp include_purposes(query, strategy) do
+    if strategy.include_purposes do
+      Ash.Query.filter(query, purpose in strategy.include_purposes)
+    else
+      query
+    end
+  end
+
+  defp exclude_purposes(query, strategy) do
+    if strategy.include_purposes do
+      Ash.Query.filter(query, purpose not in strategy.include_purposes)
+    else
+      query
     end
   end
 end
