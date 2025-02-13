@@ -284,7 +284,6 @@ if Code.ensure_loaded?(Igniter) do
               inspect(token_resource),
               "--default-actions",
               "read",
-              "create",
               "--extend",
               extensions,
               "--attribute",
@@ -370,6 +369,14 @@ if Code.ensure_loaded?(Igniter) do
           destroy :expunge_expired do
             description "Deletes expired tokens."
             change filter(expr(expires_at < now()))
+          end
+          """)
+          |> Ash.Resource.Igniter.add_action(token_resource, """
+          update :revoke_all_tokens do
+            description "Revokes all tokens for a specific subject."
+            accept [:extra_data]
+            argument :subject, :string, allow_nil?: false, public?: true
+            change AshAuthentication.TokenResource.RevokeAllTokensChange
           end
           """)
       end

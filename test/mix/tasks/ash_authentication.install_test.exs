@@ -219,6 +219,13 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
           description("Deletes expired tokens.")
           change(filter(expr(expires_at < now())))
         end
+
+        update :revoke_all_tokens do
+          description("Revokes all tokens for a specific subject.")
+          accept([:extra_data])
+          argument(:subject, :string, allow_nil?: false, public?: true)
+          change(AshAuthentication.TokenResource.RevokeAllTokensChange)
+        end
       end
     end
     """)

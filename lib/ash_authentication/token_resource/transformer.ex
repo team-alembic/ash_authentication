@@ -25,7 +25,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
   @doc false
   @impl true
   @spec before?(any) :: boolean
-  def before?(Resource.Transformers.SetPrimaryActions), do: true
   def before?(Resource.Transformers.CachePrimaryKey), do: true
   def before?(Resource.Transformers.DefaultAccept), do: true
   def before?(_), do: false
@@ -36,7 +35,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
           :ok | {:ok, map} | {:error, term} | {:warn, map, String.t() | [String.t()]} | :halt
   def transform(dsl_state) do
     with {:ok, dsl_state} <- maybe_set_domain(dsl_state, :token),
-         {:ok, dsl_state} <- maybe_add_default_create(dsl_state),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, :jti, :string,
              primary_key?: true,
@@ -197,10 +195,10 @@ defmodule AshAuthentication.TokenResource.Transformer do
            The token resource must only have `:jti` as a primary key attribute.
            Found: #{inspect(fields)}
 
-           You are likely seeing this as a by-product of an error with the generators 
+           You are likely seeing this as a by-product of an error with the generators
            that added a `uuid_primary_key :id` to the token resource.
 
-           This is **not a security issue**, because previous versions of AshAuthentication 
+           This is **not a security issue**, because previous versions of AshAuthentication
            checked for revocation tokens as a separate check. In the future, however,
            we will not perform this check, which means that all tokens must be guaranteed
            to be unique on `jti`.
@@ -222,7 +220,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
                    SELECT DISTINCT ON (t.jti) t.id
                    FROM tokens t
                    JOIN duplicate_tokens d ON t.jti = d.jti
-                   WHERE t.purpose = 'revocation' 
+                   WHERE t.purpose = 'revocation'
                ),
                other_tokens AS (
                    SELECT t.*
@@ -236,19 +234,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
            """
          )}
     end
-  end
-
-  defp maybe_add_default_create(dsl_state) do
-    defaults =
-      dsl_state
-      |> Transformer.get_option([:actions], :defaults, [])
-      |> Enum.reject(fn
-        {:create, _} -> true
-        _ -> false
-      end)
-      |> Enum.concat([{:create, [:*]}])
-
-    {:ok, Transformer.set_option(dsl_state, [:actions], :defaults, defaults)}
   end
 
   defp validate_subject_field(dsl_state) do
