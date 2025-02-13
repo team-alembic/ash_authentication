@@ -358,21 +358,6 @@ if Code.ensure_loaded?(Igniter) do
             change AshAuthentication.TokenResource.RevokeTokenChange
           end
           """)
-          # |> Ash.Resource.Igniter.add_action(token_resource, """
-          # read :get_confirmation_changes do
-          #   argument :jti, :string, allow_nil?: false, sensitive?: true
-          #   get? true
-
-          #   prepare AshAuthentication.TokenResource.GetConfirmationChangesPreparation
-          # end
-          # """)
-          # |> Ash.Resource.Igniter.add_action(token_resource, """
-          # create :store_confirmation_changes do
-          #   accept [:extra_data, :purpose]
-          #   argument :token, :string, allow_nil?: false, sensitive?: true
-          #   change AshAuthentication.TokenResource.StoreConfirmationChangesChange
-          # end
-          # """)
           |> Ash.Resource.Igniter.add_action(token_resource, """
           create :store_token do
             description "Stores a token used for the provided purpose."

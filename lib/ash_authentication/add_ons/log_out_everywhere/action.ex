@@ -12,6 +12,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
   }
 
   alias AshAuthentication.Info
+  alias AshAuthentication.TokenResource.Info, as: TokenResourceInfo
 
   @doc false
   @impl true
@@ -46,35 +47,21 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
 
   defp revoke_all_tokens_for_subject(subject, strategy) do
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
-         {:ok, tokens} <- get_all_tokens_for_subject(token_resource, subject) do
-      tokens
-      |> Stream.map(
-        &%{
-          jti: &1.jti,
-          purpose: "revocation",
-          expires_at: &1.expires_at,
-          subject: subject
-        }
-      )
-      |> Ash.bulk_create(token_resource, :create,
-        context: %{private: %{ash_authentication?: true}},
+         {:ok, revoke_all_tokens_action_name} <-
+           TokenResourceInfo.token_revocation_revoke_all_tokens_action_name(token_resource) do
+      token_resource
+      |> Ash.bulk_update(revoke_all_tokens_action_name, %{subject: subject},
+        strategy: [:atomic, :atomic_batches, :stream],
         return_errors?: true,
-        upsert?: true,
-        upsert_fields: [:purpose]
+        stop_on_error?: true
       )
       |> case do
-        %{status: :success} -> :ok
-        %{errors: errors} -> {:error, errors}
+        %{status: :success} ->
+          :ok
+
+        %{errors: errors} ->
+          {:error, errors}
       end
     end
-  end
-
-  defp get_all_tokens_for_subject(token_resource, subject) do
-    token_resource
-    |> Query.new()
-    |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.do_filter(subject: subject)
-    |> Query.for_read(:read)
-    |> Ash.read()
   end
 end

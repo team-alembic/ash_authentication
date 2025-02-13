@@ -112,6 +112,15 @@ defmodule AshAuthentication.TokenResource.Transformer do
              &build_revoke_token_action(&1, revoke_token_action_name)
            ),
          :ok <- validate_revoke_token_action(dsl_state, revoke_token_action_name),
+         {:ok, revoke_all_tokens_action_name} <-
+           Info.token_revocation_revoke_all_tokens_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             revoke_all_tokens_action_name,
+             &build_revoke_all_tokens_action(&1, revoke_all_tokens_action_name)
+           ),
+         :ok <- validate_revoke_all_tokens_action(dsl_state, revoke_all_tokens_action_name),
          {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(dsl_state),
          {:ok, dsl_state} <-
            maybe_build_action(
@@ -475,6 +484,14 @@ defmodule AshAuthentication.TokenResource.Transformer do
     )
   end
 
+  defp validate_subject_argument(action) do
+    with :ok <-
+           validate_action_argument_option(action, :subject, :type, [Ash.Type.String, :string]),
+         :ok <- validate_action_argument_option(action, :subject, :allow_nil?, [false]) do
+      validate_action_argument_option(action, :subject, :sensitive?, [true])
+    end
+  end
+
   defp validate_token_argument(action) do
     with :ok <-
            validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
@@ -511,6 +528,37 @@ defmodule AshAuthentication.TokenResource.Transformer do
       arguments: arguments,
       changes: changes,
       upsert?: true,
+      accept: [:extra_data]
+    )
+  end
+
+  defp validate_revoke_all_tokens_action(dsl_state, revoke_all_tokens_action_name) do
+    with {:ok, action} <- validate_action_exists(dsl_state, revoke_all_tokens_action_name),
+         :ok <- validate_subject_argument(action) do
+      validate_action_has_change(action, TokenResource.RevokeAllTokensChange)
+    end
+  end
+
+  defp build_revoke_all_tokens_action(_dsl_state, action_name) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :update], :argument,
+        name: :subject,
+        type: :string,
+        allow_nil?: false,
+        sensitive?: true
+      )
+    ]
+
+    changes = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+        change: TokenResource.RevokeAllTokensChange
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :update,
+      name: action_name,
+      arguments: arguments,
+      changes: changes,
       accept: [:extra_data]
     )
   end
