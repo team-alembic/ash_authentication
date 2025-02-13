@@ -14,6 +14,11 @@ defmodule AshAuthentication.TokenResource do
           The Ash domain to use to access this resource.
           """
         ],
+        created_at_attribute_name: [
+          type: :atom,
+          doc: "The name of the `created_at` attribute on this resource.",
+          default: :created_at
+        ],
         expunge_expired_action_name: [
           type: :atom,
           doc: """
