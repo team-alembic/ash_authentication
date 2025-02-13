@@ -6,8 +6,9 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   configured.
   """
 
-  alias Ash.{Resource, Resource.Info}
+  alias Ash.Resource
   alias AshAuthentication.AddOn.LogOutEverywhere
+  alias AshAuthentication.AddOn.LogOutEverywhere.OnPasswordChange
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -59,17 +60,18 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   end
 
   defp build_log_out_action(dsl, strategy) do
-    with {:ok, id} <- get_primary_key(dsl),
-         {:ok, attribute} <- get_attribute(dsl, id),
-         {:ok, token_resource} <-
+    with {:ok, token_resource} <-
            AshAuthentication.Info.authentication_tokens_token_resource(dsl),
          {:ok, argument} <-
            Transformer.build_entity(Resource.Dsl, [:actions, :action], :argument,
              allow_nil?: false,
-             description: "The identifier for the user to log out",
+             description: "The user to log out",
              name: strategy.argument_name,
              public?: true,
-             type: attribute.type
+             type: :struct,
+             constraints: [
+               instance_of: Transformer.get_persisted(dsl, :module)
+             ]
            ) do
       Transformer.build_entity(Resource.Dsl, [:actions], :action,
         arguments: [argument],
@@ -81,9 +83,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   end
 
   defp validate_log_out_action(dsl, strategy) do
-    with {:ok, id} <- get_primary_key(dsl),
-         {:ok, attribute} <- get_attribute(dsl, id),
-         {:ok, action} <- validate_action_exists(dsl, strategy.action_name),
+    with {:ok, action} <- validate_action_exists(dsl, strategy.action_name),
          :ok <- validate_action_option(action, :type, [:action]),
          :ok <- validate_action_option(action, :returns, [nil]),
          :ok <-
@@ -93,46 +93,10 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
            ]),
          :ok <- validate_action_has_argument(action, strategy.argument_name),
          :ok <-
-           validate_action_argument_option(action, strategy.argument_name, :type, [attribute.type]) do
+           validate_action_argument_option(action, strategy.argument_name, :type, [
+             Ash.Type.Struct
+           ]) do
       validate_action_argument_option(action, strategy.argument_name, :allow_nil?, [false])
-    end
-  end
-
-  defp get_primary_key(dsl) do
-    case Info.primary_key(dsl) do
-      [id] ->
-        {:ok, id}
-
-      [] ->
-        {:error,
-         DslError.exception(
-           module: Transformer.get_persisted(dsl, :module),
-           path: [:authentication, :add_ons, :log_out_everywhere],
-           message: "The log-out-everywhere add-on requires that your resource has a primary key"
-         )}
-
-      _ ->
-        {:error,
-         DslError.exception(
-           module: Transformer.get_persisted(dsl, :module),
-           path: [:authentication, :add_ons, :log_out_everywhere],
-           message: "The log-out-everywhere add-on does not support composite primary keys"
-         )}
-    end
-  end
-
-  defp get_attribute(dsl, name) do
-    case Info.attribute(dsl, name) do
-      nil ->
-        {:error,
-         DslError.exception(
-           module: Transformer.get_persisted(dsl, :module),
-           path: [:authentication, :add_ons, :log_out_everywhere],
-           message: "Unable to find the primary key attribute"
-         )}
-
-      attribute when is_struct(attribute) ->
-        {:ok, attribute}
     end
   end
 
@@ -160,7 +124,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
 
   defp maybe_build_password_change_change(dsl, hashed_password_field) do
     dsl
-    |> matching_changes(__MODULE__.OnPasswordChange,
+    |> matching_changes(OnPasswordChange,
       on: [:update],
       where: [{Ash.Resource.Validation.Changing, [field: hashed_password_field]}]
     )
@@ -173,7 +137,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   defp build_password_change_change(dsl, hashed_password_field) do
     with {:ok, change} <-
            Transformer.build_entity(Resource.Dsl, [:changes], :change,
-             change: {__MODULE__.OnPasswordChange, []},
+             change: {OnPasswordChange, []},
              on: [:update],
              where: [{Ash.Resource.Validation.Changing, [field: hashed_password_field]}]
            ) do

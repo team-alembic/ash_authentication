@@ -32,9 +32,9 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Dsl do
         argument_name: [
           type: :atom,
           required: false,
-          default: :user_id,
+          default: :user,
           doc: """
-          The name of the user ID argument to the `:log_out_everywhere` action.
+          The name of the user argument to the `:log_out_everywhere` action.
           """
         ],
         apply_on_password_change?: [

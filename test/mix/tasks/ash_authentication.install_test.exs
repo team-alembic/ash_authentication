@@ -82,11 +82,18 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
       end
 
       authentication do
+        add_ons do
+          log_out_everywhere do
+            apply_on_password_change?(true)
+          end
+        end
+
         tokens do
           enabled?(true)
           token_resource(Test.Accounts.Token)
           signing_secret(Test.Secrets)
           store_all_tokens?(true)
+          require_token_presence_for_authentication?(true)
         end
       end
 
@@ -220,11 +227,11 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
           change(filter(expr(expires_at < now())))
         end
 
-        update :revoke_all_tokens do
-          description("Revokes all tokens for a specific subject.")
+        update :revoke_all_stored_for_subject do
+          description("Revokes all stored tokens for a specific subject.")
           accept([:extra_data])
-          argument(:subject, :string, allow_nil?: false, public?: true)
-          change(AshAuthentication.TokenResource.RevokeAllTokensChange)
+          argument(:subject, :string, allow_nil?: false, sensitive?: true)
+          change(AshAuthentication.TokenResource.RevokeAllStoredForSubjectChange)
         end
       end
     end

@@ -32,7 +32,7 @@ if Code.ensure_loaded?(Igniter) do
             Igniter.t(),
             Ash.Resource.t(),
             type :: atom,
-            name :: atom,
+            name :: atom | nil,
             contents :: String.t()
           ) :: Igniter.t()
     def add_new_add_on(igniter, resource, type, name, contents) do
@@ -92,7 +92,7 @@ if Code.ensure_loaded?(Igniter) do
                  zipper,
                  constructor,
                  [1, 2],
-                 &Igniter.Code.Function.argument_equals?(&1, 0, name)
+                 &add_on_matches?(&1, name)
                ) do
           {:ok, true}
         else
@@ -107,6 +107,14 @@ if Code.ensure_loaded?(Igniter) do
         {:error, igniter} ->
           {igniter, false}
       end
+    end
+
+    defp add_on_matches?(zipper, nil) do
+      Igniter.Code.Function.move_to_nth_argument(zipper, 1) == :error
+    end
+
+    defp add_on_matches?(zipper, name) do
+      Igniter.Code.Function.argument_equals?(zipper, 0, name)
     end
 
     @doc "Adds a new strategy to the authentication.strategies section of a resource"

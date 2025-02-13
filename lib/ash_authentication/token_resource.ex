@@ -57,12 +57,12 @@ defmodule AshAuthentication.TokenResource do
               """,
               default: :revoke_token
             ],
-            revoke_all_tokens_action_name: [
+            revoke_all_stored_for_subject_action_name: [
               type: :atom,
               doc: """
-              The name of the action used to revoke all tokens for a given subject.
+              The name of the action used to revoke all stored tokens for a given subject.
               """,
-              default: :revoke_all_tokens
+              default: :revoke_all_stored_for_subject
             ],
             is_revoked_action_name: [
               type: :atom,

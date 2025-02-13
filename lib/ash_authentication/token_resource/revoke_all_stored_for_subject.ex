@@ -1,4 +1,4 @@
-defmodule AshAuthentication.TokenResource.RevokeAllTokensChange do
+defmodule AshAuthentication.TokenResource.RevokeAllStoredForSubjectChange do
   @moduledoc """
   Updates all tokens for a given subject to have the purpose revocation
   """

@@ -4,14 +4,9 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
   """
   use Ash.Resource.Actions.Implementation
 
-  alias Ash.{
-    ActionInput,
-    Error.Framework.AssumptionFailed,
-    Query,
-    Resource
-  }
-
+  alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.Info
+
   alias AshAuthentication.TokenResource.Info, as: TokenResourceInfo
 
   @doc false
@@ -28,30 +23,21 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
   end
 
   defp really_run_action(input, strategy) do
-    with {:ok, user_id} <- ActionInput.fetch_argument(input, strategy.argument_name),
-         {:ok, user} <- get_user_by_id(user_id, strategy) do
-      subject = AshAuthentication.user_to_subject(user)
-      revoke_all_tokens_for_subject(subject, strategy)
-    end
-  end
-
-  defp get_user_by_id(user_id, strategy) do
-    with [id] <- Resource.Info.primary_key(strategy.resource) do
-      strategy.resource
-      |> Query.new()
-      |> Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Query.do_filter([{id, user_id}])
-      |> Ash.read_one()
-    end
+    user = Map.fetch!(input.arguments, strategy.argument_name)
+    subject = AshAuthentication.user_to_subject(user)
+    revoke_all_tokens_for_subject(subject, strategy)
   end
 
   defp revoke_all_tokens_for_subject(subject, strategy) do
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
          {:ok, revoke_all_tokens_action_name} <-
-           TokenResourceInfo.token_revocation_revoke_all_tokens_action_name(token_resource) do
+           TokenResourceInfo.token_revocation_revoke_all_stored_for_subject_action_name(
+             token_resource
+           ) do
       token_resource
       |> Ash.bulk_update(revoke_all_tokens_action_name, %{subject: subject},
         strategy: [:atomic, :atomic_batches, :stream],
+        context: %{private: %{ash_authentication?: true}},
         return_errors?: true,
         stop_on_error?: true
       )
