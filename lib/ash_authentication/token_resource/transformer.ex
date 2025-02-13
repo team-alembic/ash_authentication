@@ -246,9 +246,8 @@ defmodule AshAuthentication.TokenResource.Transformer do
   defp validate_subject_field(dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, :subject),
-         :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
-         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
-      validate_attribute_option(attribute, resource, :public?, [true])
+         :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]) do
+      validate_attribute_option(attribute, resource, :writable?, [true])
     end
   end
 
@@ -597,9 +596,8 @@ defmodule AshAuthentication.TokenResource.Transformer do
          {:ok, attribute} <- find_attribute(dsl_state, :expires_at),
          :ok <-
            validate_attribute_option(attribute, resource, :type, [Type.UtcDatetime, :utc_datetime]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]),
-         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
-      validate_attribute_option(attribute, resource, :public?, [true])
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [false]) do
+      validate_attribute_option(attribute, resource, :writable?, [true])
     end
   end
 
