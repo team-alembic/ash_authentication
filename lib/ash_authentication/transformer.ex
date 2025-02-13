@@ -71,6 +71,7 @@ defmodule AshAuthentication.Transformer do
       _ ->
         {:error,
          DslError.exception(
+           module: Transformer.get_persisted(dsl_state, :module),
            path: [:authentication, :tokens],
            message: "Invalid token lifetime"
          )}
@@ -126,6 +127,7 @@ defmodule AshAuthentication.Transformer do
       _ ->
         {:error,
          DslError.exception(
+           module: Transformer.get_persisted(dsl_state, :module),
            path: [:actions],
            message: "Expected resource to have either read action named `#{action_name}`"
          )}
@@ -136,17 +138,17 @@ defmodule AshAuthentication.Transformer do
     dsl_state
     |> Transformer.get_entities([:authentication, :add_ons])
     |> Enum.map(&Strategy.name/1)
-    |> validate_unique("add on")
+    |> validate_unique("add on", dsl_state)
   end
 
   defp validate_unique_strategy_names(dsl_state) do
     dsl_state
     |> Transformer.get_entities([:authentication, :strategies])
     |> Enum.map(&Strategy.name/1)
-    |> validate_unique("strategy")
+    |> validate_unique("strategy", dsl_state)
   end
 
-  defp validate_unique(strategy_names, descriptor) do
+  defp validate_unique(strategy_names, descriptor, dsl_state) do
     duplicates =
       strategy_names
       |> Enum.frequencies()
@@ -162,6 +164,7 @@ defmodule AshAuthentication.Transformer do
 
       {:error,
        DslError.exception(
+         module: Transformer.get_persisted(dsl_state, :module),
          path: [:authentication, :strategies],
          message: "Strategy names must be unique.\n\n#{errors}"
        )}

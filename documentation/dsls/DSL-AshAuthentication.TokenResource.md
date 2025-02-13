@@ -88,6 +88,7 @@ Configuration options for token revocation
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`revoke_token_action_name`](#token-revocation-revoke_token_action_name){: #token-revocation-revoke_token_action_name } | `atom` | `:revoke_token` | The name of the action used to revoke tokens. |
+| [`revoke_all_stored_for_subject_action_name`](#token-revocation-revoke_all_stored_for_subject_action_name){: #token-revocation-revoke_all_stored_for_subject_action_name } | `atom` | `:revoke_all_stored_for_subject` | The name of the action used to revoke all stored tokens for a given subject. |
 | [`is_revoked_action_name`](#token-revocation-is_revoked_action_name){: #token-revocation-is_revoked_action_name } | `atom` | `:revoked?` | The name of the action used to check if a token is revoked. |
 
 

@@ -188,6 +188,16 @@ if Code.ensure_loaded?(Igniter) do
             prepare AshAuthentication.Preparations.FilterBySubject
           end
           """)
+          |> AshAuthentication.Igniter.add_new_add_on(
+            user_resource,
+            nil,
+            :log_out_everywhere,
+            """
+            log_out_everywhere do
+              apply_on_password_change? true
+            end
+            """
+          )
           |> Ash.Resource.Igniter.add_bypass(
             user_resource,
             quote do
@@ -225,6 +235,11 @@ if Code.ensure_loaded?(Igniter) do
           |> Spark.Igniter.set_option(
             user_resource,
             [:authentication, :tokens, :store_all_tokens?],
+            true
+          )
+          |> Spark.Igniter.set_option(
+            user_resource,
+            [:authentication, :tokens, :require_token_presence_for_authentication?],
             true
           )
           |> Igniter.Project.Config.configure_new(
@@ -289,9 +304,9 @@ if Code.ensure_loaded?(Igniter) do
               "--attribute",
               "jti:string:primary_key:public:required:sensitive",
               "--attribute",
-              "subject:string:required",
+              "subject:string:required:public",
               "--attribute",
-              "expires_at:utc_datetime:required",
+              "expires_at:utc_datetime:required:public",
               "--attribute",
               "purpose:string:required:public",
               "--attribute",
@@ -357,21 +372,6 @@ if Code.ensure_loaded?(Igniter) do
             change AshAuthentication.TokenResource.RevokeTokenChange
           end
           """)
-          # |> Ash.Resource.Igniter.add_action(token_resource, """
-          # read :get_confirmation_changes do
-          #   argument :jti, :string, allow_nil?: false, sensitive?: true
-          #   get? true
-
-          #   prepare AshAuthentication.TokenResource.GetConfirmationChangesPreparation
-          # end
-          # """)
-          # |> Ash.Resource.Igniter.add_action(token_resource, """
-          # create :store_confirmation_changes do
-          #   accept [:extra_data, :purpose]
-          #   argument :token, :string, allow_nil?: false, sensitive?: true
-          #   change AshAuthentication.TokenResource.StoreConfirmationChangesChange
-          # end
-          # """)
           |> Ash.Resource.Igniter.add_action(token_resource, """
           create :store_token do
             description "Stores a token used for the provided purpose."
@@ -384,6 +384,14 @@ if Code.ensure_loaded?(Igniter) do
           destroy :expunge_expired do
             description "Deletes expired tokens."
             change filter(expr(expires_at < now()))
+          end
+          """)
+          |> Ash.Resource.Igniter.add_action(token_resource, """
+          update :revoke_all_stored_for_subject do
+            description "Revokes all stored tokens for a specific subject."
+            accept [:extra_data]
+            argument :subject, :string, allow_nil?: false, sensitive?: true
+            change AshAuthentication.TokenResource.RevokeAllStoredForSubjectChange
           end
           """)
       end
