@@ -87,6 +87,7 @@ spark_locals_without_parens = [
   require_token_presence_for_authentication?: 1,
   resettable: 0,
   resettable: 1,
+  revoke_all_tokens_action_name: 1,
   revoke_token_action_name: 1,
   select_for_senders: 1,
   sender: 1,
