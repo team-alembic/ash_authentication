@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.5.1](https://github.com/team-alembic/ash_authentication/compare/v4.5.0...v4.5.1) (2025-02-14)
+
+
+
+
+### Improvements:
+
+* note on token error about upgrading ash_postgres
+
 ## [v4.5.0](https://github.com/team-alembic/ash_authentication/compare/v4.4.9...v4.5.0) (2025-02-13)
 
 
