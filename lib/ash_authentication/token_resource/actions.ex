@@ -8,6 +8,8 @@ defmodule AshAuthentication.TokenResource.Actions do
 
   import AshAuthentication.Utils
 
+  require Logger
+
   @doc false
   @spec read_expired(Resource.t(), keyword) :: {:ok, [Resource.record()]} | {:error, any}
   def read_expired(resource, opts \\ []) do
