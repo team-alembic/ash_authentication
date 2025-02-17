@@ -7,12 +7,13 @@ defmodule AshAuthentication.TokenResource.IsRevoked do
   alias AshAuthentication.{Errors.InvalidToken, Jwt}
 
   @impl true
-  def run(%{resource: resource, arguments: %{jti: jti}}, _, _) when is_binary(jti) do
+  def run(%{resource: resource, arguments: %{jti: jti}}, _, context) when is_binary(jti) do
     resource
     |> Ash.Query.do_filter(purpose: "revocation", jti: jti)
     |> Ash.Query.set_context(%{
       private: %{ash_authentication?: true}
     })
+    |> Ash.Query.set_tenant(context.tenant)
     |> Ash.exists()
   end
 
