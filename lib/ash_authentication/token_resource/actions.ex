@@ -81,10 +81,25 @@ defmodule AshAuthentication.TokenResource.Actions do
             %{"token" => token},
             Keyword.put(opts, :domain, domain)
           )
+          |> Ash.ActionInput.set_context(%{
+            private: %{
+              ash_authentication?: true
+            }
+          })
           |> Ash.run_action()
           |> case do
-            {:ok, value} -> value
-            _ -> false
+            {:ok, value} ->
+              value
+
+            {:error, error} ->
+              Logger.error("""
+              Error while checking if token is revoked.
+              We must assume that it is revoked for security purposes.
+
+              #{Exception.format(:error, error)}
+              """)
+
+              true
           end
 
         :read ->
@@ -102,9 +117,21 @@ defmodule AshAuthentication.TokenResource.Actions do
           )
           |> Ash.read()
           |> case do
-            {:ok, []} -> false
-            {:ok, _} -> true
-            _ -> false
+            {:ok, []} ->
+              false
+
+            {:ok, _} ->
+              true
+
+            {:error, error} ->
+              Logger.error("""
+              Error while checking if token is revoked.
+              We must assume that it is revoked for security purposes.
+
+              #{Exception.format(:error, error)}
+              """)
+
+              true
           end
       end
     end
