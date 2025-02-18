@@ -49,6 +49,18 @@ defmodule AshAuthentication.Jwt.ConfigTest do
     end
   end
 
+  describe "validate_tenant/2" do
+    test "when the provided tenant matches the expected tenant it is valid" do
+      assert Config.validate_tenant("banana", "banana")
+    end
+
+    test "when the provided tenant does not match the expected tenant, it is invalid" do
+      refute Config.validate_tenant("apple", "banana")
+      refute Config.validate_tenant(nil, "banana")
+      refute Config.validate_tenant("apple", nil)
+    end
+  end
+
   describe "validate_jti/3" do
     test "is true when the token has not been revoked" do
       TokenResource

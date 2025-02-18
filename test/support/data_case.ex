@@ -116,4 +116,30 @@ defmodule DataCase do
       Ash.Resource.put_metadata(user, field, value)
     end)
   end
+
+  @doc "User with multitenancy enabled factory"
+  @spec build_user_with_multitenancy(keyword) ::
+          Example.UserWithMultitenancy.t() | no_return
+  def build_user_with_multitenancy(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+      |> Map.put_new(:tenant, Faker.Lorem.word())
+
+    user =
+      Example.UserWithMultitenancy
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!(tenant: attrs[:tenant])
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
 end

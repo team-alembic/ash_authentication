@@ -29,7 +29,7 @@ defmodule AshAuthentication.JwtTest do
     end
   end
 
-  describe "token_for_user/1" do
+  describe "token_for_user/3" do
     test "correctly generates and signs tokens" do
       user = build_user()
       assert {:ok, token, claims} = Jwt.token_for_user(user)
@@ -44,6 +44,18 @@ defmodule AshAuthentication.JwtTest do
       assert claims["jti"] =~ ~r/^[0-9a-z]+$/
       assert_in_delta(claims["nbf"], now, 1.5)
       assert claims["sub"] == "user?id=#{user.id}"
+    end
+
+    test "it encodes the tenant when passed one" do
+      user = build_user()
+      assert {:ok, _token, claims} = Jwt.token_for_user(user, %{}, tenant: "banana")
+      assert claims["tenant"] == "banana"
+    end
+
+    test "it doesn't encode the tenant otherwise" do
+      user = build_user()
+      assert {:ok, _token, claims} = Jwt.token_for_user(user, %{})
+      refute is_map_key(claims, "tenant")
     end
   end
 
