@@ -123,19 +123,23 @@ defmodule DataCase do
   def build_user_with_multitenancy(attrs \\ []) do
     password = password()
 
+    {tenant, attrs} =
+      Keyword.pop_lazy(attrs, :organisation_id, fn ->
+        Ash.create!(ExampleMultiTenant.Organisation, %{name: "testing"}, action: :create).id
+      end)
+
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:username, Faker.Internet.user_name())
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
-      |> Map.put_new(:tenant, Faker.Lorem.word())
 
     user =
       ExampleMultiTenant.User
       |> Ash.Changeset.new()
       |> Ash.Changeset.for_create(:register_with_password, attrs)
-      |> Ash.create!(tenant: attrs[:tenant])
+      |> Ash.create!(tenant: tenant)
 
     attrs
     |> Enum.reduce(user, fn {field, value}, user ->

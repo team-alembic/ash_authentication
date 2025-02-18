@@ -1,6 +1,6 @@
 defmodule AshAuthentication.JwtTest do
   @moduledoc false
-  use DataCase, async: true
+  use DataCase, async: false
   alias AshAuthentication.Jwt
 
   describe "default_algorithm/0" do
@@ -46,10 +46,17 @@ defmodule AshAuthentication.JwtTest do
       assert claims["sub"] == "user?id=#{user.id}"
     end
 
-    test "it encodes the tenant when passed one" do
-      user = build_user()
-      assert {:ok, _token, claims} = Jwt.token_for_user(user, %{}, tenant: "banana")
-      assert claims["tenant"] == "banana"
+    test "it encodes the tenant when passed one for a multitenant resource" do
+      user = build_user_with_multitenancy()
+      assert {:ok, _token, claims} = Jwt.token_for_user(user, %{})
+      assert claims["tenant"] == user.organisation_id
+    end
+
+    test "it encodes tenant as nil when not passed one for a multitenant resource" do
+      user = build_user_with_multitenancy(organisation_id: nil)
+      assert {:ok, _token, claims} = Jwt.token_for_user(user, %{})
+      assert Map.has_key?(claims, "tenant")
+      assert claims["tenant"] == nil
     end
 
     test "it doesn't encode the tenant otherwise" do

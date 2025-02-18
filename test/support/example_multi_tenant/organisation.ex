@@ -9,6 +9,10 @@ defmodule ExampleMultiTenant.Organisation do
     repo(Example.Repo)
   end
 
+  actions do
+    defaults [:read, create: :*]
+  end
+
   multitenancy do
     strategy :attribute
     attribute :id

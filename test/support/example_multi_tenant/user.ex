@@ -257,8 +257,16 @@ defmodule ExampleMultiTenant.User do
     identity(:username, [:username])
   end
 
+  multitenancy do
+    strategy :attribute
+    attribute :organisation_id
+    global? true
+  end
+
   relationships do
-    belongs_to :organisation, ExampleMultiTenant.Organisation
+    belongs_to :organisation, ExampleMultiTenant.Organisation do
+      public? true
+    end
   end
 
   def get_config(path, _resource) do

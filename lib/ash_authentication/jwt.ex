@@ -98,14 +98,13 @@ defmodule AshAuthentication.Jwt do
       extra_claims
       |> Map.put("sub", subject)
 
-    {extra_claims, action_opts} =
+    action_opts =
       case Map.fetch(user.__metadata__, :tenant) do
         {:ok, tenant} ->
-          tenant = to_string(Ash.ToTenant.to_tenant(tenant, resource))
-          {Map.put(extra_claims, "tenant", tenant), Keyword.put(opts, :tenant, tenant)}
+          Keyword.put(opts, :tenant, tenant)
 
         :error ->
-          {extra_claims, opts}
+          opts
       end
 
     default_claims = Config.default_claims(resource, action_opts)

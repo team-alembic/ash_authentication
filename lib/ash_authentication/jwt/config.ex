@@ -48,18 +48,20 @@ defmodule AshAuthentication.Jwt.Config do
       &Joken.generate_jti/0,
       &validate_jti(&1, &2, &3, opts)
     )
-    |> maybe_add_tenant_claim(opts[:tenant])
+    |> maybe_add_tenant_claim(resource, opts[:tenant])
   end
 
-  defp maybe_add_tenant_claim(cfg, nil), do: cfg
-
-  defp maybe_add_tenant_claim(cfg, tenant) do
-    Config.add_claim(
-      cfg,
-      "tenant",
-      fn -> tenant end,
-      &validate_tenant(&1, tenant)
-    )
+  defp maybe_add_tenant_claim(cfg, resource, tenant) do
+    if Ash.Resource.Info.multitenancy_strategy(resource) do
+      Config.add_claim(
+        cfg,
+        "tenant",
+        fn -> tenant end,
+        &validate_tenant(&1, tenant)
+      )
+    else
+      cfg
+    end
   end
 
   @doc """
