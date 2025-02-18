@@ -48,6 +48,20 @@ defmodule AshAuthentication.Jwt.Config do
       &Joken.generate_jti/0,
       &validate_jti(&1, &2, &3, opts)
     )
+    |> maybe_add_tenant_claim(resource, opts[:tenant])
+  end
+
+  defp maybe_add_tenant_claim(cfg, resource, tenant) do
+    if Ash.Resource.Info.multitenancy_strategy(resource) do
+      Config.add_claim(
+        cfg,
+        "tenant",
+        fn -> tenant end,
+        &validate_tenant(&1, tenant)
+      )
+    else
+      cfg
+    end
   end
 
   @doc """
@@ -76,6 +90,12 @@ defmodule AshAuthentication.Jwt.Config do
   def generate_audience(vsn) do
     "~> #{vsn.major}.#{vsn.minor}"
   end
+
+  @doc """
+  Validate that the "tenant" claim matches the provided tenant option.
+  """
+  @spec validate_tenant(nil | String.t(), nil | String) :: boolean()
+  def validate_tenant(maybe_tenant, tenant), do: maybe_tenant == tenant
 
   @doc """
   The validation function used to validate the "aud" claim.

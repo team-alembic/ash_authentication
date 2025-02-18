@@ -22,6 +22,8 @@ defmodule ExampleMultiTenant.UserWithRegisterMagicLink do
   end
 
   authentication do
+    subject_name :multitenant_user_with_register_magic_link
+
     select_for_senders([:email])
 
     tokens do
