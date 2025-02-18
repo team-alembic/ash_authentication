@@ -13,7 +13,7 @@ config :git_ops,
 
 config :ash_authentication, DevServer, start?: true, port: 4000
 
-config :ash_authentication, ecto_repos: [Example.Repo], ash_domains: [Example]
+config :ash_authentication, ecto_repos: [Example.Repo], ash_domains: [Example, ExampleMultiTenant]
 
 config :ash_authentication, Example.Repo,
   username: "postgres",
