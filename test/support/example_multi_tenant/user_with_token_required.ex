@@ -24,6 +24,8 @@ defmodule ExampleMultiTenant.UserWithTokenRequired do
   end
 
   authentication do
+    subject_name :multitenant_user_with_token_required
+
     tokens do
       enabled? true
       store_all_tokens? true

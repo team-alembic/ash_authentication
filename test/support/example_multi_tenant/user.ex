@@ -139,6 +139,7 @@ defmodule ExampleMultiTenant.User do
 
   authentication do
     select_for_senders([:username])
+    subject_name :multitenant_user
 
     tokens do
       enabled? true

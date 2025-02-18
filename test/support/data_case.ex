@@ -119,7 +119,7 @@ defmodule DataCase do
 
   @doc "User with multitenancy enabled factory"
   @spec build_user_with_multitenancy(keyword) ::
-          Example.UserWithMultitenancy.t() | no_return
+          ExampleMultiTenant.User.t() | no_return
   def build_user_with_multitenancy(attrs \\ []) do
     password = password()
 
@@ -132,7 +132,7 @@ defmodule DataCase do
       |> Map.put_new(:tenant, Faker.Lorem.word())
 
     user =
-      Example.UserWithMultitenancy
+      ExampleMultiTenant.User
       |> Ash.Changeset.new()
       |> Ash.Changeset.for_create(:register_with_password, attrs)
       |> Ash.create!(tenant: attrs[:tenant])
