@@ -28,3 +28,12 @@ ash_authentication-*.tar
 .env*
 
 priv/plts
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
