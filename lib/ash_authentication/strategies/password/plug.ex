@@ -49,6 +49,7 @@ defmodule AshAuthentication.Strategy.Password.Plug do
   @doc "Handle a reset request"
   @spec reset(Conn.t(), Password.t()) :: Conn.t()
   def reset(conn, strategy) do
+    get_tenant(conn)
     params = subject_params(conn, strategy)
     opts = opts(conn)
     result = Strategy.action(strategy, :reset, params, opts)

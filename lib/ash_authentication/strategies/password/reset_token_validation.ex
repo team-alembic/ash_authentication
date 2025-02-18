@@ -10,10 +10,11 @@ defmodule AshAuthentication.Strategy.Password.ResetTokenValidation do
   @doc false
   @impl true
   @spec validate(Changeset.t(), keyword, Validation.Context.t()) :: :ok | {:error, Exception.t()}
-  def validate(changeset, _, _) do
+  def validate(changeset, _, context) do
     with {:ok, strategy} <- Info.strategy_for_action(changeset.resource, changeset.action.name),
          token when is_binary(token) <- Changeset.get_argument(changeset, :reset_token),
-         {:ok, %{"act" => token_action}, _} <- Jwt.verify(token, changeset.resource),
+         {:ok, %{"act" => token_action}, _} <-
+           Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context)),
          {:ok, resettable} <- Map.fetch(strategy, :resettable),
          true <- to_string(resettable.password_reset_action_name) == token_action do
       :ok

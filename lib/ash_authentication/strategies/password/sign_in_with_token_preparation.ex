@@ -18,15 +18,16 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
 
     query
     |> check_sign_in_token_configuration(strategy)
-    |> Query.before_action(&verify_token_and_constrain_query(&1, strategy))
-    |> Query.after_action(&revoke_sign_in_token(&1, &2, strategy))
-    |> Query.after_action(&verify_result(&1, &2, strategy))
+    |> Query.before_action(&verify_token_and_constrain_query(&1, strategy, context))
+    |> Query.after_action(&revoke_sign_in_token(&1, &2, strategy, context))
+    |> Query.after_action(&verify_result(&1, &2, strategy, context))
   end
 
-  defp verify_token_and_constrain_query(query, strategy) do
+  defp verify_token_and_constrain_query(query, strategy, context) do
     token = Query.get_argument(query, :token)
 
-    with {:ok, claims, _} <- Jwt.verify(token, strategy.resource),
+    with {:ok, claims, _} <-
+           Jwt.verify(token, strategy.resource, Ash.Context.to_opts(context)),
          :ok <- verify_sign_in_token_purpose(claims),
          {:ok, primary_keys} <- extract_primary_keys_from_subject(claims, strategy.resource) do
       query
@@ -65,11 +66,11 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     end
   end
 
-  defp revoke_sign_in_token(query, [user], strategy) do
+  defp revoke_sign_in_token(query, [user], strategy, context) do
     token_resource = Info.authentication_tokens_token_resource!(strategy.resource)
     token = Query.get_argument(query, :token)
 
-    case TokenResource.revoke(token_resource, token) do
+    case TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context)) do
       :ok ->
         {:ok, [user]}
 
@@ -83,8 +84,8 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     end
   end
 
-  defp verify_result(query, [user], strategy) do
-    case Jwt.token_for_user(user) do
+  defp verify_result(query, [user], strategy, context) do
+    case Jwt.token_for_user(user, %{}, Ash.Context.to_opts(context)) do
       {:ok, token, _claims} ->
         {:ok, [Resource.put_metadata(user, :token, token)]}
 
@@ -103,7 +104,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     end
   end
 
-  defp verify_result(query, [], strategy) do
+  defp verify_result(query, [], strategy, _context) do
     {:error,
      AuthenticationFailed.exception(
        strategy: strategy,
@@ -117,7 +118,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
      )}
   end
 
-  defp verify_result(query, users, strategy) when is_list(users) do
+  defp verify_result(query, users, strategy, _context) when is_list(users) do
     {:error,
      AuthenticationFailed.exception(
        strategy: strategy,

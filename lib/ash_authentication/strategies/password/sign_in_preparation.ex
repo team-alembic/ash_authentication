@@ -42,7 +42,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
       query, [record] when is_binary(:erlang.map_get(strategy.hashed_password_field, record)) ->
         password = Query.get_argument(query, strategy.password_field)
 
-        check_password_and_confirmation(strategy, password, record, query)
+        check_password_and_confirmation(strategy, password, record, query, context)
 
       query, [] ->
         strategy.hash_provider.simulate()
@@ -76,7 +76,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     end)
   end
 
-  defp check_password_and_confirmation(strategy, password, record, query) do
+  defp check_password_and_confirmation(strategy, password, record, query, context) do
     if strategy.hash_provider.valid?(
          password,
          Map.get(record, strategy.hashed_password_field)
@@ -84,7 +84,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
       if user_confirmed_if_needed(record, strategy) do
         token_type = query.context[:token_type] || :user
 
-        {:ok, [maybe_generate_token(token_type, record, strategy)]}
+        {:ok, [maybe_generate_token(token_type, record, strategy, Ash.Context.to_opts(context))]}
       else
         {:error,
          AuthenticationFailed.exception(
@@ -130,26 +130,30 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     query
   end
 
-  defp maybe_generate_token(purpose, record, strategy) when purpose in [:user, :sign_in] do
+  defp maybe_generate_token(purpose, record, strategy, opts) when purpose in [:user, :sign_in] do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
-      generate_token(purpose, record, strategy)
+      generate_token(purpose, record, strategy, opts)
     else
       record
     end
   end
 
-  defp generate_token(:sign_in, record, strategy) when strategy.sign_in_tokens_enabled? do
+  defp generate_token(:sign_in, record, strategy, opts) when strategy.sign_in_tokens_enabled? do
     {:ok, token, _claims} =
-      Jwt.token_for_user(record, %{"purpose" => "sign_in"},
-        token_lifetime: strategy.sign_in_token_lifetime,
-        purpose: :sign_in
+      Jwt.token_for_user(
+        record,
+        %{"purpose" => "sign_in"},
+        Keyword.merge(opts,
+          token_lifetime: strategy.sign_in_token_lifetime,
+          purpose: :sign_in
+        )
       )
 
     Ash.Resource.put_metadata(record, :token, token)
   end
 
-  defp generate_token(purpose, record, _strategy) do
-    {:ok, token, _claims} = Jwt.token_for_user(record, %{"purpose" => to_string(purpose)})
+  defp generate_token(purpose, record, _strategy, opts) do
+    {:ok, token, _claims} = Jwt.token_for_user(record, %{"purpose" => to_string(purpose)}, opts)
 
     Ash.Resource.put_metadata(record, :token, token)
   end

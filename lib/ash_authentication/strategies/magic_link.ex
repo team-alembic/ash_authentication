@@ -149,8 +149,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
 
   Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
   """
-  @spec request_token_for(t, Resource.record()) :: {:ok, binary} | :error
-  def request_token_for(strategy, user)
+  @spec request_token_for(t, Resource.record(), opts :: Keyword.t()) :: {:ok, binary} | :error
+  def request_token_for(strategy, user, opts \\ [])
       when is_struct(strategy, __MODULE__) and is_struct(user, strategy.resource) do
     case Jwt.token_for_user(
            user,
@@ -158,8 +158,10 @@ defmodule AshAuthentication.Strategy.MagicLink do
              "act" => strategy.sign_in_action_name,
              "identity" => Map.get(user, strategy.identity_field)
            },
-           token_lifetime: strategy.token_lifetime,
-           purpose: :magic_link
+           Keyword.merge(opts,
+             token_lifetime: strategy.token_lifetime,
+             purpose: :magic_link
+           )
          ) do
       {:ok, token, _claims} -> {:ok, token}
       :error -> :error

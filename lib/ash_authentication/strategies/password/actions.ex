@@ -138,10 +138,14 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.for_read(strategy.sign_in_with_token_action_name, %{
-      "token" => params["token"] || params[:token]
-    })
-    |> Ash.read(options)
+    |> Query.for_read(
+      strategy.sign_in_with_token_action_name,
+      %{
+        "token" => params["token"] || params[:token]
+      },
+      options
+    )
+    |> Ash.read()
     |> case do
       {:ok, [user]} ->
         check_user(user, strategy)
@@ -281,7 +285,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         options
       ) do
     with {:ok, token} <- Map.fetch(params, "reset_token"),
-         {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, strategy.resource),
+         {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, strategy.resource, options),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, resource, options) do
       options =
         options

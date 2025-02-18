@@ -184,20 +184,21 @@ defmodule AshAuthentication.Jwt do
   @doc """
   Given a token, verify it's signature and validate it's claims.
   """
-  @spec verify(token, Resource.t() | atom) :: {:ok, claims, Resource.t()} | :error
-  def verify(token, otp_app_or_resource) do
+  @spec verify(token, Resource.t() | atom, opts :: Keyword.t()) ::
+          {:ok, claims, Resource.t()} | :error
+  def verify(token, otp_app_or_resource, opts \\ []) do
     if function_exported?(otp_app_or_resource, :spark_is, 0) &&
          otp_app_or_resource.spark_is() == Resource do
-      verify_for_resource(token, otp_app_or_resource)
+      verify_for_resource(token, otp_app_or_resource, opts)
     else
-      verify_for_otp_app(token, otp_app_or_resource)
+      verify_for_otp_app(token, otp_app_or_resource, opts)
     end
   end
 
-  defp verify_for_resource(token, resource) do
+  defp verify_for_resource(token, resource, opts) do
     with signer <- Config.token_signer(resource),
          {:ok, claims} <- Joken.verify(token, signer),
-         defaults <- Config.default_claims(resource),
+         defaults <- Config.default_claims(resource, opts),
          {:ok, claims} <- Joken.validate(defaults, claims, resource) do
       {:ok, claims, resource}
     else
@@ -205,11 +206,11 @@ defmodule AshAuthentication.Jwt do
     end
   end
 
-  defp verify_for_otp_app(token, otp_app) do
+  defp verify_for_otp_app(token, otp_app, opts) do
     with {:ok, resource} <- token_to_resource(token, otp_app),
          signer <- Config.token_signer(resource),
          {:ok, claims} <- Joken.verify(token, signer),
-         defaults <- Config.default_claims(resource),
+         defaults <- Config.default_claims(resource, opts),
          {:ok, claims} <- Joken.validate(defaults, claims, resource) do
       {:ok, claims, resource}
     else

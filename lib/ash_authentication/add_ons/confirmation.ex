@@ -131,13 +131,22 @@ defmodule AshAuthentication.AddOn.Confirmation do
   This will generate a token with the `"act"` claim set to the confirmation
   action for the strategy, and the `"chg"` claim will contain any changes.
   """
-  @spec confirmation_token(Confirmation.t(), Changeset.t(), Resource.record()) ::
+  @spec confirmation_token(
+          Confirmation.t(),
+          Changeset.t(),
+          Resource.record(),
+          opts :: Keyword.t()
+        ) ::
           {:ok, String.t()} | :error | {:error, any}
-  def confirmation_token(strategy, changeset, user) do
+  def confirmation_token(strategy, changeset, user, opts \\ []) do
     claims = %{"act" => strategy.confirm_action_name}
 
     with {:ok, token, _claims} <-
-           Jwt.token_for_user(user, claims, token_lifetime: strategy.token_lifetime),
+           Jwt.token_for_user(
+             user,
+             claims,
+             Keyword.merge(opts, token_lifetime: strategy.token_lifetime)
+           ),
          :ok <- Confirmation.Actions.store_changes(strategy, token, changeset) do
       {:ok, token}
     end

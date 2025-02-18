@@ -16,10 +16,10 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   @doc false
   @impl true
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
-  def change(changeset, _opts, _context) do
+  def change(changeset, _opts, context) do
     case Info.strategy_for_action(changeset.resource, changeset.action.name) do
       {:ok, strategy} ->
-        do_change(changeset, strategy)
+        do_change(changeset, strategy, context)
 
       :error ->
         raise AssumptionFailed,
@@ -27,7 +27,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
     end
   end
 
-  defp do_change(changeset, strategy) do
+  defp do_change(changeset, strategy, context) do
     changeset
     |> Changeset.set_context(%{
       private: %{
@@ -38,7 +38,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
       with token when is_binary(token) <-
              Changeset.get_argument(changeset, :confirm),
            {:ok, %{"act" => action, "jti" => jti}, _} <-
-             Jwt.verify(token, changeset.resource),
+             Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context)),
            true <-
              to_string(strategy.confirm_action_name) == action,
            {:ok, changes} <- Actions.get_changes(strategy, jti) do

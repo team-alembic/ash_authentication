@@ -10,7 +10,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
   @doc false
   @impl true
   @spec change(Changeset.t(), keyword, Change.Context.t()) :: Changeset.t()
-  def change(changeset, _otps, _context) do
+  def change(changeset, _otps, context) do
     subject_name =
       changeset.resource
       |> Info.authentication_subject_name!()
@@ -33,7 +33,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
             :ok = TokenResource.revoke(token_resource, token)
           end
 
-          {:ok, token, _claims} = Jwt.token_for_user(record)
+          {:ok, token, _claims} = Jwt.token_for_user(record, %{}, Ash.Context.to_opts(context))
           {:ok, Resource.put_metadata(record, :token, token)}
 
         _changeset, {:error, error} ->

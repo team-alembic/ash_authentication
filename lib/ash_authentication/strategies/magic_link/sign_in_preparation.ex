@@ -12,7 +12,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
-  def prepare(query, _otps, _context) do
+  def prepare(query, _otps, context) do
     subject_name =
       query.resource
       |> Info.authentication_subject_name!()
@@ -21,7 +21,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
     with {:ok, strategy} <- Info.strategy_for_action(query.resource, query.action.name),
          token when is_binary(token) <- Query.get_argument(query, strategy.token_param_name),
          {:ok, %{"act" => token_action, "sub" => subject} = claims, _} <-
-           Jwt.verify(token, query.resource),
+           Jwt.verify(token, query.resource, Ash.Context.to_opts(context)),
          ^token_action <- to_string(strategy.sign_in_action_name),
          %URI{path: ^subject_name, query: primary_key} <- URI.parse(subject) do
       query
@@ -52,7 +52,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
             :ok = TokenResource.revoke(token_resource, token)
           end
 
-          {:ok, token, _claims} = Jwt.token_for_user(record)
+          {:ok, token, _claims} = Jwt.token_for_user(record, %{}, Ash.Context.to_opts(context))
           {:ok, [Resource.put_metadata(record, :token, token)]}
 
         _query, [] ->

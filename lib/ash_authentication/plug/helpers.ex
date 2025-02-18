@@ -65,6 +65,11 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec retrieve_from_session(Conn.t(), module, keyword) :: Conn.t()
   def retrieve_from_session(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
     otp_app
     |> AshAuthentication.authenticated_resources()
     |> Stream.map(
@@ -79,7 +84,7 @@ defmodule AshAuthentication.Plug.Helpers do
         with token when is_binary(token) <-
                Conn.get_session(conn, "#{options.subject_name}_token"),
              {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
-             when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app),
+             when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
              {:ok, [_]} <-
                TokenResource.Actions.get_token(
                  token_resource,
@@ -87,18 +92,13 @@ defmodule AshAuthentication.Plug.Helpers do
                    "jti" => jti,
                    "purpose" => "user"
                  },
-                 tenant: Ash.PlugHelpers.get_tenant(conn),
-                 context: Ash.PlugHelpers.get_context(conn) || %{}
+                 opts
                ),
              {:ok, user} <-
                AshAuthentication.subject_to_user(
                  subject,
                  resource,
-                 [
-                   tenant: Ash.PlugHelpers.get_tenant(conn),
-                   context: Ash.PlugHelpers.get_context(conn) || %{}
-                 ]
-                 |> Keyword.merge(opts)
+                 opts
                ) do
           Conn.assign(conn, current_subject_name, user)
         else
@@ -137,24 +137,25 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec retrieve_from_bearer(Conn.t(), module, keyword) :: Conn.t()
   def retrieve_from_bearer(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
     conn
     |> Conn.get_req_header("authorization")
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
-           when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app),
+           when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
            {:ok, token_record} <-
              validate_token(resource, jti),
            {:ok, user} <-
              AshAuthentication.subject_to_user(
                subject,
                resource,
-               [
-                 tenant: Ash.PlugHelpers.get_tenant(conn),
-                 context: Ash.PlugHelpers.get_context(conn) || %{}
-               ]
-               |> Keyword.merge(opts)
+               opts
              ),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do

@@ -46,14 +46,14 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
   def change(changeset, options, context) do
     case Info.find_strategy(changeset, context, options) do
       {:ok, strategy} ->
-        do_change(changeset, strategy)
+        do_change(changeset, strategy, context)
 
       :error ->
         changeset
     end
   end
 
-  defp do_change(changeset, strategy) do
+  defp do_change(changeset, strategy, context) do
     auto_confirm? = changeset.action.name in strategy.auto_confirm_actions
 
     changeset =
@@ -72,7 +72,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
       if auto_confirm? do
         changeset
       else
-        Ash.Changeset.before_action(changeset, &before_action(&1, strategy))
+        Ash.Changeset.before_action(changeset, &before_action(&1, strategy, context))
       end
     end)
   end
@@ -81,14 +81,14 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
   def atomic(changeset, opts, context) do
     case Info.find_strategy(changeset, context, opts) do
       {:ok, strategy} ->
-        atomic_confirmation(changeset, strategy)
+        atomic_confirmation(changeset, strategy, context)
 
       :error ->
         changeset
     end
   end
 
-  defp atomic_confirmation(changeset, strategy) do
+  defp atomic_confirmation(changeset, strategy, context) do
     auto_confirm? = changeset.action.name in strategy.auto_confirm_actions
 
     if auto_confirm? do
@@ -124,7 +124,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
         true ->
           {:ok,
-           maybe_perform_confirmation(changeset, strategy, changeset)
+           maybe_perform_confirmation(changeset, strategy, changeset, context)
            |> validate_identities(strategy, true)}
       end
     end
@@ -137,14 +137,14 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
       end)
   end
 
-  defp before_action(changeset, strategy) do
+  defp before_action(changeset, strategy, context) do
     changeset
     |> not_confirm_action(strategy)
     |> should_confirm_action_type(strategy)
     |> monitored_field_changing(strategy)
     |> changes_would_be_valid()
     |> maybe_inhibit_updates(strategy)
-    |> maybe_perform_confirmation(strategy, changeset)
+    |> maybe_perform_confirmation(strategy, changeset, context)
   end
 
   defp handle_upserts(
@@ -321,12 +321,12 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
     |> Ash.exists?(tenant: changeset.tenant)
   end
 
-  defp maybe_perform_confirmation(%Changeset{} = changeset, strategy, original_changeset) do
+  defp maybe_perform_confirmation(%Changeset{} = changeset, strategy, original_changeset, context) do
     changeset
     |> nil_confirmed_at_field(strategy)
     |> Changeset.after_action(fn _changeset, user ->
       strategy
-      |> Confirmation.confirmation_token(original_changeset, user)
+      |> Confirmation.confirmation_token(original_changeset, user, Ash.Context.to_opts(context))
       |> case do
         {:ok, token} ->
           {sender, send_opts} = strategy.sender
@@ -348,7 +348,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
     end)
   end
 
-  defp maybe_perform_confirmation(_changeset, _strategy, original_changeset),
+  defp maybe_perform_confirmation(_changeset, _strategy, original_changeset, _context),
     do: original_changeset
 
   defp nil_confirmed_at_field(changeset, strategy) do

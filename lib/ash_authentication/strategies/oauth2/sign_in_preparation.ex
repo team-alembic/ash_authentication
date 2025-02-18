@@ -18,7 +18,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
-  def prepare(query, _opts, _context) do
+  def prepare(query, _opts, context) do
     case Info.strategy_for_action(query.resource, query.action.name) do
       :error ->
         {:error,
@@ -37,7 +37,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
         |> Query.after_action(fn
           query, [user] ->
             with {:ok, user} <- maybe_update_identity(user, query, strategy) do
-              {:ok, [maybe_generate_token(user)]}
+              {:ok, [maybe_generate_token(user, context)]}
             end
 
           _, _ ->
@@ -77,9 +77,9 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
     end
   end
 
-  defp maybe_generate_token(user) do
+  defp maybe_generate_token(user, context) do
     if AshAuthentication.Info.authentication_tokens_enabled?(user.__struct__) do
-      {:ok, token, _claims} = Jwt.token_for_user(user)
+      {:ok, token, _claims} = Jwt.token_for_user(user, %{}, Ash.Context.to_opts(context))
       %{user | __metadata__: Map.put(user.__metadata__, :token, token)}
     else
       user
