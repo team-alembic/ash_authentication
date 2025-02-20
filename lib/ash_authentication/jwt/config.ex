@@ -52,6 +52,8 @@ defmodule AshAuthentication.Jwt.Config do
   end
 
   defp maybe_add_tenant_claim(cfg, resource, tenant) do
+    tenant = Ash.ToTenant.to_tenant(tenant, resource)
+
     if Ash.Resource.Info.multitenancy_strategy(resource) do
       Config.add_claim(
         cfg,
