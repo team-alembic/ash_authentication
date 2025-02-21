@@ -147,7 +147,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
              claims,
              Keyword.merge(opts, token_lifetime: strategy.token_lifetime)
            ),
-         :ok <- Confirmation.Actions.store_changes(strategy, token, changeset) do
+         :ok <- Confirmation.Actions.store_changes(strategy, token, changeset, opts) do
       {:ok, token}
     end
   end
