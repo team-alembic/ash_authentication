@@ -3,7 +3,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   The code interface for interacting with the token resource.
   """
 
-  alias Ash.{Changeset, DataLayer, Notifier, Query, Resource}
+  alias Ash.{Changeset, Query, Resource}
   alias AshAuthentication.{TokenResource, TokenResource.Info}
 
   import AshAuthentication.Utils
@@ -35,30 +35,45 @@ defmodule AshAuthentication.TokenResource.Actions do
   def expunge_expired(resource, opts \\ []) do
     expunge_expired_action_name = Info.token_expunge_expired_action_name!(resource)
 
-    resource
-    |> DataLayer.transaction(
-      fn -> expunge_inside_transaction(resource, expunge_expired_action_name, opts) end,
-      nil,
-      %{
-        type: :bulk_destroy,
-        metadata: %{
-          metadata: %{
-            resource: resource,
-            action: expunge_expired_action_name
-          }
-        }
-      }
-    )
-    |> case do
-      {:ok, {:ok, notifications}} ->
-        Notifier.notify(notifications)
-        :ok
+    with :ok <- assert_resource_has_extension(resource, TokenResource),
+         {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource) do
+      opts =
+        opts
+        |> Keyword.put_new_lazy(:domain, fn -> Info.token_domain!(resource) end)
 
-      {:ok, {:error, reason}} ->
-        {:error, reason}
+      authorize_with =
+        if Ash.DataLayer.data_layer_can?(resource, :expr_error) do
+          :error
+        else
+          :filter
+        end
 
-      {:error, reason} ->
-        {:error, reason}
+      resource
+      |> Query.new()
+      |> Query.set_context(%{private: %{ash_authentication?: true}})
+      |> Query.for_read(read_expired_action_name, %{}, opts)
+      |> Ash.bulk_destroy(
+        expunge_expired_action_name,
+        %{},
+        opts
+        |> Keyword.update(
+          :context,
+          %{private: %{ash_authentication?: true}},
+          &Ash.Helpers.deep_merge_maps(&1, %{private: %{ash_authentication?: true}})
+        )
+        |> Keyword.merge(
+          strategy: [:atomic, :atomic_batches, :stream],
+          return_errors?: true,
+          notify?: true,
+          return_records?: false,
+          return_notifications?: false,
+          authorize_with: authorize_with
+        )
+      )
+      |> case do
+        %{status: :success} -> :ok
+        %{errors: errors} -> {:error, Ash.Error.to_class(errors)}
+      end
     end
   end
 
@@ -319,29 +334,6 @@ defmodule AshAuthentication.TokenResource.Actions do
         ])
       )
       |> Ash.read()
-    end
-  end
-
-  defp expunge_inside_transaction(resource, expunge_expired_action_name, opts) do
-    with :ok <- assert_resource_has_extension(resource, TokenResource),
-         {:ok, read_expired_action_name} <- Info.token_read_expired_action_name(resource) do
-      opts =
-        opts
-        |> Keyword.put_new_lazy(:domain, fn -> Info.token_domain!(resource) end)
-
-      resource
-      |> Query.new()
-      |> Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Query.for_read(read_expired_action_name, %{}, opts)
-      |> Ash.bulk_destroy(
-        expunge_expired_action_name,
-        %{},
-        Keyword.put_new(opts, :strategy, [:atomic, :atomic_batches, :stream])
-      )
-      |> case do
-        %{status: :success, notifications: notifications} -> {:ok, notifications}
-        %{errors: errors} -> {:error, Ash.Error.to_class(errors)}
-      end
     end
   end
 end

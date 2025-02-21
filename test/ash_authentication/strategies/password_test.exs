@@ -34,7 +34,7 @@ defmodule AshAuthentication.Strategy.PasswordTest do
       user = build_user()
       subject = AshAuthentication.user_to_subject(user)
 
-      tokens = Example.Token |> Ash.read!() |> Enum.group_by(& &1.purpose)
+      tokens = Example.Token |> Ash.read!(authorize?: false) |> Enum.group_by(& &1.purpose)
       assert [%{subject: ^subject}] = tokens["user"]
 
       token_types = tokens |> Map.keys() |> MapSet.new()
@@ -45,7 +45,7 @@ defmodule AshAuthentication.Strategy.PasswordTest do
       user = build_user()
       subject = AshAuthentication.user_to_subject(user)
 
-      Example.Token |> Ash.bulk_destroy!(:destroy, %{})
+      Example.Token |> Ash.bulk_destroy!(:destroy, %{}, authorize?: false)
 
       strategy = AshAuthentication.Info.strategy!(User, :password)
 
@@ -60,7 +60,8 @@ defmodule AshAuthentication.Strategy.PasswordTest do
           context: [token_type: :sign_in]
         )
 
-      assert [%{subject: ^subject, purpose: "sign_in"}] = Example.Token |> Ash.read!()
+      assert [%{subject: ^subject, purpose: "sign_in"}] =
+               Example.Token |> Ash.read!(authorize?: false)
     end
 
     test "sign in tokens can only be used once" do

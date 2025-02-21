@@ -330,6 +330,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
       |> case do
         {:ok, token} ->
           {sender, send_opts} = strategy.sender
+
           send_opts
           |> Keyword.put(:tenant, context.tenant)
           |> Keyword.put(:changeset, original_changeset)
