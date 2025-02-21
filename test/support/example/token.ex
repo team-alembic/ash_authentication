@@ -3,11 +3,18 @@ defmodule Example.Token do
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAuthentication.TokenResource],
+    authorizers: [Ash.Policy.Authorizer],
     domain: Example
 
   postgres do
     table("tokens")
     repo(Example.Repo)
+  end
+
+  policies do
+    bypass always() do
+      authorize_if AshAuthentication.Checks.AshAuthenticationInteraction
+    end
   end
 
   actions do

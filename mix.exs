@@ -214,6 +214,7 @@ defmodule AshAuthentication.MixProject do
       {:plug, "~> 1.13"},
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
+      {:simple_sat, "~> 0.1", only: [:dev, :test]},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 1.6.0", only: [:dev, :test]},
       {:ash_json_api, "~> 1.4.6", only: [:dev, :test]},

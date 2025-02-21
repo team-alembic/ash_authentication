@@ -2,6 +2,7 @@ defmodule AshAuthentication.TokenResource.ExpungerTest do
   @moduledoc false
   use DataCase, async: false
   alias AshAuthentication.{Jwt, TokenResource.Expunger}
+  import ExUnit.CaptureLog
 
   describe "init/1" do
     test "it finds all token resources to expunge" do
