@@ -5,6 +5,37 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.5.2](https://github.com/team-alembic/ash_authentication/compare/v4.5.1...v4.5.2) (2025-02-25)
+
+
+
+
+### Bug Fixes:
+
+* ensure token expunger sets context that allows it to run (#921)
+
+* pass `opts` to `Confirmation.Actions.store_changes/4`
+
+* use the stringified tenant in the token
+
+* JWT: Generate tenant claims and validate them. (#914)
+
+* ensure that tenant is set and ferried through all operations
+
+* pass tenant through token revoked check
+
+* assume tokens are revoked on error
+
+### Improvements:
+
+* authorize with error to make expunge errors clearer
+
+* Add tenant to new user confirmation sender (#920)
+
+* Add multi tenant tests (#915)
+
+* adding example repo for multi tenant enabled user
+
 ## [v4.5.1](https://github.com/team-alembic/ash_authentication/compare/v4.5.0...v4.5.1) (2025-02-14)
 
 
