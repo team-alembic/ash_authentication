@@ -216,7 +216,7 @@ defmodule AshAuthentication.MixProject do
       {:splode, "~> 0.2"},
       {:simple_sat, "~> 0.1", only: [:dev, :test]},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
-      {:ash_graphql, "~> 1.6.0", only: [:dev, :test]},
+      {:ash_graphql, "~> 1.7.2", only: [:dev, :test]},
       {:ash_json_api, "~> 1.4.6", only: [:dev, :test]},
       {:ash_postgres, "~> 2.0", optional: true},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
