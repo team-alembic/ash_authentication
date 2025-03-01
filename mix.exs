@@ -72,6 +72,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication)},
         {"documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.AddOn.Confirmation)},
+        {"documentation/dsls/DSL-AshAuthentication.AddOn.LogOutEverywhere.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.AddOn.LogOutEverywhere)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Apple.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Apple)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Auth0.md",
