@@ -4,6 +4,7 @@ spark_locals_without_parens = [
   apple: 0,
   apple: 1,
   apple: 2,
+  apply_on_password_change?: 1,
   auth0: 0,
   auth0: 1,
   auth0: 2,
