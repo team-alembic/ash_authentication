@@ -152,6 +152,7 @@ defmodule AshAuthentication.MixProject do
         Strategies: [
           AshAuthentication.Strategy,
           AshAuthentication.AddOn.Confirmation,
+          AshAuthentication.AddOn.LogOutEverywhere,
           AshAuthentication.Strategy.Apple,
           AshAuthentication.Strategy.Auth0,
           AshAuthentication.Strategy.Custom,
