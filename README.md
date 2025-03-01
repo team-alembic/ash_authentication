@@ -51,7 +51,8 @@ Welcome! Here you will find everything you need to know to get started with and 
 ## Reference
 
 - [AshAuthentication DSL](documentation/dsls/DSL-AshAuthentication.md)
-- [AshAuthentication.AddOn.Confirmation DSL](documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md))
+- [AshAuthentication.AddOn.Confirmation DSL](documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md)
+- [AshAuthentication.AddOn.LogOutEverywhere DSL](documentation/dsls/DSL-AshAuthentication.AddOn.LogOutEverywhere.md)
 - [AshAuthentication.Strategy.Auth0](documentation/dsls/DSL-AshAuthentication.Strategy.Auth0.md)
 - [AshAuthentication.Strategy.Github DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Github.md)
 - [AshAuthentication.Strategy.Google DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Google.md)
