@@ -50,4 +50,37 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
       end
     end
   end
+
+  test "atomic updates to non-`hashed_password` fields do not trigger the log_out_everywhere functionality" do
+    user =
+      Example.UserWithTokenRequired
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "test",
+        password: "password",
+        password_confirmation: "password"
+      })
+      |> Ash.create!()
+
+    # Base token is okay
+    assert {:ok, _data, Example.UserWithTokenRequired} =
+             AshAuthentication.Jwt.verify(user.__metadata__.token, :ash_authentication)
+
+    # Non-atomic update is okay
+    user =
+      user
+      |> Ash.Changeset.for_update(:update_email_nonatomic, %{email: "foo"})
+      |> Ash.update!()
+
+    assert {:ok, _data, Example.UserWithTokenRequired} =
+             AshAuthentication.Jwt.verify(user.__metadata__.token, :ash_authentication)
+
+    # Atomic update *should* be okay - but is not
+    user =
+      user
+      |> Ash.Changeset.for_update(:update_email_atomic, %{email: "foo2"})
+      |> Ash.update!()
+
+    assert {:ok, _data, Example.UserWithTokenRequired} =
+             AshAuthentication.Jwt.verify(user.__metadata__.token, :ash_authentication)
+  end
 end

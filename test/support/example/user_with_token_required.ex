@@ -55,6 +55,16 @@ defmodule Example.UserWithTokenRequired do
 
   actions do
     defaults [:create, :read, :update, :destroy]
+
+    update :update_email_atomic do
+      require_atomic? true
+      accept [:email]
+    end
+
+    update :update_email_nonatomic do
+      require_atomic? false
+      accept [:email]
+    end
   end
 
   calculations do
