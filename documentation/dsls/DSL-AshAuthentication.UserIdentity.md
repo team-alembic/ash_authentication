@@ -23,7 +23,7 @@ your user resource(s).  This provides the following benefits:
 
 User identities are expected to be relatively long-lived (although they're
 deleted on log out), so should probably be stored using a permanent data layer
-sush as `ash_postgres`.
+such as `ash_postgres`.
 
 ## Usage
 
