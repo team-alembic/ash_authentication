@@ -42,7 +42,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
 
       with {:ok, user} when not is_nil(user) <- query_result,
            {:ok, token} <- Password.reset_token_for(strategy, user) do
-        sender.send(user, token, send_opts)
+        sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant))
 
         :ok
       else
