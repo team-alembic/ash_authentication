@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.5.3](https://github.com/team-alembic/ash_authentication/compare/v4.5.2...v4.5.3) (2025-03-07)
+
+
+
+
+### Bug Fixes:
+
+* fix the installer to only pass flags to nested tasks
+
+* use proper postgres version in error message
+
+* Added tenant to password reset sender opts (#930)
+
 ## [v4.5.2](https://github.com/team-alembic/ash_authentication/compare/v4.5.1...v4.5.2) (2025-02-25)
 
 
