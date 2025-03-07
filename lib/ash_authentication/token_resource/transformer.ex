@@ -212,7 +212,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
 
            To address this:
 
-           1. Make sure that you are on `ash_postgres` >= 2.5.3`
+           1. Make sure that you are on `ash_postgres` >= 2.5.6`
            2. remove `uuid_primary_key :id` from `#{inspect(module)}`
            3. run `mix ash.codegen remove_id_from_tokens`
            4. Add the following code to the *top* of the `up` function in the generated migration.
