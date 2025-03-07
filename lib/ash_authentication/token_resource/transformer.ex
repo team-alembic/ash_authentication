@@ -71,8 +71,11 @@ defmodule AshAuthentication.TokenResource.Transformer do
              writable?: true,
              public?: true
            ),
+         :ok <- validate_extra_data_field(dsl_state),
+         {:ok, created_at} <-
+           TokenResource.Info.token_created_at_attribute_name(dsl_state),
          {:ok, dsl_state} <-
-           maybe_build_attribute(dsl_state, :created_at, :utc_datetime_usec,
+           maybe_build_attribute(dsl_state, created_at, :utc_datetime_usec,
              allow_nil?: false,
              public?: false,
              default: &DateTime.utc_now/0
@@ -84,7 +87,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
              default: &DateTime.utc_now/0,
              update_default: &DateTime.utc_now/0
            ),
-         :ok <- validate_extra_data_field(dsl_state),
          {:ok, expunge_expired_action_name} <- Info.token_expunge_expired_action_name(dsl_state),
          {:ok, dsl_state} <-
            maybe_build_action(
