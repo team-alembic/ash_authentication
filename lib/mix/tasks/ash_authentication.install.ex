@@ -49,11 +49,9 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @impl Igniter.Mix.Task
-    def igniter(igniter, argv) do
-      options = options!(argv)
-
+    def igniter(igniter) do
       options =
-        Keyword.put_new_lazy(options, :accounts, fn ->
+        Keyword.put_new_lazy(igniter.args.options, :accounts, fn ->
           Igniter.Project.Module.module_name(igniter, "Accounts")
         end)
 
@@ -86,9 +84,10 @@ if Code.ensure_loaded?(Igniter) do
       )
       |> Igniter.compose_task(
         "ash.gen.domain",
-        [inspect(accounts_domain), "--ignore-if-exists"] ++ argv ++ resource_args
+        [inspect(accounts_domain), "--ignore-if-exists"] ++
+          igniter.args.argv_flags ++ resource_args
       )
-      |> generate_token_resource(token_resource, argv, resource_args)
+      |> generate_token_resource(token_resource, igniter.args.argv_flags, resource_args)
       |> Igniter.Project.Application.add_new_child(
         {AshAuthentication.Supervisor, otp_app: otp_app},
         after: fn _ -> true end
@@ -96,14 +95,14 @@ if Code.ensure_loaded?(Igniter) do
       |> setup_data_layer(repo)
       |> generate_user_resource(
         user_resource,
-        argv,
+        igniter.args.argv_flags,
         resource_args,
         token_resource,
         secrets_module,
         otp_app
       )
       |> Ash.Igniter.codegen("add_authentication_resources")
-      |> add_strategies(options, argv)
+      |> add_strategies(options, igniter.args.argv_flags)
     end
 
     defp add_strategies(igniter, options, argv) do
