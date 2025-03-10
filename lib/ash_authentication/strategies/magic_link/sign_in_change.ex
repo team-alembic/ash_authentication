@@ -21,7 +21,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
     with token when is_binary(token) <-
            Changeset.get_argument(changeset, strategy.token_param_name),
          {:ok, %{"act" => token_action, "sub" => subject, "identity" => identity}, _} <-
-           Jwt.verify(token, changeset.resource),
+           Jwt.verify(token, changeset.resource, [], context),
          ^token_action <- to_string(strategy.sign_in_action_name),
          %URI{path: ^subject_name} <- URI.parse(subject) do
       changeset

@@ -87,7 +87,7 @@ defmodule AshAuthentication.Jwt do
   """
   @spec token_for_user(Resource.record(), extra_claims :: map, options :: keyword) ::
           {:ok, token, claims} | :error
-  def token_for_user(user, extra_claims \\ %{}, opts \\ []) do
+  def token_for_user(user, extra_claims \\ %{}, opts \\ [], context \\ %{}) do
     resource = user.__struct__
 
     {purpose, opts} = Keyword.pop(opts, :purpose, :user)
@@ -108,7 +108,7 @@ defmodule AshAuthentication.Jwt do
       end
 
     default_claims = Config.default_claims(resource, action_opts)
-    signer = Config.token_signer(resource, opts)
+    signer = Config.token_signer(resource, opts, context)
 
     with {:ok, token, claims} <- Joken.generate_and_sign(default_claims, extra_claims, signer),
          :ok <- maybe_store_token(token, resource, user, purpose, action_opts) do
@@ -125,11 +125,11 @@ defmodule AshAuthentication.Jwt do
   """
   @spec token_for_resource(Resource.t(), extra_claims :: map, options :: keyword) ::
           {:ok, token, claims} | :error
-  def token_for_resource(resource, extra_claims, opts \\ []) do
+  def token_for_resource(resource, extra_claims, opts \\ [], context) do
     {purpose, opts} = Keyword.pop(opts, :purpose, :user)
 
     default_claims = Config.default_claims(resource, opts)
-    signer = Config.token_signer(resource, opts)
+    signer = Config.token_signer(resource, opts, context)
 
     subject =
       Info.authentication_subject_name!(resource)
@@ -183,19 +183,19 @@ defmodule AshAuthentication.Jwt do
   @doc """
   Given a token, verify it's signature and validate it's claims.
   """
-  @spec verify(token, Resource.t() | atom, opts :: Keyword.t()) ::
+  @spec verify(token, Resource.t() | atom, opts :: Keyword.t(), context :: map()) ::
           {:ok, claims, Resource.t()} | :error
-  def verify(token, otp_app_or_resource, opts \\ []) do
+  def verify(token, otp_app_or_resource, opts \\ [], context \\ %{}) do
     if function_exported?(otp_app_or_resource, :spark_is, 0) &&
          otp_app_or_resource.spark_is() == Resource do
-      verify_for_resource(token, otp_app_or_resource, opts)
+      verify_for_resource(token, otp_app_or_resource, opts, context)
     else
-      verify_for_otp_app(token, otp_app_or_resource, opts)
+      verify_for_otp_app(token, otp_app_or_resource, opts, context)
     end
   end
 
-  defp verify_for_resource(token, resource, opts) do
-    with signer <- Config.token_signer(resource),
+  defp verify_for_resource(token, resource, opts, context) do
+    with signer <- Config.token_signer(resource, [], context),
          {:ok, claims} <- Joken.verify(token, signer),
          defaults <- Config.default_claims(resource, opts),
          {:ok, claims} <- Joken.validate(defaults, claims, resource) do
@@ -205,9 +205,9 @@ defmodule AshAuthentication.Jwt do
     end
   end
 
-  defp verify_for_otp_app(token, otp_app, opts) do
+  defp verify_for_otp_app(token, otp_app, opts, context) do
     with {:ok, resource} <- token_to_resource(token, otp_app),
-         signer <- Config.token_signer(resource),
+         signer <- Config.token_signer(resource, [], context),
          {:ok, claims} <- Joken.verify(token, signer),
          defaults <- Config.default_claims(resource, opts),
          {:ok, claims} <- Joken.validate(defaults, claims, resource) do

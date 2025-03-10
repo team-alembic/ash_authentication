@@ -28,8 +28,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   @spec request(Conn.t(), OAuth2.t()) :: Conn.t()
   # sobelow_skip ["XSS.SendResp"]
   def request(conn, strategy) do
-    with {:ok, config} <- config_for(strategy),
-         {:ok, config} <- maybe_add_nonce(config, strategy),
+    with {:ok, config} <- config_for(strategy, %{conn: conn}),
+         {:ok, config} <- maybe_add_nonce(config, strategy, %{conn: conn}),
          {:ok, session_key} <- session_key(strategy),
          {:ok, %{session_params: session_params, url: url}} <-
            strategy.assent_strategy.authorize_url(config) do
@@ -52,7 +52,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   @spec callback(Conn.t(), OAuth2.t()) :: Conn.t()
   def callback(conn, strategy) do
     with {:ok, session_key} <- session_key(strategy),
-         {:ok, config} <- config_for(strategy),
+         {:ok, config} <- config_for(strategy, %{conn: conn}),
          session_params when is_map(session_params) <- get_session(conn, session_key),
          conn <- delete_session(conn, session_key),
          config <- Keyword.put(config, :session_params, session_params),
@@ -80,64 +80,74 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     |> Enum.reject(&is_nil(elem(&1, 1)))
   end
 
-  defp config_for(strategy) do
+  defp config_for(strategy, context) do
     config =
       strategy
       |> Map.take(@raw_config_attrs)
 
-    with {:ok, config} <- add_secret_value(config, strategy, :base_url),
-         {:ok, config} <- add_secret_value(config, strategy, :authorize_url, !!strategy.base_url),
-         {:ok, config} <- add_secret_value(config, strategy, :client_id, !!strategy.base_url),
-         {:ok, config} <- add_secret_value(config, strategy, :client_secret, !!strategy.base_url),
-         {:ok, config} <- add_secret_value(config, strategy, :token_url, !!strategy.base_url),
+    with {:ok, config} <- add_secret_value(config, strategy, :base_url, context),
          {:ok, config} <-
-           add_secret_value(config, strategy, :code_verifier, !!strategy.code_verifier),
+           add_secret_value(config, strategy, :authorize_url, !!strategy.base_url, context),
+         {:ok, config} <-
+           add_secret_value(config, strategy, :client_id, !!strategy.base_url, context),
+         {:ok, config} <-
+           add_secret_value(config, strategy, :client_secret, !!strategy.base_url, context),
+         {:ok, config} <-
+           add_secret_value(config, strategy, :token_url, !!strategy.base_url, context),
+         {:ok, config} <-
+           add_secret_value(config, strategy, :code_verifier, !!strategy.code_verifier, context),
          {:ok, config} <-
            add_secret_value(
              config,
              strategy,
              :authorization_params,
-             !!strategy.authorization_params
+             !!strategy.authorization_params,
+             context
            ),
          {:ok, config} <-
            add_secret_value(
              config,
              strategy,
              :openid_configuration,
-             !strategy.openid_configuration
+             !strategy.openid_configuration,
+             context
            ),
          {:ok, config} <-
            add_secret_value(
              config,
              strategy,
              :team_id,
-             strategy.assent_strategy != Assent.Strategy.Apple
+             strategy.assent_strategy != Assent.Strategy.Apple,
+             context
            ),
          {:ok, config} <-
            add_secret_value(
              config,
              strategy,
              :private_key_id,
-             strategy.assent_strategy != Assent.Strategy.Apple
+             strategy.assent_strategy != Assent.Strategy.Apple,
+             context
            ),
          {:ok, config} <-
            add_secret_value(
              config,
              strategy,
              :private_key_path,
-             strategy.assent_strategy != Assent.Strategy.Apple
+             strategy.assent_strategy != Assent.Strategy.Apple,
+             context
            ),
          {:ok, config} <-
-           add_secret_value(config, strategy, :trusted_audiences, true),
+           add_secret_value(config, strategy, :trusted_audiences, true, context),
          {:ok, config} <- add_http_adapter(config),
          {:ok, config} <-
            add_secret_value(
              config,
              strategy,
              :user_url,
-             !!strategy.authorize_url || !!strategy.base_url
+             !!strategy.authorize_url || !!strategy.base_url,
+             context
            ),
-         {:ok, redirect_uri} <- build_redirect_uri(strategy),
+         {:ok, redirect_uri} <- build_redirect_uri(strategy, context),
          {:ok, jwt_algorithm} <-
            Info.authentication_tokens_signing_algorithm(strategy.resource) do
       config =
@@ -174,8 +184,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
   # With OpenID Connect we can pass a "nonce" value into the assent strategy
   # which is an additional way to ensure that the callback matches the request.
-  defp maybe_add_nonce(config, strategy) do
-    case fetch_secret(strategy, :nonce) do
+  defp maybe_add_nonce(config, strategy, context) do
+    case fetch_secret(strategy, :nonce, context) do
       {:ok, value} when is_binary(value) and byte_size(value) > 0 ->
         {:ok, Keyword.put(config, :nonce, value)}
 
@@ -187,8 +197,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
-  defp add_secret_value(config, strategy, secret_name, allow_nil? \\ false) do
-    case fetch_secret(strategy, secret_name) do
+  defp add_secret_value(config, strategy, secret_name, allow_nil? \\ false, context) do
+    case fetch_secret(strategy, secret_name, context) do
       {:ok, nil} when allow_nil? ->
         {:ok, config}
 
@@ -213,12 +223,18 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
-  defp fetch_secret(strategy, secret_name) do
+  defp fetch_secret(strategy, secret_name, context) do
     path = [:authentication, :strategies, strategy.name, secret_name]
 
     with {:ok, {secret_module, secret_opts}} <- Map.fetch(strategy, secret_name),
          {:ok, secret} when is_binary(secret) and byte_size(secret) > 0 <-
-           secret_module.secret_for(path, strategy.resource, secret_opts) do
+           AshAuthentication.Secret.secret_for(
+             secret_module,
+             path,
+             strategy.resource,
+             secret_opts,
+             context
+           ) do
       {:ok, secret}
     else
       {:ok, secret} ->
@@ -229,9 +245,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
-  defp build_redirect_uri(strategy) do
+  defp build_redirect_uri(strategy, context) do
     with {:ok, subject_name} <- Info.authentication_subject_name(strategy.resource),
-         {:ok, redirect_uri} <- fetch_secret(strategy, :redirect_uri),
+         {:ok, redirect_uri} <- fetch_secret(strategy, :redirect_uri, context),
          {:ok, uri} <- URI.new(redirect_uri) do
       suffix = Path.join([to_string(subject_name), to_string(strategy.name), "callback"])
       # Don't append the path if the secret ends with the path already
