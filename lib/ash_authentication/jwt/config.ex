@@ -138,7 +138,7 @@ defmodule AshAuthentication.Jwt.Config do
   The signer used to sign the token on a per-resource basis.
   """
   @spec token_signer(Resource.t(), keyword) :: Signer.t()
-  def token_signer(resource, opts \\ []) do
+  def token_signer(resource, opts \\ [], context \\ %{}) do
     algorithm =
       Keyword.get_lazy(opts, :signing_algorithm, fn ->
         Info.authentication_tokens_signing_algorithm!(resource)
@@ -152,7 +152,8 @@ defmodule AshAuthentication.Jwt.Config do
              secret_module.secret_for(
                ~w[authentication tokens signing_secret]a,
                resource,
-               secret_opts
+               secret_opts,
+               context
              ) do
         secret
       else
