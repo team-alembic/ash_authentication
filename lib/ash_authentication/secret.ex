@@ -112,6 +112,8 @@ defmodule AshAuthentication.Secret do
   end
 
   def secret_for(module, secret_name, resource, opts, context) do
+    Code.ensure_loaded(module)
+
     if function_exported?(module, :secret_for, 4) do
       module.secret_for(secret_name, resource, opts, context)
     else
