@@ -167,9 +167,8 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   defp validate_confirmed_at_attribute(dsl_state, strategy) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, strategy.confirmed_at_field),
-         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
-         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]) do
-      validate_attribute_option(attribute, resource, :type, [Type.UtcDatetimeUsec])
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
+      validate_attribute_option(attribute, resource, :allow_nil?, [true])
     end
   end
 

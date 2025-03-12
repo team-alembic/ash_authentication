@@ -315,7 +315,7 @@ if Code.ensure_loaded?(Igniter) do
           |> Ash.Resource.Igniter.add_new_attribute(token_resource, :created_at, """
           create_timestamp :created_at
           """)
-          |> Ash.Resource.Igniter.add_new_attribute(token_resource, :created_at, """
+          |> Ash.Resource.Igniter.add_new_attribute(token_resource, :updated_at, """
           update_timestamp :updated_at
           """)
           # Consider moving to the extension's `install/5` callback, but we need
