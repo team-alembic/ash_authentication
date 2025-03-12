@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.5.4](https://github.com/team-alembic/ash_authentication/compare/v4.5.3...v4.5.4) (2025-03-12)
+
+
+
+
+### Bug Fixes:
+
+* use create/update timestamp in installers
+
 ## [v4.5.3](https://github.com/team-alembic/ash_authentication/compare/v4.5.2...v4.5.3) (2025-03-07)
 
 
