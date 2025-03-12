@@ -309,10 +309,15 @@ if Code.ensure_loaded?(Igniter) do
               "--attribute",
               "purpose:string:required:public",
               "--attribute",
-              "extra_data:map:public",
-              "--timestamps"
+              "extra_data:map:public"
             ] ++ resource_args
           )
+          |> Ash.Resource.Igniter.add_new_attribute(token_resource, :created_at, """
+          create_timestamp :created_at
+          """)
+          |> Ash.Resource.Igniter.add_new_attribute(token_resource, :created_at, """
+          update_timestamp :updated_at
+          """)
           # Consider moving to the extension's `install/5` callback, but we need
           # to only run it if the resource is being created which we can't
           # currently tell in that callback

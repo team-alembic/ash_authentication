@@ -175,7 +175,8 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
           public?(true)
         end
 
-        timestamps()
+        create_timestamp(:created_at)
+        update_timestamp(:updated_at)
       end
 
       actions do
