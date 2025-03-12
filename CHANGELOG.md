@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.5.5](https://github.com/team-alembic/ash_authentication/compare/v4.5.4...v4.5.5) (2025-03-12)
+
+
+
+
+### Bug Fixes:
+
+* Do not enforce confirm_at attribute type (#935)
+
 ## [v4.5.4](https://github.com/team-alembic/ash_authentication/compare/v4.5.3...v4.5.4) (2025-03-12)
 
 
