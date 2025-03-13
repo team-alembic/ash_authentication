@@ -96,8 +96,10 @@ defmodule AshAuthentication.Secret do
 
   defmacro __before_compile__(_) do
     quote do
-      def __secret_for_arity__ do
-        if function_exported?(__MODULE__, :secret_for, 4), do: 4, else: 3
+      if Module.defines?(__MODULE__, {:secret_for, 4}, :def) do
+        def __secret_for_arity__, do: 4
+      else
+        def __secret_for_arity__, do: 3
       end
     end
   end
