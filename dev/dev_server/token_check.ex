@@ -16,7 +16,7 @@ defmodule DevServer.TokenCheck do
   @impl true
   @spec call(Conn.t(), any) :: Conn.t()
   def call(%{params: %{"token" => token}} = conn, _opts) do
-    result = Jwt.verify(token, :ash_authentication, %{conn: conn})
+    result = Jwt.verify(token, :ash_authentication, [], %{conn: conn})
 
     conn
     |> Conn.send_resp(200, inspect(result))

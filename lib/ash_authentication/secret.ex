@@ -125,8 +125,6 @@ defmodule AshAuthentication.Secret do
   end
 
   @doc false
-  @spec secret_for(module, secret_name :: [atom], Resource.t(), keyword, context :: map()) ::
-          {:ok, String.t()} | :error
   def secret_for(module, secret_name, resource, opts, context) do
     if module.__secret_for_arity__() == 4 do
       module.secret_for(secret_name, resource, opts, context)
