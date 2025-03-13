@@ -78,6 +78,7 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> Igniter.Project.Formatter.import_dep(:ash_authentication)
       |> Igniter.Project.Formatter.add_formatter_plugin(Spark.Formatter)
+      |> Igniter.Project.Config.configure("test.exs", :bcrypt_elixir, [:log_rounds], 1)
       |> Spark.Igniter.prepend_to_section_order(
         :"Ash.Resource",
         [:authentication, :tokens]
