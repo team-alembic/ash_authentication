@@ -89,7 +89,16 @@ defmodule AshAuthentication.Secret do
   defmacro __using__(_) do
     quote do
       @behaviour AshAuthentication.Secret
+      @before_compile AshAuthentication.Secret
       @after_verify AshAuthentication.Secret
+    end
+  end
+
+  defmacro __before_compile__(_) do
+    quote do
+      def __secret_for_arity__ do
+        if function_exported?(__MODULE__, :secret_for, 4), do: 4, else: 3
+      end
     end
   end
 
@@ -112,9 +121,7 @@ defmodule AshAuthentication.Secret do
   end
 
   def secret_for(module, secret_name, resource, opts, context) do
-    Code.ensure_loaded(module)
-
-    if function_exported?(module, :secret_for, 4) do
+    if module.__secret_for_arity__() == 4 do
       module.secret_for(secret_name, resource, opts, context)
     else
       module.secret_for(secret_name, resource, opts)
