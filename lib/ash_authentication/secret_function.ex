@@ -9,14 +9,12 @@ defmodule AshAuthentication.SecretFunction do
 
   @doc false
   @impl true
-  @spec secret_for(secret_name :: [atom], Resource.t(), keyword) :: {:ok, String.t()} | :error
-  def secret_for(secret_name, resource, opts) do
+  @spec secret_for(secret_name :: [atom], Resource.t(), keyword, context :: map()) ::
+          {:ok, String.t()} | :error
+  def secret_for(secret_name, resource, opts, _context) do
     case Keyword.pop(opts, :fun) do
       {fun, _opts} when is_function(fun, 2) ->
         fun.(secret_name, resource)
-
-      {fun, opts} when is_function(fun, 3) ->
-        fun.(secret_name, resource, opts)
 
       {{m, f, a}, _opts} when is_atom(m) and is_atom(f) and is_list(a) ->
         apply(m, f, [secret_name, resource | a])

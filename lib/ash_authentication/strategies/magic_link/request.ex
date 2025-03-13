@@ -33,7 +33,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
       {:ok, nil} ->
         with true <- strategy.registration_enabled?,
              {sender, send_opts} <- strategy.sender,
-             {:ok, token} <- MagicLink.request_token_for_identity(strategy, identity) do
+             {:ok, token} <- MagicLink.request_token_for_identity(strategy, identity, context) do
           sender.send(to_string(identity), token, Keyword.put(send_opts, :tenant, context.tenant))
 
           :ok
@@ -44,7 +44,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
 
       {:ok, user} ->
         with {sender, send_opts} <- strategy.sender,
-             {:ok, token} <- MagicLink.request_token_for_identity(strategy, identity) do
+             {:ok, token} <- MagicLink.request_token_for_identity(strategy, identity, context) do
           sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant))
 
           :ok

@@ -18,8 +18,9 @@ defmodule AshAuthentication.Strategy.Oidc.NonceGenerator do
 
   @doc false
   @impl true
-  @spec secret_for(secret_name :: [atom], Ash.Resource.t(), keyword) :: {:ok, String.t()} | :error
-  def secret_for(_secret_name, _resource, opts) do
+  @spec secret_for(secret_name :: [atom], Ash.Resource.t(), keyword, map) ::
+          {:ok, String.t()} | :error
+  def secret_for(_secret_name, _resource, opts, _context) do
     opts
     |> Keyword.get(:byte_size, 16)
     |> :crypto.strong_rand_bytes()
