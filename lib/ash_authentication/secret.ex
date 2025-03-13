@@ -94,6 +94,7 @@ defmodule AshAuthentication.Secret do
     end
   end
 
+  @doc false
   defmacro __before_compile__(_) do
     quote do
       if Module.defines?(__MODULE__, {:secret_for, 4}, :def) do
@@ -104,6 +105,7 @@ defmodule AshAuthentication.Secret do
     end
   end
 
+  @doc false
   def __after_verify__(module) do
     if function_exported?(module, :secret_for, 3) and
          function_exported?(module, :secret_for, 4) do
@@ -122,6 +124,9 @@ defmodule AshAuthentication.Secret do
     end
   end
 
+  @doc false
+  @spec secret_for(module, secret_name :: [atom], Resource.t(), keyword, context :: map()) ::
+          {:ok, String.t()} | :error
   def secret_for(module, secret_name, resource, opts, context) do
     if module.__secret_for_arity__() == 4 do
       module.secret_for(secret_name, resource, opts, context)
