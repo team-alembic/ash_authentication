@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.5.6](https://github.com/team-alembic/ash_authentication/compare/v4.5.5...v4.5.6) (2025-03-18)
+
+
+
+
+### Bug Fixes:
+
+* set min length constraint on password update in generators
+
+### Improvements:
+
+* use `touching?` option so log out everywhere is atomic
+
+* Allow custom attribute name for created_at (#871)
+
+* set `bcrypt_elixir` rounds to 1 in test.exs in installer
+
 ## [v4.5.5](https://github.com/team-alembic/ash_authentication/compare/v4.5.4...v4.5.5) (2025-03-12)
 
 
