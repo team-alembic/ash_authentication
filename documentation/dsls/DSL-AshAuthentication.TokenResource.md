@@ -68,6 +68,7 @@ Configuration options for this token resource
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`domain`](#token-domain){: #token-domain } | `module` |  | The Ash domain to use to access this resource. |
+| [`created_at_attribute_name`](#token-created_at_attribute_name){: #token-created_at_attribute_name } | `atom` | `:created_at` | The name of the `created_at` attribute on this resource. |
 | [`expunge_expired_action_name`](#token-expunge_expired_action_name){: #token-expunge_expired_action_name } | `atom` | `:expunge_expired` | The name of the action used to remove expired tokens. |
 | [`read_expired_action_name`](#token-read_expired_action_name){: #token-read_expired_action_name } | `atom` | `:read_expired` | The name of the action use to find all expired tokens. |
 | [`expunge_interval`](#token-expunge_interval){: #token-expunge_interval } | `pos_integer` | `12` | How often to scan this resource for records which have expired, and thus can be removed. |
