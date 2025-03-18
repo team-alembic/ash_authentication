@@ -126,7 +126,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
     dsl
     |> matching_changes(OnPasswordChange,
       on: [:update],
-      where: [{Ash.Resource.Validation.Changing, [field: hashed_password_field]}]
+      where: [{Ash.Resource.Validation.Changing, [field: hashed_password_field, touching?: true]}]
     )
     |> case do
       [] -> build_password_change_change(dsl, hashed_password_field)
@@ -139,7 +139,9 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
            Transformer.build_entity(Resource.Dsl, [:changes], :change,
              change: {OnPasswordChange, []},
              on: [:update],
-             where: [{Ash.Resource.Validation.Changing, [field: hashed_password_field]}]
+             where: [
+               {Ash.Resource.Validation.Changing, [field: hashed_password_field, touching?: true]}
+             ]
            ) do
       {:ok, Transformer.add_entity(dsl, [:changes], change)}
     end

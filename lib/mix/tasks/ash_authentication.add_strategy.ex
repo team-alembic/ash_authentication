@@ -258,7 +258,7 @@ if Code.ensure_loaded?(Igniter) do
         require_atomic? false
         accept []
         argument :current_password, :string, sensitive?: true, allow_nil?: false
-        argument :password, :string, sensitive?: true, allow_nil?: false
+        argument :password, :string, sensitive?: true, allow_nil?: false, constraints: [min_length: 8]
         argument :password_confirmation, :string, sensitive?: true, allow_nil?: false
 
         validate confirm(:password, :password_confirmation)
