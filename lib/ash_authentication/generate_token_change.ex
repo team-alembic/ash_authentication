@@ -36,7 +36,8 @@ defmodule AshAuthentication.GenerateTokenChange do
         %{"purpose" => to_string(purpose)},
         Ash.Context.to_opts(context,
           token_lifetime: strategy.sign_in_token_lifetime
-        )
+        ),
+        context
       )
 
     Ash.Resource.put_metadata(record, :token, token)
