@@ -41,7 +41,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
              Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context)),
            true <-
              to_string(strategy.confirm_action_name) == action,
-           {:ok, changes} <- Actions.get_changes(strategy, jti) do
+           {:ok, changes} <- Actions.get_changes(strategy, jti, Ash.Context.to_opts(context)) do
         allowed_changes =
           if strategy.inhibit_updates?,
             do: Map.take(changes, Enum.map(strategy.monitor_fields, &to_string/1)),

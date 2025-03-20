@@ -12,10 +12,10 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
 
   @doc false
   @impl true
-  def run(input, _opts, _context) do
+  def run(input, _opts, context) do
     case Info.strategy_for_action(input.resource, input.action.name) do
       {:ok, strategy} ->
-        really_run_action(input, strategy)
+        really_run_action(input, strategy, context)
 
       :error ->
         raise AssumptionFailed,
@@ -23,13 +23,13 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
     end
   end
 
-  defp really_run_action(input, strategy) do
+  defp really_run_action(input, strategy, context) do
     user = Map.fetch!(input.arguments, strategy.argument_name)
     subject = AshAuthentication.user_to_subject(user)
-    revoke_all_tokens_for_subject(subject, strategy)
+    revoke_all_tokens_for_subject(subject, strategy, context)
   end
 
-  defp revoke_all_tokens_for_subject(subject, strategy) do
+  defp revoke_all_tokens_for_subject(subject, strategy, context) do
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
          {:ok, revoke_all_tokens_action_name} <-
            TokenResourceInfo.token_revocation_revoke_all_stored_for_subject_action_name(
@@ -38,11 +38,15 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
       token_resource
       |> include_purposes(strategy)
       |> exclude_purposes(strategy)
-      |> Ash.bulk_update(revoke_all_tokens_action_name, %{subject: subject},
-        strategy: [:atomic, :atomic_batches, :stream],
-        context: %{private: %{ash_authentication?: true}},
-        return_errors?: true,
-        stop_on_error?: true
+      |> Ash.bulk_update(
+        revoke_all_tokens_action_name,
+        %{subject: subject},
+        Ash.Context.to_opts(context,
+          strategy: [:atomic, :atomic_batches, :stream],
+          context: %{private: %{ash_authentication?: true}},
+          return_errors?: true,
+          stop_on_error?: true
+        )
       )
       |> case do
         %{status: :success} ->

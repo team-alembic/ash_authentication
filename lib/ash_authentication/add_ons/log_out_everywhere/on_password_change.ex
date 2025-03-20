@@ -5,11 +5,17 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.OnPasswordChange do
   alias AshAuthentication.{Info, Strategy}
 
   @impl true
-  def change(changeset, _opts, _context) do
+  def change(changeset, _opts, context) do
     Ash.Changeset.after_action(changeset, fn changeset, result ->
       strategy = Info.strategy!(changeset.resource, :log_out_everywhere)
 
-      with :ok <- Strategy.action(strategy, :log_out_everywhere, %{user: result}) do
+      with :ok <-
+             Strategy.action(
+               strategy,
+               :log_out_everywhere,
+               %{user: result},
+               Ash.Context.to_opts(context)
+             ) do
         {:ok, result}
       end
     end)
