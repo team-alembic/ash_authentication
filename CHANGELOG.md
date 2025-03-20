@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.6.0](https://github.com/team-alembic/ash_authentication/compare/v4.5.6...v4.6.0) (2025-03-20)
+
+
+
+
+### Features:
+
+* add context to secret functions
+
+* add context to secret functions
+
+### Bug Fixes:
+
+* add missing opts for multitenancy in various places
+
+* set context when building changeset instead of calling action
+
 ## [v4.5.6](https://github.com/team-alembic/ash_authentication/compare/v4.5.5...v4.5.6) (2025-03-18)
 
 
