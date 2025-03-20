@@ -85,12 +85,16 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
                ash_authentication?: true
              }
            })
-           |> Changeset.for_create(store_changes_action, %{
-             token: token,
-             extra_data: changes,
-             purpose: to_string(Strategy.name(strategy))
-           })
-           |> Ash.create(opts) do
+           |> Changeset.for_create(
+             store_changes_action,
+             %{
+               token: token,
+               extra_data: changes,
+               purpose: to_string(Strategy.name(strategy))
+             },
+             opts
+           )
+           |> Ash.create() do
       :ok
     else
       {:error, reason} ->
