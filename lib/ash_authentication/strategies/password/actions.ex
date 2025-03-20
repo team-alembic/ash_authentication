@@ -264,6 +264,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         |> Ash.ActionInput.for_action(action_name, params, options)
         |> Ash.run_action()
         |> case do
+          :ok -> :ok
           {:ok, _} -> :ok
           {:error, reason} -> {:error, reason}
         end
