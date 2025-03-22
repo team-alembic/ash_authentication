@@ -138,9 +138,27 @@ defmodule AshAuthentication.Jwt do
       extra_claims
       |> Map.put("sub", subject)
 
+    tenant = Map.fetch(context, :tenant)
+    action_opts =
+      case tenant do
+        {:ok, tenant} ->
+          Keyword.put(opts, :tenant, tenant)
+
+        :error ->
+          opts
+      end
+
+    extra_claims = case tenant do
+      {:ok, tenant} ->
+        extra_claims
+        |> Map.put("tenant", Ash.ToTenant.to_tenant(tenant, resource))
+      :error ->
+        extra_claims
+      end
+
     with {:ok, token, claims} <-
            Joken.generate_and_sign(default_claims, extra_claims, signer),
-         :ok <- maybe_store_token(token, resource, nil, purpose, opts) do
+         :ok <- maybe_store_token(token, resource, nil, purpose, action_opts) do
       {:ok, token, claims}
     else
       {:error, reason} ->
