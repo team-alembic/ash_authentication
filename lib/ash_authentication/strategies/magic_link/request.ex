@@ -9,7 +9,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
 
   @doc false
   @impl true
-  def run(input, _opts, context) do
+  def run(input, opts, context) do
     strategy = Info.strategy_for_action!(input.resource, input.action.name)
 
     identity = ActionInput.get_argument(input, strategy.identity_field)
@@ -44,7 +44,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
 
       {:ok, user} ->
         with {sender, send_opts} <- strategy.sender,
-             {:ok, token} <- MagicLink.request_token_for_identity(strategy, identity, context) do
+             {:ok, token} <- MagicLink.request_token_for(strategy, user, opts, context) do
           sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant))
 
           :ok

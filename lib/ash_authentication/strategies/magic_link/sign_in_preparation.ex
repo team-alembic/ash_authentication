@@ -12,7 +12,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
-  def prepare(query, _otps, context) do
+  def prepare(query, _opts, context) do
     subject_name =
       query.resource
       |> Info.authentication_subject_name!()
@@ -49,7 +49,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
         query, [record] ->
           if strategy.single_use_token? do
             token_resource = Info.authentication_tokens_token_resource!(query.resource)
-            :ok = TokenResource.revoke(token_resource, token)
+            :ok = TokenResource.revoke(token_resource, token, tenant: context.tenant)
           end
 
           {:ok, token, _claims} = Jwt.token_for_user(record, %{}, Ash.Context.to_opts(context))
