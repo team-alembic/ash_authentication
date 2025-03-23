@@ -19,7 +19,7 @@ In order to test authenticated LiveViews, you will need to seed a test user and
 log in it.  While you may certainly use a helper that logs in through the UI
 each time, it's a little more efficient to call the sign-in code directly.
 
-This can be done by adding a helper function called `MyAppWeb.ConnCase` found in
+This can be done by adding a helper function in `MyAppWeb.ConnCase` found in
 `test/support/conn_case.ex`.  In this example it's called
 `register_and_log_in_user`.
 
