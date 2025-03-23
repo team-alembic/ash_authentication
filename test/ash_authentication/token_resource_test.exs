@@ -1,7 +1,9 @@
 defmodule AshAuthentication.TokenResourceTest do
   @moduledoc false
   use DataCase, async: true
+  alias Ash.Resource
   alias AshAuthentication.{Jwt, TokenResource}
+  alias Example.TokenWithCustomCreateTimestamp
   doctest AshAuthentication.TokenResource
 
   describe "revoke/2" do
@@ -18,8 +20,8 @@ defmodule AshAuthentication.TokenResourceTest do
   end
 
   test "uses custom create timestamp instead of default" do
-    assert Ash.Resource.Info.attribute(Example.TokenWithCustomCreateTimestamp, :inserted_at)
-    refute Ash.Resource.Info.attribute(Example.TokenWithCustomCreateTimestamp, :created_at)
+    assert Resource.Info.attribute(TokenWithCustomCreateTimestamp, :inserted_at)
+    refute Resource.Info.attribute(TokenWithCustomCreateTimestamp, :created_at)
   end
 
   def build_token do
