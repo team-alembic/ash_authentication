@@ -65,7 +65,7 @@ defmodule AshAuthentication.Secret do
 
   require Logger
 
-  @doc deprecated: "Use Foo.bar/2 instead"
+  @doc deprecated: "Use AshAuthentication.Secret.secret_for/4 instead"
   @callback secret_for(secret_name :: [atom], Resource.t(), keyword) :: {:ok, String.t()} | :error
 
   @doc """
