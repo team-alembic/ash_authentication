@@ -175,7 +175,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
 
   Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
   """
-  def request_token_for_identity(strategy, identity, context)
+  def request_token_for_identity(strategy, identity, context, opts \\ [])
       when is_struct(strategy, __MODULE__) do
     case Jwt.token_for_resource(
            strategy.resource,
@@ -183,7 +183,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
              "act" => strategy.sign_in_action_name,
              "identity" => to_string(identity)
            },
-           [token_lifetime: strategy.token_lifetime, purpose: :magic_link],
+           Keyword.merge(opts, token_lifetime: strategy.token_lifetime, purpose: :magic_link),
            context
          ) do
       {:ok, token, _claims} -> {:ok, token}
