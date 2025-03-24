@@ -175,7 +175,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
 
   Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
   """
-  def request_token_for_identity(strategy, identity, context, opts \\ [])
+  def request_token_for_identity(strategy, identity, opts \\ [], context \\ %{})
       when is_struct(strategy, __MODULE__) do
     case Jwt.token_for_resource(
            strategy.resource,
