@@ -63,8 +63,6 @@ defmodule AshAuthentication.Secret do
 
   alias Ash.Resource
 
-  require Logger
-
   @doc deprecated: "Use AshAuthentication.Secret.secret_for/4 instead"
   @callback secret_for(secret_name :: [atom], Resource.t(), keyword) :: {:ok, String.t()} | :error
 
@@ -90,7 +88,7 @@ defmodule AshAuthentication.Secret do
     quote do
       @behaviour AshAuthentication.Secret
       @before_compile AshAuthentication.Secret
-      @after_verify AshAuthentication.Secret
+      @after_compile AshAuthentication.Secret
     end
   end
 
@@ -106,19 +104,21 @@ defmodule AshAuthentication.Secret do
   end
 
   @doc false
-  def __after_verify__(module) do
+  def __after_compile__(env, _bytecode) do
+    module = env.module
+
     if function_exported?(module, :secret_for, 3) and
          function_exported?(module, :secret_for, 4) do
-      raise "You should only implement `secret_for/3` or `secret_for/4`, not both."
+      raise "#{inspect(module)}: You should only implement `secret_for/3` or `secret_for/4`, not both."
     end
 
     if not function_exported?(module, :secret_for, 3) and
          not function_exported?(module, :secret_for, 4) do
-      raise "You must implement either `secret_for/3` or `secret_for/4`."
+      raise "#{inspect(module)}: You must implement either `secret_for/3` or `secret_for/4`."
     end
 
     if function_exported?(module, :secret_for, 3) do
-      Logger.warning(
+      IO.warn(
         "#{inspect(module)}: The `secret_for/3` callback is deprecated, please implement `secret_for/4` instead."
       )
     end
