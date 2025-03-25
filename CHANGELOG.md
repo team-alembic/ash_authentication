@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.6.1](https://github.com/team-alembic/ash_authentication/compare/v4.6.0...v4.6.1) (2025-03-25)
+
+
+
+
+### Bug Fixes:
+
+* make request_for_token_identity backwards compatible (#949)
+
+* Multitenant magic link redirect (#945)
+
+* properly match on `:ok` resp from generic reset action
+
 ## [v4.6.0](https://github.com/team-alembic/ash_authentication/compare/v4.5.6...v4.6.0) (2025-03-20)
 
 
