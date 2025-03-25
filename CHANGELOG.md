@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.6.2](https://github.com/team-alembic/ash_authentication/compare/v4.6.1...v4.6.2) (2025-03-25)
+
+
+
+
+### Bug Fixes:
+
+* use `after_compile` hook for secrets verification, not after_verify
+
 ## [v4.6.1](https://github.com/team-alembic/ash_authentication/compare/v4.6.0...v4.6.1) (2025-03-25)
 
 
