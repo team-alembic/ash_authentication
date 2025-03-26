@@ -80,9 +80,10 @@ defmodule AshAuthentication.Plug.Helpers do
       {resource, options, true}, conn ->
         current_subject_name = current_subject_name(options.subject_name)
         token_resource = Info.authentication_tokens_token_resource!(resource)
+        session_key = "#{options.subject_name}_token"
 
         with token when is_binary(token) <-
-               Conn.get_session(conn, "#{options.subject_name}_token"),
+               Conn.get_session(conn, session_key),
              {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
              when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
              {:ok, [_]} <-
@@ -102,7 +103,10 @@ defmodule AshAuthentication.Plug.Helpers do
                ) do
           Conn.assign(conn, current_subject_name, user)
         else
-          _ -> Conn.assign(conn, current_subject_name, nil)
+          _ ->
+            conn
+            |> Conn.assign(current_subject_name, nil)
+            |> Conn.delete_session(session_key)
         end
 
       {resource, options, false}, conn ->
@@ -118,7 +122,9 @@ defmodule AshAuthentication.Plug.Helpers do
           Conn.assign(conn, current_subject_name, user)
         else
           _ ->
-            Conn.assign(conn, current_subject_name, nil)
+            conn
+            |> Conn.assign(current_subject_name, nil)
+            |> Conn.delete_session(options.subject_name)
         end
     end)
   end
