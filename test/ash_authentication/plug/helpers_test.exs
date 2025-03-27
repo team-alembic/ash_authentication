@@ -38,6 +38,32 @@ defmodule AshAuthentication.Plug.HelpersTest do
     end
   end
 
+  describe "assign_new_resources/4" do
+    test "it assigns the users according to the callback", %{conn: conn} do
+      user = build_user()
+
+      conn =
+        conn
+        |> Helpers.store_in_session(user)
+
+      socket = %{}
+      session = %{"user" => Plug.Conn.get_session(conn, "user")}
+      assign_new = &Map.put_new_lazy/3
+
+      new_assigns =
+        Helpers.assign_new_resources(socket, session, assign_new, otp_app: :ash_authentication)
+
+      assert new_assigns[:current_user].id == user.id
+
+      socket = %{current_user: :foo}
+
+      new_assigns =
+        Helpers.assign_new_resources(socket, session, assign_new, otp_app: :ash_authentication)
+
+      assert new_assigns[:current_user] == :foo
+    end
+  end
+
   describe "load_subjects/2" do
     test "it loads the subjects listed" do
       user = build_user()

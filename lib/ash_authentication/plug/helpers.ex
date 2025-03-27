@@ -117,7 +117,7 @@ defmodule AshAuthentication.Plug.Helpers do
                AshAuthentication.subject_to_user(
                  subject,
                  resource,
-                 [tenant: Ash.PlugHelpers.get_tenant(conn)] |> Keyword.merge(opts)
+                 opts
                ) do
           Conn.assign(conn, current_subject_name, user)
         else
@@ -126,6 +126,64 @@ defmodule AshAuthentication.Plug.Helpers do
             |> Conn.assign(current_subject_name, nil)
             |> Conn.delete_session(options.subject_name)
         end
+    end)
+  end
+
+  @doc """
+  Assigns all subjects from their equivalent sessions, if they are not already assigned.
+
+  This is meant to used via `AshAuthenticationPhoenix` for nested liveviews.
+  See `AshAuthenticationPhoenix.LiveSession.assign_new_resources/3` for more.
+  """
+  def assign_new_resources(socket, session, assign_new, opts) do
+    opts = Keyword.put_new(opts, :tenant, session["tenant"])
+
+    {otp_app, opts} = Keyword.pop(opts, :otp_app)
+
+    otp_app
+    |> AshAuthentication.authenticated_resources()
+    |> Stream.map(
+      &{&1, Info.authentication_options(&1),
+       Info.authentication_tokens_require_token_presence_for_authentication?(&1)}
+    )
+    |> Enum.reduce(socket, fn
+      {resource, options, true}, socket ->
+        current_subject_name = current_subject_name(options.subject_name)
+
+        assign_new.(socket, current_subject_name, fn ->
+          with token when is_binary(token) <-
+                 Map.get(session, "#{options.subject_name}_token"),
+               {:ok, %{"sub" => subject} = claims, _}
+               when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
+               {:ok, user} <-
+                 AshAuthentication.subject_to_user(
+                   subject,
+                   resource,
+                   opts
+                 ) do
+            user
+          else
+            _ -> nil
+          end
+        end)
+
+      {resource, options, false}, socket ->
+        current_subject_name = current_subject_name(options.subject_name)
+
+        assign_new.(socket, current_subject_name, fn ->
+          with subject when is_binary(subject) <- session[to_string(options.subject_name)],
+               {:ok, user} <-
+                 AshAuthentication.subject_to_user(
+                   subject,
+                   resource,
+                   opts
+                 ) do
+            user
+          else
+            _ ->
+              nil
+          end
+        end)
     end)
   end
 
