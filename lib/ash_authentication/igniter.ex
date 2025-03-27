@@ -11,7 +11,7 @@ if Code.ensure_loaded?(Igniter) do
 
       func =
         quote do
-          def secret_for(unquote(path), unquote(resource), _opts),
+          def secret_for(unquote(path), unquote(resource), _opts, _context),
             do: Application.fetch_env(unquote(otp_app), unquote(env_key))
         end
 
