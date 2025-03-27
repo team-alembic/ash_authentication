@@ -191,7 +191,7 @@ jobs:
       - uses: team-alembic/staple-actions/actions/mix-docs@main
         with:
           mix-env: dev
-      - uses: actions/upload-pages-artifact@v1
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: doc/
 
@@ -208,7 +208,7 @@ jobs:
     steps:
       - name: Deploy to GitHub pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
 
   # git-ops:
   #   name: mix git-ops.release
