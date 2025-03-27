@@ -20,7 +20,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
     defmodule Test.Secrets do
       use AshAuthentication.Secret
 
-      def secret_for([:authentication, :tokens, :signing_secret], Test.Accounts.User, _opts) do
+      def secret_for([:authentication, :tokens, :signing_secret], Test.Accounts.User, _opts, _context) do
         Application.fetch_env(:test, :token_signing_secret)
       end
     end
