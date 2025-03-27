@@ -110,6 +110,7 @@ Configure authentication for this resource
  * [tokens](#authentication-tokens)
  * [strategies](#authentication-strategies)
  * [add_ons](#authentication-add_ons)
+ * [providers](#authentication-providers)
 
 
 
@@ -159,6 +160,15 @@ Configure authentication strategies on this resource
 
 ### authentication.add_ons
 Additional add-ons related to, but not providing authentication
+
+
+
+
+
+
+
+### authentication.providers
+A DSL section for extensions to add authentication providers
 
 
 

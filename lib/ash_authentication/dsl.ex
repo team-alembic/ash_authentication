@@ -155,6 +155,12 @@ defmodule AshAuthentication.Dsl do
             describe: "Additional add-ons related to, but not providing authentication",
             entities: [],
             patchable?: true
+          },
+          %Section{
+            name: :providers,
+            describe: "A DSL section for extensions to add authentication providers",
+            entities: [],
+            patchable?: true
           }
         ]
       }
