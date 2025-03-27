@@ -132,7 +132,7 @@ defmodule AshAuthentication.Plug.Helpers do
   @doc """
   Assigns all subjects from their equivalent sessions, if they are not already assigned.
 
-  This is meant to used bvia `AshAuthenticationPhoenix` for nested liveviews.
+  This is meant to used via `AshAuthenticationPhoenix` for nested liveviews.
   See `AshAuthenticationPhoenix.LiveSession.assign_new_resources/3` for more.
   """
   def assign_new_resources(socket, session, assign_new, opts) do
