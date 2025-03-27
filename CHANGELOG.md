@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.6.3](https://github.com/team-alembic/ash_authentication/compare/v4.6.2...v4.6.3) (2025-03-27)
+
+
+
+
+### Improvements:
+
+* add `AshAuthentication.Plug.Helpers.assign_new_resources/4` (#951)
+
+* Add a patchable empty `authentication.providers` section. (#952)
+
+* delete_session on unsuccessful auth (#950)
+
 ## [v4.6.2](https://github.com/team-alembic/ash_authentication/compare/v4.6.1...v4.6.2) (2025-03-25)
 
 
