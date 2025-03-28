@@ -4,6 +4,8 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   import Igniter.Test
 
+  @moduletag :igniter
+
   setup do
     igniter =
       test_project()
