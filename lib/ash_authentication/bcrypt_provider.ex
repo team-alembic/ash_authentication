@@ -29,7 +29,8 @@ defmodule AshAuthentication.BcryptProvider do
   """
   @impl true
   @spec valid?(input :: String.t() | nil, hash :: String.t()) :: boolean
-  def valid?(nil, hash), do: false
+  def valid?(nil, _hash), do: Bcrypt.no_user_verify()
+
   def valid?(input, hash) when is_binary(input) and is_binary(hash),
     do: Bcrypt.verify_pass(input, hash)
 
