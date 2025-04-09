@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.6.4](https://github.com/team-alembic/ash_authentication/compare/v4.6.3...v4.6.4) (2025-04-09)
+
+
+
+
+### Bug Fixes:
+
+* Potential timing attack introduced by #961. (#962)
+
+* add guard clause when input is nil (#961)
+
+* failing installer test.
+
+* replace secret_for/3 with secret_for/4 in the igniter.ex (#953)
+
 ## [v4.6.3](https://github.com/team-alembic/ash_authentication/compare/v4.6.2...v4.6.3) (2025-03-27)
 
 
