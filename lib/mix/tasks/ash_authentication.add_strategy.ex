@@ -318,11 +318,15 @@ if Code.ensure_loaded?(Igniter) do
             monitor_fields [:email]
             confirm_on_create? true
             confirm_on_update? false
+            confirmed_at_field :confirmed_at
             auto_confirm_actions [:sign_in_with_magic_link, :reset_password_with_token]
             sender #{inspect(sender)}
           end
           """
         )
+        |> Ash.Resource.Igniter.add_new_attribute(options[:user], :confirmed_at, """
+        attribute :confirmed_at, :utc_datetime_usec
+        """)
         |> create_new_user_confirmation_sender(sender, options)
       else
         igniter

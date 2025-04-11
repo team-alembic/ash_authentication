@@ -62,6 +62,8 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |      allow_nil?(false)
       + |      sensitive?(true)
       + |    end
+      + |
+      + |    attribute(:confirmed_at, :utc_datetime_usec)
       """)
     end
 
