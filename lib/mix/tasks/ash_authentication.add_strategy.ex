@@ -651,9 +651,9 @@ if Code.ensure_loaded?(Igniter) do
 
       url =
         if use_web_module do
-          "\#{url(~p\"/auth/user/confirm_new_user?\#{[confirm: token]}\")}"
+          "\#{url(~p\"/confirm_new_user?/\#{token}\")}"
         else
-          "/auth/user/confirm_new_user?confirm=\#{token}"
+          "/confirm_new_user/\#{token}"
         end
 
       Igniter.Project.Module.create_module(
