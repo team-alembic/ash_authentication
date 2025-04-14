@@ -14,6 +14,8 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 * mitigate medium-sev security issue for confirmation emails (#968)
 
+For more information see the security advisory: https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-3988-q8q7-p787
+
 * generate `created_at` timestamp on add_strategy
 
 ## [v4.6.4](https://github.com/team-alembic/ash_authentication/compare/v4.6.3...v4.6.4) (2025-04-09)
