@@ -55,7 +55,7 @@ defmodule Example.UserWithRegisterMagicLink do
         inhibit_updates? false
         confirm_on_create? true
         confirm_on_update? true
-        require_interaction?(true)
+        require_interaction? true
         auto_confirm_actions [:sign_in_with_magic_link]
 
         sender fn user, _, _ ->

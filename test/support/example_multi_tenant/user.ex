@@ -152,7 +152,7 @@ defmodule ExampleMultiTenant.User do
       confirmation :confirm do
         monitor_fields [:username]
         inhibit_updates? true
-        require_interaction?(true)
+        require_interaction? true
 
         sender fn _user, token, opts ->
           username =
