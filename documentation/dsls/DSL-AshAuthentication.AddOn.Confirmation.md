@@ -70,6 +70,23 @@ so via the `AshAuthentication.Strategy` protocol.
     ...> user.confirmed_at >= one_second_ago()
     true
 
+## Usage with AshAuthenticationPhoenix
+
+If you are using `AshAuthenticationPhoenix`, and have `require_interaction?` set to `true`,
+which you very much should, then you will need to add a `confirm_route` to your router. This
+is placed in the same location as `auth_routes`, and should be provided the user and the
+strategy name. For example:
+
+```elixir
+# Remove this if you do not want to use the confirmation strategy
+confirm_route(
+  MyApp.Accounts.User,
+  :confirm_new_user,
+  auth_routes_prefix: "/auth",
+  overrides: [MyApp.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+)
+```
+
 ## Plugs
 
 Confirmation provides a single endpoint for the `:confirm` phase.  If you wish
@@ -112,6 +129,7 @@ User confirmation flow
 | [`sender`](#authentication-add_ons-confirmation-sender){: #authentication-add_ons-confirmation-sender .spark-required} | `(any, any, any -> any) \| module` |  | How to send the confirmation instructions to the user. |
 | [`token_lifetime`](#authentication-add_ons-confirmation-token_lifetime){: #authentication-add_ons-confirmation-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{3, :days}` | How long should the confirmation token be valid.  If no unit is provided, then hours is assumed. |
 | [`prevent_hijacking?`](#authentication-add_ons-confirmation-prevent_hijacking?){: #authentication-add_ons-confirmation-prevent_hijacking? } | `boolean` | `true` | Whether or not to prevent upserts over unconfirmed uers. See [the confirmation guide](/documentation/topics/confirmation.md) for more. |
+| [`require_interaction?`](#authentication-add_ons-confirmation-require_interaction?){: #authentication-add_ons-confirmation-require_interaction? } | `boolean` | `false` | Whether or not to require user interaction to confirm. If true, the confirmation URLs are changed to a `POST` request, and AshAuthenticationPhoenix will show a button to confirm when the page is visited |
 | [`confirmed_at_field`](#authentication-add_ons-confirmation-confirmed_at_field){: #authentication-add_ons-confirmation-confirmed_at_field } | `atom` | `:confirmed_at` | The name of the field to store the time that the last confirmation took place. Created if it does not exist. |
 | [`confirm_on_create?`](#authentication-add_ons-confirmation-confirm_on_create?){: #authentication-add_ons-confirmation-confirm_on_create? } | `boolean` | `true` | Generate and send a confirmation token when a new resource is created. Triggers when a create action is executed _and_ one of the monitored fields is being set. |
 | [`confirm_on_update?`](#authentication-add_ons-confirmation-confirm_on_update?){: #authentication-add_ons-confirmation-confirm_on_update? } | `boolean` | `true` | Generate and send a confirmation token when a resource is changed.  Triggers when an update action is executed _and_ one of the monitored fields is being set. |

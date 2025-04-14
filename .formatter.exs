@@ -93,6 +93,7 @@ spark_locals_without_parens = [
   request_action_name: 1,
   request_password_reset_action_name: 1,
   require_confirmed_with: 1,
+  require_interaction?: 1,
   require_token_presence_for_authentication?: 1,
   resettable: 0,
   resettable: 1,

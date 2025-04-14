@@ -28,7 +28,9 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.Confirmation do
 
   @doc false
   @spec method_for_phase(Confirmation.t(), phase) :: Strategy.http_method()
-  def method_for_phase(_, _), do: :get
+  def method_for_phase(strategy, _phase) when strategy.require_interaction?, do: :post
+
+  def method_for_phase(_strategy, _phase), do: :get
 
   @doc false
   @spec routes(Confirmation.t()) :: [Strategy.route()]

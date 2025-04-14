@@ -69,6 +69,23 @@ defmodule AshAuthentication.AddOn.Confirmation do
       ...> user.confirmed_at >= one_second_ago()
       true
 
+  ## Usage with AshAuthenticationPhoenix
+
+  If you are using `AshAuthenticationPhoenix`, and have `require_interaction?` set to `true`,
+  which you very much should, then you will need to add a `confirm_route` to your router. This
+  is placed in the same location as `auth_routes`, and should be provided the user and the
+  strategy name. For example:
+
+  ```elixir
+  # Remove this if you do not want to use the confirmation strategy
+  confirm_route(
+    MyApp.Accounts.User,
+    :confirm_new_user,
+    auth_routes_prefix: "/auth",
+    overrides: [MyApp.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+  )
+  ```
+
   ## Plugs
 
   Confirmation provides a single endpoint for the `:confirm` phase.  If you wish
@@ -90,6 +107,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
             confirm_on_update?: true,
             prevent_hijacking?: true,
             confirmed_at_field: :confirmed_at,
+            require_interaction?: false,
             inhibit_updates?: true,
             monitor_fields: [],
             auto_confirm_actions: [],

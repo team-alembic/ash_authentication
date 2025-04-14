@@ -31,7 +31,7 @@ defmodule AshAuthentication.AddOn.Confirmation.PlugTest do
       }
 
       assert {_conn, {:error, error}} =
-               :get
+               :post
                |> conn("/", params)
                |> Plug.confirm(strategy)
                |> Helpers.get_authentication_result()
@@ -47,7 +47,7 @@ defmodule AshAuthentication.AddOn.Confirmation.PlugTest do
       }
 
       assert {_conn, {:error, error}} =
-               :get
+               :post
                |> conn("/", params)
                |> Plug.confirm(strategy)
                |> Helpers.get_authentication_result()
@@ -73,7 +73,7 @@ defmodule AshAuthentication.AddOn.Confirmation.PlugTest do
       }
 
       assert {_conn, {:ok, confirmed_user}} =
-               :get
+               :post
                |> conn("/", params)
                |> Plug.confirm(strategy)
                |> Helpers.get_authentication_result()
