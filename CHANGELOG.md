@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.7.1](https://github.com/team-alembic/ash_authentication/compare/v4.7.0...v4.7.1) (2025-04-14)
+
+
+
+
+### Bug Fixes:
+
+* update generated email templates to use the correct link
+
 ## [v4.7.0](https://github.com/team-alembic/ash_authentication/compare/v4.6.4...v4.7.0) (2025-04-14)
 
 
