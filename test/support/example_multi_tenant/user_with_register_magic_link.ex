@@ -57,6 +57,7 @@ defmodule ExampleMultiTenant.UserWithRegisterMagicLink do
         inhibit_updates? false
         confirm_on_create? true
         confirm_on_update? true
+        require_interaction?(true)
         # in a real setup, you should have this
         # but we don't for testing purposes
         auto_confirm_actions [:sign_in_with_magic_link]

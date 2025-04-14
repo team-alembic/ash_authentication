@@ -97,6 +97,7 @@ defmodule MyApp.Accounts.User do
         monitor_fields [:email]
         confirm_on_create? true
         confirm_on_update? false
+        require_interaction? true
         sender MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail
       end
     end
@@ -221,6 +222,7 @@ defmodule MyApp.Accounts.User do
         confirm_on_create? false
         confirm_on_update? true
         confirm_action_name :confirm_change
+        require_interaction? true
         sender MyApp.Accounts.User.Senders.SendEmailChangeConfirmationEmail
       end
     end

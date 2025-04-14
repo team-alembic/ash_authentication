@@ -53,6 +53,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
           doc:
             "Whether or not to prevent upserts over unconfirmed uers. See [the confirmation guide](/documentation/topics/confirmation.md) for more."
         ],
+        require_interaction?: [
+          type: :boolean,
+          default: false,
+          doc:
+            "Whether or not to require user interaction to confirm. If true, the confirmation URLs are changed to a `POST` request, and AshAuthenticationPhoenix will show a button to confirm when the page is visited"
+        ],
         confirmed_at_field: [
           type: :atom,
           doc:

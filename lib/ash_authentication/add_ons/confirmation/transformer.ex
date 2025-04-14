@@ -32,6 +32,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
              strategy.confirm_action_name,
              &build_confirm_action(&1, strategy)
            ),
+         :ok <- warn_on_require_interaction(strategy),
          :ok <- validate_confirm_action(dsl_state, strategy),
          {:ok, dsl_state} <-
            maybe_build_attribute(
@@ -68,6 +69,42 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
            path: [:authentication, :add_ons, :confirmation],
            message: "Configuration error"
          )}
+    end
+  end
+
+  defp warn_on_require_interaction(strategy) when strategy.require_interaction? do
+    :ok
+  end
+
+  defp warn_on_require_interaction(strategy) do
+    bypassing_error? =
+      Application.get_env(
+        :ash_authentication_phoenix,
+        :bypass_require_interaction_for_confirmation?,
+        false
+      )
+
+    if bypassing_error? do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:authentication, :add_ons, :confirmation],
+         message: """
+         `require_interaction?` must be set to true on the
+         #{inspect(strategy.name)} confirmation for #{inspect(strategy.resource)}.
+         Without it, confirmation links use a `GET` endpoint for confirmation. Some
+         email clients and security tools (e.g., Outlook, virus scanners, and email
+         previewers) may automatically follow these links, unintentionally
+         confirming the account. This allows an attacker to register an account
+         using another user’s email and potentially have it auto-confirmed by the
+         victim’s email client.
+
+         See the security advisory for more information:
+
+         https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-3988-q8q7-p787
+         """
+       )}
     end
   end
 
