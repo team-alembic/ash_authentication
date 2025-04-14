@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.7.0](https://github.com/team-alembic/ash_authentication/compare/v4.6.4...v4.7.0) (2025-04-14)
+
+
+
+
+### Improvements:
+
+* mitigate medium-sev security issue for confirmation emails (#968)
+
+* generate `created_at` timestamp on add_strategy
+
 ## [v4.6.4](https://github.com/team-alembic/ash_authentication/compare/v4.6.3...v4.6.4) (2025-04-09)
 
 
