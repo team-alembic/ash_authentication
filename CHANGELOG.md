@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.7.4](https://github.com/team-alembic/ash_authentication/compare/v4.7.3...v4.7.4) (2025-04-15)
+
+
+
+
+### Bug Fixes:
+
+* use get as method for callback phase in oauth2
+
 ## [v4.7.3](https://github.com/team-alembic/ash_authentication/compare/v4.7.2...v4.7.3) (2025-04-15)
 
 
