@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.7.5](https://github.com/team-alembic/ash_authentication/compare/v4.7.4...v4.7.5) (2025-04-15)
+
+
+
+
+### Bug Fixes:
+
+* *actually* use `:post` as method for callback
+
 ## [v4.7.4](https://github.com/team-alembic/ash_authentication/compare/v4.7.3...v4.7.4) (2025-04-15)
 
 
