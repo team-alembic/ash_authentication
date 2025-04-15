@@ -100,7 +100,12 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
          using another user’s email and potentially have it auto-confirmed by the
          victim’s email client.
 
-         See the security advisory for more information:
+         If you are *positive* that you are not affected , and *absolutely
+         must*, you can bypass this warning by setting `config
+         :ash_authentication, :bypass_require_interaction_for_confirmation?,
+         true` in your configuration.
+
+         Read the security advisory and follow patch the steps closely if you need to upgrade:
 
          https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-3988-q8q7-p787
          """
