@@ -30,7 +30,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.OAuth2 do
   @doc false
   @spec method_for_phase(OAuth2.t(), phase) :: Strategy.http_method()
   def method_for_phase(_, :request), do: :get
-  def method_for_phase(_, :callback), do: :get
+  def method_for_phase(_, :callback), do: :post
 
   @doc """
   Return a list of routes for use by the strategy.
