@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.7.3](https://github.com/team-alembic/ash_authentication/compare/v4.7.2...v4.7.3) (2025-04-15)
+
+
+
+
+### Improvements:
+
+* better error message for `require_interaction?` option
+
 ## [v4.7.2](https://github.com/team-alembic/ash_authentication/compare/v4.7.1...v4.7.2) (2025-04-14)
 
 
