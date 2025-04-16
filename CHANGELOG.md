@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.7.6](https://github.com/team-alembic/ash_authentication/compare/v4.7.5...v4.7.6) (2025-04-16)
+
+
+
+
+### Bug Fixes:
+
+* switch method back again to `:get` like its supposed to be ð¤¦ââï¸
+
 ## [v4.7.5](https://github.com/team-alembic/ash_authentication/compare/v4.7.4...v4.7.5) (2025-04-15)
 
 
