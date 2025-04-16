@@ -202,7 +202,7 @@ authentication do
   strategies do
     strategy :password do
       ...
-      # replace with your confirmation strategy
+      # which confirmation strategy to require confirmation for
       require_confirmed_with :confirm_new_user
     end
   end
