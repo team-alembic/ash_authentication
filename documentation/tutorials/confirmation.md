@@ -191,10 +191,20 @@ The above section explains how to confirm an user account. There's a new directi
 So:
 
 ```
-strategies do
-  strategy :password do
-    ...
-    require_confirmed_with :confirmed_at
+authentication do
+  ...
+  add_ons do
+    confirmation :confirm_new_user do
+      ...
+    end
+  end
+
+  strategies do
+    strategy :password do
+      ...
+      # which confirmation strategy to require confirmation for
+      require_confirmed_with :confirm_new_user
+    end
   end
 end
 ```
