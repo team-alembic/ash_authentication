@@ -33,8 +33,8 @@ defmodule AshAuthentication.Strategy.OAuth2.StrategyTest do
       assert :get = Strategy.method_for_phase(%OAuth2{}, :request)
     end
 
-    test "it is post for the callback phase" do
-      assert :post = Strategy.method_for_phase(%OAuth2{}, :callback)
+    test "it is get for the callback phase" do
+      assert :get = Strategy.method_for_phase(%OAuth2{}, :callback)
     end
   end
 
