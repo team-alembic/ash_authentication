@@ -79,7 +79,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   defp warn_on_require_interaction(strategy) do
     bypassing_error? =
       Application.get_env(
-        :ash_authentication_phoenix,
+        :ash_authentication,
         :bypass_require_interaction_for_confirmation?,
         false
       )
