@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.7.7](https://github.com/team-alembic/ash_authentication/compare/v4.7.6...v4.7.7) (2025-04-29)
+
+
+
+
+### Bug Fixes:
+
+* Use correct bypass config key for confirmation CVE
+
+### Improvements:
+
+* support installing AshAuthentication on top of existing resources
+
 ## [v4.7.6](https://github.com/team-alembic/ash_authentication/compare/v4.7.5...v4.7.6) (2025-04-16)
 
 
