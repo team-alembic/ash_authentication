@@ -69,9 +69,14 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
       use Ash.Resource,
         otp_app: :test,
         domain: Test.Accounts,
+        data_layer: AshPostgres.DataLayer,
         authorizers: [Ash.Policy.Authorizer],
-        extensions: [AshAuthentication],
-        data_layer: AshPostgres.DataLayer
+        extensions: [AshAuthentication]
+
+      postgres do
+        table("users")
+        repo(Test.Repo)
+      end
 
       policies do
         bypass AshAuthentication.Checks.AshAuthenticationInteraction do
@@ -99,11 +104,6 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
         end
       end
 
-      postgres do
-        table("users")
-        repo(Test.Repo)
-      end
-
       attributes do
         uuid_primary_key(:id)
       end
@@ -129,9 +129,14 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
       use Ash.Resource,
         otp_app: :test,
         domain: Test.Accounts,
+        data_layer: AshPostgres.DataLayer,
         authorizers: [Ash.Policy.Authorizer],
-        extensions: [AshAuthentication.TokenResource],
-        data_layer: AshPostgres.DataLayer
+        extensions: [AshAuthentication.TokenResource]
+
+      postgres do
+        table("tokens")
+        repo(Test.Repo)
+      end
 
       policies do
         bypass AshAuthentication.Checks.AshAuthenticationInteraction do
@@ -143,11 +148,6 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
           description("No one aside from AshAuthentication can interact with the tokens resource.")
           forbid_if(always())
         end
-      end
-
-      postgres do
-        table("tokens")
-        repo(Test.Repo)
       end
 
       attributes do
