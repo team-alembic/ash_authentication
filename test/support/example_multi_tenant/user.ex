@@ -230,6 +230,8 @@ defmodule ExampleMultiTenant.User do
       end
 
       magic_link do
+        require_interaction? true
+
         sender fn user, token, _opts ->
           Logger.debug("Magic link request for #{user.username}, token #{inspect(token)}")
         end

@@ -9,6 +9,8 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
   alias Plug.Conn
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
+  require EEx
+  require Logger
 
   @doc """
   Handle a request for a magic link.
@@ -30,6 +32,23 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
     result = Strategy.action(strategy, :request, params, opts)
     store_authentication_result(conn, result)
   end
+
+  @doc """
+  Present a sign in button to a user.
+  """
+  @spec accept(Conn.t(), MagicLink.t()) :: Conn.t()
+  # sobelow_skip ["XSS.SendResp"]
+  def accept(conn, strategy) do
+    token = Map.get(conn.params, to_string(strategy.token_param_name))
+
+    conn
+    |> Conn.put_resp_content_type("text/html")
+    |> Conn.send_resp(200, render_form(strategy: strategy, conn: conn, token: token))
+  end
+
+  EEx.function_from_file(:defp, :render_form, Path.join(__DIR__, "sign_in_form.html.eex"), [
+    :assigns
+  ])
 
   @doc """
   Sign in via magic link.

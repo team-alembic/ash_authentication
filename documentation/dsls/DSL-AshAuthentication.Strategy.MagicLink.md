@@ -79,6 +79,20 @@ Signing in using a magic link token:
     ...> signed_in_user.id == user
     true
 
+## Usage with AshAuthenticationPhoenix
+
+If you are using `AshAuthenticationPhoenix`, and have `require_authentication?` set to `true`, which you very much should, then you will need to add a `magic_sign_in_route` to your router. This is placed in the same location as `auth_routes`, and should be provided the user and the strategy name. For example:
+
+```elixir
+# Remove this if you do not want to use the magic link strategy
+magic_sign_in_route(
+  MyApp.Accounts.User,
+  :sign_in,
+  auth_routes_prefix: "/auth",
+  overrides: [MyApp.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+)
+```
+
 ## Plugs
 
 The magic link strategy provides plug endpoints for both request and sign-in
@@ -129,6 +143,7 @@ Strategy for authenticating using local users with a magic link
 | [`identity_field`](#authentication-strategies-magic_link-identity_field){: #authentication-strategies-magic_link-identity_field } | `atom` | `:username` | The name of the attribute which uniquely identifies the user, usually something like `username` or `email_address`. |
 | [`token_lifetime`](#authentication-strategies-magic_link-token_lifetime){: #authentication-strategies-magic_link-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{10, :minutes}` | How long the sign in token is valid.  If no unit is provided, then `minutes` is assumed. |
 | [`prevent_hijacking?`](#authentication-strategies-magic_link-prevent_hijacking?){: #authentication-strategies-magic_link-prevent_hijacking? } | `boolean` | `true` | Requires a confirmation add_on to be present if the password strategy is used with the same identity_field. |
+| [`require_interaction?`](#authentication-strategies-magic_link-require_interaction?){: #authentication-strategies-magic_link-require_interaction? } | `boolean` | `false` | Whether or not to require user interaction to sign in. If true, the magic link URLs are changed to a `POST` request, and AshAuthenticationPhoenix will show a button to confirm when the page is visited |
 | [`request_action_name`](#authentication-strategies-magic_link-request_action_name){: #authentication-strategies-magic_link-request_action_name } | `atom` |  | The name to use for the request action. Defaults to `request_<strategy_name>` |
 | [`lookup_action_name`](#authentication-strategies-magic_link-lookup_action_name){: #authentication-strategies-magic_link-lookup_action_name } | `atom` |  | The action to use when looking up a user by their identity. Defaults to `get_by_<identity_field>` |
 | [`single_use_token?`](#authentication-strategies-magic_link-single_use_token?){: #authentication-strategies-magic_link-single_use_token? } | `boolean` | `true` | Automatically revoke the token once it's been used for sign in. |
