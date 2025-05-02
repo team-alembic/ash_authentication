@@ -32,6 +32,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
          {:ok, primary_keys} <- extract_primary_keys_from_subject(claims, strategy.resource) do
       query
       |> Query.filter(^primary_keys)
+      |> Query.put_context(:token_claims, claims)
     else
       :error ->
         Query.add_error(
@@ -85,7 +86,12 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   end
 
   defp verify_result(query, [user], strategy, context) do
-    case Jwt.token_for_user(user, %{}, Ash.Context.to_opts(context)) do
+    claims =
+      query.context
+      |> Map.get(:token_claims, %{})
+      |> Map.take(["tenant"])
+
+    case Jwt.token_for_user(user, claims, Ash.Context.to_opts(context)) do
       {:ok, token, _claims} ->
         {:ok, [Resource.put_metadata(user, :token, token)]}
 
