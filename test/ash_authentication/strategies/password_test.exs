@@ -102,5 +102,30 @@ defmodule AshAuthentication.Strategy.PasswordTest do
                  }
                )
     end
+
+    test "users without hashed passwords fail for the right reason" do
+      user = build_user()
+
+      user =
+        Ash.update!(user, %{hashed_password: nil, confirmed_at: DateTime.utc_now()},
+          authorize?: false
+        )
+
+      strategy = AshAuthentication.Info.strategy!(User, :password)
+
+      assert {:error, %{caused_by: %{errors: [error]}}} =
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   username: user.username,
+                   password: password()
+                 }
+               )
+
+      assert error.__struct__ == AshAuthentication.Errors.AuthenticationFailed
+      assert error.caused_by.module == AshAuthentication.Strategy.Password.SignInPreparation
+      assert error.caused_by.message =~ ~r/no users/i
+    end
   end
 end

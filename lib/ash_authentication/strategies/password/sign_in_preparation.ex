@@ -23,6 +23,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   def prepare(query, options, context) do
     {:ok, strategy} = Info.find_strategy(query, context, options)
     identity_field = strategy.identity_field
+    hashed_password_field = strategy.hashed_password_field
     identity = Query.get_argument(query, identity_field)
 
     query =
@@ -30,7 +31,9 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
         # This will fail due to the argument being `nil`, so this is just a formality
         Query.filter(query, false)
       else
-        Query.filter(query, ^ref(identity_field) == ^identity)
+        query
+        |> Query.filter(^ref(identity_field) == ^identity)
+        |> Query.filter(not is_nil(^ref(hashed_password_field)))
       end
 
     query
