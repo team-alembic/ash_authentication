@@ -291,6 +291,24 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
         |      sensitive?(true)
         |    end
       """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |   action :request_magic_link do
+      + |     argument :email, :ci_string do
+      + |       allow_nil?(false)
+      + |     end
+      + |
+      + |     run(AshAuthentication.Strategy.MagicLink.Request)
+      + |   end
+      """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |     magic_link do
+      + |       identity_field(:email)
+      + |       registration_enabled?(true)
+      + |       require_interaction?(true)
+      + |
+      + |       sender(Test.Accounts.User.Senders.SendMagicLinkEmail)
+      + |     end
+      """)
     end
   end
 end

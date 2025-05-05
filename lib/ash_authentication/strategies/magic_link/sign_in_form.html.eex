@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Sign In with Magic Link</title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <h1>Sign in</h1>
+
+    <form method="post" action="<%= @conn.request_path %>">
+      <input type="hidden" name="token" value="<%= @token %>" />
+      <input type="submit" value="Sign in" />
+    </form>
+  </body>
+</html>
+

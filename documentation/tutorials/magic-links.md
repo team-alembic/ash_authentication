@@ -15,6 +15,7 @@ strategies do
   magic_link do
     identity_field :email
     registration_enabled? true
+    require_interaction? true
 
     sender(Example.Accounts.User.Senders.SendMagicLink)
   end
@@ -32,6 +33,12 @@ This allows a user who does not exist to request a magic link and sign up with o
 ### Registration Disabled (default)
 
 When registration is disabled, signing in with magic link is a _read_ action.
+
+### Require Interaction
+
+Some email clients, virus scanners, etc will retrieve a link automatically without user interaction, causing the magic link token to be consumed and thus fail when the user clicks the link.  The mitigate this we now default to requiring that the user click a "sign in" button to ensure that retrieving the confirmation page does not actually consume the token.  By default if a GET request is sent to the magic link endpoint a very simple form is served which submits to the same URL with the same token parameter as a POST.  You probably don't want to serve this page to users in production.  You can work around this by placing your own page at the same path before it in the router, or changing the email link to a different URL.
+
+See also `AshAuthentication.Phoenix.Router.magic_sign_in_route/3`.
 
 ## Create an email sender and email template
 

@@ -78,6 +78,20 @@ defmodule AshAuthentication.Strategy.MagicLink do
       ...> signed_in_user.id == user
       true
 
+  ## Usage with AshAuthenticationPhoenix
+
+  If you are using `AshAuthenticationPhoenix`, and have `require_authentication?` set to `true`, which you very much should, then you will need to add a `magic_sign_in_route` to your router. This is placed in the same location as `auth_routes`, and should be provided the user and the strategy name. For example:
+
+  ```elixir
+  # Remove this if you do not want to use the magic link strategy
+  magic_sign_in_route(
+    MyApp.Accounts.User,
+    :sign_in,
+    auth_routes_prefix: "/auth",
+    overrides: [MyApp.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+  )
+  ```
+
   ## Plugs
 
   The magic link strategy provides plug endpoints for both request and sign-in
@@ -107,14 +121,15 @@ defmodule AshAuthentication.Strategy.MagicLink do
   """
 
   defstruct identity_field: :username,
+            lookup_action_name: nil,
             name: nil,
-            request_action_name: nil,
-            resource: nil,
-            sender: nil,
             prevent_hijacking?: true,
             registration_enabled?: false,
+            request_action_name: nil,
+            require_interaction?: false,
+            resource: nil,
+            sender: nil,
             sign_in_action_name: nil,
-            lookup_action_name: nil,
             single_use_token?: true,
             strategy_module: __MODULE__,
             token_lifetime: {10, :minutes},
@@ -127,15 +142,16 @@ defmodule AshAuthentication.Strategy.MagicLink do
 
   @type t :: %__MODULE__{
           identity_field: atom,
+          lookup_action_name: nil,
           name: atom,
           prevent_hijacking?: boolean,
           registration_enabled?: boolean,
           request_action_name: atom,
+          require_interaction?: boolean,
           resource: module,
           sender: {module, keyword},
-          lookup_action_name: nil,
-          single_use_token?: boolean,
           sign_in_action_name: atom,
+          single_use_token?: boolean,
           strategy_module: module,
           token_lifetime: pos_integer(),
           token_param_name: atom

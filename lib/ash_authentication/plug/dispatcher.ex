@@ -24,6 +24,7 @@ defmodule AshAuthentication.Plug.Dispatcher do
   @spec call(Conn.t(), config | any) :: Conn.t()
   def call(conn, {phase, strategy, return_to}) do
     activity = {Strategy.name(strategy), phase}
+    conn = %{conn | params: Map.drop(conn.params, ["glob"])}
 
     strategy
     |> Strategy.plug(phase, conn)

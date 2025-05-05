@@ -43,6 +43,12 @@ defmodule AshAuthentication.Strategy.MagicLink.Dsl do
           doc:
             "Requires a confirmation add_on to be present if the password strategy is used with the same identity_field."
         ],
+        require_interaction?: [
+          type: :boolean,
+          default: false,
+          doc:
+            "Whether or not to require user interaction to sign in. If true, the magic link URLs are changed to a `POST` request, and AshAuthenticationPhoenix will show a button to confirm when the page is visited"
+        ],
         request_action_name: [
           type: :atom,
           doc: "The name to use for the request action. Defaults to `request_<strategy_name>`",

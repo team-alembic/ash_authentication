@@ -31,16 +31,20 @@ defmodule AshAuthentication.Plug.Router do
         |> Application.compile_env(:ash_domains, [])
         |> Stream.flat_map(&Ash.Domain.Info.resources(&1))
         |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
-        |> Stream.flat_map(&Info.authentication_strategies/1)
+        |> Stream.flat_map(
+          &(Info.authentication_strategies(&1) ++ Info.authentication_add_ons(&1))
+        )
         |> Stream.flat_map(fn strategy ->
           strategy
           |> Strategy.routes()
-          |> Stream.map(fn {path, phase} -> {path, {phase, strategy, unquote(return_to)}} end)
+          |> Stream.map(fn {path, phase} ->
+            {path, Strategy.method_for_phase(strategy, phase),
+             {phase, strategy, unquote(return_to)}}
+          end)
         end)
-        |> Map.new()
 
-      for {path, config} <- routes do
-        match(path, to: Dispatcher, init_opts: [config])
+      for {path, method, config} <- routes do
+        match(path, to: Dispatcher, via: [method], init_opts: [config])
       end
 
       match(_, to: Dispatcher, init_opts: [unquote(return_to)])

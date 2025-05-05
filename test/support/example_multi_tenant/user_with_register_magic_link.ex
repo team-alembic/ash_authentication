@@ -37,6 +37,7 @@ defmodule ExampleMultiTenant.UserWithRegisterMagicLink do
       magic_link do
         identity_field :email
         registration_enabled? true
+        require_interaction? true
 
         sender fn user, token, _opts ->
           email =

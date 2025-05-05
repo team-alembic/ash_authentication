@@ -169,6 +169,7 @@ if Code.ensure_loaded?(Igniter) do
       magic_link do
         identity_field :#{options[:identity_field]}
         registration_enabled? true
+        require_interaction? true
 
         sender #{inspect(sender)}
       end
@@ -394,6 +395,13 @@ if Code.ensure_loaded?(Igniter) do
         {igniter, [mailer]} ->
           {_web_module_exists?, use_web_module, igniter} = create_use_web_module(igniter)
 
+          url =
+            if use_web_module do
+              "\#{url(~p\"/magic_link?token=\#{params[:token}\")}"
+            else
+              "/auth/user/magic_link?token=\#{params[:token]}"
+            end
+
           Igniter.Project.Module.create_module(igniter, sender, ~s'''
           @moduledoc """
           Sends a magic link email
@@ -426,11 +434,11 @@ if Code.ensure_loaded?(Igniter) do
           end
 
           defp body(params) do
-            url = url(~p"/auth/user/magic_link/?token=\#{params[:token]}")
+            # NOTE: You may have to change this to match your magic link acceptance URL.
 
             """
             <p>Hello, \#{params[:email]}! Click this link to sign in:</p>
-            <p><a href="\#{url}">\#{url}</a></p>
+            <p><a href="\#{url}">#{url}</a></p>
             """
           end
           ''')
@@ -458,7 +466,7 @@ if Code.ensure_loaded?(Igniter) do
 
       url =
         if use_web_module do
-          "\#{url(~p\"/auth/user/magic_link/?token=\#{token}\")}"
+          "\#{url(~p\"/magic_link/?token=\#{token}\")}"
         else
           "/auth/user/magic_link/?token=\#{token}"
         end
