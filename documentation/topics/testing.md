@@ -31,7 +31,7 @@ defmodule MyAppWeb.ConnCase do
     # ...
   end
 
-  def register_and_log_in_user(%{conn: conn}) do
+  def register_and_log_in_user(%{conn: conn} = context) do
     email = "user@example.com"
     password = "password"
     {:ok, hashed_password} = AshAuthentication.BcryptProvider.hash(password)
@@ -50,12 +50,12 @@ defmodule MyAppWeb.ConnCase do
         password: password
       })
 
-    conn =
+    new_conn =
       conn
       |> Phoenix.ConnTest.init_test_session(%{})
       |> AshAuthentication.Plug.Helpers.store_in_session(user)
 
-    %{conn: conn}
+   %{context | conn: conn}
   end
 end
 ```
