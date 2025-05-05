@@ -49,7 +49,7 @@ defmodule Example.User do
     update :update do
       argument :password, :string, allow_nil?: true, sensitive?: true
       argument :password_confirmation, :string, allow_nil?: true, sensitive?: true
-      accept [:username]
+      accept [:username, :hashed_password, :confirmed_at]
       primary? true
       require_atomic? false
     end

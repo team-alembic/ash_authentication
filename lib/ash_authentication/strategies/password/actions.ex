@@ -68,6 +68,9 @@ defmodule AshAuthentication.Strategy.Password.Actions do
            }
          )}
 
+      {:error, error} when is_struct(error, Errors.AuthenticationFailed) ->
+        {:error, error}
+
       {:error, error} when is_exception(error) ->
         {:error,
          Errors.AuthenticationFailed.exception(
