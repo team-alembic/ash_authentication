@@ -55,7 +55,7 @@ defmodule MyAppWeb.ConnCase do
       |> Phoenix.ConnTest.init_test_session(%{})
       |> AshAuthentication.Plug.Helpers.store_in_session(user)
 
-    Map.put(context, :conn, new_conn)
+   %{context | conn: conn}
   end
 end
 ```
