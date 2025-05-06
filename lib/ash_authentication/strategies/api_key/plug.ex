@@ -51,7 +51,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
 
   * `:resource` - The resource to authenticate against.
   * `:source` - Where to get the API key from. Can be `:header`, `:query_param` or `:header_or_query_param`. Default: `:header`.
-    Keep in mind tha tquery params are often stored in logs etc, so we *highly* recommend using `:header`.
+    Keep in mind that query params are often stored in logs etc, so we *highly* recommend using `:header`.
   * `:param_name` - The name of the query parameter when `source: :query_param`. Default: `"api_key"`
   * `:header_prefix` - The prefix to strip from the Authorization header value when `source: :header`. Default: `"Bearer "`
   * `:strategy` - The name of the API key strategy being used, defaults to the only api key strategy on the resource, or an error if there are multiple.
