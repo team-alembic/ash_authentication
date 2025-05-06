@@ -41,7 +41,7 @@ defmodule MyApp.Accounts.ApiKey do
     create :create do
       primary? true
       accept [:user_id, :expires_at]
-      change {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: :my_app, hash: :api_key_hash}
+      change {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: :myapp, hash: :api_key_hash}
     end
   end
 
