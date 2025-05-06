@@ -70,7 +70,7 @@ defmodule MyApp.Accounts.ApiKey do
   end
 
   identities do
-    identity :unique_api_key, [:api_key]
+    identity :unique_api_key, [:api_key_hash]
   end
 
   policies do
