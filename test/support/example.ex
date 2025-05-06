@@ -9,6 +9,7 @@ defmodule Example do
     resource Example.TokenWithCustomCreateTimestamp
     resource Example.UserIdentity
     resource Example.UserWithRegisterMagicLink
+    resource Example.ApiKey
   end
 
   json_api do

@@ -40,10 +40,13 @@ Welcome! Here you will find everything you need to know to get started with and 
 
 ## Tutorials
 
+- [Authenticate with API keys](documentation/tutorials/api-keys.md)
 - [Authenticate with Auth0](documentation/tutorials/auth0.md)
 - [Authenticate with GitHub](documentation/tutorials/github.md)
 - [Authenticate with Google](documentation/tutorials/google.md)
 - [Authenticate with Magic Links](documentation/tutorials/magic-links.md)
+- [Authenticate with Slack](documentation/tutorials/slack.md)
+- [Authenticate with Passwords](documentation/tutorials/password.md)
 - [Confirmation](documentation/tutorials/confirmation.md)
 
 ---
@@ -53,6 +56,7 @@ Welcome! Here you will find everything you need to know to get started with and 
 - [AshAuthentication DSL](documentation/dsls/DSL-AshAuthentication.md)
 - [AshAuthentication.AddOn.Confirmation DSL](documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md)
 - [AshAuthentication.AddOn.LogOutEverywhere DSL](documentation/dsls/DSL-AshAuthentication.AddOn.LogOutEverywhere.md)
+- [AshAuthentication.Strategy.ApiKey](documentation/dsls/DSL-AshAuthentication.Strategy.ApiKey.md)
 - [AshAuthentication.Strategy.Auth0](documentation/dsls/DSL-AshAuthentication.Strategy.Auth0.md)
 - [AshAuthentication.Strategy.Github DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Github.md)
 - [AshAuthentication.Strategy.Google DSL](documentation/dsls/DSL-AshAuthentication.Strategy.Google.md)

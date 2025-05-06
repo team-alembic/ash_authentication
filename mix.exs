@@ -55,9 +55,9 @@ defmodule AshAuthentication.MixProject do
     ]
   end
 
-  defp extra_applications(:dev), do: [:logger, :bcrypt_elixir]
-  defp extra_applications(:test), do: [:logger, :bcrypt_elixir]
-  defp extra_applications(_), do: [:logger]
+  defp extra_applications(:dev), do: [:logger, :bcrypt_elixir, :crypto]
+  defp extra_applications(:test), do: [:logger, :bcrypt_elixir, :crypto]
+  defp extra_applications(_), do: [:logger, :crypto]
 
   defp docs do
     [
@@ -74,6 +74,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.AddOn.Confirmation)},
         {"documentation/dsls/DSL-AshAuthentication.AddOn.LogOutEverywhere.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.AddOn.LogOutEverywhere)},
+        {"documentation/dsls/DSL-AshAuthentication.Strategy.ApiKey.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.ApiKey)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Apple.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Apple)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Auth0.md",
@@ -101,6 +103,7 @@ defmodule AshAuthentication.MixProject do
         "documentation/topics/testing.md",
         "documentation/topics/tokens.md",
         "documentation/topics/upgrading.md",
+        {"documentation/tutorials/api-keys.md", title: "API Keys"},
         "documentation/tutorials/auth0.md",
         "documentation/tutorials/confirmation.md",
         "documentation/tutorials/get-started.md",
@@ -241,6 +244,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication",
       "AshAuthentication.AddOn.Confirmation",
       "AshAuthentication.AddOn.LogOutEverywhere",
+      "AshAuthentication.Strategy.ApiKey",
       "AshAuthentication.Strategy.Apple",
       "AshAuthentication.Strategy.Auth0",
       "AshAuthentication.Strategy.Github",

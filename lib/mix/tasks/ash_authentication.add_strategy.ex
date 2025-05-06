@@ -9,7 +9,8 @@ if Code.ensure_loaded?(Igniter) do
 
     @strategies [
       password: "Register and sign in with a username/email and a password.",
-      magic_link: "Register and sign in with a magic link, sent via email to the user."
+      magic_link: "Register and sign in with a magic link, sent via email to the user.",
+      api_key: "Sign in with an API key."
     ]
 
     @strategy_explanation Enum.map_join(@strategies, "\n", fn {name, description} ->
@@ -52,16 +53,19 @@ if Code.ensure_loaded?(Igniter) do
           strategies: [rest: true]
         ],
         schema: [
-          user: :string
+          user: :string,
+          api_key: :string
         ],
         aliases: [
-          u: :user
+          u: :user,
+          a: :api_key
         ]
       }
     end
 
-    def igniter(igniter, argv) do
-      {%{strategies: strategies}, argv} = positional_args!(argv)
+    def igniter(igniter) do
+      strategies = igniter.args.positional
+      argv = igniter.args.argv
       default_user = Igniter.Project.Module.module_name(igniter, "Accounts.User")
 
       options =
@@ -101,6 +105,11 @@ if Code.ensure_loaded?(Igniter) do
               igniter
               |> magic_link(options)
               |> Ash.Igniter.codegen("add_magic_link_auth")
+
+            "api_key", igniter ->
+              igniter
+              |> api_key(options)
+              |> Ash.Igniter.codegen("add_api_key_auth")
           end)
 
         {false, igniter} ->
@@ -109,6 +118,121 @@ if Code.ensure_loaded?(Igniter) do
 
           Perhaps you have not yet installed ash_authentication?
           """)
+      end
+    end
+
+    defp api_key(igniter, options) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+
+      api_key =
+        if api_key = options[:api_key] do
+          Igniter.Project.Module.parse(api_key)
+        else
+          options[:user]
+          |> Module.split()
+          |> :lists.droplast()
+          |> Enum.concat([ApiKey])
+          |> Module.concat()
+        end
+
+      {exists?, igniter} = Igniter.Project.Module.module_exists(igniter, api_key)
+
+      if exists? do
+        Igniter.add_issue(
+          igniter,
+          """
+          Api key resource already exists: #{inspect(api_key)}.
+          Please use the `--api-key` option to provide a different name.
+          """
+        )
+      else
+        igniter
+        |> Ash.Resource.Igniter.add_new_relationship(
+          options[:user],
+          :valid_api_keys,
+          """
+          has_many :valid_api_keys, #{inspect(api_key)} do
+            filter expr(valid)
+          end
+          """
+        )
+        |> Igniter.compose_task("ash.gen.resource", [
+          inspect(api_key),
+          "--uuid-primary-key",
+          "id",
+          "--default-actions",
+          "read,destroy",
+          "--attribute",
+          "api_key_hash:binary:required",
+          "--attribute",
+          "expires_at:utc_datetime_usec:required",
+          "--relationship",
+          "belongs_to:user:#{inspect(options[:user])}",
+          "--extend",
+          "Ash.Policy.Authorizer"
+        ])
+        |> Ash.Resource.Igniter.add_new_action(api_key, :create, """
+        create :create do
+          primary? true
+          accept [:user_id, :expires_at]
+
+          change {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: #{inspect(otp_app)}, hash: :api_key_hash}
+        end
+        """)
+        |> Ash.Resource.Igniter.add_new_identity(api_key, :unique_api_key, """
+        identity :unique_api_key, [:api_key]
+        """)
+        |> Ash.Resource.Igniter.add_new_calculation(api_key, :valid, """
+        calculate :valid, :boolean, expr(expires_at > now())
+        """)
+        |> Ash.Resource.Igniter.add_bypass(
+          api_key,
+          quote do
+            AshAuthentication.Checks.AshAuthenticationInteraction
+          end,
+          quote do
+            authorize_if always()
+          end
+        )
+        |> setup_api_key_phoenix(options)
+        |> Ash.Resource.Igniter.add_new_action(options[:user], :sign_in_with_api_key, """
+        read :sign_in_with_api_key do
+          argument :api_key, :string, allow_nil?: false
+          prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+        end
+        """)
+        |> AshAuthentication.Igniter.add_new_strategy(
+          options[:user],
+          :api_key,
+          :api_key,
+          """
+          api_key do
+            api_key_relationship :valid_api_keys
+            api_key_hash_attribute :api_key_hash
+          end
+          """
+        )
+      end
+    end
+
+    defp setup_api_key_phoenix(igniter, options) do
+      case Igniter.Libs.Phoenix.select_router(
+             igniter,
+             "Which router would you like to add api key authentication to?"
+           ) do
+        {igniter, nil} ->
+          igniter
+
+        {igniter, router} ->
+          igniter
+          |> Igniter.Libs.Phoenix.append_to_pipeline(
+            :api,
+            """
+            plug AshAuthentication.Strategy.ApiKey.Plug,
+              resource: #{inspect(options[:user])}
+            """,
+            router: router
+          )
       end
     end
 
