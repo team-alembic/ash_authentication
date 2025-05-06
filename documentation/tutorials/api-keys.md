@@ -12,7 +12,7 @@ For example:
 
 ```elixir
 has_many :valid_api_keys, MyApp.Accounts.ApiKey do
-  filter expr(is_expired == false)
+  filter expr(valid)
 end
 ```
 
