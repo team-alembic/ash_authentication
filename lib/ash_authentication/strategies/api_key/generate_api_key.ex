@@ -16,6 +16,7 @@ defmodule AshAuthentication.Strategy.ApiKey.GenerateApiKey do
 
   use Ash.Resource.Change
 
+  @impl true
   def change(changeset, opts, _) do
     prefix = to_string(Keyword.fetch!(opts, :prefix))
 
@@ -24,20 +25,31 @@ defmodule AshAuthentication.Strategy.ApiKey.GenerateApiKey do
             "#{inspect(prefix)} contains invalid characters. Must contain only `a-z0-9`"
     end
 
-    random_bytes = :crypto.strong_rand_bytes(32)
+    random_bytes = base62_safe_bytes()
     id = Ecto.UUID.bingenerate()
 
     changeset = Ash.Changeset.force_change_attribute(changeset, :id, id)
+    token = random_bytes <> id
 
     api_key =
-      "#{prefix}_#{AshAuthentication.Base.encode62(id <> random_bytes)}_#{AshAuthentication.Base.encode62(:erlang.crc32(id <> random_bytes))}"
+      "#{prefix}_#{AshAuthentication.Base.encode62(token)}_#{AshAuthentication.Base.encode62(:erlang.crc32(token))}"
 
-    hash = :crypto.hash(:sha256, id <> random_bytes)
+    hash = :crypto.hash(:sha256, token)
 
     changeset
     |> Ash.Changeset.force_change_attribute(opts[:hash], hash)
     |> Ash.Changeset.after_action(fn _changeset, result ->
       {:ok, Ash.Resource.set_metadata(result, %{plaintext_api_key: api_key})}
     end)
+  end
+
+  defp base62_safe_bytes() do
+    case :crypto.strong_rand_bytes(32) do
+      # Base62 is an integer based calculation and cannot
+      # deal with leading null bytes since they are ignored
+      # so we generate another one to avoid that problem
+      <<0, _::binary>> -> base62_safe_bytes()
+      bytes -> bytes
+    end
   end
 end

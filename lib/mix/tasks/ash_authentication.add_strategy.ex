@@ -64,7 +64,7 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     def igniter(igniter) do
-      strategies = igniter.args.positional
+      strategies = igniter.args.positional[:strategies] || []
       argv = igniter.args.argv
       default_user = Igniter.Project.Module.module_name(igniter, "Accounts.User")
 
@@ -146,6 +146,18 @@ if Code.ensure_loaded?(Igniter) do
           """
         )
       else
+        extensions =
+          cond do
+            Code.ensure_loaded?(AshPostgres.DataLayer) ->
+              "Ash.Policy.Authorizer,postgres"
+
+            Code.ensure_loaded?(AshSqlite.DataLayer) ->
+              "Ash.Policy.Authorizer,sqlite"
+
+            true ->
+              "Ash.Policy.Authorizer"
+          end
+
         igniter
         |> Ash.Resource.Igniter.add_new_relationship(
           options[:user],
@@ -163,13 +175,13 @@ if Code.ensure_loaded?(Igniter) do
           "--default-actions",
           "read,destroy",
           "--attribute",
-          "api_key_hash:binary:required",
+          "api_key_hash:binary:required:sensitive",
           "--attribute",
           "expires_at:utc_datetime_usec:required",
           "--relationship",
           "belongs_to:user:#{inspect(options[:user])}",
           "--extend",
-          "Ash.Policy.Authorizer"
+          extensions
         ])
         |> Ash.Resource.Igniter.add_new_action(api_key, :create, """
         create :create do
@@ -180,7 +192,7 @@ if Code.ensure_loaded?(Igniter) do
         end
         """)
         |> Ash.Resource.Igniter.add_new_identity(api_key, :unique_api_key, """
-        identity :unique_api_key, [:api_key]
+        identity :unique_api_key, [:api_key_hash]
         """)
         |> Ash.Resource.Igniter.add_new_calculation(api_key, :valid, """
         calculate :valid, :boolean, expr(expires_at > now())

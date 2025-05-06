@@ -3,6 +3,12 @@ defmodule AshAuthentication.Base do
 
   @base62 Enum.with_index(Enum.concat([?a..?z, ?A..?Z, ?0..?9]))
 
+  @doc false
+  def encode62(""), do: ""
+
+  # We don't deal with leading null bytes
+  def encode62(<<0>> <> _), do: raise(ArgumentError)
+
   def encode62(value) when is_binary(value) do
     value
     |> :crypto.bytes_to_integer()
@@ -17,6 +23,10 @@ defmodule AshAuthentication.Base do
     encode62(div(v, 62)) <> encode62(rem(v, 62))
   end
 
+  @doc false
+
+  def bindecode62(""), do: {:ok, ""}
+
   def bindecode62(binary) do
     binary
     |> do_bindecode62([])
@@ -24,10 +34,9 @@ defmodule AshAuthentication.Base do
     |> Integer.digits(256)
     |> :binary.list_to_bin()
     |> then(&{:ok, &1})
-
-    # rescue
-    #   _ ->
-    #     :error
+  rescue
+    _ ->
+      :error
   end
 
   defp do_bindecode62(<<>>, digits) do
@@ -41,6 +50,9 @@ defmodule AshAuthentication.Base do
   defp do_bindecode62(<<char, rest::binary>>, digits) do
     do_bindecode62(rest, [decode_char62(char) | digits])
   end
+
+  @doc false
+  def decode62(""), do: {:ok, 0}
 
   def decode62(binary) do
     binary

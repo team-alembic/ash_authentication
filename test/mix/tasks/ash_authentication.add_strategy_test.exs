@@ -301,22 +301,31 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       |> Igniter.compose_task("ash_authentication.add_strategy", ["api_key"])
       |> assert_creates("lib/test/accounts/api_key.ex", """
       defmodule Test.Accounts.ApiKey do
-        use Ash.Resource, otp_app: :test, domain: Test.Accounts, authorizers: [Ash.Policy.Authorizer]
+        use Ash.Resource,
+          otp_app: :test,
+          domain: Test.Accounts,
+          data_layer: AshPostgres.DataLayer,
+          authorizers: [Ash.Policy.Authorizer]
 
         actions do
           defaults([:read, :destroy])
 
           create :create do
             primary?(true)
-            accept([:api_key, :user_id, :expires_at])
+            accept([:user_id, :expires_at])
+
+            change(
+              {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: :test, hash: :api_key_hash}
+            )
           end
         end
 
         attributes do
           uuid_primary_key(:id)
 
-          attribute :api_key, :string do
+          attribute :api_key_hash, :binary do
             allow_nil?(false)
+            sensitive?(true)
           end
 
           attribute :expires_at, :utc_datetime_usec do
@@ -328,8 +337,13 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
           belongs_to(:user, Test.Accounts.User)
         end
 
+        postgres do
+          table("api_keys")
+          repo(Test.Repo)
+        end
+
         identities do
-          identity(:unique_api_key, [:api_key])
+          identity(:unique_api_key, [:api_key_hash])
         end
 
         calculations do

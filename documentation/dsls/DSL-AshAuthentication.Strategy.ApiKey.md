@@ -43,7 +43,7 @@ Strategy for authenticating using api keys
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`api_key_relationship`](#authentication-strategies-api_key-api_key_relationship){: #authentication-strategies-api_key-api_key_relationship .spark-required} | `atom` |  | The relationship from the user to their *valid* API keys. |
-| [`api_key_hash_attribute`](#authentication-strategies-api_key-api_key_attribute){: #authentication-strategies-api_key-api_key_attribute } | `atom` | `:api_key` | The attribute on the API key resource that contains the API key. |
+| [`api_key_hash_attribute`](#authentication-strategies-api_key-api_key_hash_attribute){: #authentication-strategies-api_key-api_key_hash_attribute } | `atom` | `:api_key_hash` | The attribute on the API key resource that contains the API key's hash. |
 | [`sign_in_action_name`](#authentication-strategies-api_key-sign_in_action_name){: #authentication-strategies-api_key-sign_in_action_name } | `atom` |  | The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>` |
 
 

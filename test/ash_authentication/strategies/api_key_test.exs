@@ -48,98 +48,111 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
       assert auth_user.username == user.username
     end
 
-    test "fails with invalid API key" do
-      assert_raise Ash.Error.Forbidden, fn ->
-        User
-        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: "invalid_api_key"})
-        |> Ash.read_one!()
-      end
+    test "returns no user with invalid API key" do
+      refute User
+             |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: "invalid_api_key"})
+             |> Ash.read_one!()
     end
   end
 
   describe "authentication with API key using plug" do
-    test "succeeeds when API key is present in header", %{api_key: api_key, user: user} do
+    test "succeeeds when API key is present in header", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
       opts = ApiKeyPlug.init(resource: Example.User, source: :header)
 
       conn =
         :get
         |> conn("/")
-        |> put_req_header("authorization", "Bearer #{api_key.api_key}")
+        |> put_req_header("authorization", "Bearer #{plaintext_api_key}")
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.current_user.id == user.id
     end
 
-    test "succeeds when API key is present in query parameter", %{api_key: api_key, user: user} do
+    test "succeeds when API key is present in query parameter", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
       opts = ApiKeyPlug.init(resource: Example.User, source: :query_param)
 
       conn =
         :get
-        |> conn("/?api_key=#{api_key.api_key}")
+        |> conn("/?api_key=#{plaintext_api_key}")
         |> Plug.Conn.fetch_query_params()
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.current_user.id == user.id
     end
 
-    test "succeeds with custom query parameter name", %{api_key: api_key, user: user} do
+    test "succeeds with custom query parameter name", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
       opts = ApiKeyPlug.init(resource: Example.User, source: :query_param, param_name: "token")
 
       conn =
         :get
-        |> conn("/?token=#{api_key.api_key}")
+        |> conn("/?token=#{plaintext_api_key}")
         |> Plug.Conn.fetch_query_params()
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.current_user.id == user.id
     end
 
-    test "succeeds with custom header prefix", %{api_key: api_key, user: user} do
+    test "succeeds with custom header prefix", %{plaintext_api_key: plaintext_api_key, user: user} do
       opts = ApiKeyPlug.init(resource: Example.User, source: :header, header_prefix: "Token ")
 
       conn =
         :get
         |> conn("/")
-        |> put_req_header("authorization", "Token #{api_key.api_key}")
+        |> put_req_header("authorization", "Token #{plaintext_api_key}")
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.current_user.id == user.id
     end
 
-    test "succeeds with header_or_query_param using header", %{api_key: api_key, user: user} do
-      opts = ApiKeyPlug.init(resource: Example.User, source: :header_or_query_param)
-
-      conn =
-        :get
-        |> conn("/")
-        |> put_req_header("authorization", "Bearer #{api_key.api_key}")
-        |> ApiKeyPlug.call(opts)
-
-      assert conn.assigns.current_user.id == user.id
-    end
-
-    test "succeeds with header_or_query_param using query parameter", %{
-      api_key: api_key,
+    test "succeeds with header_or_query_param using header", %{
+      plaintext_api_key: plaintext_api_key,
       user: user
     } do
       opts = ApiKeyPlug.init(resource: Example.User, source: :header_or_query_param)
 
       conn =
         :get
-        |> conn("/?api_key=#{api_key.api_key}")
+        |> conn("/")
+        |> put_req_header("authorization", "Bearer #{plaintext_api_key}")
+        |> ApiKeyPlug.call(opts)
+
+      assert conn.assigns.current_user.id == user.id
+    end
+
+    test "succeeds with header_or_query_param using query parameter", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
+      opts = ApiKeyPlug.init(resource: Example.User, source: :header_or_query_param)
+
+      conn =
+        :get
+        |> conn("/?api_key=#{plaintext_api_key}")
         |> Plug.Conn.fetch_query_params()
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.current_user.id == user.id
     end
 
-    test "uses custom assign name when provided", %{api_key: api_key, user: user} do
+    test "uses custom assign name when provided", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
       opts = ApiKeyPlug.init(resource: Example.User, source: :header, assign: :authenticated_user)
 
       conn =
         :get
         |> conn("/")
-        |> put_req_header("authorization", "Bearer #{api_key.api_key}")
+        |> put_req_header("authorization", "Bearer #{plaintext_api_key}")
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.authenticated_user.id == user.id
@@ -248,13 +261,16 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
       assert conn.halted
     end
 
-    test "properly sets actor on the connection", %{api_key: api_key, user: user} do
+    test "properly sets actor on the connection", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
       opts = ApiKeyPlug.init(resource: Example.User, source: :header)
 
       conn =
         :get
         |> conn("/")
-        |> put_req_header("authorization", "Bearer #{api_key.api_key}")
+        |> put_req_header("authorization", "Bearer #{plaintext_api_key}")
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.current_user.id == user.id
@@ -263,25 +279,24 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
   end
 
   describe "API key lifecycle" do
-    test "user can have multiple API keys", %{user: user} do
+    test "user can have multiple API keys", %{user: user, plaintext_api_key: plaintext_api_key} do
       api_key2 =
         ApiKey
         |> Ash.Changeset.for_create(
           :create,
           %{
-            api_key: "another_api_key",
             user_id: user.id
           },
           authorize?: false
         )
         |> Ash.create!()
 
-      assert api_key2.api_key == "another_api_key"
+      plaintext_api_key2 = api_key2.__metadata__.plaintext_api_key
 
       # Both keys should work for authentication
       {:ok, _} =
         User
-        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: "test_api_key_123"},
+        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: plaintext_api_key},
           context: %{
             private: %{ash_authentication?: true}
           }
@@ -290,7 +305,7 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
 
       {:ok, _} =
         User
-        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: "another_api_key"},
+        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: plaintext_api_key2},
           context: %{
             private: %{ash_authentication?: true}
           }
@@ -298,7 +313,11 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
         |> Ash.read_one()
     end
 
-    test "deleting API key prevents authentication", %{user: user, api_key: api_key} do
+    test "deleting API key prevents authentication", %{
+      user: user,
+      api_key: api_key,
+      plaintext_api_key: plaintext_api_key
+    } do
       # Delete the API key
       api_key
       |> Ash.Changeset.for_destroy(:destroy, %{}, authorize?: false)
@@ -307,7 +326,7 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
       # Should no longer be able to authenticate with that key
       assert_raise Ash.Error.Forbidden, fn ->
         User
-        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: api_key.api_key})
+        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: plaintext_api_key})
         |> Ash.read_one!()
       end
 

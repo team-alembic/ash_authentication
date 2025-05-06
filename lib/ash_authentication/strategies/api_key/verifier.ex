@@ -69,36 +69,34 @@ defmodule AshAuthentication.Strategy.ApiKey.Verifier do
          )}
 
       attribute ->
-        with :ok <- validate_id_is_primary_key(dsl_state, destination, attribute),
-             :ok <- validate_id_type(dsl_state, destination, attribute) do
-          :ok
+        with :ok <- validate_id_is_primary_key(dsl_state, destination, attribute) do
+          validate_id_type(dsl_state, destination, attribute)
         end
     end
   end
 
   defp validate_id_is_primary_key(_dsl_state, destination, attribute) do
-    unless attribute.primary_key? do
+    if attribute.primary_key? do
+      :ok
+    else
       {:error,
        DslError.exception(
          path: [:authentication, :strategies],
-         message:
-           "The API key resource `#{inspect(destination)}` must have `id` as a primary key"
+         message: "The API key resource `#{inspect(destination)}` must have `id` as a primary key"
        )}
-    else
-      :ok
     end
   end
 
   defp validate_id_type(_dsl_state, destination, attribute) do
-    unless attribute.type == Ash.Type.UUID do
+    if attribute.type == Ash.Type.UUID do
+      :ok
+    else
       {:error,
        DslError.exception(
          path: [:authentication, :strategies],
          message:
            "The API key resource `#{inspect(destination)}` must have `id` with type `Ash.Type.UUID`"
        )}
-    else
-      :ok
     end
   end
 
