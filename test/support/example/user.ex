@@ -46,6 +46,11 @@ defmodule Example.User do
       manual Example.CurrentUserRead
     end
 
+    read :sign_in_with_api_key do
+      argument :api_key, :string, allow_nil?: false
+      prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+    end
+
     update :update do
       argument :password, :string, allow_nil?: true, sensitive?: true
       argument :password_confirmation, :string, allow_nil?: true, sensitive?: true
@@ -207,6 +212,10 @@ defmodule Example.User do
         end
       end
 
+      api_key do
+        api_key_relationship(:valid_api_keys)
+      end
+
       oauth2 do
         client_id &get_config/2
         redirect_uri &get_config/2
@@ -281,6 +290,10 @@ defmodule Example.User do
         identity_resource Example.UserIdentity
       end
     end
+  end
+
+  relationships do
+    has_many :valid_api_keys, Example.ApiKey
   end
 
   identities do
