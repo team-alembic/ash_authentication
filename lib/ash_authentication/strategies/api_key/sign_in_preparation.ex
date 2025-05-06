@@ -99,7 +99,7 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
   end
 
   defp decode_api_key(api_key) do
-    with [_parse_prefix, middle, crc32] <- String.split(api_key, "_"),
+    with [_parse_prefix, middle, crc32] <- String.split(api_key, "_", parts: 3),
          {:ok, <<random_bytes::binary-size(32), id::binary-size(16)>>} <-
            AshAuthentication.Base.bindecode62(middle),
          true <-
