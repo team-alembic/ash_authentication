@@ -35,7 +35,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
     if Plug.Conn.get_req_header(conn, "accept") |> Enum.any?(&String.contains?(&1, "json")) do
       conn
       |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.send_resp(403, ~s({"error":"Forbidden"}))
+      |> Plug.Conn.send_resp(401, ~s({"error":"Unauthorized"}))
       |> Plug.Conn.halt()
     else
       conn
