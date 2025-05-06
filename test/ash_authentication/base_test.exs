@@ -1,4 +1,5 @@
 defmodule AshAuthentication.BaseTest do
+  @moduledoc false
   use ExUnit.Case, async: true
   use ExUnitProperties
 

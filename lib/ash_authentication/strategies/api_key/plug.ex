@@ -23,13 +23,13 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
   message.
 
     - If the `Accept` header contains "json", the response will be:
-      - Status: 403 Forbidden
+      - Status: 401 Unauthorized
       - Content-Type: application/json
-      - Body: `{"error":"Forbidden"}`
+      - Body: `{"error":"Unauthorized"}`
     - Otherwise, the response will be:
-      - Status: 403 Forbidden
+      - Status: 401 Unauthorized
       - Content-Type: text/plain (default)
-      - Body: `Forbidden`
+      - Body: `Unauthorized`
   """
   def on_error(conn, _error) do
     if Plug.Conn.get_req_header(conn, "accept") |> Enum.any?(&String.contains?(&1, "json")) do
@@ -39,7 +39,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
       |> Plug.Conn.halt()
     else
       conn
-      |> Plug.Conn.send_resp(403, "Forbidden")
+      |> Plug.Conn.send_resp(401, "Unauthorized")
       |> Plug.Conn.halt()
     end
   end

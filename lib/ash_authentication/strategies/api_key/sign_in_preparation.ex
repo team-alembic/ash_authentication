@@ -8,8 +8,6 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
   alias Ash.{Query, Resource.Preparation}
   require Ash.Query
 
-  alias Ash.Error.Framework.AssumptionFailed
-
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
@@ -17,24 +15,82 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
     with {:ok, strategy} <- Info.strategy_for_action(query.resource, query.action.name),
          {:ok, api_key} <- Query.fetch_argument(query, :api_key),
          {:ok, api_key_id, random_bytes} <- decode_api_key(api_key) do
+      api_key_relationship =
+        Ash.Resource.Info.relationship(query.resource, strategy.api_key_relationship)
+
       query
       |> Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Ash.Query.filter(
-        exists(
-          ^[strategy.api_key_relationship],
-          id == ^api_key_id
+      |> Ash.Query.before_action(fn query ->
+        api_key_relationship.destination
+        |> Ash.Query.do_filter(api_key_relationship.filter)
+        |> Ash.Query.filter(id == ^api_key_id)
+        |> Query.set_context(%{private: %{ash_authentication?: true}})
+        |> Ash.read_one()
+        |> case do
+          {:ok, nil} ->
+            Plug.Crypto.secure_compare(
+              :crypto.hash(:sha256, random_bytes <> api_key_id),
+              Ecto.UUID.bingenerate() <> :crypto.strong_rand_bytes(32)
+            )
+
+            Ash.Query.filter(query, false)
+
+          {:ok, api_key} ->
+            check_api_key(
+              query,
+              api_key,
+              api_key_id,
+              strategy,
+              api_key_relationship,
+              random_bytes
+            )
+
+          {:error, error} ->
+            Ash.Query.add_error(
+              query,
+              AuthenticationFailed.exception(
+                strategy: strategy,
+                query: query,
+                caused_by: error
+              )
+            )
+        end
+      end)
+    else
+      _ ->
+        Plug.Crypto.secure_compare(
+          :crypto.hash(:sha256, :crypto.strong_rand_bytes(32) <> Ecto.UUID.bingenerate()),
+          Ecto.UUID.bingenerate() <> :crypto.strong_rand_bytes(32)
         )
-      )
-      |> Query.after_action(fn
-        _query, [record] ->
-          verify_hash_and_set_api_key(record, query, api_key_id, random_bytes, strategy, api_key)
 
-        _query, [] ->
-          Plug.Crypto.secure_compare(
-            :crypto.hash(:sha256, random_bytes <> api_key_id),
-            Ecto.UUID.bingenerate() <> :crypto.strong_rand_bytes(32)
-          )
+        Query.do_filter(query, false)
+    end
+  end
 
+  defp check_api_key(query, api_key, api_key_id, strategy, api_key_relationship, random_bytes) do
+    if Plug.Crypto.secure_compare(
+         :crypto.hash(:sha256, random_bytes <> api_key_id),
+         Map.get(api_key, strategy.api_key_hash_attribute)
+       ) do
+      query
+      |> Ash.Query.do_filter(%{
+        api_key_relationship.source_attribute =>
+          Map.get(api_key, api_key_relationship.destination_attribute)
+      })
+      |> Ash.Query.after_action(fn
+        _query, [user] ->
+          {:ok,
+           [
+             Ash.Resource.set_metadata(
+               user,
+               %{
+                 api_key: api_key,
+                 using_api_key?: true
+               }
+             )
+           ]}
+
+        query, [] ->
           {:error,
            AuthenticationFailed.exception(
              strategy: strategy,
@@ -46,55 +102,22 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
                message: "Query returned no users"
              }
            )}
+
+        query, _ ->
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             query: query,
+             caused_by: %{
+               module: __MODULE__,
+               strategy: strategy,
+               action: :sign_in,
+               message: "Query returned too many users"
+             }
+           )}
       end)
     else
-      _ -> Query.do_filter(query, false)
-    end
-  end
-
-  defp verify_hash_and_set_api_key(record, query, api_key_id, random_bytes, strategy, api_key) do
-    api_key_query =
-      query.resource
-      |> Ash.Resource.Info.related(strategy.api_key_relationship)
-      |> Ash.Query.filter(id == ^api_key_id)
-      |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
-
-    record
-    |> Ash.load!([{strategy.api_key_relationship, api_key_query}])
-    |> Map.get(strategy.api_key_relationship)
-    |> case do
-      [] ->
-        Plug.Crypto.secure_compare(
-          :crypto.hash(:sha256, random_bytes <> api_key_id),
-          Ecto.UUID.bingenerate() <> :crypto.strong_rand_bytes(32)
-        )
-
-        {:ok, []}
-
-      [api_key] ->
-        if Plug.Crypto.secure_compare(
-             :crypto.hash(:sha256, random_bytes <> api_key_id),
-             Map.get(api_key, strategy.api_key_hash_attribute)
-           ) do
-          {:ok,
-           [
-             Ash.Resource.set_metadata(
-               record,
-               %{
-                 api_key: api_key,
-                 using_api_key?: true
-               }
-             )
-           ]}
-        else
-          {:ok, []}
-        end
-
-      _api_keys ->
-        {:error,
-         AssumptionFailed.exception(
-           message: "Multiple API tokens found for actor matching: #{inspect(api_key)}"
-         )}
+      Ash.Query.filter(query, false)
     end
   end
 

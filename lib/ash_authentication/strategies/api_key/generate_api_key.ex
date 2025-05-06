@@ -43,7 +43,7 @@ defmodule AshAuthentication.Strategy.ApiKey.GenerateApiKey do
     end)
   end
 
-  defp base62_safe_bytes() do
+  defp base62_safe_bytes do
     case :crypto.strong_rand_bytes(32) do
       # Base62 is an integer based calculation and cannot
       # deal with leading null bytes since they are ignored

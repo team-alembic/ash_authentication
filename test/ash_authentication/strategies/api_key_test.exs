@@ -167,8 +167,8 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
         |> put_req_header("authorization", "Bearer invalid_key")
         |> ApiKeyPlug.call(opts)
 
-      assert conn.status == 403
-      assert conn.resp_body == "Forbidden"
+      assert conn.status == 401
+      assert conn.resp_body == "Unauthorized"
       assert conn.halted
     end
 
@@ -180,8 +180,8 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
         |> conn("/")
         |> ApiKeyPlug.call(opts)
 
-      assert conn.status == 403
-      assert conn.resp_body == "Forbidden"
+      assert conn.status == 401
+      assert conn.resp_body == "Unauthorized"
       assert conn.halted
     end
 
@@ -206,8 +206,8 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
         |> put_req_header("accept", "application/json")
         |> ApiKeyPlug.call(opts)
 
-      assert conn.status == 403
-      assert conn.resp_body == ~s({"error":"Forbidden"})
+      assert conn.status == 401
+      assert conn.resp_body == ~s({"error":"Unauthorized"})
 
       assert Plug.Conn.get_resp_header(conn, "content-type") == [
                "application/json; charset=utf-8"
@@ -256,8 +256,8 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
         |> put_req_header("authorization", "Token invalid_prefix")
         |> ApiKeyPlug.call(opts)
 
-      assert conn.status == 403
-      assert conn.resp_body == "Forbidden"
+      assert conn.status == 401
+      assert conn.resp_body == "Unauthorized"
       assert conn.halted
     end
 
@@ -324,11 +324,9 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
       |> Ash.destroy!()
 
       # Should no longer be able to authenticate with that key
-      assert_raise Ash.Error.Forbidden, fn ->
-        User
-        |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: plaintext_api_key})
-        |> Ash.read_one!()
-      end
+      refute User
+             |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: plaintext_api_key})
+             |> Ash.read_one!()
 
       # But can still authenticate with password
       {:ok, _} =
