@@ -159,4 +159,15 @@ mix ash_postgres.generate_migrations
 mix ecto.migrate
 ```
 
+In your auth controller, make sure to add a redirect to `https://[auth0_endpoint]/v2/logout` when logging out. This notifies Auth0 that the user has logged out. Be sure to replace `[auth0_endpoint]` and `[auth0_client_id]` with your actual Auth0 values:
+
+```elixir
+  def sign_out(conn, _params) do
+
+    conn
+    |> clear_session()
+    |> redirect(external: "https://[auth0_endpoint]/v2/logout?client_id=[auth0_client_id]&returnTo=#{AppWeb.Endpoint.url()}")
+  end
+```
+
 All good! Go to http://localhost:4000/sign-in to see it working.
