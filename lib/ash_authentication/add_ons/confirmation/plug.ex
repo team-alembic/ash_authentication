@@ -8,6 +8,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Plug do
   alias Plug.Conn
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
+  require EEx
 
   @doc """
   Attempt to perform a confirmation.
@@ -29,6 +30,30 @@ defmodule AshAuthentication.AddOn.Confirmation.Plug do
     conn
     |> store_authentication_result(result)
   end
+
+  @doc """
+  Present a confirm button to the user.
+  """
+  @spec accept(Conn.t(), Confirmation.t()) :: Conn.t()
+  # sobelow_skip ["XSS.SendResp"]
+  def accept(conn, strategy) do
+    case params(strategy, conn.params) do
+      {:ok, params} ->
+        conn
+        |> Conn.put_resp_content_type("text/html")
+        |> Conn.send_resp(
+          200,
+          render_form(strategy: strategy, conn: conn, token: params["confirm"])
+        )
+
+      :error ->
+        store_authentication_result(conn, {:error, InvalidToken.exception(type: :confirmation)})
+    end
+  end
+
+  EEx.function_from_file(:defp, :render_form, Path.join(__DIR__, "confirmation_form.html.eex"), [
+    :assigns
+  ])
 
   defp opts(conn) do
     [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn) || %{}]
