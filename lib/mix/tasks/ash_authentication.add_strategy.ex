@@ -533,7 +533,7 @@ if Code.ensure_loaded?(Igniter) do
 
           url =
             if use_web_module do
-              "\#{url(~p\"/magic_link?token=\#{params[:token}\")}"
+              "\#{url(~p\"/magic_link?token=\#{params[:token]}\")}"
             else
               "/auth/user/magic_link?token=\#{params[:token]}"
             end
