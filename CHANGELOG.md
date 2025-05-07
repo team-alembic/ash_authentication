@@ -5,6 +5,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.8.0](https://github.com/team-alembic/ash_authentication/compare/v4.7.7...v4.8.0) (2025-05-07)
+
+
+
+
+### Features:
+
+* Add API key authentication strategy (#984)
+
+### Bug Fixes:
+
+* MagicLink: Add `require_interaction?` option to magic link strategy. (#976)
+
+* SignInPreparation: Filter out users with nil hashed password field. (#982)
+
+### Improvements:
+
+* pass along the tenant claim(if exists) to the long-lived token (#981)
+
 ## [v4.7.7](https://github.com/team-alembic/ash_authentication/compare/v4.7.6...v4.7.7) (2025-04-29)
 
 
