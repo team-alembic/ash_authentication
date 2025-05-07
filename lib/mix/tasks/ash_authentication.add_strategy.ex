@@ -574,7 +574,7 @@ if Code.ensure_loaded?(Igniter) do
 
             """
             <p>Hello, \#{params[:email]}! Click this link to sign in:</p>
-            <p><a href="\#{url}">#{url}</a></p>
+            <p><a href="#{url}">#{url}</a></p>
             """
           end
           ''')
