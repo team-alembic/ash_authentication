@@ -6,7 +6,7 @@ defmodule AshAuthentication.MixProject do
   Authentication extension for the Ash Framework.
   """
 
-  @version "4.8.1"
+  @version "4.8.2"
 
   def project do
     [

@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.8.2](https://github.com/team-alembic/ash_authentication/compare/v4.8.1...v4.8.2) (2025-05-07)
+
+
+
+
+### Bug Fixes:
+
+* Typo (another) in `ash_authentication.add_strategy` task.
+
 ## [v4.8.1](https://github.com/team-alembic/ash_authentication/compare/v4.8.0...v4.8.1) (2025-05-07)
 
 
