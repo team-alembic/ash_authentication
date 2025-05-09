@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.8.3](https://github.com/team-alembic/ash_authentication/compare/v4.8.2...v4.8.3) (2025-05-09)
+
+
+
+
+### Bug Fixes:
+
+* properly use path params for magic link token
+
 ## [v4.8.2](https://github.com/team-alembic/ash_authentication/compare/v4.8.1...v4.8.2) (2025-05-07)
 
 
