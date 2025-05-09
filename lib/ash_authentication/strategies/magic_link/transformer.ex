@@ -186,10 +186,35 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
     else
       Logger.warning(fn ->
         """
-        `require_interaction?` should be set to true on the #{inspect(strategy.name)} magic link strategy for #{inspect(strategy.resource)}.
-        Without it, magic links use a `GET` endpoint for signing in.  Some email clients and security tools (e.g., Outlook, virus scanners, and email previewers) may automatically follow these links, unintentionally consuming the sign in token making it unavailable to the end user.
+        `require_interaction?` should be set to true on the #{inspect(strategy.name)}
+        magic link strategy for #{inspect(strategy.resource)}. Without it, magic links
+        use a `GET` endpoint for signing in. Some  email clients and security tools
+        (e.g., Outlook, virus scanners, and email previewers) may automatically follow
+        these links, unintentionally consuming the sign in token making it unavailable
+        to the end user.
 
-        If you would like to keep the old behaviour and remove this warning then you can do so by setting `config :ash_authentication. :bypass_require_interaction_for_magic_link?, true` in your configuration.
+        In addition to setting `require_interaction?` you will need to make sure that
+        ash_authentication_phoenix is updated, and that you add `magic_sign_in_route`
+        to your router.
+
+            magic_sign_in_route(
+              MyApp.Accounts.User,
+              # your magic link strategy name here
+              :magic_link,
+              auth_routes_prefix: "/auth",
+              overrides: [MyAppWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default],
+              # the route will default `/<the_strategy_name>/:magic_link`
+              # use these options to keep your currently issued magic link emails compatible
+              # if you use this option, make sure to place it *above* `auth_routes` in your router.
+              path: "/auth/user/magic_link",
+              token_as_route_param?: false
+            )
+
+        If you would like to keep the old behaviour and remove this warning then you can
+        do so by adding the following configuration
+
+            config :ash_authentication.
+              :bypass_require_interaction_for_magic_link?, true
         """
       end)
     end
