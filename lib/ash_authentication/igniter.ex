@@ -199,6 +199,38 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc "Returns true if the given resource defines an authentication strategy of the provided type"
+    @spec defines_strategy_of_type(
+            Igniter.t(),
+            Ash.Resource.t(),
+            constructor :: atom()
+          ) ::
+            {Igniter.t(), true | false}
+    def defines_strategy_of_type(igniter, resource, constructor) do
+      Spark.Igniter.find(igniter, resource, fn _, zipper ->
+        with {:ok, zipper} <- enter_section(zipper, :authentication),
+             {:ok, zipper} <- enter_section(zipper, :strategies),
+             {:ok, _zipper} <-
+               Igniter.Code.Function.move_to_function_call_in_current_scope(
+                 zipper,
+                 constructor,
+                 [1, 2]
+               ) do
+          {:ok, true}
+        else
+          _ ->
+            :error
+        end
+      end)
+      |> case do
+        {:ok, igniter, _module, _value} ->
+          {igniter, true}
+
+        {:error, igniter} ->
+          {igniter, false}
+      end
+    end
+
     defp enter_section(zipper, name) do
       with {:ok, zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(
