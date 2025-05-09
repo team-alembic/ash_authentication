@@ -25,6 +25,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
       identity = Ash.ActionInput.get_argument(action_input, identity_field)
       select_for_senders = Info.authentication_select_for_senders!(action_input.resource)
       {sender, send_opts} = strategy.resettable.sender
+      send_opts = Keyword.put(send_opts, :context, action_input.context)
 
       query_result =
         action_input.resource
