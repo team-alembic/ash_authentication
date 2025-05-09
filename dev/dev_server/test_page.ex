@@ -148,12 +148,12 @@ defmodule DevServer.TestPage do
        do: ""
 
   defp render_strategy(strategy, phase, options)
-       when strategy.provider == :confirmation and phase == :confirm do
+       when strategy.provider == :confirmation and phase == :accept do
     EEx.eval_string(
       ~s"""
       <form method="<%= @method %>" action="<%= @route %>">
         <fieldset>
-          <legend><%= @strategy.name %></legend>
+        <legend><%= @strategy.name %> <%= @phase %></legend>
           <input type="text" name="confirm" placeholder="confirmation token" />
           <br />
           <input type="submit" value="Confirm" />
@@ -163,6 +163,30 @@ defmodule DevServer.TestPage do
       assigns: [
         strategy: strategy,
         route: route_for_phase(strategy, phase),
+        phase: phase,
+        options: options,
+        method: Strategy.method_for_phase(strategy, phase)
+      ]
+    )
+  end
+
+  defp render_strategy(strategy, phase, options)
+       when strategy.provider == :confirmation and phase == :confirm do
+    EEx.eval_string(
+      ~s"""
+      <form method="<%= @method %>" action="<%= @route %>">
+        <fieldset>
+          <legend><%= @strategy.name %> <%= @phase %></legend>
+          <input type="text" name="confirm" placeholder="confirmation token" />
+          <br />
+          <input type="submit" value="Confirm" />
+        </fieldset>
+      </form>
+      """,
+      assigns: [
+        strategy: strategy,
+        route: route_for_phase(strategy, phase),
+        phase: phase,
         options: options,
         method: Strategy.method_for_phase(strategy, phase)
       ]
