@@ -10,7 +10,6 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   require EEx
-  require Logger
 
   @doc """
   Handle a request for a magic link.
@@ -34,7 +33,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
   end
 
   @doc """
-  Present a sign in button to a user.
+  Present a sign in button to the user.
   """
   @spec accept(Conn.t(), MagicLink.t()) :: Conn.t()
   # sobelow_skip ["XSS.SendResp"]
