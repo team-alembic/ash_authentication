@@ -105,6 +105,17 @@ relationships do
 end
 ```
 
+#### Add the sign_in_with_api_key action
+
+Add the action to your user resource
+
+```elixir
+read :sign_in_with_api_key do
+  argument :api_key, :string, allow_nil?: false
+  prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+end
+```
+
 #### Use the plug in your router/plug pipeline
 
 See `AshAuthentication.Strategies.ApiKey.Plug` for all available options.
