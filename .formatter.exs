@@ -60,6 +60,7 @@ spark_locals_without_parens = [
   include_purposes: 1,
   inhibit_updates?: 1,
   is_revoked_action_name: 1,
+  issuer: 1,
   log_out_everywhere: 0,
   log_out_everywhere: 1,
   log_out_everywhere: 2,
@@ -118,6 +119,7 @@ spark_locals_without_parens = [
   slack: 0,
   slack: 1,
   slack: 2,
+  storage_field: 1,
   store_all_tokens?: 1,
   store_changes_action_name: 1,
   store_token_action_name: 1,
@@ -129,12 +131,16 @@ spark_locals_without_parens = [
   token_resource: 1,
   token_url: 1,
   trusted_audiences: 1,
+  two_factor_totp: 0,
+  two_factor_totp: 1,
+  two_factor_totp: 2,
   uid_attribute_name: 1,
   upsert_action_name: 1,
   user_id_attribute_name: 1,
   user_relationship_name: 1,
   user_resource: 1,
-  user_url: 1
+  user_url: 1,
+  verify_action_name: 1
 ]
 
 [
