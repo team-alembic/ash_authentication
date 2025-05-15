@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.8.5](https://github.com/team-alembic/ash_authentication/compare/v4.8.4...v4.8.5) (2025-05-15)
+
+
+
+
+### Improvements:
+
+* provide explicit name to api key strategy when installed
+
 ## [v4.8.4](https://github.com/team-alembic/ash_authentication/compare/v4.8.3...v4.8.4) (2025-05-15)
 
 
