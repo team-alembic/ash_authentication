@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.8.4](https://github.com/team-alembic/ash_authentication/compare/v4.8.3...v4.8.4) (2025-05-15)
+
+
+
+
+### Improvements:
+
+* Confirmation: Provide a default accept phase form. (#986)
+
+* pass along the action_input.context to the send_opts as `:context`. (#989)
+
 ## [v4.8.3](https://github.com/team-alembic/ash_authentication/compare/v4.8.2...v4.8.3) (2025-05-09)
 
 
