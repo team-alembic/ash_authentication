@@ -112,8 +112,7 @@ defmodule AshAuthentication.Strategy.Password do
             sign_in_enabled?: true,
             sign_in_token_lifetime: 60,
             sign_in_tokens_enabled?: false,
-            sign_in_with_token_action_name: nil,
-            strategy_module: nil
+            sign_in_with_token_action_name: nil
 
   alias Ash.Resource
 
@@ -147,8 +146,7 @@ defmodule AshAuthentication.Strategy.Password do
           sign_in_enabled?: boolean,
           sign_in_token_lifetime: pos_integer,
           sign_in_tokens_enabled?: boolean,
-          sign_in_with_token_action_name: atom,
-          strategy_module: __MODULE__
+          sign_in_with_token_action_name: atom
         }
 
   @doc false

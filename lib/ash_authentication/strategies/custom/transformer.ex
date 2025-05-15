@@ -59,17 +59,6 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
     end)
   end
 
-  defp do_transform(strategy, _, _) when not is_map_key(strategy, :strategy_module) do
-    name = Strategy.name(strategy)
-
-    {:error,
-     DslError.exception(
-       path: [:authentication, name],
-       message:
-         "The struct defined by `#{inspect(strategy.__struct__)}` must contain a `strategy_module` field."
-     )}
-  end
-
   defp do_transform(strategy, _, _) when not is_map_key(strategy, :resource) do
     name = Strategy.name(strategy)
 
@@ -85,9 +74,10 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
     strategy = %{strategy | resource: Transformer.get_persisted(dsl_state, :module)}
     dsl_state = put_strategy(dsl_state, strategy)
     entity_module = strategy.__struct__
+    strategy_module = strategy_module(strategy)
 
     strategy
-    |> strategy.strategy_module.transform(dsl_state)
+    |> strategy_module.transform(dsl_state)
     |> case do
       {:ok, strategy} when is_struct(strategy, entity_module) ->
         {:ok, put_strategy(dsl_state, strategy)}
@@ -104,9 +94,10 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
     strategy = %{strategy | resource: Transformer.get_persisted(dsl_state, :module)}
     dsl_state = put_add_on(dsl_state, strategy)
     entity_module = strategy.__struct__
+    strategy_module = strategy_module(strategy)
 
     strategy
-    |> strategy.strategy_module.transform(dsl_state)
+    |> strategy_module.transform(dsl_state)
     |> case do
       {:ok, strategy} when is_struct(strategy, entity_module) ->
         {:ok, put_add_on(dsl_state, strategy)}
@@ -118,4 +109,12 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
         {:error, reason}
     end
   end
+
+  # This is needed by some strategies which re-use another strategy's entity (ie everything based on oauth2).
+  defp strategy_module(strategy) when is_nil(strategy.strategy_module), do: strategy.__struct__
+
+  defp strategy_module(strategy) when is_atom(strategy.strategy_module),
+    do: strategy.strategy_module
+
+  defp strategy_module(strategy), do: strategy.__struct__
 end

@@ -195,7 +195,11 @@ defmodule AshAuthentication.Validations do
           end
 
         {:error,
-         DslError.exception(path: [:authentication, :strategies, strategy.name], message: message)}
+         DslError.exception(
+           path: [:authentication, :strategies, strategy.name],
+           message: message,
+           module: strategy.resource
+         )}
     end
   end
 end
