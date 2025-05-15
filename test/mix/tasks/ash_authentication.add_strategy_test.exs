@@ -284,7 +284,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["api_key"])
       |> assert_has_patch("lib/test/accounts/user.ex", """
-      + | api_key do
+      + | api_key :api_key do
       + |   api_key_relationship(:valid_api_keys)
       + |   api_key_hash_attribute(:api_key_hash)
       + | end

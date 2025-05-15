@@ -218,7 +218,7 @@ if Code.ensure_loaded?(Igniter) do
           :api_key,
           :api_key,
           """
-          api_key do
+          api_key :api_key do
             api_key_relationship :valid_api_keys
             api_key_hash_attribute :api_key_hash
           end
