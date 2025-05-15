@@ -92,7 +92,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
       end
 
     on_error =
-      Keyword.get(opts, :on_error, &on_error/2)
+      Keyword.get(opts, :on_error, &__MODULE__.on_error/2)
 
     %{
       resource: resource,
