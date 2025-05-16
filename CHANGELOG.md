@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.8.6](https://github.com/team-alembic/ash_authentication/compare/v4.8.5...v4.8.6) (2025-05-16)
+
+
+
+
+### Bug Fixes:
+
+* remove underscores from app name for prefix
+
 ## [v4.8.5](https://github.com/team-alembic/ash_authentication/compare/v4.8.4...v4.8.5) (2025-05-15)
 
 
