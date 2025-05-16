@@ -158,6 +158,8 @@ if Code.ensure_loaded?(Igniter) do
               "Ash.Policy.Authorizer"
           end
 
+        token_prefix = ":" <> String.replace(String.downcase(to_string(otp_app)), "_", "")
+
         igniter
         |> Ash.Resource.Igniter.add_new_relationship(
           options[:user],
@@ -188,7 +190,7 @@ if Code.ensure_loaded?(Igniter) do
           primary? true
           accept [:user_id, :expires_at]
 
-          change {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: #{inspect(otp_app)}, hash: :api_key_hash}
+          change {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: #{token_prefix}, hash: :api_key_hash}
         end
         """)
         |> Ash.Resource.Igniter.add_new_identity(api_key, :unique_api_key, """
