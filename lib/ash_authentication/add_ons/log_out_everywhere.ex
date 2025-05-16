@@ -57,8 +57,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere do
             include_purposes: nil,
             exclude_purposes: ["revocation"],
             provider: :log_out_everywhere,
-            resource: nil,
-            strategy_module: __MODULE__
+            resource: nil
 
   alias __MODULE__.{Dsl, Transformer, Verifier}
   alias AshAuthentication.Strategy.Custom
@@ -71,8 +70,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere do
           argument_name: nil,
           name: :log_out_everywhere,
           provider: :log_out_everywhere,
-          resource: module,
-          strategy_module: module
+          resource: module
         }
 
   defdelegate transform(strategy, dsl), to: Transformer

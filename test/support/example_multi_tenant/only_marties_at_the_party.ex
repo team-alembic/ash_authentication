@@ -6,8 +6,7 @@ defmodule ExampleMultiTenant.OnlyMartiesAtTheParty do
   defstruct name: :marty,
             case_sensitive?: false,
             name_field: nil,
-            resource: nil,
-            strategy_module: __MODULE__
+            resource: nil
 
   @entity %Spark.Dsl.Entity{
     name: :only_marty,

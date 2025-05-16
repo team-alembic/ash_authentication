@@ -27,8 +27,7 @@ defmodule AshAuthentication.Strategy.ApiKey do
             resource: nil,
             sign_in_action_name: nil,
             api_key_hash_attribute: nil,
-            api_key_relationship: nil,
-            strategy_module: nil
+            api_key_relationship: nil
 
   alias AshAuthentication.Strategy.{ApiKey, ApiKey.Transformer, ApiKey.Verifier}
 
@@ -39,8 +38,7 @@ defmodule AshAuthentication.Strategy.ApiKey do
           resource: Ash.Resource.t(),
           sign_in_action_name: atom(),
           api_key_hash_attribute: atom(),
-          api_key_relationship: atom(),
-          strategy_module: module()
+          api_key_relationship: atom()
         }
 
   @doc false

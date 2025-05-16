@@ -8,7 +8,7 @@ Strategy for authenticating using [Slack](https://slack.com)
 This strategy builds on-top of `AshAuthentication.Strategy.Oidc` and
 [`assent`](https://hex.pm/packages/assent).
 
-In order to use GitHub you need to provide the following minimum configuration:
+In order to use Slack you need to provide the following minimum configuration:
 
   - `client_id`
   - `redirect_uri`

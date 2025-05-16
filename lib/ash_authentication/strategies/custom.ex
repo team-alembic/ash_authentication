@@ -19,13 +19,17 @@ defmodule AshAuthentication.Strategy.Custom do
   This is the DSL target for your entity and the struct for which you will
   implement the `AshAuthentication.Strategy` protocol.
 
-  The only required field is `strategy_module` which is used to keep track of
-  which custom strategy created which strategy.
+  The only required field is `resource` which will contain the resource module
+  that the strategy has been added to.
+
+  Optionally, you can include a `strategy_module` field if you're reusing
+  another strategy's entity, and thus the `__struct__` key can't be used to
+  introspect the location of the `transform/2` and `verify/2` callbacks.
   """
   @type strategy :: %{
           required(:__struct__) => module,
-          required(:strategy_module) => module,
           required(:resource) => module,
+          optional(:strategy_module) => module,
           optional(atom) => any
         }
 

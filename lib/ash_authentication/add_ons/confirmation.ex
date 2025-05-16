@@ -115,7 +115,6 @@ defmodule AshAuthentication.AddOn.Confirmation do
             provider: :confirmation,
             resource: nil,
             sender: nil,
-            strategy_module: __MODULE__,
             token_lifetime: nil
 
   alias Ash.{Changeset, Resource}
@@ -136,7 +135,6 @@ defmodule AshAuthentication.AddOn.Confirmation do
           provider: :confirmation,
           resource: module,
           sender: nil | {module, keyword},
-          strategy_module: module,
           token_lifetime: hours :: pos_integer
         }
 
