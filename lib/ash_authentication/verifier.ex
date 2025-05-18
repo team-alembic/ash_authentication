@@ -89,7 +89,7 @@ defmodule AshAuthentication.Verifier do
 
            To fix this error you can either:
 
-             1. disable sign in tokens by setting `sign_in_tokens? false` your password strategy, or
+             1. disable sign in tokens by setting `sign_in_tokens_enabled? false` your password strategy, or
              2. enable tokens.
            """
          )}
