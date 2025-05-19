@@ -1,6 +1,8 @@
 defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.TwoFactorTotp do
   @moduledoc false
 
+  alias AshAuthentication.AddOn.TwoFactorTotp
+
   @doc false
   def name(strategy), do: strategy.name
 
@@ -8,7 +10,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.TwoFactorTotp d
   def phases(_), do: [:verify]
 
   @doc false
-  def actions(_), do: []
+  def actions(_), do: [:setup, :verify]
 
   @doc false
   def routes(strategy) do

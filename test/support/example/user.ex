@@ -129,6 +129,12 @@ defmodule Example.User do
       change Example.GenericOAuth2Change
       change AshAuthentication.Strategy.OAuth2.IdentityChange
     end
+
+    update :setup_two_factor_totp do
+      metadata :otp_auth_uri, :string
+
+      change AshAuthentication.AddOn.TwoFactorTotp.SetupTotp
+    end
   end
 
   calculations do
@@ -181,6 +187,11 @@ defmodule Example.User do
     end
 
     add_ons do
+      two_factor_totp do
+        issuer "Example Co."
+        identity_field :username
+      end
+
       confirmation :confirm do
         monitor_fields [:username]
         inhibit_updates? true

@@ -5,11 +5,12 @@ defmodule AshAuthentication.AddOn.TwoFactorTotp do
 
   defstruct name: :two_factor_totp,
             storage_field: nil,
+            identity_field: nil,
             verify_action_name: nil,
             issuer: nil,
-            resource: nil,
-            strategy_module: __MODULE__,
-            provider: :two_factor_totp
+            resource: nil
 
   use AshAuthentication.Strategy.Custom, style: :add_on, entity: __MODULE__.Dsl.dsl()
+
+  defdelegate transform(strategy, dsl_state), to: __MODULE__.Transformer
 end

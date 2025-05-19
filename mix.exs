@@ -223,6 +223,8 @@ defmodule AshAuthentication.MixProject do
       {:plug, "~> 1.13"},
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
+      {:nimble_totp, "~> 1.0.0", optional: true},
+      {:eqrcode, "~> 0.2.1", optional: true},
       {:simple_sat, "~> 0.1", only: [:dev, :test]},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 1.7.2", only: [:dev, :test]},
