@@ -27,6 +27,79 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |    strategies do
       + |      password :password do
       + |        identity_field(:email)
+      + |        hash_provider(AshAuthentication.BcryptProvider)
+      + |
+      + |        resettable do
+      + |          sender(Test.Accounts.User.Senders.SendPasswordResetEmail)
+      + |          # these configurations will be the default in a future release
+      + |          password_reset_action_name(:reset_password_with_token)
+      + |          request_password_reset_action_name(:request_password_reset_token)
+      + |        end
+      + |      end
+      + |    end
+      """)
+    end
+
+    test "the `bcrypt` hash provider can be selected", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", [
+        "password",
+        "--hash-provider",
+        "bcrypt"
+      ])
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |    strategies do
+      + |      password :password do
+      + |        identity_field(:email)
+      + |        hash_provider(AshAuthentication.BcryptProvider)
+      + |
+      + |        resettable do
+      + |          sender(Test.Accounts.User.Senders.SendPasswordResetEmail)
+      + |          # these configurations will be the default in a future release
+      + |          password_reset_action_name(:reset_password_with_token)
+      + |          request_password_reset_action_name(:request_password_reset_token)
+      + |        end
+      + |      end
+      + |    end
+      """)
+    end
+
+    test "the `argon2` hash provider can be selected", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", [
+        "password",
+        "--hash-provider",
+        "argon2"
+      ])
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |    strategies do
+      + |      password :password do
+      + |        identity_field(:email)
+      + |        hash_provider(AshAuthentication.Argon2Provider)
+      + |
+      + |        resettable do
+      + |          sender(Test.Accounts.User.Senders.SendPasswordResetEmail)
+      + |          # these configurations will be the default in a future release
+      + |          password_reset_action_name(:reset_password_with_token)
+      + |          request_password_reset_action_name(:request_password_reset_token)
+      + |        end
+      + |      end
+      + |    end
+      """)
+    end
+
+    test "an arbitrary hash provider can be entered", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", [
+        "password",
+        "--hash-provider",
+        "MyApp.ExampleHashProvider"
+      ])
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |    strategies do
+      + |      password :password do
+      + |        identity_field(:email)
+      + |        hash_provider(MyApp.ExampleHashProvider)
       + |
       + |        resettable do
       + |          sender(Test.Accounts.User.Senders.SendPasswordResetEmail)
@@ -216,11 +289,41 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       """)
     end
 
-    test "adds the bcrypt dependency", %{igniter: igniter} do
+    test "adds the bcrypt_elixir dependency when no hash provider is selected", %{
+      igniter: igniter
+    } do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
       |> assert_has_patch("mix.exs", """
       + |      {:bcrypt_elixir, "~> 3.0"},
+      """)
+    end
+
+    test "adds the bcrypt_elixir dependency when the bcrypt hash provider is selected", %{
+      igniter: igniter
+    } do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", [
+        "password",
+        "--hash-provider",
+        "bcrypt"
+      ])
+      |> assert_has_patch("mix.exs", """
+      + |      {:bcrypt_elixir, "~> 3.0"},
+      """)
+    end
+
+    test "adds the argon2_elixir dependency when the argon2 hash provider is selected", %{
+      igniter: igniter
+    } do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", [
+        "password",
+        "--hash-provider",
+        "argon2"
+      ])
+      |> assert_has_patch("mix.exs", """
+      + |      {:argon2_elixir, "~> 4.0"},
       """)
     end
 

@@ -11,11 +11,56 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
   @spec verify(Password.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
     with :ok <- validate_behaviour(strategy.hash_provider, HashProvider),
+         :ok <- validate_hash_provider_dep(strategy),
          :ok <- validate_tokens_enabled_for_sign_in_tokens(dsl_state, strategy),
          :ok <- validate_tokens_enabled_for_resettable(dsl_state, strategy) do
       maybe_validate_resettable_sender(dsl_state, strategy)
     end
   end
+
+  defp validate_hash_provider_dep(strategy)
+       when strategy.hash_provider == AshAuthentication.BcryptProvider do
+    if Code.ensure_loaded?(Bcrypt) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         module: strategy.resource,
+         path: [
+           :authentication,
+           :strategies,
+           :password,
+           strategy.name,
+           :hash_provider
+         ],
+         message:
+           "Bcrypt is not available. Please ensure that the Bcrypt library is installed and available."
+       )}
+    end
+  end
+
+  defp validate_hash_provider_dep(strategy)
+       when strategy.hash_provider == AshAuthentication.Argon2Provider do
+    if Code.ensure_loaded?(Argon2) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         module: strategy.resource,
+         path: [
+           :authentication,
+           :strategies,
+           :password,
+           strategy.name,
+           :hash_provider
+         ],
+         message:
+           "Argon2 is not available. Please ensure that the Argon2 library is installed and available."
+       )}
+    end
+  end
+
+  defp validate_hash_provider_dep(_), do: :ok
 
   defp validate_tokens_enabled_for_sign_in_tokens(dsl_state, strategy)
        when strategy.sign_in_tokens_enabled? do
