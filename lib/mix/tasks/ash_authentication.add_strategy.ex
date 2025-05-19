@@ -19,6 +19,23 @@ if Code.ensure_loaded?(Igniter) do
 
     @strategy_names @strategies |> Keyword.keys() |> Enum.map(&to_string/1)
 
+    @strategy_options [
+                        password: [
+                          hash_provider:
+                            "The hash provider to use, either `bcrypt` or `argon2`.  Defaults to `bcrypt2`."
+                        ]
+                      ]
+                      |> Enum.reduce("", fn {strategy, opts}, result ->
+                        strategy =
+                          strategy
+                          |> to_string()
+                          |> String.capitalize()
+
+                        result <>
+                          "## #{strategy} options\n\n" <>
+                          Enum.map_join(opts, "\n", &"  - `#{elem(&1, 0)}` - #{elem(&1, 1)}")
+                      end)
+
     @moduledoc """
     #{@shortdoc}
 
@@ -34,11 +51,13 @@ if Code.ensure_loaded?(Igniter) do
     #{@example}
     ```
 
-    ## Options
+    ## Global options
 
     * `--user`, `-u` -  The user resource. Defaults to `YourApp.Accounts.User`
     * `--identity-field`, `-i` - The field on the user resource that will be used to identify
       the user. Defaults to `email`
+
+    #{@strategy_options}
     """
 
     def info(_argv, _composing_task) do
@@ -48,13 +67,14 @@ if Code.ensure_loaded?(Igniter) do
         extra_args?: false,
         # A list of environments that this should be installed in, only relevant if this is an installer.
         only: nil,
-        # a ist of positional arguments, i.e `[:file]`
+        # a list of positional arguments, i.e `[:file]`
         positional: [
           strategies: [rest: true]
         ],
         schema: [
           user: :string,
-          api_key: :string
+          api_key: :string,
+          hash_provider: :string
         ],
         aliases: [
           u: :user,
@@ -350,6 +370,35 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp password(igniter, options) do
+      hash_provider =
+        cond do
+          options[:hash_provider] |> to_string() |> String.downcase() == "bcrypt" ->
+            "AshAuthentication.BcryptProvider"
+
+          options[:hash_provider] |> to_string() |> String.downcase() == "argon2" ->
+            "AshAuthentication.Argon2Provider"
+
+          is_binary(options[:hash_provider]) ->
+            options[:hash_provider]
+
+          true ->
+            "AshAuthentication.BcryptProvider"
+        end
+
+      igniter =
+        if hash_provider == "AshAuthentication.BcryptProvider" do
+          Igniter.Project.Deps.add_dep(igniter, {:bcrypt_elixir, "~> 3.0"})
+        else
+          igniter
+        end
+
+      igniter =
+        if hash_provider == "AshAuthentication.Argon2Provider" do
+          Igniter.Project.Deps.add_dep(igniter, {:argon2_elixir, "~> 4.0"})
+        else
+          igniter
+        end
+
       sender = Module.concat(options[:user], Senders.SendPasswordResetEmail)
 
       {igniter, _, zipper} =
@@ -365,7 +414,6 @@ if Code.ensure_loaded?(Igniter) do
         end
 
       igniter
-      |> Igniter.Project.Deps.add_dep({:bcrypt_elixir, "~> 3.0"})
       |> Ash.Resource.Igniter.add_new_attribute(options[:user], options[:identity_field], """
       attribute :#{options[:identity_field]}, :ci_string do
         allow_nil? false
@@ -382,6 +430,7 @@ if Code.ensure_loaded?(Igniter) do
       |> AshAuthentication.Igniter.add_new_strategy(options[:user], :password, :password, """
       password :password do
         identity_field :#{options[:identity_field]}
+        hash_provider #{hash_provider}
 
         resettable do
           sender #{inspect(sender)}

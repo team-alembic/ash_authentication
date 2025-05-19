@@ -15,8 +15,12 @@ defmodule AshAuthentication.BcryptProvider do
   """
   @impl true
   @spec hash(String.t()) :: {:ok, String.t()} | :error
-  def hash(input) when is_binary(input), do: {:ok, Bcrypt.hash_pwd_salt(input)}
-  def hash(_), do: :error
+  if Code.ensure_loaded?(Bcrypt) do
+    def hash(input) when is_binary(input), do: {:ok, Bcrypt.hash_pwd_salt(input)}
+    def hash(_), do: :error
+  else
+    def hash(_), do: raise("Bcrypt is not available")
+  end
 
   @doc """
   Check if the user input matches the hash.
@@ -29,10 +33,14 @@ defmodule AshAuthentication.BcryptProvider do
   """
   @impl true
   @spec valid?(input :: String.t() | nil, hash :: String.t()) :: boolean
-  def valid?(nil, _hash), do: Bcrypt.no_user_verify()
+  if Code.ensure_loaded?(Bcrypt) do
+    def valid?(nil, _hash), do: Bcrypt.no_user_verify()
 
-  def valid?(input, hash) when is_binary(input) and is_binary(hash),
-    do: Bcrypt.verify_pass(input, hash)
+    def valid?(input, hash) when is_binary(input) and is_binary(hash),
+      do: Bcrypt.verify_pass(input, hash)
+  else
+    def valid?(_input, _hash), do: raise("Bcrypt not available")
+  end
 
   @doc """
   Simulate a password check to help avoid timing attacks.
@@ -44,5 +52,9 @@ defmodule AshAuthentication.BcryptProvider do
   """
   @impl true
   @spec simulate :: false
-  def simulate, do: Bcrypt.no_user_verify()
+  if Code.ensure_loaded?(Bcrypt) do
+    def simulate, do: Bcrypt.no_user_verify()
+  else
+    def simulate, do: raise("Bcrypt not available")
+  end
 end
