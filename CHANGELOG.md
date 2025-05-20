@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.8.7](https://github.com/team-alembic/ash_authentication/compare/v4.8.6...v4.8.7) (2025-05-20)
+
+
+
+
+### Bug Fixes:
+
+* incorrect warning in password verifier.
+
+* remove underscores from app name for prefix
+
+### Improvements:
+
+* Strategy.Custom: The `strategy_module` field is no longer required.
+
 ## [v4.8.6](https://github.com/team-alembic/ash_authentication/compare/v4.8.5...v4.8.6) (2025-05-16)
 
 
