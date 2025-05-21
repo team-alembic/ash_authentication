@@ -54,8 +54,8 @@ defmodule AshAuthentication.AddOn.TwoFactorTotp.Dsl do
           doc: "The issuer name to use for the TOTP. Usually the company name.",
           required: true
         ]
-        # Strategies to apply this add-on to?
-        # Grace period - https://hexdocs.pm/nimble_totp/NimbleTOTP.html#module-grace-period
+        # TODO: Strategies to apply this add-on to?
+        # TODO: Grace period - https://hexdocs.pm/nimble_totp/NimbleTOTP.html#module-grace-period
       ]
     }
   end

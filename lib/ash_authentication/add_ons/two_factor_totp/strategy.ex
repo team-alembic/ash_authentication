@@ -23,4 +23,14 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.TwoFactorTotp d
 
   @doc false
   def tokens_required?(_), do: false
+
+  @doc false
+  def plug(strategy, :verify, conn) do
+    TwoFactorTotp.Plug.verify(conn, strategy)
+  end
+
+  @doc false
+  def action(strategy, :verify, params, options) do
+    TwoFactorTotp.Actions.verify(strategy, params, options)
+  end
 end

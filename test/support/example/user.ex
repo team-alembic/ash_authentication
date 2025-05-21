@@ -135,6 +135,12 @@ defmodule Example.User do
 
       change AshAuthentication.AddOn.TwoFactorTotp.SetupTotp
     end
+
+    update :verify_two_factor_totp do
+      argument :totp, :string, allow_nil?: false
+
+      change AshAuthentication.AddOn.TwoFactorTotp.VerifyTotp
+    end
   end
 
   calculations do
