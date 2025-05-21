@@ -12,6 +12,7 @@
       <%= for {resource, options, strategies} <- @resources do %>
         <h2><%= inspect(options.subject_name) %> - <%= Ash.Domain.Info.short_name(options.domain) %> / <%= Ash.Resource.Info.short_name(resource) %></h2>
 
+        <% options = Map.put(options, :current, @current_users[String.to_atom("current_#{options.subject_name}")]) %>
 
         <%= for strategy <- strategies do %>
           <%= for phase <- Strategy.phases(strategy) do %>

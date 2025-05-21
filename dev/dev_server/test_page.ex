@@ -143,6 +143,31 @@ defmodule DevServer.TestPage do
     )
   end
 
+  defp render_strategy(strategy, phase, options)
+       when strategy.name == :two_factor_totp and phase == :verify do
+    EEx.eval_string(
+      ~s"""
+      <form method="<%= @method %>" action="<%= @route %>">
+        <fieldset>
+          <legend><%= @strategy.name %> verification</legend>
+          <%= if !@options.current do %>
+            No current user - sign in first
+          <% else %>
+            <input type="text" name="totp" placeholder="totp" />
+            <input type="submit" value="Verify" />
+          <% end %>
+        </fieldset>
+      </form>
+      """,
+      assigns: [
+        strategy: strategy,
+        route: route_for_phase(strategy, phase),
+        options: options,
+        method: Strategy.method_for_phase(strategy, phase)
+      ]
+    )
+  end
+
   defp render_strategy(strategy, phase, _)
        when strategy.provider == :password and phase == :sign_in_with_token,
        do: ""
