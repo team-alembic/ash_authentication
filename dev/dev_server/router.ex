@@ -10,7 +10,6 @@ defmodule DevServer.Router do
   plug(:match)
   plug(:dispatch)
 
-  forward("/auth", to: Example.AuthPlug)
   get("/clear_session", to: DevServer.ClearSession)
   post("/token_check", to: DevServer.TokenCheck)
   forward("/api", to: DevServer.ApiRouter)

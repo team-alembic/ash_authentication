@@ -9,6 +9,7 @@ defmodule DevServer.WebRouter do
   plug(:match)
   plug(:dispatch)
 
+  forward("/auth", to: Example.AuthPlug)
   get("/", to: DevServer.TestPage)
 
   match _ do
