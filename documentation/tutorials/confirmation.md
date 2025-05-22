@@ -186,9 +186,9 @@ Provided you have your authentication routes hooked up either via `AshAuthentica
 
 ## Blocking unconfirmed users from logging in
 
-The above section explains how to confirm an user account. There's a new directive in the [dsl](https://hexdocs.pm/ash_authentication/dsl-ashauthentication-strategy-password.html#authentication-strategies-password-require_confirmed_with) which can require the user to be confirmed in order to log in.
+The previous section explained how to confirm a user account. AshAuthentication now includes a directive in the [DSL](https://hexdocs.pm/ash_authentication/dsl-ashauthentication-strategy-password.html#authentication-strategies-password-require_confirmed_with) that allows you to require account confirmation before a user can log in.
 
-So:
+For example:
 
 ```
 authentication do
@@ -196,22 +196,25 @@ authentication do
   add_ons do
     confirmation :confirm_new_user do
       ...
+      confirmed_at_field :confirmed_at
     end
   end
 
   strategies do
     strategy :password do
       ...
-      # which confirmation strategy to require confirmation for
-      require_confirmed_with :confirm_new_user
+      # Require confirmation using the specified field
+      require_confirmed_with :confirmed_at
     end
   end
 end
 ```
 
-this will make impossible for unconfirmed users to log in. Note that at the moment it is developer responsibility to handle the scenario, for example redirecting the user to a page that gives some context and maybe offers the chance to require a new confirmation email in case the previous one is lost.
+With this configuration, users whose `confirmed_at` field is `nil` will not be able to log in.
 
-If the field value is `nil` or if the field itself is not present, no confirmation check will be enforced.
+*Note:* It is currently the developer’s responsibility to handle this scenario - for example, by redirecting the user to a page that explains the situation and possibly offers an option to request a new confirmation email if the original one was lost.
+
+If `require_confirmed_with` is not set or set to `nil`, no confirmation check is enforced - unconfirmed users will be allowed to log in.
 
 ## Confirming changes to monitored fields
 

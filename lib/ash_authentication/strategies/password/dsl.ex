@@ -135,7 +135,8 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
         require_confirmed_with: [
           type: {:or, [:atom, nil]},
           required: false,
-          doc: "Whether a new account must be confirmed in order to log in.",
+          doc:
+            "The field that must be non-nil for a user to be allowed to log in. If unset or nil, no confirmation check will be enforced.",
           default: nil
         ]
       ],
