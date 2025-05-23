@@ -10,7 +10,8 @@ defmodule AshAuthentication.AddOn.TwoFactorTotp.SetupTotp do
 
     totp_details = %{
       secret: :binary.encode_hex(secret, :lowercase),
-      confirmed?: false
+      confirmed?: false,
+      last_used_at: nil
     }
 
     changeset
