@@ -8,8 +8,10 @@ defmodule AshAuthentication.AddOn.TwoFactorTotp.VerifyTotp do
 
     totp_details = Map.fetch!(changeset.data, strategy.storage_field)
     secret = Map.fetch!(totp_details, :secret)
+    last_used_at = Map.get(totp_details, :last_used_at)
+    since = if last_used_at, do: DateTime.to_unix(last_used_at), else: nil
 
-    if NimbleTOTP.valid?(:binary.decode_hex(secret), entered_totp) do
+    if NimbleTOTP.valid?(:binary.decode_hex(secret), entered_totp, since: since) do
       updated_details =
         Map.merge(totp_details, %{
           confirmed?: true,
