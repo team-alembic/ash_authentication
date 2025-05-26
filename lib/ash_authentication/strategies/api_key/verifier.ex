@@ -85,19 +85,6 @@ defmodule AshAuthentication.Strategy.ApiKey.Verifier do
     end
   end
 
-  defp validate_id_type(_dsl_state, destination, attribute) do
-    if attribute.type == Ash.Type.UUID do
-      :ok
-    else
-      {:error,
-       DslError.exception(
-         path: [:authentication, :strategies],
-         message:
-           "The API key resource `#{inspect(destination)}` must have `id` with type `Ash.Type.UUID`"
-       )}
-    end
-  end
-
   defp validate_sign_in_action(dsl_state, strategy) do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
          :ok <- validate_action_has_argument(action, :api_key),
