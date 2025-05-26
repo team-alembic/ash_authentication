@@ -159,10 +159,12 @@ end
 **Supported providers:** github, google, auth0, apple, oidc, slack
 
 **Required for all OAuth2:**
-- UserIdentity resource
 - Custom `register_with_[provider]` action
 - Secrets management
 - Tokens enabled
+
+**Optional for all OAuth2:**
+- UserIdentity resource (for multiple providers per user)
 
 ### OAuth2 Configuration Pattern
 ```elixir
@@ -190,6 +192,8 @@ actions do
     upsert_identity :unique_email
 
     change AshAuthentication.GenerateTokenChange
+    
+    # If UserIdentity resource is being used
     change AshAuthentication.Strategy.OAuth2.IdentityChange
 
     change fn changeset, _ctx ->
