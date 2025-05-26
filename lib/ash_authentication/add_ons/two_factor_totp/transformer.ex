@@ -24,7 +24,9 @@ defmodule AshAuthentication.AddOn.TwoFactorTotp.Transformer do
       name: strategy.storage_field,
       type: TwoFactorTotp.Types.StorageDetails,
       allow_nil?: true,
-      writable?: true
+      writable?: true,
+      sensitive?: true,
+      public?: false
     )
   end
 end
