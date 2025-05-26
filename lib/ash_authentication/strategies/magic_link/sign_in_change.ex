@@ -10,15 +10,16 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
   @doc false
   @impl true
   @spec change(Changeset.t(), keyword, Change.Context.t()) :: Changeset.t()
-  def change(changeset, _otps, context) do
+  def change(changeset, opts, context) do
     subject_name =
       changeset.resource
       |> Info.authentication_subject_name!()
       |> to_string()
 
-    strategy = Info.strategy_for_action!(changeset.resource, changeset.action.name)
+    {:ok, strategy} = Info.find_strategy(changeset, context, opts)
 
-    with token when is_binary(token) <-
+    with {:ok, strategy} = Info.find_strategy(changeset, context, opts),
+         token when is_binary(token) <-
            Changeset.get_argument(changeset, strategy.token_param_name),
          {:ok, %{"act" => token_action, "sub" => subject, "identity" => identity}, _} <-
            Jwt.verify(token, changeset.resource, [], context),
