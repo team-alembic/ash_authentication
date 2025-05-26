@@ -38,7 +38,9 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
   @spec accept(Conn.t(), MagicLink.t()) :: Conn.t()
   # sobelow_skip ["XSS.SendResp"]
   def accept(conn, strategy) do
-    token = Map.get(conn.params, to_string(strategy.token_param_name))
+    subject_params = subject_params(conn, strategy)
+    param_name = to_string(strategy.token_param_name)
+    token = Map.get(conn.params, param_name, subject_params[param_name])
 
     conn
     |> Conn.put_resp_content_type("text/html")
@@ -54,9 +56,16 @@ defmodule AshAuthentication.Strategy.MagicLink.Plug do
   """
   @spec sign_in(Conn.t(), MagicLink.t()) :: Conn.t()
   def sign_in(conn, strategy) do
+    param_name =
+      strategy.resource
+      |> Info.authentication_subject_name!()
+      |> to_string()
+
     params =
-      conn.params
-      |> Map.take([to_string(strategy.token_param_name)])
+      case Map.fetch(conn.params, param_name) do
+        :error -> conn.params
+        {:ok, params} -> params
+      end
 
     opts = opts(conn)
     result = Strategy.action(strategy, :sign_in, params, opts)
