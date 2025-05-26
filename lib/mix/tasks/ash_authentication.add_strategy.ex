@@ -243,7 +243,9 @@ if Code.ensure_loaded?(Igniter) do
             :api,
             """
             plug AshAuthentication.Strategy.ApiKey.Plug,
-              resource: #{inspect(options[:user])}
+              resource: #{inspect(options[:user])},
+              # if you want to require an api key to be supplied, set `required?` to true
+              required?: false
             """,
             router: router
           )
