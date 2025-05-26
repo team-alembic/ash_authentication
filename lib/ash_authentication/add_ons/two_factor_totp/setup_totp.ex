@@ -50,12 +50,10 @@ defmodule AshAuthentication.AddOn.TwoFactorTotp.SetupTotp do
     end
   end
 
-  @doc """
-  Creates a new TOTP setup for a user.
-
-  This generates a new secret, stores it in the user record, and creates an auth URI
-  that can be used to generate a QR code for the user to scan with their authenticator app.
-  """
+  # Creates a new TOTP setup for a user.
+  #
+  # This generates a new secret, stores it in the user record, and creates an auth URI
+  # that can be used to generate a QR code for the user to scan with their authenticator app.
   defp setup_new_totp(changeset, strategy) do
     secret = NimbleTOTP.secret()
 

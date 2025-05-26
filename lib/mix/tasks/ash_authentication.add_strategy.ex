@@ -10,7 +10,8 @@ if Code.ensure_loaded?(Igniter) do
     @strategies [
       password: "Register and sign in with a username/email and a password.",
       magic_link: "Register and sign in with a magic link, sent via email to the user.",
-      api_key: "Sign in with an API key."
+      api_key: "Sign in with an API key.",
+      two_factor_totp: "Add two-factor authentication using Time-based One-Time Passwords (TOTP)."
     ]
 
     @strategy_explanation Enum.map_join(@strategies, "\n", fn {name, description} ->
@@ -110,6 +111,11 @@ if Code.ensure_loaded?(Igniter) do
               igniter
               |> api_key(options)
               |> Ash.Igniter.codegen("add_api_key_auth")
+
+            "two_factor_totp", igniter ->
+              igniter
+              |> two_factor_totp(options)
+              |> Ash.Igniter.codegen("add_two_factor_totp")
           end)
 
         {false, igniter} ->
@@ -412,6 +418,46 @@ if Code.ensure_loaded?(Igniter) do
       |> generate_reset(sender, options)
       |> add_confirmation(options)
       |> Ash.Igniter.codegen("add_password_authentication")
+    end
+
+    defp two_factor_totp(igniter, options) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+
+      default_issuer =
+        otp_app
+        |> to_string()
+        |> String.split("_")
+        |> Enum.map(&String.capitalize/1)
+        |> Enum.join(" ")
+
+      igniter
+      |> Igniter.Project.Deps.add_dep({:nimble_totp, "~> 1.0"})
+      |> AshAuthentication.Igniter.add_new_add_on(
+        options[:user],
+        :two_factor_totp,
+        nil,
+        """
+        two_factor_totp do
+          issuer #{inspect(default_issuer)}
+          identity_field :#{options[:identity_field]}
+          storage_field :totp_details
+        end
+        """
+      )
+      |> Ash.Resource.Igniter.add_new_action(options[:user], :setup_two_factor_totp, """
+      update :setup_two_factor_totp do
+        metadata :otp_auth_uri, :string
+
+        change AshAuthentication.AddOn.TwoFactorTotp.SetupTotp
+      end
+      """)
+      |> Ash.Resource.Igniter.add_new_action(options[:user], :verify_two_factor_totp, """
+      update :verify_two_factor_totp do
+        argument :totp, :string, allow_nil?: false
+
+        change AshAuthentication.AddOn.TwoFactorTotp.VerifyTotp
+      end
+      """)
     end
 
     defp ensure_identity(igniter, options) do

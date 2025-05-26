@@ -4,8 +4,15 @@ defmodule AshAuthentication.AddOn.TwoFactorTotp do
   """
 
   # TODO: Write all of the docs for the things
-  # TODO: Write Igniter to set up add-on in end-user apps
-  # TODO: How to actually prevent users from using the app without submitting a valid TOTP?
+  #
+  # TODO: How to actually prevent users from using the app without submitting a valid TOTP? Update
+  # user's auth controller to not actually store the authentication result, but instead force a
+  # TOTP request?
+  #
+  # TODO: How to make it opt-in on a per-level? eg. GitHub
+  # Also, sudo mode (like GitHub. `phx.gen.auth` also does this)
+  #
+  # TODO: Recovery codes
 
   defstruct name: :two_factor_totp,
             storage_field: nil,

@@ -48,6 +48,47 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |  end
       """)
     end
+  end
+
+  describe "two_factor_totp" do
+    test "adds the two_factor_totp add-on to the user", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["two_factor_totp"])
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |        two_factor_totp do
+      + |          issuer("Test")
+      + |          identity_field(:email)
+      + |          storage_field(:totp_details)
+      + |        end
+      """)
+    end
+
+    test "adds nimble_totp dependency", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["two_factor_totp"])
+      |> assert_has_patch("mix.exs", """
+      + |      {:nimble_totp, "~> 1.0"},
+      """)
+    end
+
+    test "adds setup and verify actions to the user", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["two_factor_totp"])
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |    update :setup_two_factor_totp do
+      + |      metadata(:otp_auth_uri, :string)
+      + |
+      + |      change(AshAuthentication.AddOn.TwoFactorTotp.SetupTotp)
+      + |    end
+      """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |    update :verify_two_factor_totp do
+      + |      argument(:totp, :string, allow_nil?: false)
+      + |
+      + |      change(AshAuthentication.AddOn.TwoFactorTotp.VerifyTotp)
+      + |    end
+      """)
+    end
 
     test "adds the attributes to the user resource", %{igniter: igniter} do
       igniter
