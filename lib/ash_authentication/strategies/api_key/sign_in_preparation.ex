@@ -11,8 +11,8 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
-  def prepare(query, _opts, _context) do
-    with {:ok, strategy} <- Info.strategy_for_action(query.resource, query.action.name),
+  def prepare(query, opts, context) do
+    with {:ok, strategy} <- Info.find_strategy(query, context, opts),
          {:ok, api_key} <- Query.fetch_argument(query, :api_key),
          {:ok, api_key_id, random_bytes} <- decode_api_key(api_key) do
       api_key_relationship =

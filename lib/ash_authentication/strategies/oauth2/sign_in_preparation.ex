@@ -18,8 +18,8 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
-  def prepare(query, _opts, context) do
-    case Info.strategy_for_action(query.resource, query.action.name) do
+  def prepare(query, opts, context) do
+    case Info.find_strategy(query, context, opts) do
       :error ->
         {:error,
          AuthenticationFailed.exception(
