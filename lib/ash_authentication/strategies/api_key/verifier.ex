@@ -69,9 +69,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Verifier do
          )}
 
       attribute ->
-        with :ok <- validate_id_is_primary_key(dsl_state, destination, attribute) do
-          validate_id_type(dsl_state, destination, attribute)
-        end
+        validate_id_is_primary_key(dsl_state, destination, attribute)
     end
   end
 
