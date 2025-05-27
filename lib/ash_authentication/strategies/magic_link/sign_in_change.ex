@@ -16,9 +16,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
       |> Info.authentication_subject_name!()
       |> to_string()
 
-    {:ok, strategy} = Info.find_strategy(changeset, context, opts)
-
-    with {:ok, strategy} = Info.find_strategy(changeset, context, opts),
+    with {:ok, strategy} <- Info.find_strategy(changeset, context, opts),
          token when is_binary(token) <-
            Changeset.get_argument(changeset, strategy.token_param_name),
          {:ok, %{"act" => token_action, "sub" => subject, "identity" => identity}, _} <-
@@ -42,13 +40,22 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
       end)
     else
       _ ->
-        Ash.Changeset.add_error(
-          changeset,
-          InvalidToken.exception(
-            field: strategy.token_param_name,
-            type: :magic_link
-          )
-        )
+        case Info.find_strategy(changeset, context, opts) do
+          {:ok, strategy} ->
+            Ash.Changeset.add_error(
+              changeset,
+              InvalidToken.exception(
+                field: strategy.token_param_name,
+                type: :magic_link
+              )
+            )
+
+          _ ->
+            Ash.Changeset.add_error(
+              changeset,
+              "No strategy in context, and no strategy found for action #{inspect(changeset.resource)}.#{changeset.action.name}"
+            )
+        end
     end
   end
 end
