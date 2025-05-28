@@ -68,8 +68,14 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
           context: %{token_type: :sign_in}
         )
 
-      assert {:ok, _user} =
-               Actions.sign_in_with_token(strategy, %{"token" => user.__metadata__.token}, [])
+      assert {:ok, user} =
+               Actions.sign_in_with_token(
+                 strategy,
+                 %{"token" => user.__metadata__.token, "remember_me" => true},
+                 []
+               )
+
+      assert user.__metadata__.remember_me == true
     end
 
     test "it cannot sign in a user with a sign-in token confirmation is required and account is not confirmed" do

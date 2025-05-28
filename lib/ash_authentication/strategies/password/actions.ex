@@ -138,16 +138,23 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       options
       |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
 
+    %{arguments: arg_infos} =
+      Ash.Resource.Info.action(strategy.resource, strategy.sign_in_with_token_action_name)
+
+    arg_names = arg_infos |> Enum.map(& &1.name)
+
+    args =
+      arg_names
+      |> Enum.reduce(%{}, fn arg_name, args ->
+        value = params[arg_name] || params[arg_name |> to_string()]
+
+        args |> Map.put(arg_name, value)
+      end)
+
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.for_read(
-      strategy.sign_in_with_token_action_name,
-      %{
-        "token" => params["token"] || params[:token]
-      },
-      options
-    )
+    |> Query.for_read(strategy.sign_in_with_token_action_name, args, options)
     |> Ash.read()
     |> case do
       {:ok, [user]} ->

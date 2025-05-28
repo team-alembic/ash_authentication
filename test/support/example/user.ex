@@ -59,6 +59,42 @@ defmodule Example.User do
       require_atomic? false
     end
 
+    read :sign_in_with_token do
+      description "Attempt to sign in using a short-lived sign in token."
+      get? true
+
+      argument :token, :string do
+        description "The short-lived sign in token."
+        allow_nil? false
+        sensitive? true
+      end
+
+      argument :remember_me, :boolean, default: false
+
+      prepare AshAuthentication.Strategy.Password.SignInWithTokenPreparation
+
+      metadata :token, :string do
+        description "A JWT that can be used to authenticate the user."
+        allow_nil? false
+      end
+
+      metadata :remember_me, :boolean, default: false
+
+      prepare fn query, _ctx ->
+        query
+        |> Ash.Query.after_action(fn
+          query, [user] ->
+            remember_me = query |> Ash.Query.get_argument(:remember_me)
+            user = user |> Ash.Resource.put_metadata(:remember_me, remember_me)
+
+            {:ok, [user]}
+
+          query, [] ->
+            {:ok, []}
+        end)
+      end
+    end
+
     create :register_with_auth0 do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
