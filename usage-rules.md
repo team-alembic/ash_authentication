@@ -340,3 +340,33 @@ authentication do
   end
 end
 ```
+
+## Customizing Authentication Actions
+
+When customizing generated authentication actions (register, sign_in, etc.):
+
+**Key Security Rules:**
+- Always mark credentials with `sensitive?: true` (passwords, API keys, tokens)
+- Use `public?: false` for internal fields and highly sensitive PII
+- Use `public?: true` for identity fields and UI display data
+- Include required authentication changes (`GenerateTokenChange`, `HashPasswordChange`, etc.)
+
+**Argument Handling:**
+- All arguments must be used in `accept` or `change set_attribute()`
+- Use `allow_nil?: false` for required arguments
+- OAuth2 data must be extracted in changes, not accepted directly
+
+**Example Custom Registration:**
+```elixir
+create :register_with_password do
+  argument :password, :string, allow_nil?: false, sensitive?: true
+  argument :first_name, :string, allow_nil?: false
+  
+  accept [:email, :first_name]
+  
+  change AshAuthentication.GenerateTokenChange
+  change AshAuthentication.Strategy.Password.HashPasswordChange
+end
+```
+
+For more guidance, see the "Customizing Authentication Actions" section in the getting started guide.

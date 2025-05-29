@@ -163,13 +163,31 @@ defmodule MyApp.Accounts.User do
     uuid_primary_key :id
   end
 
+  actions do
+    defaults [:read]
+    
+    read :get_by_subject do
+      description "Get a user by the subject claim in a JWT"
+      argument :subject, :string, allow_nil?: false
+      get? true
+      prepare AshAuthentication.Preparations.FilterBySubject
+    end
+  end
+
   authentication do
     tokens do
       enabled? true
       token_resource MyApp.Accounts.Token
+      store_all_tokens? true
       signing_secret fn _, _ ->
         # This is a secret key used to sign tokens. See the note below on secrets management
         Application.fetch_env(:my_app, :token_signing_secret)
+      end
+    end
+
+    add_ons do
+      log_out_everywhere do
+        apply_on_password_change? true
       end
     end
   end
@@ -287,6 +305,68 @@ router using `forward "/auth", to: MyApp.AuthPlug` or similar.
 Your generated auth plug module will also contain `load_from_session` and
 `load_from_bearer` function plugs, which can be used to load users into assigns
 based on the contents of the session store or `Authorization` header.
+
+## Customizing Authentication Actions
+
+Authentication strategies automatically generate actions like `register`, `sign_in`, etc. When customizing these actions, keep in mind:
+
+### Required Authentication Changes
+
+Always include the strategy's required changes when overriding actions:
+
+```elixir
+# Password registration
+create :register_with_password do
+  # Your custom arguments and logic...
+  
+  # Required for password strategy:
+  change AshAuthentication.GenerateTokenChange
+  change AshAuthentication.Strategy.Password.HashPasswordChange
+end
+
+# OAuth2 registration  
+create :register_with_github do
+  argument :user_info, :map, allow_nil?: false
+  argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+  
+  # Required for OAuth2:
+  change AshAuthentication.GenerateTokenChange
+  change AshAuthentication.Strategy.OAuth2.IdentityChange
+  
+  # Extract user data from OAuth response:
+  change fn changeset, _ctx ->
+    user_info = Ash.Changeset.get_argument(changeset, :user_info)
+    Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email", "name"]))
+  end
+end
+```
+
+### Security for Authentication
+
+Mark sensitive authentication data appropriately:
+
+```elixir
+attributes do
+  # Identity fields - public for authentication UI
+  attribute :email, :ci_string, allow_nil?: false, public?: true
+  
+  # Credentials - always sensitive, never public
+  attribute :hashed_password, :string, allow_nil?: false, sensitive?: true, public?: false
+end
+
+actions do
+  create :register do
+    # Credential arguments - always sensitive
+    argument :password, :string, allow_nil?: false, sensitive?: true
+    argument :password_confirmation, :string, allow_nil?: false, sensitive?: true
+  end
+end
+```
+
+> ### Note on `public?: true` {: .info}
+> 
+> The `public?: true` option controls API visibility, not authentication requirements. 
+> Identity fields like `:email` typically need `public?: true` for authentication UIs to work properly.
 
 ## Summary
 
