@@ -105,6 +105,8 @@ defmodule AshAuthentication.Secret do
 
   @doc false
   def __after_verify__(module) do
+    Code.ensure_loaded!(module)
+
     if function_exported?(module, :secret_for, 3) and
          function_exported?(module, :secret_for, 4) do
       raise "#{inspect(module)}: You should only implement `secret_for/3` or `secret_for/4`, not both."
