@@ -88,7 +88,7 @@ defmodule AshAuthentication.Secret do
     quote do
       @behaviour AshAuthentication.Secret
       @before_compile AshAuthentication.Secret
-      @after_compile AshAuthentication.Secret
+      @after_verify AshAuthentication.Secret
     end
   end
 
@@ -104,9 +104,7 @@ defmodule AshAuthentication.Secret do
   end
 
   @doc false
-  def __after_compile__(env, _bytecode) do
-    module = env.module
-
+  def __after_verify__(module) do
     if function_exported?(module, :secret_for, 3) and
          function_exported?(module, :secret_for, 4) do
       raise "#{inspect(module)}: You should only implement `secret_for/3` or `secret_for/4`, not both."
