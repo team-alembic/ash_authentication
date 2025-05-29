@@ -161,14 +161,11 @@ defmodule AshAuthentication.Jwt.Config do
         {:ok, secret} when is_binary(secret) ->
           secret
 
-        {:ok, secret} when not is_binary(secret) ->
-          raise "Invalid JWT signing secret: #{inspect(secret)}. Please see the documentation for `AshAuthentication.Jwt` for details"
-
-        secret when is_binary(secret) ->
+        {:ok, _secret} ->
           raise "Invalid JWT signing secret format: Make sure to return a success tuple like `{:ok, \"signing_secret\"}`." <>
                   " Please see the documentation for `AshAuthentication.Jwt` for details"
 
-        _ ->
+        :error ->
           raise "Missing JWT signing secret. Please see the documentation for `AshAuthentication.Jwt` for details"
       end
 
