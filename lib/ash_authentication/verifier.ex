@@ -70,12 +70,11 @@ defmodule AshAuthentication.Verifier do
          DslError.exception(
            path: [:authentication, :tokens, :enabled?],
            message: """
-           The `#{password.name}` password authentication strategy requires tokens be enabled because reset tokens are in use.
+            The `#{password.name}` password authentication strategy requires tokens be enabled because reset tokens are in use.
 
-           To fix this error you can either:
+            To fix this error you can either:
 
-             1. disable password resets by removing the `resettable` configuration from your password strategy, or
-             2. enable tokens.
+              1. disable password resets by removing the `resettable` configuration from your password strategy, or
            """
          )}
 
