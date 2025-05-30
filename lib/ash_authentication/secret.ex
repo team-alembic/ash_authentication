@@ -62,6 +62,7 @@ defmodule AshAuthentication.Secret do
   """
 
   alias Ash.Resource
+  alias AshAuthentication.Errors.InvalidSecret
 
   @doc deprecated: "Use AshAuthentication.Secret.secret_for/4 instead"
   @callback secret_for(secret_name :: [atom], Resource.t(), keyword) :: {:ok, String.t()} | :error
@@ -126,10 +127,28 @@ defmodule AshAuthentication.Secret do
 
   @doc false
   def secret_for(module, secret_name, resource, opts, context) do
-    if module.__secret_for_arity__() == 4 do
-      module.secret_for(secret_name, resource, opts, context)
-    else
-      module.secret_for(secret_name, resource, opts)
+    result =
+      if module.__secret_for_arity__() == 4 do
+        module.secret_for(secret_name, resource, opts, context)
+      else
+        module.secret_for(secret_name, resource, opts)
+      end
+
+    case result do
+      {:ok, secret} ->
+        {:ok, secret}
+
+      :error ->
+        :error
+
+      other ->
+        path = secret_name
+
+        raise InvalidSecret.exception(
+                path: path,
+                resource: resource,
+                value: other
+              )
     end
   end
 end
