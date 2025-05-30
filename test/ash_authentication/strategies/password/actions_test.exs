@@ -71,7 +71,11 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert {:ok, user} =
                Actions.sign_in_with_token(
                  strategy,
-                 %{"token" => user.__metadata__.token, "remember_me" => true},
+                 %{
+                   "token" => user.__metadata__.token,
+                   "remember_me" => true,
+                   "unknown_input" => "ignored"
+                 },
                  []
                )
 
