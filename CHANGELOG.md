@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.0](https://github.com/team-alembic/ash_authentication/compare/v4.8.7...v4.9.0) (2025-05-30)
+
+
+
+
+### Features:
+
+* Password: Support password hashing with Argon2. (#998)
+
+### Bug Fixes:
+
+* set correct default on_error (#1008)
+
+* Info.strategy_for_action/2 -> Info.find_strategy/3 (#1007)
+
+* remove strict type validation on api key id type
+
+* set `required?: true` when adding api key strategy
+
+### Improvements:
+
+* improve secret validation and security (#1010)
+
+* use `after_verify` hook for secret module checks
+
+* extract params from subject name (#1006)
+
 ## [v4.8.7](https://github.com/team-alembic/ash_authentication/compare/v4.8.6...v4.8.7) (2025-05-20)
 
 
