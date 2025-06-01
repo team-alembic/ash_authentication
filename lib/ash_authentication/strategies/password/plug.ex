@@ -34,15 +34,16 @@ defmodule AshAuthentication.Strategy.Password.Plug do
     params = conn.params
     opts = opts(conn)
     result = Strategy.action(strategy, :sign_in_with_token, params, opts)
+
     store_authentication_result(conn, result)
   end
 
   @doc "Handle a reset request request"
   @spec reset_request(Conn.t(), Password.t()) :: Conn.t()
   def reset_request(conn, strategy) do
-    params = subject_params(conn, strategy)
-    opts = opts(conn)
-    result = Strategy.action(strategy, :reset_request, params, opts)
+    params = subject_params(conn, strategy) |> IO.inspect(label: "params")
+    opts = opts(conn) |> IO.inspect(label: "opts")
+    result = Strategy.action(strategy, :reset_request, params, opts) |> IO.inspect(label: "result")
     store_authentication_result(conn, result)
   end
 

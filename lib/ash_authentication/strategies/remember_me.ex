@@ -1,16 +1,11 @@
 defmodule AshAuthentication.Strategy.RememberMe do
-  alias __MODULE__.{Dsl, Transformer, Verifier}
+  alias __MODULE__.Dsl
 
   @moduledoc """
   Strategy for authentication using a remember me token.
 
-  In order to use remember me authentication your resource needs to meet the
-  following minimum requirements:
-
-  1. Have a primary key.
-  2. A uniquely constrained identity field (eg `username` or `email`)
-  3. Have tokens enabled.
-
+  In order to use remember me authentication you need to have another strategy
+  enabled that supports remember me. Currently, only the `password` strategy does.
   There are other options documented in the DSL.
 
   ### Example
@@ -29,7 +24,6 @@ defmodule AshAuthentication.Strategy.RememberMe do
     authentication do
       strategies do
         remember_me do
-          identity_field :email
           cookie_name :remember_me
           cookie_options [
             max_age: 30 * 24 * 60 * 60, # 30 days
@@ -41,24 +35,25 @@ defmodule AshAuthentication.Strategy.RememberMe do
         end
       end
     end
-
-    identities do
-      identity :unique_email, [:email]
-    end
   end
   ```
 
   """
 
+
   defstruct identity_field: :username,
-            cookie_name: :remember_me,
-            cookie_options: [
-              max_age: 30 * 24 * 60 * 60, # 30 days
-              http_only: true,
-              secure: true,
-              same_site: :lax
-            ],
-            token_lifetime: {10, :minutes}
+    cookie_name: :remember_me,
+    cookie_options: [
+      max_age: 30 * 24 * 60 * 60, # 30 days
+      http_only: true,
+      secure: true,
+      same_site: :lax
+    ],
+    name: nil,
+    registration_enabled?: false,
+    resource: nil,
+    token_lifetime: {30, :days},
+    remember_me_field: :remember_me
 
   use AshAuthentication.Strategy.Custom, entity: Dsl.dsl()
 
@@ -66,12 +61,16 @@ defmodule AshAuthentication.Strategy.RememberMe do
   # alias AshAuthentication.Jwt
 
   @type t :: %__MODULE__{
-          identity_field: atom,
-          cookie_name: atom,
-          cookie_options: keyword,
-          token_lifetime: pos_integer
-        }
+    identity_field: atom,
+    name: atom,
+    registration_enabled?: boolean,
+    resource: module,
+    identity_field: atom,
+    cookie_name: atom,
+    cookie_options: keyword,
+    token_lifetime: pos_integer
+  }
 
-  defdelegate transform(strategy, dsl_state), to: Transformer
-  defdelegate verify(strategy, dsl_state), to: Verifier
+  # defdelegate transform(strategy, dsl_state), to: Transformer
+  # defdelegate verify(strategy, dsl_state), to: Verifier
 end

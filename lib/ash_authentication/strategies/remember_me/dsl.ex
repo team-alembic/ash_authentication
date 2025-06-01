@@ -20,12 +20,6 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
           doc: "Uniquely identifies the strategy.",
           required: true
         ],
-        identity_field: [
-          type: :atom,
-          doc:
-            "The name of the attribute which uniquely identifies the user, usually something like `username` or `email_address`.",
-          default: :username
-        ],
         token_lifetime: [
           type:
             {:or,
@@ -43,9 +37,14 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
           default: :remember_me
         ],
         cookie_options: [
-          type: :keyword,
+          type: :keyword_list,
           doc: "The options to use for the cookie. Defaults to `[max_age: 30 * 24 * 60 * 60, http_only: true, secure: true, same_site: :lax]`",
           default: [max_age: 30 * 24 * 60 * 60, http_only: true, secure: true, same_site: :lax]
+        ],
+        remember_me_field: [
+          type: :atom,
+          doc: "The name of the field to use for the remember me checkbox. Defaults to `:remember_me`",
+          default: :remember_me
         ]
       ]
     }
