@@ -65,12 +65,6 @@ defmodule MyApp.Accounts.User do
       # Required if you're using the password & confirmation strategies
       upsert_fields []
       change set_attribute(:confirmed_at, &DateTime.utc_now/0)
-      change after_action(fn _changeset, user, _context ->
-        case user.confirmed_at do
-          nil -> {:error, "Unconfirmed user exists already"}
-          _ -> {:ok, user}
-        end
-      end)
     end
   end
 
