@@ -23,7 +23,14 @@ defmodule AshAuthentication.Strategy.RememberMe do
 
     authentication do
       strategies do
-        remember_me do
+        password do
+          identity_field :email
+          hashed_password_field :hashed_password
+          hash_provider AshAuthentication.BcryptProvider
+          confirmation_required? true
+        end
+
+                remember_me do
           cookie_name :remember_me
           cookie_options [
             max_age: 30 * 24 * 60 * 60, # 30 days
@@ -31,6 +38,7 @@ defmodule AshAuthentication.Strategy.RememberMe do
             secure: true,
             same_site: :lax
           ]
+          remember_me_field :remember_me
           token_lifetime {30, :days}
         end
       end
