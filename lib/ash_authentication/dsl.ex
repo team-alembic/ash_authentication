@@ -138,6 +138,11 @@ defmodule AshAuthentication.Dsl do
                   "The resource used to store token information, such as in-flight confirmations, revocations, and if `store_all_tokens?` is enabled, authentication tokens themselves.",
                 required: true
               ],
+              extra_claims: [
+                type: {:or, [{:fun, 2}, :map]},
+                doc:
+                  "A function that takes the user and the options provided when generating a token (contains the tenant), and returns a map of extra claims to include in the token."
+              ],
               signing_secret: [
                 type: secret_type,
                 doc: "The secret used to sign tokens.  #{secret_doc}"
