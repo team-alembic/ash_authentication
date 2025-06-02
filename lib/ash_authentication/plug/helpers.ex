@@ -101,7 +101,6 @@ defmodule AshAuthentication.Plug.Helpers do
                  resource,
                  opts
                ) do
-          user = Ash.Resource.set_metadata(user, %{claims: claims})
           Conn.assign(conn, current_subject_name, user)
         else
           _ ->
