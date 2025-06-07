@@ -29,6 +29,7 @@ defmodule AshAuthentication.Plug.Dispatcher do
     strategy
     |> Strategy.plug(phase, conn)
     |> get_authentication_result()
+    |> IO.inspect(label: "get_authentication_result")
     |> case do
       {conn, _} when conn.state not in @unsent ->
         conn

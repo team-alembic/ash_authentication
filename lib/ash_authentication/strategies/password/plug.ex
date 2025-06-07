@@ -34,6 +34,7 @@ defmodule AshAuthentication.Strategy.Password.Plug do
     params = conn.params
     opts = opts(conn)
     result = Strategy.action(strategy, :sign_in_with_token, params, opts)
+
     store_authentication_result(conn, result)
   end
 
