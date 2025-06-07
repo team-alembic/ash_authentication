@@ -86,13 +86,8 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
        ) do
       if user_confirmed_if_needed(record, strategy) do
         token_type = query.context[:token_type] || :user
-        record =
-          record
-          |> maybe_generate_token(token_type, strategy, Ash.Context.to_opts(context))
-          |> maybe_generate_remember_me_token(strategy, query, context)
 
-
-        {:ok, [record]}
+        {:ok, [maybe_generate_token(token_type, record, strategy, Ash.Context.to_opts(context))]}
       else
         {:error,
          AuthenticationFailed.exception(
@@ -138,7 +133,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     query
   end
 
-  defp maybe_generate_token(record, purpose, strategy, opts) when purpose in [:user, :sign_in] do
+  defp maybe_generate_token(purpose, record, strategy, opts) when purpose in [:user, :sign_in] do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
       generate_token(purpose, record, strategy, opts)
     else
@@ -146,7 +141,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     end
   end
 
-  defp generate_token(record, :sign_in,strategy, opts) when strategy.sign_in_tokens_enabled? do
+  defp generate_token(:sign_in, record, strategy, opts) when strategy.sign_in_tokens_enabled? do
     {:ok, token, _claims} =
       Jwt.token_for_user(
         record,
@@ -160,7 +155,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     Ash.Resource.put_metadata(record, :token, token)
   end
 
-  defp generate_token(record, purpose, _strategy, opts) do
+  defp generate_token(purpose, record, _strategy, opts) do
     {:ok, token, _claims} = Jwt.token_for_user(record, %{"purpose" => to_string(purpose)}, opts)
 
     Ash.Resource.put_metadata(record, :token, token)
@@ -170,12 +165,4 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
   def user_confirmed_if_needed(user, %{require_confirmed_with: field} = _strategy),
     do: Map.get(user, field) != nil
-
-  defp maybe_generate_remember_me_token(record, strategy, query, context) do
-    IO.inspect(query, label: "query")
-    IO.inspect(record, label: "record")
-    IO.inspect(strategy, label: "strategy")
-    IO.inspect(context, label: "context")
-    record
-  end
 end

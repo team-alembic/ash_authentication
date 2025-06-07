@@ -22,18 +22,18 @@ defmodule AshAuthentication.Strategy.Password.Plug do
   @doc "Handle a sign-in request"
   @spec sign_in(Conn.t(), Password.t()) :: Conn.t()
   def sign_in(conn, strategy) do
-    params = subject_params(conn, strategy) |> IO.inspect(label: "params")
-    opts = opts(conn) |> IO.inspect(label: "opts")
-    result = Strategy.action(strategy, :sign_in, params, opts) |> IO.inspect(label: "result")
+    params = subject_params(conn, strategy)
+    opts = opts(conn)
+    result = Strategy.action(strategy, :sign_in, params, opts)
     store_authentication_result(conn, result)
   end
 
   @doc "Handle a request to validate a sign in token"
   @spec sign_in_with_token(Conn.t(), Password.t()) :: Conn.t()
   def sign_in_with_token(conn, strategy) do
-    params = conn.params |> IO.inspect(label: "params")
-    opts = opts(conn) |> IO.inspect(label: "opts")
-    result = Strategy.action(strategy, :sign_in_with_token, params, opts) |> IO.inspect(label: "result")
+    params = conn.params
+    opts = opts(conn)
+    result = Strategy.action(strategy, :sign_in_with_token, params, opts)
 
     store_authentication_result(conn, result)
   end
@@ -41,9 +41,9 @@ defmodule AshAuthentication.Strategy.Password.Plug do
   @doc "Handle a reset request request"
   @spec reset_request(Conn.t(), Password.t()) :: Conn.t()
   def reset_request(conn, strategy) do
-    params = subject_params(conn, strategy) |> IO.inspect(label: "params")
-    opts = opts(conn) |> IO.inspect(label: "opts")
-    result = Strategy.action(strategy, :reset_request, params, opts) |> IO.inspect(label: "result")
+    params = subject_params(conn, strategy)
+    opts = opts(conn)
+    result = Strategy.action(strategy, :reset_request, params, opts)
     store_authentication_result(conn, result)
   end
 
