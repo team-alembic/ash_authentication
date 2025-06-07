@@ -178,6 +178,7 @@ defmodule AshAuthentication.Jwt.Config do
     |> lifetime_to_seconds()
   end
 
+  defp lifetime_to_seconds(seconds) when is_integer(seconds), do: seconds
   defp lifetime_to_seconds({seconds, :seconds}), do: seconds
   defp lifetime_to_seconds({minutes, :minutes}), do: minutes * 60
   defp lifetime_to_seconds({hours, :hours}), do: hours * 60 * 60
