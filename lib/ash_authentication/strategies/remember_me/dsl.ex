@@ -36,11 +36,6 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
           doc: "The name to use for the cookie. Defaults to `remember_me`",
           default: :remember_me
         ],
-        cookie_options: [
-          type: :keyword_list,
-          doc: "The options to use for the cookie. Defaults to `[max_age: 30 * 24 * 60 * 60, http_only: true, secure: true, same_site: :lax]`",
-          default: [max_age: 30 * 24 * 60 * 60, http_only: true, secure: true, same_site: :lax]
-        ],
         remember_me_field: [
           type: :atom,
           doc: "The name of the field to use for the remember me checkbox. Defaults to `:remember_me`",

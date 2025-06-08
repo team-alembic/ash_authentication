@@ -26,7 +26,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
 
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
   alias Ash.{Error.Unknown, Query, Resource, Resource.Preparation}
   require Ash.Query
 
@@ -68,7 +68,6 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
       query.context
       |> Map.get(:token_claims, %{})
       |> Map.take(["tenant"])
-      |> IO.inspect(label: "claims in verify_result")
 
     opts =
       context
@@ -81,7 +80,8 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
         user =
           Resource.put_metadata(user, :remember_me, %{
             token: token,
-            strategy: strategy,
+            cookie_name: strategy.cookie_name,
+            max_age: Utils.lifetime_to_seconds(strategy.token_lifetime)
           })
         {:ok, [user]}
 
