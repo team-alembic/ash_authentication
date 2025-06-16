@@ -52,6 +52,24 @@ defmodule AshAuthentication.Plug.Macros do
   end
 
   @doc """
+  Generates the `sign_in_with_remember_me/2` plug with the `otp_app` prefilled.
+  """
+  @spec define_sign_in_with_remember_me(atom) :: Macro.t()
+  defmacro define_sign_in_with_remember_me(otp_app) do
+    quote do
+      @doc """
+      Attempt to sign in a user from any remember me tokens in the connections cookies.
+
+      A wrapper around `AshAuthentication.Plug.Helpers.sign_in_with_remember_me/3`
+      with the `otp_app` already present.
+      """
+      @spec sign_in_with_remember_me(Conn.t(), any) :: Conn.t()
+      def sign_in_with_remember_me(conn, opts),
+        do: Helpers.sign_in_with_remember_me(conn, unquote(otp_app), opts)
+    end
+  end
+
+  @doc """
   Generates the `load_from_session/2` plug with the `otp_app` prefilled.
   """
   @spec define_load_from_session(atom) :: Macro.t()
@@ -68,6 +86,7 @@ defmodule AshAuthentication.Plug.Macros do
         do: Helpers.retrieve_from_session(conn, unquote(otp_app), opts)
     end
   end
+
 
   @doc """
   Generates the `load_from_bearer/2` plug with the `otp_app` prefilled.

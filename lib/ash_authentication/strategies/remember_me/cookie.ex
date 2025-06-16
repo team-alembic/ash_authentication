@@ -1,5 +1,5 @@
 defmodule AshAuthentication.Strategy.RememberMe.Cookie do
-  @doc """
+  @moduledoc """
   Helper functions for working with remember me cookies.
   """
 

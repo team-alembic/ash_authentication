@@ -68,11 +68,12 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
       query.context
       |> Map.get(:token_claims, %{})
       |> Map.take(["tenant"])
+      |> Map.put("purpose", "remember_me")
 
     opts =
       context
       |> Ash.Context.to_opts()
-      |> Keyword.put(:purpose, "remember_me")
+      |> Keyword.put(:purpose, :remember_me)
       |> Keyword.put(:token_lifetime, strategy.token_lifetime)
 
     case Jwt.token_for_user(user, claims, opts) do

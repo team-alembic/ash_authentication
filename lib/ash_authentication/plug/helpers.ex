@@ -4,7 +4,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
 
   alias Ash.{PlugHelpers, Resource}
-  alias AshAuthentication.{Info, Jwt, TokenResource}
+  alias AshAuthentication.{Info, Jwt, TokenResource, Strategy.RememberMe}
   alias Plug.Conn
 
   @doc """
@@ -15,7 +15,7 @@ defmodule AshAuthentication.Plug.Helpers do
     subject_name = Info.authentication_subject_name!(user.__struct__)
 
     if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
-      Conn.put_session(conn, "#{subject_name}_token", user.__metadata__.token)
+      Conn.put_session(conn, session_key(subject_name), user.__metadata__.token)
     else
       subject = AshAuthentication.user_to_subject(user)
       Conn.put_session(conn, subject_name, subject)
@@ -55,6 +55,50 @@ defmodule AshAuthentication.Plug.Helpers do
   end
 
   @doc """
+  Attempt to sign in a user from any remember me tokens in the connections cookies.
+
+  Iterate through all configured authentication resources for `otp_app`, find any
+  RememberMe strategies. If any are found, check the cookie for a remember me
+  token. If a token is found, use the strategy to login the user.
+
+  If no remember me strategies are found, do nothing.
+
+  If a remember me strategy is found, but no token is found, do nothing.
+
+  If a remember me strategy is found, and a token is found, and the token is valid,
+  login the user.
+
+  If a remember me strategy is found, and a token is found, and the token is invalid,
+  delete the cookie.
+
+  Use the opts to pass in `strategy` by name if you want to only login for specific
+  remember me strategies.
+  """
+  @spec sign_in_using_remember_me(Conn.t(), module, keyword) :: Conn.t()
+  def sign_in_using_remember_me(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
+    otp_app
+    |> AshAuthentication.authenticated_resources()
+    |> Stream.map(
+      &{&1, Info.authentication_options(&1)}
+    )
+    |> Enum.reduce(conn, fn {resource, options}, conn ->
+      session_key = session_key(options.subject_name)
+      case Conn.get_session(conn, session_key) do
+        nil ->
+          RememberMe.Plug.sign_in_with_remember_me(conn, resource, opts)
+        _current_user ->
+          conn
+      end
+    end)
+  end
+
+
+  @doc """
   Attempt to retrieve all users from the connections' session.
 
   Iterates through all configured authentication resources for `otp_app` and
@@ -80,7 +124,7 @@ defmodule AshAuthentication.Plug.Helpers do
       {resource, options, true}, conn ->
         current_subject_name = current_subject_name(options.subject_name)
         token_resource = Info.authentication_tokens_token_resource!(resource)
-        session_key = "#{options.subject_name}_token"
+        session_key = session_key(options.subject_name)
 
         with token when is_binary(token) <-
                Conn.get_session(conn, session_key),
@@ -152,7 +196,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
         assign_new.(socket, current_subject_name, fn ->
           with token when is_binary(token) <-
-                 Map.get(session, "#{options.subject_name}_token"),
+                 Map.get(session, session_key(options.subject_name)),
                {:ok, %{"sub" => subject} = claims, _}
                when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
                {:ok, user} <-
@@ -367,4 +411,6 @@ defmodule AshAuthentication.Plug.Helpers do
   # sobelow_skip ["DOS.StringToAtom"]
   defp current_subject_token_record_name(subject_name) when is_atom(subject_name),
     do: String.to_atom("current_#{subject_name}_token_record")
+
+  defp session_key(subject_name), do: "#{subject_name}_token"
 end
