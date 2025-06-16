@@ -284,7 +284,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @doc """
   Revoke a token by JTI.
 
-  If you have the token, you should instaed use `revoke/2` instead.
+  If you have the token, you should use `revoke/2` instead.
   """
   @spec revoke_jti(Resource.t(), String.t(), String.t(), keyword) ::
           :ok | {:error, any}
