@@ -267,20 +267,66 @@ defmodule AshAuthentication.Plug.Helpers do
 
   Any bearer-style authorization headers will have their tokens revoked.
   """
-  @spec revoke_bearer_tokens(Conn.t(), module) :: Conn.t()
-  def revoke_bearer_tokens(conn, otp_app) do
+  @spec revoke_bearer_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
+  def revoke_bearer_tokens(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
     conn
     |> Conn.get_req_header("authorization")
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, resource} <- Jwt.token_to_resource(token, otp_app),
-           {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource),
-           :ok <- TokenResource.Actions.revoke(token_resource, token) do
+           {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
+        # we want this to blow up if something goes wrong
+        :ok = TokenResource.Actions.revoke(token_resource, token, opts)
+
         conn
       else
         _ -> conn
       end
+    end)
+  end
+
+  @doc """
+  Revoke all tokens in the session.
+  """
+  @spec revoke_session_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
+  def revoke_session_tokens(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
+    otp_app
+    |> AshAuthentication.authenticated_resources()
+    |> Stream.map(
+      &{&1, Info.authentication_options(&1),
+       Info.authentication_tokens_require_token_presence_for_authentication?(&1)}
+    )
+    |> Enum.reduce(conn, fn
+      {resource, options, true}, conn ->
+        token_resource = Info.authentication_tokens_token_resource!(resource)
+        session_key = "#{options.subject_name}_token"
+
+        case Conn.get_session(conn, session_key) do
+          token when is_binary(token) ->
+            # we want this to blow up if something goes wrong
+            :ok = TokenResource.Actions.revoke(token_resource, token, opts)
+
+            conn
+
+          _ ->
+            conn
+        end
+
+      {_resource, _options, false}, conn ->
+        # we can't revoke tokens for resources that don't store them
+        # because the only thing in the session is the subject
+        conn
     end)
   end
 
