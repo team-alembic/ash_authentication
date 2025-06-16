@@ -17,6 +17,9 @@ defmodule AshAuthentication.TokenResource.RevokeJtiChange do
     |> Changeset.change_attributes(
       jti: jti,
       purpose: "revocation",
+      # We don't know how long the token should be revoked for
+      # so we set it to so long that it will never be expunged
+      # PRs welcome for a more sophisticated solution
       expires_at: DateTime.shift(DateTime.utc_now(), year: 1000),
       subject: subject
     )

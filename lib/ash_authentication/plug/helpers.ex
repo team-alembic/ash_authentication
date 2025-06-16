@@ -17,8 +17,14 @@ defmodule AshAuthentication.Plug.Helpers do
     if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
       Conn.put_session(conn, "#{subject_name}_token", user.__metadata__.token)
     else
-      {:ok, %{"sub" => subject, "jti" => jti}} = Jwt.peek(user.__metadata__.token)
-      Conn.put_session(conn, subject_name, jti <> ":" <> subject)
+      if Info.authentication_session_identifier!(user.__struct__) == :jti do
+        {:ok, %{"sub" => subject, "jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+        Conn.put_session(conn, subject_name, jti <> ":" <> subject)
+      else
+        subject = AshAuthentication.user_to_subject(user)
+        Conn.put_session(conn, subject_name, subject)
+      end
     end
   end
 
@@ -113,7 +119,7 @@ defmodule AshAuthentication.Plug.Helpers do
         current_subject_name = current_subject_name(options.subject_name)
 
         with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
-             [_jti, subject] <- String.split(subject, ":", parts: 2),
+             {:ok, subject} <- split_identifier(subject, resource),
              {:ok, user} <-
                AshAuthentication.subject_to_user(
                  subject,
@@ -173,7 +179,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
         assign_new.(socket, current_subject_name, fn ->
           with subject when is_binary(subject) <- session[to_string(options.subject_name)],
-               [_jti, subject] <- String.split(subject, ":", parts: 2),
+               {:ok, subject} <- split_identifier(subject, resource),
                {:ok, user} <-
                  AshAuthentication.subject_to_user(
                    subject,
@@ -424,4 +430,15 @@ defmodule AshAuthentication.Plug.Helpers do
   # sobelow_skip ["DOS.StringToAtom"]
   defp current_subject_token_record_name(subject_name) when is_atom(subject_name),
     do: String.to_atom("current_#{subject_name}_token_record")
+
+  defp split_identifier(subject, resource) do
+    if Info.authentication_session_identifier!(resource) == :jti do
+      case String.split(subject, ":", parts: 2) do
+        [_jti, subject] -> {:ok, subject}
+        _ -> :error
+      end
+    else
+      {:ok, subject}
+    end
+  end
 end

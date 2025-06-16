@@ -23,6 +23,7 @@ defmodule ExampleMultiTenant.UserWithRegisterMagicLink do
 
   authentication do
     subject_name :multitenant_user_with_register_magic_link
+    session_identifier(:jti)
 
     select_for_senders([:email])
 

@@ -19,7 +19,24 @@ defmodule AshAuthentication.Verifier do
   def verify(dsl_state) do
     with {:ok, _domain} <- validate_domain_presence(dsl_state),
          :ok <- validate_tokens_may_be_required(dsl_state) do
-      validate_token_resource(dsl_state)
+      if Info.authentication_session_identifier!(dsl_state) == :error and
+           not Info.authentication_tokens_require_token_presence_for_authentication?(dsl_state) do
+        {:error,
+         DslError.exception(
+           path: [:authentication, :session_identifier],
+           message: """
+           Must set `authentication.session_identifier` to either `:jti` or `:unsafe`.
+
+           If you are seeing this error while upgrading ash_authentication, be aware that
+           updating this setting will log out all of your users.
+
+           When set to `:unsafe`, tokens are not revoked when the user logs out.
+           When set to `:jti`, we use this information to revoke tokens on logout.
+           """
+         )}
+      else
+        validate_token_resource(dsl_state)
+      end
     end
   end
 
