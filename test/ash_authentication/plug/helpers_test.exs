@@ -53,7 +53,10 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.store_in_session(user)
 
       socket = %{}
-      session = %{"user" => Plug.Conn.get_session(conn, "user")}
+
+      session =
+        %{"user" => Plug.Conn.get_session(conn, "user")}
+
       assign_new = &Map.put_new_lazy/3
 
       new_assigns =
@@ -321,15 +324,21 @@ defmodule AshAuthentication.Plug.HelpersTest do
       |> Helpers.revoke_session_tokens(:ash_authentication)
     end
 
-    test "when token presence is not required it handles gracefully", %{conn: conn} do
+    test "when token presence is not required it properly revokes the token", %{conn: conn} do
       user = build_user()
 
       conn =
         conn
         |> Helpers.store_in_session(user)
 
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      refute AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+
       conn
       |> Helpers.revoke_session_tokens(:ash_authentication)
+
+      assert AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
     end
 
     test "when token presence is required and deleted token in session it still revokes successfully",
