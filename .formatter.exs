@@ -103,6 +103,7 @@ spark_locals_without_parens = [
   resettable: 0,
   resettable: 1,
   revoke_all_stored_for_subject_action_name: 1,
+  revoke_jti_action_name: 1,
   revoke_token_action_name: 1,
   select_for_senders: 1,
   sender: 1,

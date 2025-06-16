@@ -23,7 +23,13 @@ defmodule AshAuthentication.Plug.HelpersTest do
         conn
         |> Helpers.store_in_session(user)
 
-      assert conn.private.plug_session["user"] == subject
+      jti =
+        user.__metadata__.token
+        |> AshAuthentication.Jwt.peek()
+        |> elem(1)
+        |> Map.fetch!("jti")
+
+      assert conn.private.plug_session["user"] == jti <> ":" <> subject
     end
 
     test "when token presence is required it stores the token in the session", %{conn: conn} do
@@ -84,7 +90,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       conn =
         conn
-        |> Conn.put_session("user", subject)
+        |> Conn.put_session("user", "jti:" <> subject)
         |> Helpers.retrieve_from_session(:ash_authentication)
 
       assert conn.assigns.current_user.id == user.id
@@ -154,7 +160,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       conn0 =
         conn
-        |> Conn.put_session("user", subject)
+        |> Conn.put_session("user", "jti:" <> subject)
         |> Helpers.retrieve_from_session(:ash_authentication, load: [:dummy_calc])
 
       assert conn0.assigns.current_user.dummy_calc == "dummy"

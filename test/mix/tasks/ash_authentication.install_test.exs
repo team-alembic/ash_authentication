@@ -218,6 +218,18 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
           change(AshAuthentication.TokenResource.RevokeTokenChange)
         end
 
+        create :revoke_jti do
+          description(
+            "Revoke a token by JTI. Creates a revocation token corresponding to the provided jti."
+          )
+
+          accept([:extra_data])
+          argument(:subject, :string, allow_nil?: false, sensitive?: true)
+          argument(:jti, :string, allow_nil?: false, sensitive?: true)
+
+          change(AshAuthentication.TokenResource.RevokeJtiChange)
+        end
+
         create :store_token do
           description("Stores a token used for the provided purpose.")
           accept([:extra_data, :purpose])

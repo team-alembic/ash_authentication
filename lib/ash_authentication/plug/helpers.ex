@@ -17,8 +17,8 @@ defmodule AshAuthentication.Plug.Helpers do
     if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
       Conn.put_session(conn, "#{subject_name}_token", user.__metadata__.token)
     else
-      subject = AshAuthentication.user_to_subject(user)
-      Conn.put_session(conn, subject_name, subject)
+      {:ok, %{"sub" => subject, "jti" => jti}} = Jwt.peek(user.__metadata__.token)
+      Conn.put_session(conn, subject_name, jti <> ":" <> subject)
     end
   end
 
@@ -113,6 +113,7 @@ defmodule AshAuthentication.Plug.Helpers do
         current_subject_name = current_subject_name(options.subject_name)
 
         with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
+             [_jti, subject] <- String.split(subject, ":", parts: 2),
              {:ok, user} <-
                AshAuthentication.subject_to_user(
                  subject,
@@ -172,6 +173,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
         assign_new.(socket, current_subject_name, fn ->
           with subject when is_binary(subject) <- session[to_string(options.subject_name)],
+               [_jti, subject] <- String.split(subject, ":", parts: 2),
                {:ok, user} <-
                  AshAuthentication.subject_to_user(
                    subject,
@@ -323,10 +325,19 @@ defmodule AshAuthentication.Plug.Helpers do
             conn
         end
 
-      {_resource, _options, false}, conn ->
-        # we can't revoke tokens for resources that don't store them
-        # because the only thing in the session is the subject
-        conn
+      {resource, options, false}, conn ->
+        token_resource = Info.authentication_tokens_token_resource!(resource)
+
+        with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
+             [jti, subject] <- String.split(subject, ":", parts: 2) do
+          :ok =
+            TokenResource.Actions.revoke_jti(token_resource, jti, subject, opts)
+
+          conn
+        else
+          _ ->
+            conn
+        end
     end)
   end
 
