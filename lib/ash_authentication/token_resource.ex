@@ -62,6 +62,13 @@ defmodule AshAuthentication.TokenResource do
               """,
               default: :revoke_token
             ],
+            revoke_jti_action_name: [
+              type: :atom,
+              doc: """
+              The name of the action used to revoke jtis.
+              """,
+              default: :revoke_jti
+            ],
             revoke_all_stored_for_subject_action_name: [
               type: :atom,
               doc: """

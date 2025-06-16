@@ -112,6 +112,15 @@ defmodule AshAuthentication.TokenResource.Transformer do
              &build_revoke_token_action(&1, revoke_token_action_name)
            ),
          :ok <- validate_revoke_token_action(dsl_state, revoke_token_action_name),
+         {:ok, revoke_jti_action_name} <-
+           Info.token_revocation_revoke_jti_action_name(dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
+             revoke_jti_action_name,
+             &build_revoke_jti_action(&1, revoke_jti_action_name)
+           ),
+         :ok <- validate_revoke_jti_action(dsl_state, revoke_jti_action_name),
          {:ok, revoke_all_stored_for_subject_action_name} <-
            Info.token_revocation_revoke_all_stored_for_subject_action_name(dsl_state),
          {:ok, dsl_state} <-
@@ -494,6 +503,14 @@ defmodule AshAuthentication.TokenResource.Transformer do
     end
   end
 
+  defp validate_jti_argument(action) do
+    with :ok <-
+           validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]),
+         :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [false]) do
+      validate_action_argument_option(action, :jti, :sensitive?, [true])
+    end
+  end
+
   defp validate_revoke_token_action(dsl_state, revoke_token_action_name) do
     with {:ok, action} <- validate_action_exists(dsl_state, revoke_token_action_name),
          :ok <- validate_token_argument(action) do
@@ -514,6 +531,45 @@ defmodule AshAuthentication.TokenResource.Transformer do
     changes = [
       Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
         change: TokenResource.RevokeTokenChange
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :create,
+      name: action_name,
+      arguments: arguments,
+      changes: changes,
+      upsert?: true,
+      accept: [:extra_data]
+    )
+  end
+
+  defp validate_revoke_jti_action(dsl_state, revoke_jti_action_name) do
+    with {:ok, action} <- validate_action_exists(dsl_state, revoke_jti_action_name),
+         :ok <- validate_jti_argument(action),
+         :ok <- validate_subject_argument(action) do
+      validate_action_has_change(action, TokenResource.RevokeJtiChange)
+    end
+  end
+
+  defp build_revoke_jti_action(_dsl_state, action_name) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
+        name: :jti,
+        type: :string,
+        allow_nil?: false,
+        sensitive?: true
+      ),
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
+        name: :subject,
+        type: :string,
+        allow_nil?: false,
+        sensitive?: true
+      )
+    ]
+
+    changes = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+        change: TokenResource.RevokeJtiChange
       )
     ]
 
