@@ -107,6 +107,7 @@ spark_locals_without_parens = [
   revoke_token_action_name: 1,
   select_for_senders: 1,
   sender: 1,
+  session_identifier: 1,
   sign_in_action_name: 1,
   sign_in_enabled?: 1,
   sign_in_token_lifetime: 1,
