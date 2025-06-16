@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.1](https://github.com/team-alembic/ash_authentication/compare/v4.9.0...v4.9.1) (2025-06-16)
+
+
+
+
+### Improvements:
+
+* add utility to revoke all session tokens (#1026) by Zach Daniel
+
+* store jti in session when not requiring token storage by Zach Daniel
+
 ## [v4.9.0](https://github.com/team-alembic/ash_authentication/compare/v4.8.7...v4.9.0) (2025-05-30)
 
 
