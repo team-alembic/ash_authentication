@@ -25,13 +25,18 @@ defmodule AshAuthentication.Verifier do
          DslError.exception(
            path: [:authentication, :session_identifier],
            message: """
-           Must set `authentication.session_identifier` to either `:jti` or `:unsafe`.
+           Must set `authentication.session_identifier` to either `:jti` or `:unsafe`,
+           unless `authentication.tokens.require_token_presence_for_authentication?` is set to `true`.
 
            If you are seeing this error while upgrading ash_authentication, be aware that
            updating this setting will log out all of your users.
 
            When set to `:unsafe`, tokens are not revoked when the user logs out.
            When set to `:jti`, we use this information to revoke tokens on logout.
+
+           We suggest setting `authentication.tokens.require_token_presence_for_authentication?` to `true`
+           to ensure that tokens are always present during authentication, which makes this option unnecessary.
+           Changing either of these settings will log out all of your users.
            """
          )}
       else
