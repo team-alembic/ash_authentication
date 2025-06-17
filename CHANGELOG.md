@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.2](https://github.com/team-alembic/ash_authentication/compare/v4.9.1...v4.9.2) (2025-06-17)
+
+
+
+
+### Improvements:
+
+* better verifier warning by Zach Daniel
+
 ## [v4.9.1](https://github.com/team-alembic/ash_authentication/compare/v4.9.0...v4.9.1) (2025-06-16)
 
 
