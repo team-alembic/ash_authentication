@@ -16,6 +16,15 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
     [igniter: igniter]
   end
 
+  test "installation is idempotent" do
+    test_project()
+    |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+    |> apply_igniter!()
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+    |> assert_unchanged()
+  end
+
   test "installation creates a secrets module", %{igniter: igniter} do
     igniter
     |> assert_creates("lib/test/secrets.ex", """
