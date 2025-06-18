@@ -76,7 +76,7 @@ defmodule AshAuthentication.Dsl do
             type: {:in, [:error, :jti, :unsafe]},
             default: :error,
             doc:
-              "How to uniquely identify a session in the case that `require_token_presence_for_authentication?` is not set to `true`. Should always be `:jti`. Exists for backwards compatibility."
+              "How to uniquely identify a session. Only necessary if  `require_token_presence_for_authentication?` is not set to `true`. Should always be `:jti`, if set."
           ],
           domain: [
             type: {:behaviour, Domain},
