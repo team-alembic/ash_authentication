@@ -188,10 +188,17 @@ Provided you have your authentication routes hooked up either via `AshAuthentica
 
 The previous section explained how to confirm a user account. AshAuthentication now includes a directive in the [DSL](https://hexdocs.pm/ash_authentication/dsl-ashauthentication-strategy-password.html#authentication-strategies-password-require_confirmed_with) that allows you to require account confirmation before a user can log in.
 
-> #### Does not apply to registration {: .warning}
+This can be a nice layer of protection to lock down your application, but consider
+instead allowing unconfirmed users to use your application in a partial state.
+This is often a better UX. This would involve adding a plug to your router,
+for example, that redirects users to a home page that requests that they confirm
+their account. Alternatively, you can just leverage their confirmation status
+to allow or disallow certain actions.
+
+> #### Must add error handling {: .warning}
 >
-> Note that, on registration, the user will still be provided to your success callback in your AuthController (when using AshAuthenticationPhoenix). It is your
-responsibility to determine what to do post-registration. This typically means modifying the default not to call `store_in_session` if the activity is for registration.
+> Your AuthController will begin getting a new error in the failure callback:
+> `AshAuthentication.Errors.UnconfirmedUser` when this setting is enabled.. You'll need to handle this to show a new flash message.
 
 For example:
 
