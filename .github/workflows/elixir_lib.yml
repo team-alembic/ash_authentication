@@ -14,6 +14,7 @@ jobs:
       doctor: true
       community-files: false
       conventional-commit: true
+      tenants: false
     permissions:
       id-token: write
       contents: write
