@@ -226,7 +226,7 @@ defmodule AshAuthentication.MixProject do
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 1.7.2", only: [:dev, :test]},
       {:ash_json_api, "~> 1.4.6", only: [:dev, :test]},
-      {:ash_postgres, "~> 2.0", optional: true},
+      {:ash_postgres, "~> 2.6 and >= 2.6.8", optional: true},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
