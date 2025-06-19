@@ -17,6 +17,7 @@ jobs:
     permissions:
       id-token: write
       contents: write
+      pages: write
 
     secrets:
       hex_api_key: ${{ secrets.HEX_API_KEY }}
