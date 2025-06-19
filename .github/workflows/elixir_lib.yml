@@ -16,6 +16,7 @@ jobs:
       conventional-commit: true
     permissions:
       id-token: write
+      contents: write
 
     secrets:
       hex_api_key: ${{ secrets.HEX_API_KEY }}
