@@ -125,7 +125,7 @@ defmodule MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail do
   def send(user, token, _opts) do
     MyApp.Accounts.Emails.deliver_email_confirmation_instructions(
       user,
-      url(~p"/auth/user/confirm_new_user?#{[confirm: token]}")
+      url(~p"/confirm_new_user/#{token}")
     )
   end
 end
