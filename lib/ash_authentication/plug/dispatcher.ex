@@ -6,8 +6,8 @@ defmodule AshAuthentication.Plug.Dispatcher do
   @behaviour Plug
   alias AshAuthentication.Strategy
   alias Plug.Conn
-  alias AshAuthentication.Strategy.RememberMe
   import AshAuthentication.Plug.Helpers, only: [get_authentication_result: 1]
+  import Strategy.RememberMe.Plug.Helpers, only: [maybe_put_remember_me_cookies: 2]
 
   @type config :: {atom, Strategy.t(), module} | module
 
@@ -30,19 +30,7 @@ defmodule AshAuthentication.Plug.Dispatcher do
     strategy
     |> Strategy.plug(phase, conn)
     |> get_authentication_result()
-    |> case do
-      {conn, {:ok, user} = result} when is_map(user.__metadata__.remember_me) ->
-        remember_me = user.__metadata__.remember_me
-
-        {return_to.put_remember_me_cookie(
-           conn,
-           RememberMe.Cookie.cookie_name(remember_me.cookie_name),
-           remember_me
-         ), result}
-
-      conn_and_maybe_result ->
-        conn_and_maybe_result
-    end
+    |> maybe_put_remember_me_cookies(return_to)
     |> case do
       {conn, _} when conn.state not in @unsent ->
         conn

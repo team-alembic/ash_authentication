@@ -4,7 +4,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
 
   alias Ash.{PlugHelpers, Resource}
-  alias AshAuthentication.{Info, Jwt, TokenResource, Strategy.RememberMe}
+  alias AshAuthentication.{Info, Jwt, Strategy.RememberMe.Plug.Helpers, TokenResource}
   alias Plug.Conn
 
   @doc """
@@ -84,15 +84,20 @@ defmodule AshAuthentication.Plug.Helpers do
         # Already signed in
         conn
       else
-        case RememberMe.Plug.Helpers.sign_in_resource_with_remember_me(conn, resource, opts) do
-          {conn, user} ->
-            store_in_session(conn, user)
-
-          conn ->
-            conn
-        end
+        attempt_sign_in_resource_with_remember_me(conn, resource, opts)
       end
     end)
+  end
+
+  @doc false
+  defp attempt_sign_in_resource_with_remember_me(conn, resource, opts) do
+    case Helpers.sign_in_resource_with_remember_me(conn, resource, opts) do
+      {conn, user} ->
+        store_in_session(conn, user)
+
+      conn ->
+        conn
+    end
   end
 
   @doc """

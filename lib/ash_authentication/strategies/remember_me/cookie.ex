@@ -17,5 +17,5 @@ defmodule AshAuthentication.Strategy.RememberMe.Cookie do
     @cookie_name_prefix <> ":" <> to_string(strategy_cookie_name)
   end
 
-  def prefix(), do: @cookie_name_prefix
+  def prefix, do: @cookie_name_prefix
 end
