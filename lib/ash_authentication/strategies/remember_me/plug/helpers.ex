@@ -24,7 +24,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   and the token is invalid, delete the cookie.
   """
   @spec sign_in_resource_with_remember_me(Plug.Conn.t(), Ash.Resource.t(), Keyword.t()) ::
-          Plug.Conn.t() | {Plug.Conn.t(), Ash.Resouce.t()}
+          Plug.Conn.t() | {Plug.Conn.t(), Ash.Resource.t()}
   def sign_in_resource_with_remember_me(conn, resource, _opts) do
     resource
     |> Info.authentication_strategies()
@@ -84,7 +84,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   @doc """
   Put the remember me token in connection response cookies.
   """
-  @spec put_remember_me_cookie(Conn.t(), String.t(), Map.t()) :: Conn.t()
+  @spec put_remember_me_cookie(Conn.t(), String.t(), map) :: Conn.t()
   def put_remember_me_cookie(conn, cookie_name, %{token: token, max_age: max_age}) do
     cookie_options = Keyword.put(@remember_me_cookie_options, :max_age, max_age)
 
@@ -123,7 +123,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   Take a connection and possibly an authentication result tuple, call the endpoint
   to put the remember me cookie
   """
-  @spec maybe_put_remember_me_cookies(Conn.t() | {Conn.t(), {:atom, Ash.Resource.t()}}, any) ::
+  @spec maybe_put_remember_me_cookies({Conn.t(), {:atom, Ash.Resource.t()}} | any, any) ::
           Conn.t() | {Conn.t(), {:atom, Ash.Resource.t()}}
   def maybe_put_remember_me_cookies({conn, {:ok, user} = result}, return_to)
       when is_map(user.__metadata__.remember_me) do
