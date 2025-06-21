@@ -34,7 +34,7 @@ defmodule AshAuthentication.Plug.Dispatcher do
       {conn, {:ok, user} = result} when is_map(user.__metadata__.remember_me) ->
         remember_me = user.__metadata__.remember_me
 
-        {return_to.put_remember_me(
+        {return_to.put_remember_me_cookie(
            conn,
            RememberMe.Cookie.cookie_name(remember_me.cookie_name),
            remember_me
