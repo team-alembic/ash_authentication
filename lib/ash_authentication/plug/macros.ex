@@ -87,7 +87,6 @@ defmodule AshAuthentication.Plug.Macros do
     end
   end
 
-
   @doc """
   Generates the `load_from_bearer/2` plug with the `otp_app` prefilled.
   """

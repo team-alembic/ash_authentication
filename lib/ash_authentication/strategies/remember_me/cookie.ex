@@ -11,6 +11,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Cookie do
   @spec cookie_name(Ash.Resource.t()) :: String.t()
   def cookie_name(:remember_me), do: @cookie_name_prefix
   def cookie_name("remember_me"), do: @cookie_name_prefix
+
   def cookie_name(strategy_cookie_name) do
     @cookie_name_prefix <> ":" <> to_string(strategy_cookie_name)
   end

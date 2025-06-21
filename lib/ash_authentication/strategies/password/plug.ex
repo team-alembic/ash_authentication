@@ -31,8 +31,8 @@ defmodule AshAuthentication.Strategy.Password.Plug do
   @doc "Handle a request to validate a sign in token"
   @spec sign_in_with_token(Conn.t(), Password.t()) :: Conn.t()
   def sign_in_with_token(conn, strategy) do
-    opts = opts(conn)
     params = conn.params
+    opts = opts(conn)
     result = Strategy.action(strategy, :sign_in_with_token, params, opts)
     store_authentication_result(conn, result)
   end

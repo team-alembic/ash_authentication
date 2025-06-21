@@ -274,7 +274,15 @@ defmodule AshAuthentication.Utils do
   @doc """
   Convert a lifetime to seconds.
   """
-  @spec lifetime_to_seconds(lifetime :: String.t() | integer | {integer, :seconds} | {integer, :minutes} | {integer, :hours} | {integer, :days}) :: integer
+  @spec lifetime_to_seconds(
+          lifetime ::
+            String.t()
+            | integer
+            | {integer, :seconds}
+            | {integer, :minutes}
+            | {integer, :hours}
+            | {integer, :days}
+        ) :: integer
   def lifetime_to_seconds(seconds) when is_integer(seconds), do: seconds
   def lifetime_to_seconds({seconds, :seconds}), do: seconds
   def lifetime_to_seconds({minutes, :minutes}), do: minutes * 60

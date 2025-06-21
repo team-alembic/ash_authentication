@@ -38,7 +38,8 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
         ],
         remember_me_field: [
           type: :atom,
-          doc: "The name of the field to use for the remember me checkbox. Defaults to `:remember_me`",
+          doc:
+            "The name of the field to use for the remember me checkbox. Defaults to `:remember_me`",
           default: :remember_me
         ]
       ]

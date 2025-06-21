@@ -84,6 +84,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
             cookie_name: strategy.cookie_name,
             max_age: Utils.lifetime_to_seconds(strategy.token_lifetime)
           })
+
         {:ok, [user]}
 
       :error ->
@@ -104,5 +105,4 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   defp verify_result(query, _resource, _strategy, _context) do
     {:ok, query}
   end
-
 end
