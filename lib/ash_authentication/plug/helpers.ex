@@ -90,6 +90,7 @@ defmodule AshAuthentication.Plug.Helpers do
   end
 
   @doc false
+  @spec attempt_sign_in_resource_with_remember_me(Conn.t(), Resource.t(), Keyword.t()) :: Conn.t()
   defp attempt_sign_in_resource_with_remember_me(conn, resource, opts) do
     case Helpers.sign_in_resource_with_remember_me(conn, resource, opts) do
       {conn, user} ->
