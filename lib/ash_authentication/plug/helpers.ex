@@ -17,8 +17,14 @@ defmodule AshAuthentication.Plug.Helpers do
     if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
       Conn.put_session(conn, session_key(subject_name), user.__metadata__.token)
     else
-      subject = AshAuthentication.user_to_subject(user)
-      Conn.put_session(conn, subject_name, subject)
+      if Info.authentication_session_identifier!(user.__struct__) == :jti do
+        {:ok, %{"sub" => subject, "jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+        Conn.put_session(conn, subject_name, jti <> ":" <> subject)
+      else
+        subject = AshAuthentication.user_to_subject(user)
+        Conn.put_session(conn, subject_name, subject)
+      end
     end
   end
 
@@ -148,6 +154,7 @@ defmodule AshAuthentication.Plug.Helpers do
         current_subject_name = current_subject_name(options.subject_name)
 
         with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
+             {:ok, subject} <- split_identifier(subject, resource),
              {:ok, user} <-
                AshAuthentication.subject_to_user(
                  subject,
@@ -207,6 +214,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
         assign_new.(socket, current_subject_name, fn ->
           with subject when is_binary(subject) <- session[to_string(options.subject_name)],
+               {:ok, subject} <- split_identifier(subject, resource),
                {:ok, user} <-
                  AshAuthentication.subject_to_user(
                    subject,
@@ -302,20 +310,75 @@ defmodule AshAuthentication.Plug.Helpers do
 
   Any bearer-style authorization headers will have their tokens revoked.
   """
-  @spec revoke_bearer_tokens(Conn.t(), module) :: Conn.t()
-  def revoke_bearer_tokens(conn, otp_app) do
+  @spec revoke_bearer_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
+  def revoke_bearer_tokens(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
     conn
     |> Conn.get_req_header("authorization")
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, resource} <- Jwt.token_to_resource(token, otp_app),
-           {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource),
-           :ok <- TokenResource.Actions.revoke(token_resource, token) do
+           {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
+        # we want this to blow up if something goes wrong
+        :ok = TokenResource.Actions.revoke(token_resource, token, opts)
+
         conn
       else
         _ -> conn
       end
+    end)
+  end
+
+  @doc """
+  Revoke all tokens in the session.
+  """
+  @spec revoke_session_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
+  def revoke_session_tokens(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
+    otp_app
+    |> AshAuthentication.authenticated_resources()
+    |> Stream.map(
+      &{&1, Info.authentication_options(&1),
+       Info.authentication_tokens_require_token_presence_for_authentication?(&1)}
+    )
+    |> Enum.reduce(conn, fn
+      {resource, options, true}, conn ->
+        token_resource = Info.authentication_tokens_token_resource!(resource)
+        session_key = "#{options.subject_name}_token"
+
+        case Conn.get_session(conn, session_key) do
+          token when is_binary(token) ->
+            # we want this to blow up if something goes wrong
+            :ok = TokenResource.Actions.revoke(token_resource, token, opts)
+
+            conn
+
+          _ ->
+            conn
+        end
+
+      {resource, options, false}, conn ->
+        token_resource = Info.authentication_tokens_token_resource!(resource)
+
+        with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
+             [jti, subject] <- String.split(subject, ":", parts: 2) do
+          :ok =
+            TokenResource.Actions.revoke_jti(token_resource, jti, subject, opts)
+
+          conn
+        else
+          _ ->
+            conn
+        end
     end)
   end
 
@@ -404,4 +467,15 @@ defmodule AshAuthentication.Plug.Helpers do
     do: String.to_atom("current_#{subject_name}_token_record")
 
   defp session_key(subject_name), do: "#{subject_name}_token"
+
+  defp split_identifier(subject, resource) do
+    if Info.authentication_session_identifier!(resource) == :jti do
+      case String.split(subject, ":", parts: 2) do
+        [_jti, subject] -> {:ok, subject}
+        _ -> :error
+      end
+    else
+      {:ok, subject}
+    end
+  end
 end

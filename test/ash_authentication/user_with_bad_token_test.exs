@@ -29,6 +29,8 @@ defmodule AshAuthentication.UserWithBadTokenTest do
                      end
 
                      authentication do
+                       session_identifier :jti
+
                        tokens do
                          enabled? true
                          token_resource BadToken

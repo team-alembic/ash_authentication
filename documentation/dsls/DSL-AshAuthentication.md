@@ -121,6 +121,7 @@ Configure authentication for this resource
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`subject_name`](#authentication-subject_name){: #authentication-subject_name } | `atom` |  | The subject name is used anywhere that a short version of your resource name is needed.  Must be unique system-wide and will be inferred from the resource name by default (ie `MyApp.Accounts.User` -> `user`). |
+| [`session_identifier`](#authentication-session_identifier){: #authentication-session_identifier } | `:error \| :jti \| :unsafe` | `:error` | How to uniquely identify a session. Only necessary if  `require_token_presence_for_authentication?` is not set to `true`. Should always be `:jti`, if set. |
 | [`domain`](#authentication-domain){: #authentication-domain } | `module` |  | The name of the Ash domain to use to access this resource when doing anything authentication related. |
 | [`get_by_subject_action_name`](#authentication-get_by_subject_action_name){: #authentication-get_by_subject_action_name } | `atom` | `:get_by_subject` | The name of the read action used to retrieve records. If the action doesn't exist, one will be generated for you. |
 | [`select_for_senders`](#authentication-select_for_senders){: #authentication-select_for_senders } | `list(atom)` |  | A list of fields that we will ensure are selected whenever a sender will be invoked.  Defaults to `[:email]` if there is an `:email` attribute on the resource, and `[]` otherwise. |

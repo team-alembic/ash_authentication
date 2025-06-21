@@ -23,6 +23,7 @@ defmodule Example.UserWithRegisterMagicLink do
 
   authentication do
     select_for_senders([:email])
+    session_identifier(:jti)
 
     tokens do
       enabled? true

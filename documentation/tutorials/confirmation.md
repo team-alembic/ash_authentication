@@ -125,7 +125,7 @@ defmodule MyApp.Accounts.User.Senders.SendNewUserConfirmationEmail do
   def send(user, token, _opts) do
     MyApp.Accounts.Emails.deliver_email_confirmation_instructions(
       user,
-      url(~p"/auth/user/confirm_new_user?#{[confirm: token]}")
+      url(~p"/confirm_new_user/#{token}")
     )
   end
 end
@@ -187,6 +187,18 @@ Provided you have your authentication routes hooked up either via `AshAuthentica
 ## Blocking unconfirmed users from logging in
 
 The previous section explained how to confirm a user account. AshAuthentication now includes a directive in the [DSL](https://hexdocs.pm/ash_authentication/dsl-ashauthentication-strategy-password.html#authentication-strategies-password-require_confirmed_with) that allows you to require account confirmation before a user can log in.
+
+This can be a nice layer of protection to lock down your application, but consider
+instead allowing unconfirmed users to use your application in a partial state.
+This is often a better UX. This would involve adding a plug to your router,
+for example, that redirects users to a home page that requests that they confirm
+their account. Alternatively, you can just leverage their confirmation status
+to allow or disallow certain actions.
+
+> #### Must add error handling {: .warning}
+>
+> Your AuthController will begin getting a new error in the failure callback:
+> `AshAuthentication.Errors.UnconfirmedUser` when this setting is enabled.. You'll need to handle this to show a new flash message.
 
 For example:
 

@@ -172,6 +172,7 @@ defmodule Example.User do
 
   authentication do
     select_for_senders([:username])
+    session_identifier(:jti)
 
     tokens do
       enabled? true

@@ -23,7 +23,13 @@ defmodule AshAuthentication.Plug.HelpersTest do
         conn
         |> Helpers.store_in_session(user)
 
-      assert conn.private.plug_session["user"] == subject
+      jti =
+        user.__metadata__.token
+        |> AshAuthentication.Jwt.peek()
+        |> elem(1)
+        |> Map.fetch!("jti")
+
+      assert conn.private.plug_session["user"] == jti <> ":" <> subject
     end
 
     test "when token presence is required it stores the token in the session", %{conn: conn} do
@@ -47,7 +53,10 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.store_in_session(user)
 
       socket = %{}
-      session = %{"user" => Plug.Conn.get_session(conn, "user")}
+
+      session =
+        %{"user" => Plug.Conn.get_session(conn, "user")}
+
       assign_new = &Map.put_new_lazy/3
 
       new_assigns =
@@ -84,7 +93,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       conn =
         conn
-        |> Conn.put_session("user", subject)
+        |> Conn.put_session("user", "jti:" <> subject)
         |> Helpers.retrieve_from_session(:ash_authentication)
 
       assert conn.assigns.current_user.id == user.id
@@ -154,7 +163,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       conn0 =
         conn
-        |> Conn.put_session("user", subject)
+        |> Conn.put_session("user", "jti:" <> subject)
         |> Helpers.retrieve_from_session(:ash_authentication, load: [:dummy_calc])
 
       assert conn0.assigns.current_user.dummy_calc == "dummy"
@@ -285,6 +294,89 @@ defmodule AshAuthentication.Plug.HelpersTest do
       |> Helpers.revoke_bearer_tokens(:ash_authentication)
 
       assert AshAuthentication.TokenResource.jti_revoked?(user.__struct__, jti)
+    end
+  end
+
+  describe "revoke_session_tokens/3" do
+    test "when token presence is required and token is in session it revokes the token", %{
+      conn: conn
+    } do
+      user = build_user_with_token_required()
+
+      conn =
+        conn
+        |> Helpers.store_in_session(user)
+
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      refute AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+
+      conn
+      |> Helpers.revoke_session_tokens(:ash_authentication)
+
+      assert AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+    end
+
+    test "when token presence is required and no token in session it handles gracefully", %{
+      conn: conn
+    } do
+      conn
+      |> Helpers.revoke_session_tokens(:ash_authentication)
+    end
+
+    test "when token presence is not required it properly revokes the token", %{conn: conn} do
+      user = build_user()
+
+      conn =
+        conn
+        |> Helpers.store_in_session(user)
+
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      refute AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+
+      conn
+      |> Helpers.revoke_session_tokens(:ash_authentication)
+
+      assert AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+    end
+
+    test "when token presence is required and deleted token in session it still revokes successfully",
+         %{
+           conn: conn
+         } do
+      user = build_user_with_token_required()
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      # Remove the token from the database to simulate an invalid/expired token
+      import Ecto.Query
+      Example.Repo.delete_all(from(t in Example.Token, where: t.jti == ^jti))
+
+      conn =
+        conn
+        |> Conn.put_session("user_with_token_required_token", user.__metadata__.token)
+
+      # Even for deleted tokens, revocation should succeed by creating a revocation record
+      conn
+      |> Helpers.revoke_session_tokens(:ash_authentication)
+
+      # Verify the token is now revoked
+      assert AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+    end
+
+    test "when token presence is required and completely invalid token format in session it raises an error",
+         %{
+           conn: conn
+         } do
+      conn =
+        conn
+        |> Conn.put_session("user_with_token_required_token", "completely_invalid_token_format")
+
+      # This should raise a MatchError because the implementation expects revoke to succeed
+      assert_raise MatchError, fn ->
+        conn
+        |> Helpers.revoke_session_tokens(:ash_authentication)
+      end
     end
   end
 

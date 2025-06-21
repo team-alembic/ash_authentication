@@ -5,6 +5,71 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.4](https://github.com/team-alembic/ash_authentication/compare/v4.9.3...v4.9.4) (2025-06-19)
+
+
+
+
+### Bug Fixes:
+
+* ensure `require_confirmed_with` is honored when sign in tokens disabled by Zach Daniel
+
+## [v4.9.3](https://github.com/team-alembic/ash_authentication/compare/v4.9.2...v4.9.3) (2025-06-18)
+
+
+
+
+### Bug Fixes:
+
+* ensure installer is idempotent by Zach Daniel
+
+## [v4.9.2](https://github.com/team-alembic/ash_authentication/compare/v4.9.1...v4.9.2) (2025-06-17)
+
+
+
+
+### Improvements:
+
+* better verifier warning by Zach Daniel
+
+## [v4.9.1](https://github.com/team-alembic/ash_authentication/compare/v4.9.0...v4.9.1) (2025-06-16)
+
+
+
+
+### Improvements:
+
+* add utility to revoke all session tokens (#1026) by Zach Daniel
+
+* store jti in session when not requiring token storage by Zach Daniel
+
+## [v4.9.0](https://github.com/team-alembic/ash_authentication/compare/v4.8.7...v4.9.0) (2025-05-30)
+
+
+
+
+### Features:
+
+* Password: Support password hashing with Argon2. (#998)
+
+### Bug Fixes:
+
+* set correct default on_error (#1008)
+
+* Info.strategy_for_action/2 -> Info.find_strategy/3 (#1007)
+
+* remove strict type validation on api key id type
+
+* set `required?: true` when adding api key strategy
+
+### Improvements:
+
+* improve secret validation and security (#1010)
+
+* use `after_verify` hook for secret module checks
+
+* extract params from subject name (#1006)
+
 ## [v4.8.7](https://github.com/team-alembic/ash_authentication/compare/v4.8.6...v4.8.7) (2025-05-20)
 
 

@@ -282,6 +282,38 @@ defmodule AshAuthentication.TokenResource.Actions do
   end
 
   @doc """
+  Revoke a token by JTI.
+
+  If you have the token, you should use `revoke/2` instead.
+  """
+  @spec revoke_jti(Resource.t(), String.t(), String.t(), keyword) ::
+          :ok | {:error, any}
+  def revoke_jti(resource, jti, subject, opts \\ []) do
+    with :ok <- assert_resource_has_extension(resource, TokenResource),
+         {:ok, domain} <- Info.token_domain(resource),
+         {:ok, revoke_token_action_name} <-
+           Info.token_revocation_revoke_jti_action_name(resource) do
+      resource
+      |> Changeset.new()
+      |> Changeset.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
+      |> Changeset.for_create(
+        revoke_token_action_name,
+        %{"jti" => jti, "subject" => subject},
+        Keyword.merge(opts, upsert?: true)
+      )
+      |> Ash.create(domain: domain)
+      |> case do
+        {:ok, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  @doc """
   Store a token.
 
   Stores a token for any purpose.

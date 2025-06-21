@@ -16,6 +16,15 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
     [igniter: igniter]
   end
 
+  test "installation is idempotent" do
+    test_project()
+    |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+    |> apply_igniter!()
+    |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+    |> assert_unchanged()
+  end
+
   test "installation creates a secrets module", %{igniter: igniter} do
     igniter
     |> assert_creates("lib/test/secrets.ex", """
@@ -216,6 +225,18 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
           argument(:token, :string, allow_nil?: false, sensitive?: true)
 
           change(AshAuthentication.TokenResource.RevokeTokenChange)
+        end
+
+        create :revoke_jti do
+          description(
+            "Revoke a token by JTI. Creates a revocation token corresponding to the provided jti."
+          )
+
+          accept([:extra_data])
+          argument(:subject, :string, allow_nil?: false, sensitive?: true)
+          argument(:jti, :string, allow_nil?: false, sensitive?: true)
+
+          change(AshAuthentication.TokenResource.RevokeJtiChange)
         end
 
         create :store_token do

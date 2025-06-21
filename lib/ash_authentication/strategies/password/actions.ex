@@ -195,6 +195,10 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     })
     |> Changeset.for_create(strategy.register_action_name, params, options)
     |> Ash.create()
+    |> case do
+      {:ok, user} -> check_user(user, strategy)
+      other -> other
+    end
   end
 
   def register(strategy, _params, _options) when is_struct(strategy, Password) do
@@ -325,14 +329,14 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     {:ok, user}
   end
 
-  defp check_user(user, %Password{require_confirmed_with: _value} = strategy) do
-    if is_nil(user.confirmed_at) do
+  defp check_user(user, %Password{require_confirmed_with: value} = strategy) do
+    if is_nil(Map.get(user, value)) do
       {:error,
        Errors.AuthenticationFailed.exception(
          strategy: strategy,
          caused_by: %Ash.Error.Forbidden{
            errors: [
-             %Errors.CannotConfirmUnconfirmedUser{}
+             %AshAuthentication.Errors.UnconfirmedUser{}
            ]
          }
        )}

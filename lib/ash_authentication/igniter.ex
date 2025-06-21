@@ -3,6 +3,41 @@ if Code.ensure_loaded?(Igniter) do
   defmodule AshAuthentication.Igniter do
     @moduledoc "Codemods for working with AshAuthentication"
 
+    @doc "Adds a secret to a secret module that reads from application env, if one for that module/path doesn't exist already."
+    @spec add_new_secret_from_env(Igniter.t(), module(), Ash.Resource.t(), list(atom), atom()) ::
+            Igniter.t()
+    def add_new_secret_from_env(igniter, module, resource, path, env_key) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+
+      func =
+        quote do
+          def secret_for(unquote(path), unquote(resource), _opts, _context),
+            do: Application.fetch_env(unquote(otp_app), unquote(env_key))
+        end
+
+      full =
+        quote do
+          use AshAuthentication.Secret
+          unquote(func)
+        end
+        |> Sourceror.to_string()
+
+      Igniter.Project.Module.find_and_update_or_create_module(igniter, module, full, fn zipper ->
+        with {:ok, zipper} <-
+               Igniter.Code.Function.move_to_def(zipper, :secret_for, 4, target: :at),
+             zipper when not is_nil(zipper) <- Sourceror.Zipper.down(zipper),
+             zipper when not is_nil(zipper) <- Sourceror.Zipper.down(zipper),
+             true <- Igniter.Code.Common.nodes_equal?(zipper, path),
+             zipper when not is_nil(zipper) <- Sourceror.Zipper.right(zipper),
+             true <- Igniter.Code.Common.nodes_equal?(zipper, resource) do
+          {:ok, zipper}
+        else
+          _ ->
+            {:ok, Igniter.Code.Common.add_code(zipper, func)}
+        end
+      end)
+    end
+
     @doc "Adds a secret to a secret module that reads from application env"
     @spec add_secret_from_env(Igniter.t(), module(), Ash.Resource.t(), list(atom), atom()) ::
             Igniter.t()
