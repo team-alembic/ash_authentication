@@ -6,7 +6,8 @@ defmodule AshAuthentication.Strategy.RememberMe.Cookie do
   @cookie_name_prefix "ash_auth:remember_me"
 
   @doc """
-  Generate a cookie name for a given resource.
+  Generate a cookie name for a given resource. All cookie names are begin with
+  "ash_auth:remember_me" for identifying remember me cookies in the connection.
   """
   @spec cookie_name(Ash.Resource.t()) :: String.t()
   def cookie_name(:remember_me), do: @cookie_name_prefix

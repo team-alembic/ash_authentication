@@ -1,5 +1,7 @@
 defmodule AshAuthentication.Strategy.RememberMe.Dsl do
-  @moduledoc false
+  @moduledoc """
+  Defines the Spark DSL entity for the RememberMe strategy.
+  """
 
   alias AshAuthentication.Strategy.{Custom, RememberMe}
   alias Spark.Dsl.Entity
@@ -9,11 +11,11 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
   def dsl do
     %Entity{
       name: :remember_me,
-      describe: "Strategy for authenticating with a remember me cookie",
+      describe: "Strategy for authenticating with a remember me token",
       args: [{:optional, :name, :remember_me}],
       hide: [:name],
       target: RememberMe,
-      no_depend_modules: [:sender],
+      no_depend_modules: [],
       schema: [
         name: [
           type: :atom,
@@ -28,8 +30,8 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
                {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
              ]},
           doc:
-            "How long the sign in token is valid.  If no unit is provided, then `minutes` is assumed.",
-          default: {10, :minutes}
+            "How long the remember me token is valid.  If no unit is provided, then `minutes` is assumed.",
+          default: {30, :days}
         ],
         cookie_name: [
           type: :atom,
@@ -39,7 +41,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
         remember_me_field: [
           type: :atom,
           doc:
-            "The name of the field to use for the remember me checkbox. Defaults to `:remember_me`",
+            "The name of the field to use for the remember me checkbox. Only used by AshAuthenticationPhoenix. Defaults to `:remember_me`",
           default: :remember_me
         ]
       ]

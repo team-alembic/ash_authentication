@@ -3,7 +3,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   Maybe generate a remember me token and put it in the metadata of the resource to
   later be dropped as a cookie.
 
-  Add this to a sign action that to support generating a remember me token.
+  Add this to a sign action to support generating a remember me token.
 
   Example:
 
@@ -15,15 +15,15 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
         allow_nil? true
       end
 
-      prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me}
+      prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
+      # prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me, argument: :remember_me}
 
       metadata :remember_me_token, :string do
         description "A remember me token that can be used to authenticate the user."
         allow_nil? false
       end
     end
-
-
+  ```
   """
   use Ash.Resource.Preparation
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
@@ -33,7 +33,18 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   @doc false
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
-  def prepare(%{arguments: %{remember_me: true}} = query, options, context) do
+  def prepare(query, options, context) do
+    remember_me_argument = Keyword.get(options, :argument, :remember_me)
+    case get_argument(query, argument) do
+      true ->
+        prepare_after_action(query, options, context)
+
+      _ ->
+        query
+    end
+  end
+
+  defp prepare_after_action(query, options, context)
     remember_me_strategy_name = Keyword.get(options, :strategy_name, :remember_me)
 
     case Info.strategy(query.resource, remember_me_strategy_name) do
@@ -42,13 +53,6 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
         |> Query.after_action(&verify_result(&1, &2, strategy, context))
 
       :error ->
-        # I copied this from sign_in_with_token_preparation.ex but it doesn't work.
-        # [error] ** (KeyError) key :message not found
-        # (ash 3.5.13) anonymous fn/2 in Ash.Error.Unknown.__struct__/1
-        # (elixir 1.18.2) lib/enum.ex:2546: Enum."-reduce/3-lists^foldl/2-0-"/3
-        # (elixir 1.18.2) lib/kernel.ex:2456: Kernel.struct!/2
-        # (ash 3.5.13) lib/ash/error/unknown.ex:3: Ash.Error.Unknown."exception (overridable 2)"/1
-        # (ash_authentication 4.8.7) lib/ash_authentication/strategies/remember_me/maybe_generate_token_preparation.ex:25: AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation.prepare/3
         Query.add_error(
           query,
           Unknown.exception(
@@ -60,8 +64,6 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
         )
     end
   end
-
-  def prepare(query, _options, _context), do: query
 
   defp verify_result(query, [user], strategy, context) do
     claims =

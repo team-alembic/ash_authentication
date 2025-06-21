@@ -59,7 +59,7 @@ defmodule AshAuthentication.Plug.Helpers do
   using the RememberMe strategy if not already signed in. You can limited it to
   specific strategies using the `strategy` opt.
 
-  Opts are forwarded to `AshAuthentication.Strategies.RememberMe.Plus.sign_in_resource_with_remember_me/3`
+  Opts are forwarded to `AshAuthentication.Strategies.RememberMe.Plug.sign_in_resource_with_remember_me/3`
   """
   @spec sign_in_using_remember_me(Conn.t(), module, keyword) :: Conn.t()
   def sign_in_using_remember_me(conn, otp_app, opts \\ []) do
@@ -74,12 +74,17 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Enum.reduce(conn, fn {resource, options}, conn ->
       session_key = session_key(options.subject_name)
 
-      case Conn.get_session(conn, session_key) do
-        nil ->
-          RememberMe.Plug.sign_in_with_remember_me(conn, resource, opts)
+      if Conn.get_session(conn, session_key) do
+        # Already signed in
+        conn
+      else
+        case RememberMe.Plug.Helpers.sign_in_resource_with_remember_me(conn, resource, opts) do
+          conn ->
+            conn
 
-        _current_user ->
-          conn
+          {conn, user} ->
+            store_in_session(conn, user)
+        end
       end
     end)
   end

@@ -1,13 +1,14 @@
-defmodule AshAuthentication.Strategy.RememberMe.Plug do
+defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   @moduledoc """
-  Plug for signing in with remember me.
+  Plug for signing in with remember me token in cookies.
   """
 
   alias Ash.Query
-  alias AshAuthentication.{Info, Strategy.RememberMe, Plug.Helpers}
+  alias AshAuthentication.{Info, Strategy.RememberMe}
 
   @doc """
   Sign in the given Ash Resource with the AshAuthentication RememberMe strategy.
+  To sign in with any Ash Resource see sign_in_resource_with_remember_me.
 
   For the given resource, find the remember me strategies.
 
@@ -22,8 +23,8 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug do
   and the token is invalid, delete the cookie.
   """
   @spec sign_in_resource_with_remember_me(Plug.Conn.t(), Ash.Resource.t(), Keyword.t()) ::
-          Plug.Conn.t()
-  def sign_in_with_remember_me(conn, resource, _opts) do
+          Plug.Conn.t() : {Plug.Conn.t(), Ash.Resouce.t() }
+  def sign_in_resource_with_remember_me(conn, resource, _opts) do
     action_options = Keyword.new()
 
     action_options =
@@ -55,7 +56,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug do
               |> Ash.read_one()
               |> case do
                 {:ok, user} ->
-                  Helpers.store_in_session(conn, user)
+                  {:conn, user}
 
                 {:error, _reason} ->
                   # Cookie is invalid, delete it
