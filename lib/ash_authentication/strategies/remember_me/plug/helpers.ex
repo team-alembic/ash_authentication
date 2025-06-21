@@ -111,7 +111,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
     |> Conn.get_cookies()
     |> Enum.reduce(conn, fn {key, _}, conn ->
       if String.starts_with?(key, AshAuthentication.Strategy.RememberMe.Cookie.prefix()) do
-        delete_remember_me(conn, key)
+        delete_remember_me_cookie(conn, key)
       else
         conn
       end
