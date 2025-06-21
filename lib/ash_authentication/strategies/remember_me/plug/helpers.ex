@@ -57,7 +57,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
               |> Ash.read_one()
               |> case do
                 {:ok, user} ->
-                  {:conn, user}
+                  {conn, user}
 
                 {:error, _reason} ->
                   # Cookie is invalid, delete it
