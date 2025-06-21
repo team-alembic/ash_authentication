@@ -40,8 +40,8 @@ defmodule AshAuthentication.Plug.Dispatcher do
            remember_me
          ), result}
 
-      {conn, result} ->
-        {conn, result}
+      conn_and_maybe_result ->
+        conn_and_maybe_result
     end
     |> case do
       {conn, _} when conn.state not in @unsent ->

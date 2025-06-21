@@ -35,7 +35,8 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, options, context) do
     remember_me_argument = Keyword.get(options, :argument, :remember_me)
-    case get_argument(query, argument) do
+
+    case Query.get_argument(query, remember_me_argument) do
       true ->
         prepare_after_action(query, options, context)
 
@@ -44,7 +45,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
     end
   end
 
-  defp prepare_after_action(query, options, context)
+  defp prepare_after_action(query, options, context) do
     remember_me_strategy_name = Keyword.get(options, :strategy_name, :remember_me)
 
     case Info.strategy(query.resource, remember_me_strategy_name) do

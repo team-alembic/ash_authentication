@@ -85,11 +85,11 @@ defmodule AshAuthentication.Plug.Helpers do
         conn
       else
         case RememberMe.Plug.Helpers.sign_in_resource_with_remember_me(conn, resource, opts) do
-          conn ->
-            conn
-
           {conn, user} ->
             store_in_session(conn, user)
+
+          conn ->
+            conn
         end
       end
     end)

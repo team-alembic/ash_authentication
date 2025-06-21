@@ -23,7 +23,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   and the token is invalid, delete the cookie.
   """
   @spec sign_in_resource_with_remember_me(Plug.Conn.t(), Ash.Resource.t(), Keyword.t()) ::
-          Plug.Conn.t() : {Plug.Conn.t(), Ash.Resouce.t() }
+          Plug.Conn.t() | {Plug.Conn.t(), Ash.Resouce.t()}
   def sign_in_resource_with_remember_me(conn, resource, _opts) do
     action_options = Keyword.new()
 
@@ -60,7 +60,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
 
                 {:error, _reason} ->
                   # Cookie is invalid, delete it
-                  Plug.Conn.delete_resp_cookies(conn, full_cookie_name)
+                  Plug.Conn.delete_resp_cookie(conn, full_cookie_name)
               end
           end
 

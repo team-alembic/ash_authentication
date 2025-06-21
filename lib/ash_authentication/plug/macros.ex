@@ -65,7 +65,7 @@ defmodule AshAuthentication.Plug.Macros do
       """
       @spec sign_in_with_remember_me(Conn.t(), any) :: Conn.t()
       def sign_in_with_remember_me(conn, opts),
-        do: Helpers.sign_in_with_remember_me(conn, unquote(otp_app), opts)
+        do: Helpers.sign_in_using_remember_me(conn, unquote(otp_app), opts)
     end
   end
 
