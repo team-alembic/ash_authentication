@@ -1,4 +1,4 @@
-# Remember Me
+# Remember Me Authentication Tutorial
 
 The Remember Me strategy allows authenticating users with long lived tokens
 that are typically stored in a browser's cookies and that exist beyond a single session. 
