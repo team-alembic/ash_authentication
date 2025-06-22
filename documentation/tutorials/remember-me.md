@@ -1,0 +1,248 @@
+# Remember Me
+
+The Remember Me strategy allows authenticating users with long lived tokens
+that are typically stored in a browser's cookies and that exist beyond a single session. 
+
+The Remember Me strategy is versatile with a lot of escape hatches to integrate it 
+with other strategies in variety of use cases. The most common use case is to add 
+a "Remember me" checkbox to your password form, giving your users a way to remain 
+signed in for long periods of time. This tutorial will focus on that use case.
+
+Remember Me does not require Phoenix or AshAuthenticationPhoenix, but we'll assume
+you're using both for this tutorial. We'll also assume that your authenticated
+resource is User.
+
+## Add the Remember Me strategy to your User resource.
+
+```elixir
+# lib/my_app/accounts/user.ex
+authentication do
+  ...
+  # If you don't already have tokens enabled, add them. Tokens are required.
+  tokens do
+    enabled? true
+    store_all_tokens? true
+    require_token_presence_for_authentication? true
+  end
+
+  addons do
+    ...
+    add_ons do
+      # Recommended: use the logout everywhere add on to revoke
+      # Remember Me tokens on password change.
+      log_out_everywhere do
+        apply_on_password_change? true
+      end
+    end
+  end
+
+  strategies do
+    ...
+    # Add the remember me strategy
+    remember_me do # Optionally name the strategy: `remember_me :remember_me do`
+      sign_in_action_name :sign_in_with_remember_me. # Optional defaults to :sign_in_with_[:strategy_name]
+      cookie_name :remember_me # Optional. Defaults to :remember_me
+      remember_me_field :remember_me # Optional. Defaults to :remember_me. Used by AshAuthenticationPhoenix
+      token_lifetime {30, :days} # Optional. Defaults to {30, :days}
+    end
+  end
+end
+```
+
+## Optionally add the Remember Me sign in action
+
+This action will be called by sign_in_with_remember_me plug to validate the remember me 
+token, and generate a token for the session.
+
+```elixir
+# lib/my_app/accounts/user.ex
+actions do
+  ...
+
+  # If not provided, a :sign_in_with_remember_me action will be 
+  # automagically created for you.
+  read :sign_in_with_remember_me do
+    description "Attempt to sign in using a remember me token."
+    get? true
+
+    argument :token, :string do
+      description "The remember me token."
+      allow_nil? false
+      sensitive? true
+    end
+
+    # validates the provided sign in token and generates a token
+    prepare AshAuthentication.Strategy.RememberMe.SignInPreparation
+
+    metadata :token, :string do
+      description "A JWT that can be used to authenticate the user."
+      allow_nil? false
+    end
+  end
+end
+```
+
+## Update your existing sign in actions to generate Remember Me tokens
+
+For each sign in action that might generate a Remember Me token, add an argument, 
+preparation, and metadata. We're going to add it to two actions: :sign_in_with_password 
+and :sign_in_with_token which is used by by AshAuthenticationPhoenix's liveview 
+password form.
+
+```elixir
+# lib/my_app/accounts/user.ex
+actions do
+  read :sign_in_with_password do
+    description "Attempt to sign in using a email and password."
+    get? true
+
+    argument :email, :ci_string do
+      description "The email to use for retrieving the user."
+      allow_nil? false
+    end
+
+    argument :password, :string do
+      description "The password to check for the matching user."
+      allow_nil? false
+      sensitive? true
+    end
+
+    # 1 of 3: Add the argument
+    argument :remember_me, :boolean do  # Optionally, use your own argument name
+      description "Whether to generate a remember me token."
+      allow_nil? true
+    end
+
+    prepare AshAuthentication.Strategy.Password.SignInPreparation
+
+    # 2 of 3: Add the preparation. See the preparation docs if using an argument
+    # or strategy name other than remember_me
+    prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
+
+    metadata :token, :string do
+      description "A JWT that can be used to authenticate the user."
+      allow_nil? false
+    end
+
+    # 3 of 3: Add the metadata attribute
+    metadata :remember_me, :map do
+      description "A map with the remember me token and strategy."
+      allow_nil? true
+    end
+  end
+
+  read :sign_in_with_token do
+    description "Attempt to sign in using a short-lived sign in token."
+    get? true
+
+    argument :token, :string do
+      description "The short-lived sign in token."
+      allow_nil? false
+      sensitive? true
+    end
+
+    # 1 of 3: Add the argument
+    argument :remember_me, :boolean do
+      description "Whether to generate a remember me token."
+      allow_nil? true
+    end
+
+    prepare AshAuthentication.Strategy.Password.SignInWithTokenPreparation
+
+    # 2 of 3: Add the preparation
+    prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me}
+
+    metadata :token, :string do
+      description "A JWT that can be used to authenticate the user."
+      allow_nil? false
+    end
+
+    # 3 of 3: Add the metadata
+    metadata :remember_me, :map do
+      description "A map with the remember me token and strategy."
+      allow_nil? true
+    end
+  end
+end
+```
+
+## Update your AuthController
+
+```elixir
+# lib/my_app_web/controllers/auth_controller.ex
+defmodule MyAppWeb.AuthController do
+  use MyAppWeb, :controller
+  use AshAuthentication.Phoenix.Controller
+
+  def sign_out(conn, _params) do
+    return_to = get_session(conn, :return_to) || ~p"/"
+
+    conn
+    |> clear_session()
+    # Add this to delete all the remember me cookies on explicit signout.
+    |> delete_all_remember_me_cookies()
+    |> put_flash(:info, "You are now signed out")
+    |> redirect(to: return_to)
+  end
+
+  ...
+
+  # The following three callbacks are optional and will be available
+  # by `use AshAuthentication.Phoenix.Controller` but are all overridable
+  # if you want to change the cookie options
+  @remember_me_cookie_options [
+    http_only: true, # cookie is only readable by HTTP/S
+    secure: true, # only send the cookie over HTTPS
+    same_site: "Lax" # prevents the cookie from being sent with cross-site requests
+  ]
+  def put_remember_me_cookie(conn, cookie_name, %{token: token, max_age: max_age}) do
+    cookie_options = Keyword.put(@remember_me_cookie_options, :max_age, max_age)
+
+    conn
+    |> put_resp_cookie(cookie_name, token, cookie_options)
+  end
+
+  def delete_remember_me_cookie(conn, cookie_name) do
+    cookie_options = Keyword.put(@remember_me_cookie_options, :max_age, 0)
+    conn
+    |> delete_resp_cookie(cookie_name, cookie_options)
+  end
+
+  def delete_all_remember_me_cookies(conn) do
+    conn
+    |> Conn.get_cookies()
+    |> Enum.reduce(conn, fn {key, _}, conn ->
+      if String.starts_with?(key, AshAuthentication.Strategy.RememberMe.Cookie.prefix()) do
+        delete_remember_me_cookie(conn, key)
+      else
+        conn
+      end
+    end)
+  end
+end
+```
+
+## Update your router
+
+Add the plug to sign in using the cookie. This plug will call the 
+sign_in_with_remember_me action define above.
+
+```elixir
+# lib/my_app_web/router.ex
+defmodule MyAppWeb.Router do
+  use MyAppWebWeb, :router
+  use AshAuthentication.Phoenix.Router
+
+  ...
+  pipeline :browser do
+    ...
+    # Add the sign_in_with_remember_me plug *before* load_from_session
+    plug :sign_in_with_remember_me
+    plug :load_from_session
+  end
+  ...
+end
+```
+
+And that's it! AshAuthenicationPhoenix should now display a Remember Me checkbox
+in the password authentication form.
