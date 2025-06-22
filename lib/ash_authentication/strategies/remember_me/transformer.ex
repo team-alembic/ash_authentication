@@ -53,7 +53,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Transformer do
         name: :token,
         type: :string,
         allow_nil?: false,
-        sensitive: true,
+        sensitive?: true,
         description: "The remember me token for authenticating"
       )
     ]
@@ -90,7 +90,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Transformer do
 
   defp validate_sign_in_action(dsl_state, strategy) do
     with {:ok, action} <-
-           validate_action_exists(dsl_state, strategy.sign_in_with_token_action_name),
+           validate_action_exists(dsl_state, strategy.sign_in_action_name),
          :ok <-
            validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
          :ok <- validate_action_argument_option(action, :token, :allow_nil?, [false]),
