@@ -55,7 +55,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
           private: %{ash_authentication?: true},
           strategy_name: strategy
         })
-        |> Query.for_read(:sign_in_with_remember_me, %{token: token},
+        |> Query.for_read(strategy.sign_in_action_name, %{token: token},
           domain: Info.domain!(resource)
         )
         |> Ash.read_one()

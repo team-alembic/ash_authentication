@@ -12,6 +12,15 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
     %Entity{
       name: :remember_me,
       describe: "Strategy for authenticating with a remember me token",
+      examples: [
+        """
+        remember_me :remember_me do
+          cookie_name :remember_me
+          remember_me_field :remember_me
+          token_lifetime {30, :days}
+        end
+        """
+      ],
       args: [{:optional, :name, :remember_me}],
       hide: [:name],
       target: RememberMe,
@@ -43,6 +52,12 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
           doc:
             "The name of the field to use for the remember me checkbox. Only used by AshAuthenticationPhoenix. Defaults to `:remember_me`",
           default: :remember_me
+        ],
+        sign_in_action_name: [
+          type: :atom,
+          doc:
+            "The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>`",
+          required: false
         ]
       ]
     }
