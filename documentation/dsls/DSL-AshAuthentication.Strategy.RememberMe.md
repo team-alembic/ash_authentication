@@ -53,7 +53,8 @@ defmodule MyApp.Accounts.User do
       end
 
       # Add the remember me Strategy
-      remember_me do
+      remember_me :remember_me do
+        sign_in_action_name :sign_in_with_remember_me. # Optional defaults to :sign_in_with_[:strategy_name]
         cookie_name :remember_me # Optional. Defaults to :remember_me
         remember_me_field :remember_me # Optional. Defaults to :remember_me. Used by AshAuthenticationPhoenix
         token_lifetime {30, :days} # Optional. Defaults to {30, :days}
@@ -63,7 +64,7 @@ defmodule MyApp.Accounts.User do
 
   # In any of the actions used by your other strategies...
   actions do
-    read :sign_in do
+    read :sign_in_with_password do
       ...
       # Add an argument to your form
       argument :remember_me, :boolean do
@@ -79,6 +80,25 @@ defmodule MyApp.Accounts.User do
       metadata :remember_me, :map do
         description "A map that includes the token options"
         allow_nil? true
+      end
+    end
+
+    read :sign_in_with_remember_me do
+      description "Attempt to sign in using a remember me token."
+      get? true
+
+      argument :token, :string do
+        description "The remember me token"
+        allow_nil? false
+        sensitive? true
+      end
+
+      # validates the provided the remember me token and generates a token for the session
+      prepare AshAuthentication.Strategy.RememberMe.SignInPreparation
+
+      metadata :token, :string do
+        description "A JWT that can be used to authenticate the user."
+        allow_nil? false
       end
     end
   end
@@ -157,6 +177,16 @@ Strategy for authenticating with a remember me token
 
 
 
+### Examples
+```
+remember_me :remember_me do
+  cookie_name :remember_me
+  remember_me_field :remember_me
+  token_lifetime {30, :days}
+end
+
+```
+
 
 
 
@@ -167,6 +197,7 @@ Strategy for authenticating with a remember me token
 | [`token_lifetime`](#authentication-strategies-remember_me-token_lifetime){: #authentication-strategies-remember_me-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{30, :days}` | How long the remember me token is valid.  If no unit is provided, then `minutes` is assumed. |
 | [`cookie_name`](#authentication-strategies-remember_me-cookie_name){: #authentication-strategies-remember_me-cookie_name } | `atom` | `:remember_me` | The name to use for the cookie. Defaults to `remember_me` |
 | [`remember_me_field`](#authentication-strategies-remember_me-remember_me_field){: #authentication-strategies-remember_me-remember_me_field } | `atom` | `:remember_me` | The name of the field to use for the remember me checkbox. Only used by AshAuthenticationPhoenix. Defaults to `:remember_me` |
+| [`sign_in_action_name`](#authentication-strategies-remember_me-sign_in_action_name){: #authentication-strategies-remember_me-sign_in_action_name } | `atom` |  | The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>` |
 
 
 
