@@ -133,7 +133,8 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   Take a connection and possibly an authentication result tuple, call the endpoint
   to put the remember me cookie
   """
-  @spec maybe_put_remember_me_cookies({Plug.Conn.t(), any} | Plug.Conn.t(), any) :: {Plug.Conn.t(), any} | Plug.Conn.t()
+  @spec maybe_put_remember_me_cookies({Plug.Conn.t(), any} | Plug.Conn.t(), any) ::
+          {Plug.Conn.t(), any} | Plug.Conn.t()
   def maybe_put_remember_me_cookies({conn, {:ok, user} = result}, return_to)
       when is_map(user.__metadata__.remember_me) do
     remember_me = user.__metadata__.remember_me
@@ -145,5 +146,6 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
 
     {conn, result}
   end
+
   def maybe_put_remember_me_cookies(conn_with_auth_result, _return_to), do: conn_with_auth_result
 end
