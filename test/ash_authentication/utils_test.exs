@@ -10,7 +10,7 @@ defmodule AshAuthentication.UtilsTest do
       assert Utils.lifetime_to_seconds(3600) == 3600
       assert Utils.lifetime_to_seconds({3600, :seconds}) == 3600
       assert Utils.lifetime_to_seconds({60, :minutes}) == 3600
-      assert Utils.lifetime_to_seconds({24, :hours}) == 86400
+      assert Utils.lifetime_to_seconds({24, :hours}) == 86_400
       assert Utils.lifetime_to_seconds({365, :days}) == 31_536_000
     end
   end

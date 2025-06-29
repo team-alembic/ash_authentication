@@ -2,8 +2,8 @@ defmodule AshAuthentication.Strategy.RememberMe.SignInPreparationTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  alias AshAuthentication.Strategy.RememberMe.SignInPreparation
   alias AshAuthentication.Strategy.RememberMe
+  alias AshAuthentication.Strategy.RememberMe.SignInPreparation
   alias Example.UserWithRememberMe
 
   use Mimic

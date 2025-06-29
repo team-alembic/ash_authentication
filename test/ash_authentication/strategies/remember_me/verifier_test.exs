@@ -2,8 +2,8 @@ defmodule AshAuthentication.Strategy.RememberMe.VerifierTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  alias AshAuthentication.Strategy.RememberMe.Verifier
   alias AshAuthentication.Strategy.RememberMe
+  alias AshAuthentication.Strategy.RememberMe.Verifier
   alias Spark.Error.DslError
 
   use Mimic

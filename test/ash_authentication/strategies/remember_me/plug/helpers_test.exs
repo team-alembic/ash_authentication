@@ -2,8 +2,8 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
   @moduledoc false
   use DataCase, async: true
 
-  alias AshAuthentication.Strategy.RememberMe.Plug.Helpers
   alias AshAuthentication.Strategy.RememberMe
+  alias AshAuthentication.Strategy.RememberMe.Plug.Helpers
   alias Example.UserWithRememberMe
   alias Plug.Conn
 
