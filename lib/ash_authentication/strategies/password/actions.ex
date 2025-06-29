@@ -141,13 +141,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     strategy.resource
     |> Query.new()
     |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.for_read(
-      strategy.sign_in_with_token_action_name,
-      %{
-        "token" => params["token"] || params[:token]
-      },
-      options
-    )
+    |> Query.for_read(strategy.sign_in_with_token_action_name, params, options)
     |> Ash.read()
     |> case do
       {:ok, [user]} ->
