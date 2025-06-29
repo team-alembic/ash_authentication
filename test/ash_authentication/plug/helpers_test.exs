@@ -444,10 +444,10 @@ defmodule AshAuthentication.Plug.HelpersTest do
     test "when remember me cookie is present and valid, it signs in the user" do
       # Create a user with remember me strategy
       user = build_user_with_remember_me()
-      
+
       # Generate a remember me token
       {:ok, remember_me_token} = generate_remember_me_token(user)
-      
+
       # Set the remember me cookie
       conn =
         :get
@@ -487,10 +487,10 @@ defmodule AshAuthentication.Plug.HelpersTest do
     test "it respects tenant and context options" do
       # Create a user with remember me strategy
       user = build_user_with_remember_me()
-      
+
       # Generate a remember me token
       {:ok, remember_me_token} = generate_remember_me_token(user)
-      
+
       # Set tenant and context
       conn =
         :get
@@ -499,9 +499,10 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> SessionPipeline.call([])
         |> Ash.PlugHelpers.set_tenant("test_tenant")
         |> Ash.PlugHelpers.set_context(%{test: "context"})
-        |> Helpers.sign_in_using_remember_me(:ash_authentication, 
-           tenant: "test_tenant", 
-           context: %{test: "context"})
+        |> Helpers.sign_in_using_remember_me(:ash_authentication,
+          tenant: "test_tenant",
+          context: %{test: "context"}
+        )
 
       # Should have the user assigned
       assert conn.private.plug_session["user_with_remember_me"]
@@ -511,7 +512,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       # This test would require multiple resources with remember me strategies
       # For now, we'll test that it doesn't crash with the existing setup
       conn = Helpers.sign_in_using_remember_me(conn, :ash_authentication)
-      
+
       # Should not crash and should not have any assigns set
       refute conn.private.plug_session["user_with_remember_me"]
     end

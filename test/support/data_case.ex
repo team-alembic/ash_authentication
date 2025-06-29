@@ -175,7 +175,7 @@ defmodule DataCase do
   @spec generate_remember_me_token(Example.UserWithRememberMe.t()) :: {:ok, String.t()} | :error
   def generate_remember_me_token(user) do
     claims = %{"purpose" => "remember_me"}
-    
+
     opts = [
       purpose: :remember_me,
       token_lifetime: {30, :days}

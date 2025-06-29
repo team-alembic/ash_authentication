@@ -25,7 +25,13 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   """
   @spec sign_in_resource_with_remember_me(Plug.Conn.t(), Ash.Resource.t(), Keyword.t()) ::
           Plug.Conn.t() | {Plug.Conn.t(), Ash.Resource.t()}
+  def sign_in_resource_with_remember_me(%{cookies: %Plug.Conn.Unfetched{}} = conn, resource, opts) do
+    sign_in_resource_with_remember_me(Conn.fetch_cookies(conn), resource, opts)
+  end
+
   def sign_in_resource_with_remember_me(conn, resource, _opts) do
+    conn = Conn.fetch_cookies(conn)
+
     resource
     |> Info.authentication_strategies()
     |> Enum.reduce(conn, fn strategy, conn ->
@@ -107,6 +113,10 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   Delete all the remember me tokens from the response cookies.
   """
   @spec delete_all_remember_me_cookies(Conn.t()) :: Conn.t()
+  def delete_all_remember_me_cookies(%{cookies: %Plug.Conn.Unfetched{}} = conn) do
+    delete_all_remember_me_cookies(Conn.fetch_cookies(conn))
+  end
+
   def delete_all_remember_me_cookies(conn) do
     conn
     |> Conn.get_cookies()

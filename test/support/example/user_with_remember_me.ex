@@ -59,7 +59,9 @@ defmodule Example.UserWithRememberMe do
       end
 
       prepare AshAuthentication.Strategy.Password.SignInPreparation
-      prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me}
+
+      prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation,
+               strategy_name: :remember_me}
 
       metadata :token, :string do
         description "A JWT that can be used to authenticate the user."
@@ -90,7 +92,7 @@ defmodule Example.UserWithRememberMe do
       end
     end
   end
-  
+
   postgres do
     table "user_with_remember_me"
     repo(Example.Repo)
@@ -135,4 +137,4 @@ defmodule Example.UserWithRememberMe do
 
     {:ok, value}
   end
-end 
+end
