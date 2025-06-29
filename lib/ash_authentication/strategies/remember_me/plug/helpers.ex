@@ -3,7 +3,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   Plug for signing in with remember me token in cookies.
   """
 
-  alias Ash.Query
+  alias Ash.{Query, Resource}
   alias AshAuthentication.{Info, Strategy.RememberMe}
   alias Plug.Conn
 
@@ -24,7 +24,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   and the token is invalid, delete the cookie.
   """
   @spec sign_in_resource_with_remember_me(Plug.Conn.t(), Ash.Resource.t(), Keyword.t()) ::
-          Plug.Conn.t() | {Plug.Conn.t(), Ash.Resource.t()}
+          Plug.Conn.t() | {Plug.Conn.t(), Resource.record()}
   def sign_in_resource_with_remember_me(%{cookies: %Plug.Conn.Unfetched{}} = conn, resource, opts) do
     sign_in_resource_with_remember_me(Conn.fetch_cookies(conn), resource, opts)
   end
@@ -133,8 +133,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   Take a connection and possibly an authentication result tuple, call the endpoint
   to put the remember me cookie
   """
-  @spec maybe_put_remember_me_cookies({Conn.t(), {:atom, Ash.Resource.t()}} | any, any) ::
-          Conn.t() | {Conn.t(), {:atom, Ash.Resource.t()}}
+  @spec maybe_put_remember_me_cookies({Plug.Conn.t(), any} | Plug.Conn.t(), any) :: {Plug.Conn.t(), any} | Plug.Conn.t()
   def maybe_put_remember_me_cookies({conn, {:ok, user} = result}, return_to)
       when is_map(user.__metadata__.remember_me) do
     remember_me = user.__metadata__.remember_me
