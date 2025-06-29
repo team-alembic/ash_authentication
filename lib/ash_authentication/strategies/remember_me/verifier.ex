@@ -4,10 +4,11 @@ defmodule AshAuthentication.Strategy.RememberMe.Verifier do
   """
 
   alias AshAuthentication.Info
+  alias AshAuthentication.Strategy.RememberMe
   alias Spark.{Dsl.Verifier, Error.DslError}
 
   @doc false
-  @spec verify(Password.t(), map) :: :ok | {:error, Exception.t()}
+  @spec verify(RememberMe.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
     validate_tokens_enabled(dsl_state, strategy)
   end

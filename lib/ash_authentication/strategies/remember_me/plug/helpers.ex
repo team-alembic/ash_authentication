@@ -146,6 +146,5 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
 
     {conn, result}
   end
-
   def maybe_put_remember_me_cookies(conn_with_auth_result, _return_to), do: conn_with_auth_result
 end
