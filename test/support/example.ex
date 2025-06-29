@@ -5,6 +5,7 @@ defmodule Example do
   resources do
     resource Example.User
     resource Example.UserWithTokenRequired
+    resource Example.UserWithRememberMe
     resource Example.Token
     resource Example.TokenWithCustomCreateTimestamp
     resource Example.UserIdentity

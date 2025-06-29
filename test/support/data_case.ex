@@ -146,4 +146,44 @@ defmodule DataCase do
       Ash.Resource.put_metadata(user, field, value)
     end)
   end
+
+  @doc "User with remember me strategy factory"
+  @spec build_user_with_remember_me(keyword) :: Example.UserWithRememberMe.t() | no_return
+  def build_user_with_remember_me(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:username, Faker.Internet.user_name())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithRememberMe
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "Generate a remember me token for a user"
+  @spec generate_remember_me_token(Example.UserWithRememberMe.t()) :: {:ok, String.t()} | :error
+  def generate_remember_me_token(user) do
+    claims = %{"purpose" => "remember_me"}
+    
+    opts = [
+      purpose: :remember_me,
+      token_lifetime: {30, :days}
+    ]
+
+    case AshAuthentication.Jwt.token_for_user(user, claims, opts) do
+      {:ok, token, _claims} -> {:ok, token}
+      :error -> :error
+    end
+  end
 end

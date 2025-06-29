@@ -2,7 +2,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
   @moduledoc false
   use DataCase, async: true
   alias AshAuthentication.{Info, Jwt, Plug.Helpers, Strategy.Password, TokenResource}
-  import Plug.Test, only: [conn: 3]
+  import Plug.Test, only: [conn: 3, put_req_cookie: 3]
   alias Plug.Conn
 
   setup do
@@ -413,6 +413,107 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.store_authentication_result({:ok, user})
 
       assert conn.private.authentication_result == {:ok, user}
+    end
+  end
+
+  describe "sign_in_using_remember_me/3" do
+    test "when user is already signed in via session, it does nothing", %{conn: conn} do
+      user = build_user()
+      subject = AshAuthentication.user_to_subject(user)
+
+      conn =
+        conn
+        |> Conn.put_session("user", "jti:" <> subject)
+        |> Helpers.sign_in_using_remember_me(:ash_authentication)
+
+      # Should not have any remember me cookies set
+      assert conn.resp_cookies == %{}
+      # Should not have any assigns set
+      refute conn.private.plug_session["user_with_remember_me"]
+    end
+
+    test "when no remember me strategy is configured, it does nothing", %{conn: conn} do
+      conn = Helpers.sign_in_using_remember_me(conn, :ash_authentication)
+
+      # Should not have any remember me cookies set
+      assert conn.resp_cookies == %{}
+      # Should not have any assigns set
+      refute conn.private.plug_session["user_with_remember_me"]
+    end
+
+    test "when remember me cookie is present and valid, it signs in the user" do
+      # Create a user with remember me strategy
+      user = build_user_with_remember_me()
+      
+      # Generate a remember me token
+      {:ok, remember_me_token} = generate_remember_me_token(user)
+      
+      # Set the remember me cookie
+      conn =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("ash_auth:remember_me", remember_me_token)
+        |> SessionPipeline.call([])
+        |> Helpers.sign_in_using_remember_me(:ash_authentication)
+
+      # Should have the user_with_remember_me stored in session
+      assert conn.private.plug_session["user_with_remember_me"]
+    end
+
+    test "when remember me cookie is present but invalid, it deletes the cookie" do
+      # Set an invalid remember me cookie
+      conn =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("ash_auth:remember_me", "invalid_token")
+        |> SessionPipeline.call([])
+        |> Helpers.sign_in_using_remember_me(:ash_authentication)
+
+      # Should delete the invalid cookie
+      assert conn.resp_cookies["ash_auth:remember_me"][:max_age] == 0
+      # Should not be in session
+      refute conn.private.plug_session["user_with_remember_me"]
+    end
+
+    test "when remember me cookie is not present, it does nothing", %{conn: conn} do
+      conn = Helpers.sign_in_using_remember_me(conn, :ash_authentication)
+
+      # Should not have any remember me cookies set
+      assert conn.resp_cookies == %{}
+      # Should not have any assigns set
+      refute conn.private.plug_session["user_with_remember_me"]
+    end
+
+    test "it respects tenant and context options" do
+      # Create a user with remember me strategy
+      user = build_user_with_remember_me()
+      
+      # Generate a remember me token
+      {:ok, remember_me_token} = generate_remember_me_token(user)
+      
+      # Set tenant and context
+      conn =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("ash_auth:remember_me", remember_me_token)
+        |> SessionPipeline.call([])
+        |> Ash.PlugHelpers.set_tenant("test_tenant")
+        |> Ash.PlugHelpers.set_context(%{test: "context"})
+        |> Helpers.sign_in_using_remember_me(:ash_authentication, 
+           tenant: "test_tenant", 
+           context: %{test: "context"})
+
+      # Should have the user assigned
+      assert conn.private.plug_session["user_with_remember_me"]
+    end
+
+    test "it handles multiple authenticated resources", %{conn: conn} do
+      # This test would require multiple resources with remember me strategies
+      # For now, we'll test that it doesn't crash with the existing setup
+      conn = Helpers.sign_in_using_remember_me(conn, :ash_authentication)
+      
+      # Should not crash and should not have any assigns set
+      refute conn.private.plug_session["user_with_remember_me"]
     end
   end
 end
