@@ -19,7 +19,8 @@ defmodule AshAuthentication.Verifier do
   def verify(dsl_state) do
     with {:ok, _domain} <- validate_domain_presence(dsl_state),
          :ok <- validate_tokens_may_be_required(dsl_state) do
-      if Info.authentication_session_identifier!(dsl_state) == :error and
+      if Info.authentication_tokens_enabled?(dsl_state) and
+           Info.authentication_session_identifier!(dsl_state) == :error and
            not Info.authentication_tokens_require_token_presence_for_authentication?(dsl_state) do
         {:error,
          DslError.exception(
