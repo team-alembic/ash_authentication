@@ -70,7 +70,18 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
     |> case do
       {:ok, _identity} ->
         user
-        |> Ash.load(strategy.identity_relationship_name, domain: Info.domain!(strategy.resource))
+        |> Ash.load(
+          [
+            {strategy.identity_relationship_name,
+             Query.new(strategy.identity_resource)
+             |> Query.set_context(%{
+               private: %{
+                 ash_authentication?: true
+               }
+             })}
+          ],
+          domain: Info.domain!(strategy.resource)
+        )
 
       {:error, reason} ->
         {:error, reason}
