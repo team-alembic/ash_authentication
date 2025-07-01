@@ -2,7 +2,7 @@
 
 ## A note on API Keys
 
-API keys are generated using `AshAuthentication.Strategies.ApiKey.GenerateApiKey`. See the module docs for more information.
+API keys are generated using `AshAuthentication.Strategy.ApiKey.GenerateApiKey`. See the module docs for more information.
 The API key is generated using a random byte string and a prefix. The prefix is used to generate a key that is compliant with secret scanning. You can use this to set up an endpoint that will automatically revoke leaked tokens, which is an extremely powerful and useful security feature. We only store a hash of the api key. The plaintext api key is only available in `api_key.__metadata__.plaintext_api_key` immediately after creation.
 
 See [the guide on Github](https://docs.github.com/en/code-security/secret-scanning/secret-scanning-partnership-program/secret-scanning-partner-program) for more information.
@@ -118,7 +118,7 @@ end
 
 #### Use the plug in your router/plug pipeline
 
-See `AshAuthentication.Strategies.ApiKey.Plug` for all available options.
+See `AshAuthentication.Strategy.ApiKey.Plug` for all available options.
 
 In Phoenix, for example, you might add this plug to your
 `:api` pipeline.
