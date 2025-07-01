@@ -4,7 +4,7 @@ defmodule AshAuthentication.Secret do
 
   Allows you to implement secrets access via your method or choice at runtime.
 
-  The context paramter is either a map with the `conn` key containing the Plug.Conn
+  The context parameter is either a map with the `conn` key containing the Plug.Conn
   if the secret is being retrieved in a plug, or the context of the ash action it is
   called in
 
