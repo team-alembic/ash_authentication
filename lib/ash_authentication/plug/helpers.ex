@@ -222,7 +222,7 @@ defmodule AshAuthentication.Plug.Helpers do
       with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
            when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
            {:ok, token_record} <-
-             validate_token(resource, jti),
+             validate_token(resource, jti, opts),
            {:ok, user} <-
              AshAuthentication.subject_to_user(
                subject,
@@ -252,15 +252,19 @@ defmodule AshAuthentication.Plug.Helpers do
     )
   end
 
-  defp validate_token(resource, jti) do
+  defp validate_token(resource, jti, opts) do
     if Info.authentication_tokens_require_token_presence_for_authentication?(resource) do
       with {:ok, token_resource} <-
              Info.authentication_tokens_token_resource(resource),
            {:ok, [token_record]} <-
-             TokenResource.Actions.get_token(token_resource, %{
-               "jti" => jti,
-               "purpose" => "user"
-             }) do
+             TokenResource.Actions.get_token(
+               token_resource,
+               %{
+                 "jti" => jti,
+                 "purpose" => "user"
+               },
+               opts
+             ) do
         {:ok, token_record}
       else
         _ -> :error
