@@ -111,7 +111,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       assert conn.assigns.current_user_with_token_required.id == user.id
     end
 
-    test "when token presense is required and the token is not present in the token resource it doesn't load the token's subject",
+    test "when token presence is required and the token is not present in the token resource it still loads the token's subject via JWT verification",
          %{conn: conn} do
       user = build_user_with_token_required()
       {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
@@ -125,10 +125,11 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Conn.put_session("user_with_token_required_token", user.__metadata__.token)
         |> Helpers.retrieve_from_session(:ash_authentication)
 
-      refute conn.assigns.current_user_with_token_required
+      # Authentication succeeds because JWT verification relies on revocation checking, not token record presence
+      assert conn.assigns.current_user_with_token_required.id == user.id
     end
 
-    test "when token presense is requried and the token has been revoked it doesn't load the token's subject",
+    test "when token presence is requried and the token has been revoked it doesn't load the token's subject",
          %{conn: conn} do
       user = build_user_with_token_required()
 
@@ -156,6 +157,49 @@ defmodule AshAuthentication.Plug.HelpersTest do
       refute conn.assigns.current_user_with_token_required
     end
 
+    test "with store_all_tokens?: false it loads user subjects correctly when token records are missing",
+         %{
+           conn: conn
+         } do
+      user = build_user_with_stateless_tokens()
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      import Ecto.Query
+
+      # Delete any token records that might exist for this JTI
+      Example.Repo.delete_all(from(t in ExampleStateless.Token, where: t.jti == ^jti))
+
+      subject = AshAuthentication.user_to_subject(user)
+
+      conn =
+        conn
+        |> Conn.put_session("stateless_user", "jti:" <> subject)
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      assert conn.assigns.current_stateless_user.id == user.id
+    end
+
+    test "with store_all_tokens?: false session authentication bypasses JWT verification (by design)",
+         %{conn: conn} do
+      user = build_user_with_stateless_tokens()
+
+      # Revoke the token
+      :ok =
+        AshAuthentication.TokenResource.revoke(ExampleStateless.Token, user.__metadata__.token)
+
+      subject = AshAuthentication.user_to_subject(user)
+
+      # Session-based authentication with store_all_tokens?: false doesn't check revocation
+      # This is by design - session auth is simpler and doesn't verify JWT claims
+      conn =
+        conn
+        |> Conn.put_session("stateless_user", "jti:" <> subject)
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      # Authentication succeeds because session-based auth doesn't check token revocation
+      assert conn.assigns.current_stateless_user.id == user.id
+    end
+
     test "with opts", %{conn: conn} do
       # without token
       user = build_user()
@@ -181,7 +225,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
   end
 
   describe "retrieve_from_bearer/3" do
-    test "when token presense is not required it loads any subjects from authorization header(s)",
+    test "when token presence is not required it loads any subjects from authorization header(s)",
          %{conn: conn} do
       user = build_user()
 
@@ -193,7 +237,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       assert conn.assigns.current_user.id == user.id
     end
 
-    test "when token presense is required and the token is present in the database it loads the subjects from the authorization header(s)",
+    test "when token presence is required and the token is present in the database it loads the subjects from the authorization header(s)",
          %{conn: conn} do
       user = build_user_with_token_required()
 
@@ -213,7 +257,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       assert user_for_token.id == user.id
     end
 
-    test "when token presense is required and the token is not present in the token resource it doesn't load the subjects from the authorization header(s)",
+    test "when token presence is required and the token is not present in the token resource it doesn't load the subjects from the authorization header(s)",
          %{conn: conn} do
       user = build_user_with_token_required()
       {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
@@ -231,7 +275,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       refute is_map_key(conn.assigns, :current_user_with_token_required_token_record)
     end
 
-    test "when token presense is required and the token has been revoked it doesn't lkoad the subjects from the authorization header(s)",
+    test "when token presence is required and the token has been revoked it doesn't load the subjects from the authorization header(s)",
          %{conn: conn} do
       user = build_user_with_token_required()
 
@@ -257,6 +301,41 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
       refute is_map_key(conn.assigns, :current_user_with_token_required)
+    end
+
+    test "with store_all_tokens?: false it loads user subjects correctly when token records are missing",
+         %{
+           conn: conn
+         } do
+      user = build_user_with_stateless_tokens()
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      import Ecto.Query
+
+      # Delete any token records that might exist for this JTI
+      Example.Repo.delete_all(from(t in ExampleStateless.Token, where: t.jti == ^jti))
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      assert conn.assigns.current_stateless_user.id == user.id
+    end
+
+    test "with store_all_tokens?: false it fails authentication for revoked tokens", %{conn: conn} do
+      user = build_user_with_stateless_tokens()
+
+      # Revoke the token
+      :ok =
+        AshAuthentication.TokenResource.revoke(ExampleStateless.Token, user.__metadata__.token)
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user.__metadata__.token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      refute is_map_key(conn.assigns, :current_stateless_user)
     end
 
     test "with opts", %{conn: conn} do

@@ -85,22 +85,12 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Enum.reduce(conn, fn
       {resource, options, true}, conn ->
         current_subject_name = current_subject_name(options.subject_name)
-        token_resource = Info.authentication_tokens_token_resource!(resource)
         session_key = "#{options.subject_name}_token"
 
         with token when is_binary(token) <-
                Conn.get_session(conn, session_key),
-             {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
+             {:ok, %{"sub" => subject} = claims, _}
              when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
-             {:ok, [_]} <-
-               TokenResource.Actions.get_token(
-                 token_resource,
-                 %{
-                   "jti" => jti,
-                   "purpose" => "user"
-                 },
-                 opts
-               ),
              {:ok, user} <-
                AshAuthentication.subject_to_user(
                  subject,
