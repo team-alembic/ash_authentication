@@ -99,7 +99,6 @@ spark_locals_without_parens = [
   remember_me: 0,
   remember_me: 1,
   remember_me: 2,
-  remember_me_field: 1,
   request_action_name: 1,
   request_password_reset_action_name: 1,
   require_confirmed_with: 1,

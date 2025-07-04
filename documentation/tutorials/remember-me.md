@@ -42,7 +42,6 @@ authentication do
     remember_me do # Optionally name the strategy: `remember_me :remember_me do`
       sign_in_action_name :sign_in_with_remember_me. # Optional defaults to :sign_in_with_[:strategy_name]
       cookie_name :remember_me # Optional. Defaults to :remember_me
-      remember_me_field :remember_me # Optional. Defaults to :remember_me. Used by AshAuthenticationPhoenix
       token_lifetime {30, :days} # Optional. Defaults to {30, :days}
     end
   end

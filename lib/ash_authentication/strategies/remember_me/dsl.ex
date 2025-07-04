@@ -16,7 +16,6 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
         """
         remember_me :remember_me do
           cookie_name :remember_me
-          remember_me_field :remember_me
           token_lifetime {30, :days}
         end
         """
@@ -45,12 +44,6 @@ defmodule AshAuthentication.Strategy.RememberMe.Dsl do
         cookie_name: [
           type: :atom,
           doc: "The name to use for the cookie. Defaults to `remember_me`",
-          default: :remember_me
-        ],
-        remember_me_field: [
-          type: :atom,
-          doc:
-            "The name of the field to use for the remember me checkbox. Only used by AshAuthenticationPhoenix. Defaults to `:remember_me`",
           default: :remember_me
         ],
         sign_in_action_name: [

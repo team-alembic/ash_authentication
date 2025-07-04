@@ -119,7 +119,6 @@ defmodule Example.UserWithRememberMe do
       remember_me :remember_me do
         sign_in_action_name :sign_in_with_remember_me
         cookie_name :remember_me
-        remember_me_field :remember_me
         token_lifetime {30, :days}
       end
     end
