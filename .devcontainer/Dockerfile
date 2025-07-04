@@ -21,7 +21,7 @@ ENV LANGUAGE en_AU:en
 ENV LC_ALL en_AU.UTF-8
 
 ARG USERNAME=vscode
-ARG USER_UID=1000
+ARG USER_UID=9000
 ARG USER_GID=$USER_UID
 RUN groupadd --gid ${USER_GID} ${USERNAME}
 RUN useradd --shell /usr/bin/zsh --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME}
