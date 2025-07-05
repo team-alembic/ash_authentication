@@ -45,6 +45,7 @@ Strategy for authenticating using api keys
 | [`api_key_relationship`](#authentication-strategies-api_key-api_key_relationship){: #authentication-strategies-api_key-api_key_relationship .spark-required} | `atom` |  | The relationship from the user to their *valid* API keys. |
 | [`api_key_hash_attribute`](#authentication-strategies-api_key-api_key_hash_attribute){: #authentication-strategies-api_key-api_key_hash_attribute } | `atom` | `:api_key_hash` | The attribute on the API key resource that contains the API key's hash. |
 | [`sign_in_action_name`](#authentication-strategies-api_key-sign_in_action_name){: #authentication-strategies-api_key-sign_in_action_name } | `atom` |  | The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>` |
+| [`multitenancy_relationship`](#authentication-strategies-api_key-multitenancy_relationship){: #authentication-strategies-api_key-multitenancy_relationship } | `atom` |  | The relationship from the API key to the issuing tenant, used to access the user resource. Defaults to global user resource. |
 
 
 
