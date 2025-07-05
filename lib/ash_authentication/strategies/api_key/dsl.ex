@@ -33,6 +33,10 @@ defmodule AshAuthentication.Strategy.ApiKey.Dsl do
           type: :atom,
           doc:
             "The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>`"
+        ],
+        multitenancy_relationship: [
+          type: :atom,
+          doc: "The relationship from the API key to the issuing tenant."
         ]
       ]
     }
