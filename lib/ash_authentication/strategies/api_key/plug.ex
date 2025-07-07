@@ -142,10 +142,15 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
   defp get_api_key(conn, %{source: :header, header_prefix: prefix}) do
     case Conn.get_req_header(conn, "authorization") do
       [header_value | _] ->
-        if String.starts_with?(header_value, prefix) do
-          {:ok, String.replace_prefix(header_value, prefix, "")}
-        else
-          {:error, :invalid_api_key}
+        cond do
+          match?(%Regex{}, prefix) && header_value =~ prefix ->
+            {:ok, String.trim(Regex.replace(prefix, header_value, ""))}
+
+          String.starts_with?(header_value, prefix) ->
+            {:ok, String.trim(String.replace_prefix(header_value, prefix, ""))}
+
+          true ->
+            {:error, :invalid_api_key}
         end
 
       _ ->
