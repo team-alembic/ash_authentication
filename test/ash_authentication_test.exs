@@ -11,6 +11,7 @@ defmodule AshAuthenticationTest do
                Example.UserWithTokenRequired,
                Example.UserWithRegisterMagicLink,
                ExampleMultiTenant.User,
+               ExampleMultiTenant.GlobalUser,
                ExampleMultiTenant.UserWithTokenRequired,
                ExampleMultiTenant.UserWithRegisterMagicLink
              ] =
