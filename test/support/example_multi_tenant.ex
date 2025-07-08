@@ -5,9 +5,11 @@ defmodule ExampleMultiTenant do
   resources do
     resource ExampleMultiTenant.Organisation
     resource ExampleMultiTenant.User
+    resource ExampleMultiTenant.GlobalUser
     resource ExampleMultiTenant.UserWithTokenRequired
     resource ExampleMultiTenant.Token
     resource ExampleMultiTenant.UserIdentity
     resource ExampleMultiTenant.UserWithRegisterMagicLink
+    resource ExampleMultiTenant.ApiKey
   end
 end
