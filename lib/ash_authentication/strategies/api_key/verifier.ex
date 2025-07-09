@@ -14,6 +14,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Verifier do
   @spec verify(ApiKey.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
     with :ok <- validate_api_key_relationship(dsl_state, strategy),
+         :ok <- validate_multitenancy_relationship(dsl_state, strategy),
          :ok <- validate_api_key_hash_attribute(dsl_state, strategy),
          :ok <- validate_api_key_id_attribute(dsl_state, strategy) do
       validate_sign_in_action(dsl_state, strategy)
@@ -30,6 +31,26 @@ defmodule AshAuthentication.Strategy.ApiKey.Verifier do
            path: [:relationships],
            message:
              "The resource `#{inspect(resource)}` does not define a relationship named `#{inspect(strategy.api_key_relationship)}`"
+         )}
+
+      _relationship ->
+        :ok
+    end
+  end
+
+  defp validate_multitenancy_relationship(_dsl_state, %{multitenancy_relationship: nil}), do: :ok
+
+  defp validate_multitenancy_relationship(dsl_state, strategy) do
+    relationship = ResourceInfo.relationship(dsl_state, strategy.api_key_relationship)
+    destination = relationship.destination
+
+    case ResourceInfo.relationship(destination, strategy.multitenancy_relationship) do
+      nil ->
+        {:error,
+         DslError.exception(
+           path: [:relationships],
+           message:
+             "The API key resource `#{inspect(destination)}` does not define a relationship named `#{inspect(strategy.multitenancy_relationship)}`"
          )}
 
       _relationship ->

@@ -24,6 +24,7 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
         api_key_relationship.destination
         |> Ash.Query.do_filter(api_key_relationship.filter)
         |> Ash.Query.filter(id == ^api_key_id)
+        |> maybe_load_tenant(strategy.multitenancy_relationship)
         |> Query.set_context(%{private: %{ash_authentication?: true}})
         |> Ash.read_one()
         |> case do
@@ -77,6 +78,7 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
         api_key_relationship.source_attribute =>
           Map.get(api_key, api_key_relationship.destination_attribute)
       })
+      |> maybe_set_tenant(api_key, strategy.multitenancy_relationship)
       |> Ash.Query.after_action(fn
         _query, [user] ->
           {:ok,
@@ -87,6 +89,7 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
                  api_key: api_key,
                  using_api_key?: true
                }
+               |> maybe_add_tenant_to_metadata(api_key, strategy.multitenancy_relationship)
              )
            ]}
 
@@ -132,6 +135,26 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
     else
       _ ->
         :error
+    end
+  end
+
+  defp maybe_load_tenant(query, nil), do: query
+
+  defp maybe_load_tenant(query, multitenancy_relationship) do
+    Ash.Query.load(query, multitenancy_relationship)
+  end
+
+  defp maybe_set_tenant(query, api_key, multitenancy_relationship) do
+    case Map.get(api_key, multitenancy_relationship) do
+      %{__struct__: _} = tenant -> Ash.Query.set_tenant(query, tenant)
+      _ -> query
+    end
+  end
+
+  defp maybe_add_tenant_to_metadata(metadata, api_key, multitenancy_relationship) do
+    case Map.get(api_key, multitenancy_relationship) do
+      %{__struct__: _} = tenant -> Map.put(metadata, :tenant, tenant)
+      _ -> metadata
     end
   end
 end
