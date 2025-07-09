@@ -210,7 +210,8 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, ash_version("~> 3.0 and >= 3.4.29")},
+      # {:ash, ash_version("~> 3.0 and >= 3.4.29")},
+      {:ash, github: "serpent213/ash", branch: "read-tenant-new-query", override: true},
       {:igniter, "~> 0.4", optional: true},
       {:assent, "~> 0.2.13"},
       {:bcrypt_elixir, "~> 3.0"},

@@ -89,7 +89,6 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
                  api_key: api_key,
                  using_api_key?: true
                }
-               |> maybe_add_tenant_to_metadata(api_key, strategy.multitenancy_relationship)
              )
            ]}
 
@@ -138,23 +137,16 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
     end
   end
 
-  defp maybe_load_tenant(query, nil), do: query
+  defp maybe_load_tenant(api_key_query, nil), do: api_key_query
 
-  defp maybe_load_tenant(query, multitenancy_relationship) do
-    Ash.Query.load(query, multitenancy_relationship)
+  defp maybe_load_tenant(api_key_query, multitenancy_relationship) do
+    Ash.Query.load(api_key_query, multitenancy_relationship)
   end
 
-  defp maybe_set_tenant(query, api_key, multitenancy_relationship) do
+  defp maybe_set_tenant(user_query, api_key, multitenancy_relationship) do
     case Map.get(api_key, multitenancy_relationship) do
-      %{__struct__: _} = tenant -> Ash.Query.set_tenant(query, tenant)
-      _ -> query
-    end
-  end
-
-  defp maybe_add_tenant_to_metadata(metadata, api_key, multitenancy_relationship) do
-    case Map.get(api_key, multitenancy_relationship) do
-      %{__struct__: _} = tenant -> Map.put(metadata, :tenant, tenant)
-      _ -> metadata
+      %{__struct__: _} = tenant -> Ash.Query.set_tenant(user_query, tenant)
+      _ -> user_query
     end
   end
 end
