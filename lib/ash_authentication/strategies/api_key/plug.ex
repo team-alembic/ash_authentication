@@ -70,9 +70,11 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
     required? = Keyword.get(opts, :required?, true)
     source = Keyword.get(opts, :source, :header)
     param_name = Keyword.get(opts, :param_name, "api_key")
-    header_prefix = Keyword.get(opts, :header_prefix, "Bearer ")
     subject_name = AshAuthentication.Info.authentication_subject_name!(resource)
     assign = Keyword.get(opts, :assign, :"current_#{subject_name}")
+
+    header_prefix = Keyword.get(opts, :header_prefix, "Bearer ")
+    :ok = validate_header_prefix(header_prefix)
 
     strategy =
       case Keyword.fetch(opts, :strategy) do
@@ -191,5 +193,15 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
       tenant: tenant,
       context: context
     )
+  end
+
+  defp validate_header_prefix(prefix) when is_binary(prefix), do: :ok
+
+  defp validate_header_prefix(%Regex{} = prefix) do
+    if String.starts_with?(inspect(prefix), "~r/^") do
+      :ok
+    else
+      raise "Invalid header_prefix regex. Regexes must begin with `^`, got: #{inspect(prefix)}"
+    end
   end
 end

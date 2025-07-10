@@ -79,7 +79,7 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
       plaintext_api_key: plaintext_api_key,
       user: user
     } do
-      opts = ApiKeyPlug.init(resource: Example.User, source: :header, header_prefix: ~r/bearer/i)
+      opts = ApiKeyPlug.init(resource: Example.User, source: :header, header_prefix: ~r/^bearer/i)
 
       conn =
         :get
@@ -88,6 +88,18 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
         |> ApiKeyPlug.call(opts)
 
       assert conn.assigns.current_user.id == user.id
+    end
+
+    test "raises an error when initializing with an improper regex prefix" do
+      assert_raise RuntimeError,
+                   "Invalid header_prefix regex. Regexes must begin with `^`, got: ~r/bearer/i",
+                   fn ->
+                     ApiKeyPlug.init(
+                       resource: Example.User,
+                       source: :header,
+                       header_prefix: ~r/bearer/i
+                     )
+                   end
     end
 
     test "succeeds when API key is present in query parameter", %{
