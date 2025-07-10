@@ -71,6 +71,33 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
       assert conn.assigns.current_user.id == user.id
     end
 
+    test "succeeeds when API key is present in header with regex prefix", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
+      opts = ApiKeyPlug.init(resource: Example.User, source: :header, header_prefix: ~r/^bearer/i)
+
+      conn =
+        :get
+        |> conn("/")
+        |> put_req_header("authorization", "Bearer #{plaintext_api_key}")
+        |> ApiKeyPlug.call(opts)
+
+      assert conn.assigns.current_user.id == user.id
+    end
+
+    test "raises an error when initializing with an improper regex prefix" do
+      assert_raise RuntimeError,
+                   "Invalid header_prefix regex. Regexes must begin with `^`, got: ~r/bearer/i",
+                   fn ->
+                     ApiKeyPlug.init(
+                       resource: Example.User,
+                       source: :header,
+                       header_prefix: ~r/bearer/i
+                     )
+                   end
+    end
+
     test "succeeds when API key is present in query parameter", %{
       plaintext_api_key: plaintext_api_key,
       user: user
@@ -103,6 +130,21 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
 
     test "succeeds with custom header prefix", %{plaintext_api_key: plaintext_api_key, user: user} do
       opts = ApiKeyPlug.init(resource: Example.User, source: :header, header_prefix: "Token ")
+
+      conn =
+        :get
+        |> conn("/")
+        |> put_req_header("authorization", "Token #{plaintext_api_key}")
+        |> ApiKeyPlug.call(opts)
+
+      assert conn.assigns.current_user.id == user.id
+    end
+
+    test "succeeds with custom header prefix without trailing space", %{
+      plaintext_api_key: plaintext_api_key,
+      user: user
+    } do
+      opts = ApiKeyPlug.init(resource: Example.User, source: :header, header_prefix: "Token")
 
       conn =
         :get
