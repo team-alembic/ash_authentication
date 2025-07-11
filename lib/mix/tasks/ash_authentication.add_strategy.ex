@@ -21,7 +21,7 @@ if Code.ensure_loaded?(Igniter) do
 
     @strategy_options [
                         password: [
-                          hash_provider:
+                          "hash-provider":
                             "The hash provider to use, either `bcrypt` or `argon2`.  Defaults to `bcrypt2`."
                         ]
                       ]
