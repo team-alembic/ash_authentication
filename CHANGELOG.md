@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.6](https://github.com/team-alembic/ash_authentication/compare/v4.9.5...v4.9.6) (2025-07-11)
+
+
+
+
+### Bug Fixes:
+
+* support --identity-field option in the installer by Zach Daniel
+
+### Improvements:
+
+* Pass all args to sign_in_with_token action of password strategies (#1009) by Jinkyou Son
+
 ## [v4.9.5](https://github.com/team-alembic/ash_authentication/compare/v4.9.4...v4.9.5) (2025-07-02)
 
 
