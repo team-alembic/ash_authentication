@@ -79,7 +79,8 @@ if Code.ensure_loaded?(Igniter) do
         ],
         aliases: [
           u: :user,
-          a: :api_key
+          a: :api_key,
+          i: :identity_field
         ],
         defaults: [
           identity_field: "email"
