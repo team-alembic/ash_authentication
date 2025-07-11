@@ -73,12 +73,16 @@ if Code.ensure_loaded?(Igniter) do
         ],
         schema: [
           user: :string,
+          identity_field: :string,
           api_key: :string,
           hash_provider: :string
         ],
         aliases: [
           u: :user,
           a: :api_key
+        ],
+        defaults: [
+          identity_field: "email"
         ]
       }
     end
