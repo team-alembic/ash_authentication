@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.7](https://github.com/team-alembic/ash_authentication/compare/v4.9.6...v4.9.7) (2025-07-17)
+
+
+
+
+### Bug Fixes:
+
+* add `-i` flag alias for add_strategy task by Zach Daniel
+
 ## [v4.9.6](https://github.com/team-alembic/ash_authentication/compare/v4.9.5...v4.9.6) (2025-07-11)
 
 
