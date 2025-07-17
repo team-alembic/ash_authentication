@@ -90,12 +90,10 @@ if Code.ensure_loaded?(Igniter) do
 
     def igniter(igniter) do
       strategies = igniter.args.positional[:strategies] || []
-      argv = igniter.args.argv
       default_user = Igniter.Project.Module.module_name(igniter, "Accounts.User")
 
       options =
-        argv
-        |> options!()
+        igniter.args.options
         |> Keyword.update(:identity_field, :email, &String.to_atom/1)
         |> Keyword.update(:user, default_user, &Igniter.Project.Module.parse/1)
 
