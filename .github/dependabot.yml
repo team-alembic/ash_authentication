@@ -1,25 +1,26 @@
-version: 2
+---
 updates:
-  - package-ecosystem: docker
-    directory: "/.devcontainer"
-    schedule:
-      interval: weekly
-      day: thursday
+  - directory: /.devcontainer
     groups:
-      production-dependencies:
-        dependency-type: production
       dev-dependencies:
         dependency-type: development
-  - package-ecosystem: mix
-    directory: "/"
-    versioning-strategy: lockfile-only
+      production-dependencies:
+        dependency-type: production
+    package-ecosystem: docker
+    schedule:
+      day: thursday
+      interval: monthly
+  - directory: /
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      production-dependencies:
+        dependency-type: production
     ignore:
-      - dependency-name: "assent"
+      - dependency-name: assent
+    package-ecosystem: mix
     schedule:
-      interval: weekly
       day: thursday
-    groups:
-      production-dependencies:
-        dependency-type: production
-      dev-dependencies:
-        dependency-type: development
+      interval: monthly
+    versioning-strategy: lockfile-only
+version: 2
