@@ -22,7 +22,8 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
                {:got_token, Changeset.get_argument(changeset, strategy.token_param_name)},
              {:verified,
               {:ok, %{"act" => token_action, "sub" => subject, "identity" => identity}, _}} <-
-               {:verified, Jwt.verify(token, changeset.resource, [], context)},
+               {:verified,
+                Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context), context)},
              {:action, ^token_action} <-
                {:action, to_string(strategy.sign_in_action_name)},
              {:subject_matches, %URI{path: ^subject_name}} <-
@@ -33,7 +34,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
             _changeset, {:ok, record} ->
               if strategy.single_use_token? do
                 token_resource = Info.authentication_tokens_token_resource!(changeset.resource)
-                :ok = TokenResource.revoke(token_resource, token)
+                :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
               end
 
               {:ok, token, _claims} =
