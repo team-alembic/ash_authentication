@@ -191,12 +191,15 @@ defmodule AshAuthentication.Strategy.MagicLink do
   """
   def request_token_for_identity(strategy, identity, opts \\ [], context \\ %{})
       when is_struct(strategy, __MODULE__) do
+        context_map = Map.from_struct(context)
+        source_context = Map.get(context_map, :source_context, %{})
+        context_claims = Map.get(source_context, :claims, %{})
     case Jwt.token_for_resource(
            strategy.resource,
            %{
              "act" => strategy.sign_in_action_name,
              "identity" => to_string(identity)
-           },
+           } |> Map.merge(context_claims),
            Keyword.merge(opts, token_lifetime: strategy.token_lifetime, purpose: :magic_link),
            context
          ) do
