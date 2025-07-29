@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.9](https://github.com/team-alembic/ash_authentication/compare/v4.9.8...v4.9.9) (2025-07-29)
+
+
+
+
+### Bug Fixes:
+
+* ensure tenant is set when verifying magic link tokens by Zach Daniel
+
+* resolve accounts option not affecting user/token resource defaults and add a exemple #1041 (#1045) by horberlan
+
+### Improvements:
+
+* comp-time error message on mismatching magic link action type by Zach Daniel
+
+* better error message on invalid magic link token by Zach Daniel
+
 ## [v4.9.8](https://github.com/team-alembic/ash_authentication/compare/v4.9.7...v4.9.8) (2025-07-22)
 
 
