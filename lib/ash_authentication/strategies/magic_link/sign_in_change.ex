@@ -32,10 +32,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
           |> Changeset.force_change_attribute(strategy.identity_field, identity)
           |> Changeset.after_transaction(fn
             _changeset, {:ok, record} ->
-              if strategy.single_use_token? do
-                token_resource = Info.authentication_tokens_token_resource!(changeset.resource)
-                :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
-              end
+              revoke_single_use_token!(strategy, changeset, token, context)
 
               {:ok, token, _claims} =
                 Jwt.token_for_user(record, %{}, Ash.Context.to_opts(context))
@@ -47,26 +44,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
           end)
         else
           e ->
-            reason =
-              case e do
-                {:got_token, nil} ->
-                  "No token supplied in #{strategy.token_param_name}"
-
-                {:got_token, token} ->
-                  "Expected #{strategy.token_param_name} to be a string, got: #{inspect(token)}"
-
-                {:verified, _} ->
-                  "Token in #{strategy.token_param_name} param did not pass verification"
-
-                {:action, token_action} ->
-                  "Token in #{strategy.token_param_name} param was for action #{token_action}, expected it to be for #{strategy.sign_in_action_name}"
-
-                {:subject_matches, %URI{path: subject_name}} ->
-                  "Expected subject of token to be #{inspect(subject_name)}, got #{subject_name}"
-
-                {:subject_matches, _} ->
-                  "Could not parse token subject as a URI"
-              end
+            reason = error_reason(e, strategy)
 
             case Info.find_strategy(changeset, context, opts) do
               {:ok, strategy} ->
@@ -86,6 +64,32 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
           changeset,
           "No strategy in context, and no strategy found for action #{inspect(changeset.resource)}.#{changeset.action.name}"
         )
+    end
+  end
+
+  defp revoke_single_use_token!(strategy, changeset, token, context) do
+    if strategy.single_use_token? do
+      token_resource = Info.authentication_tokens_token_resource!(changeset.resource)
+      :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
+    end
+  end
+
+  defp error_reason(e, strategy) do
+    case e do
+      {:got_token, nil} ->
+        "No token supplied in #{strategy.token_param_name}"
+
+      {:got_token, token} ->
+        "Expected #{strategy.token_param_name} to be a string, got: #{inspect(token)}"
+
+      {:verified, _} ->
+        "Token in #{strategy.token_param_name} param did not pass verification"
+
+      {:action, token_action} ->
+        "Token in #{strategy.token_param_name} param was for action #{token_action}, expected it to be for #{strategy.sign_in_action_name}"
+
+      {:subject_matches, %URI{path: subject_name}} ->
+        "Expected subject of token to be #{inspect(subject_name)}, got #{subject_name}"
     end
   end
 end
