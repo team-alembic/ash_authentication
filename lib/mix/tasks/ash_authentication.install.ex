@@ -230,15 +230,6 @@ if Code.ensure_loaded?(Igniter) do
               authorize_if always()
             end
           )
-          |> Ash.Resource.Igniter.add_policy(
-            user_resource,
-            quote do
-              always()
-            end,
-            quote do
-              forbid_if always()
-            end
-          )
         end
       end)
       |> Spark.Igniter.set_option(user_resource, [:authentication, :tokens, :enabled?], true)
@@ -391,16 +382,6 @@ if Code.ensure_loaded?(Igniter) do
             quote do
               description "AshAuthentication can interact with the token resource"
               authorize_if always()
-            end
-          )
-          |> Ash.Resource.Igniter.add_policy(
-            token_resource,
-            quote do
-              always()
-            end,
-            quote do
-              description "No one aside from AshAuthentication can interact with the tokens resource."
-              forbid_if always()
             end
           )
         end
