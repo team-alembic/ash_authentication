@@ -61,7 +61,7 @@ defmodule AshAuthentication.Plug.Helpers do
   end
 
   @doc """
-  Attempts to sign in all authtenticated resources for the specificed otp_app 
+  Attempts to sign in all authenticated resources for the specificed otp_app 
   using the RememberMe strategy if not already signed in. You can limited it to
   specific strategies using the `strategy` opt.
 
