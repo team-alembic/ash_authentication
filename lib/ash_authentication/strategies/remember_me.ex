@@ -121,6 +121,7 @@ defmodule AshAuthentication.Strategy.RememberMe do
     use MyAppWeb, :controller
     use AshAuthentication.Phoenix.Controller
 
+    @impl AshAuthentication.Phoenix.Controller
     def put_remember_me_cookie(conn, cookie_name, %{token: token, max_age: max_age}) do
       cookie_options = %{
         max_age: max_age, # matches the token lifetime
@@ -156,6 +157,7 @@ defmodule AshAuthentication.Strategy.RememberMe do
     use MyAppWeb, :controller
     use AshAuthentication.Phoenix.Controller
 
+    @impl AshAuthentication.Phoenix.Controller
     def sign_out(conn, _params) do
       return_to = get_session(conn, :return_to) || ~p"/"
 
