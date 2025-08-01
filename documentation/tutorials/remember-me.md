@@ -114,9 +114,11 @@ actions do
 
     prepare AshAuthentication.Strategy.Password.SignInPreparation
 
-    # 2 of 3: Add the preparation. See the preparation docs if using an argument
-    # or strategy name other than remember_me
+    # 2 of 3: Add the preparation. Optionally include the strategy_name 
+    # and argument if not using the defaults.
+    # prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me, argument: :remember_me}
     prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
+
 
     metadata :token, :string do
       description "A JWT that can be used to authenticate the user."
@@ -194,6 +196,8 @@ defmodule MyAppWeb.AuthController do
     secure: true, # only send the cookie over HTTPS
     same_site: "Lax" # prevents the cookie from being sent with cross-site requests
   ]
+
+  @impl AshAuthentication.Phoenix.Controller
   def put_remember_me_cookie(conn, cookie_name, %{token: token, max_age: max_age}) do
     cookie_options = Keyword.put(@remember_me_cookie_options, :max_age, max_age)
 
@@ -201,12 +205,14 @@ defmodule MyAppWeb.AuthController do
     |> put_resp_cookie(cookie_name, token, cookie_options)
   end
 
+  @impl AshAuthentication.Phoenix.Controller
   def delete_remember_me_cookie(conn, cookie_name) do
     cookie_options = Keyword.put(@remember_me_cookie_options, :max_age, 0)
     conn
     |> delete_resp_cookie(cookie_name, cookie_options)
   end
 
+  @impl AshAuthentication.Phoenix.Controller
   def delete_all_remember_me_cookies(conn) do
     conn
     |> Conn.get_cookies()
