@@ -378,6 +378,25 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.revoke_session_tokens(:ash_authentication)
       end
     end
+
+    test "when a remember_me token is present, it revokes successfully", %{conn: conn} do
+      user = build_user()
+
+      {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "remember_me"}, purpose: :remember_me, token_lifetime: {30, :days})
+
+      conn =
+        conn
+        |> Helpers.store_in_session(user)
+
+      {:ok, %{"jti" => jti}} = Jwt.peek(token)
+
+      refute AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+
+      conn
+      |> Helpers.revoke_session_tokens(:ash_authentication)
+
+      assert AshAuthentication.TokenResource.jti_revoked?(Example.Token, jti)
+    end
   end
 
   describe "set_actor/2" do
