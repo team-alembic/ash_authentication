@@ -210,6 +210,7 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:usage_rules, "~> 0.1", only: [:dev]},
       {:ash, ash_version("~> 3.0 and >= 3.4.29")},
       {:igniter, "~> 0.4", optional: true},
       {:assent, "~> 0.2.13"},

@@ -6,8 +6,8 @@ defmodule AshAuthentication.Verifier do
   """
 
   use Spark.Dsl.Verifier
-  alias AshAuthentication.{Info, Strategy, Strategy.Password}
-  alias Spark.{Dsl.Transformer, Error.DslError}
+  alias AshAuthentication.{AddOn.Confirmation, Info, Strategy, Strategy.Password}
+  alias Spark.{Dsl.Transformer, Dsl.Verifier, Error.DslError}
   import AshAuthentication.Utils
 
   @doc false
@@ -18,7 +18,8 @@ defmodule AshAuthentication.Verifier do
           | {:warn, String.t() | list(String.t())}
   def verify(dsl_state) do
     with {:ok, _domain} <- validate_domain_presence(dsl_state),
-         :ok <- validate_tokens_may_be_required(dsl_state) do
+         :ok <- validate_tokens_may_be_required(dsl_state),
+         :ok <- validate_confirmation_action_names(dsl_state) do
       if Info.authentication_tokens_enabled?(dsl_state) and
            Info.authentication_session_identifier!(dsl_state) == :error and
            not Info.authentication_tokens_require_token_presence_for_authentication?(dsl_state) do
@@ -161,6 +162,61 @@ defmodule AshAuthentication.Verifier do
       validator.(dsl_state)
     else
       :ok
+    end
+  end
+
+  defp validate_confirmation_action_names(dsl_state) do
+    conflicting_strategies =
+      dsl_state
+      |> Info.authentication_add_ons()
+      |> Enum.filter(&is_struct(&1, Confirmation))
+      |> Enum.frequencies_by(& &1.confirm_action_name)
+      |> Enum.reject(&(elem(&1, 1) == 1))
+
+    case conflicting_strategies do
+      [] ->
+        :ok
+
+      conflicts ->
+        conflicting_action_names = Enum.map(conflicts, &elem(&1, 0))
+
+        conflicting_strategy_names =
+          dsl_state
+          |> Info.authentication_add_ons()
+          |> Enum.filter(
+            &(is_struct(&1, Confirmation) and &1.confirm_action_name in conflicting_action_names)
+          )
+          |> Enum.map(& &1.name)
+
+        {:error,
+         DslError.exception(
+           module: Verifier.get_persisted(dsl_state, :module),
+           path: [:authentication, :add_ons],
+           message: """
+           Multiple confirmation add-ons are configured with conflicting action names.
+
+           The following confirmation strategies have conflicting action names:
+            #{Enum.map_join(conflicting_strategy_names, "\n", &"  - #{inspect(&1)}")}
+           All confirmation add-ons must have unique action names. You can fix this by:
+           1. Giving each confirmation add-on a unique name (e.g., `confirmation :confirm_email` and `confirmation :confirm_phone`)
+           2. Or explicitly setting different `confirm_action_name` values for each add-on
+
+           Example:
+           ```elixir
+           add_ons do
+             confirmation :confirm_email do
+               monitor_fields [:email]
+               # ... other config
+             end
+
+             confirmation :confirm_phone do
+               monitor_fields [:phone]
+               # ... other config
+             end
+           end
+           ```
+           """
+         )}
     end
   end
 end
