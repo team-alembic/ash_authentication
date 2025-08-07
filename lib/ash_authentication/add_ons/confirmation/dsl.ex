@@ -96,7 +96,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
         confirm_action_name: [
           type: :atom,
           doc:
-            "The name of the action to use when performing confirmation. Will be created if it does not already exist. Defaults to confirm_<String.trim_leading(strategy_name, \"confirm\")>"
+            "The name of the action to use when performing confirmation. Will be created if it does not already exist. Defaults to `:confirm` if the add-on name is `:confirm`, otherwise `confirm_<String.trim_leading(strategy_name, \"confirm_\")>`"
         ]
       ]
     }
