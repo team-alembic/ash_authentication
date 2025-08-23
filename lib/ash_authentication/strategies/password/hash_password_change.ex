@@ -68,7 +68,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
       {:atomic, changeset,
        %{
          strategy.hashed_password_field =>
-           expr(lazy({__MODULE__, :hash_or_raise, [strategy.hash_provider, value]}))
+           {:atomic, expr(lazy({__MODULE__, :hash_or_raise, [strategy.hash_provider, value]}))}
        }}
     else
       _ ->
