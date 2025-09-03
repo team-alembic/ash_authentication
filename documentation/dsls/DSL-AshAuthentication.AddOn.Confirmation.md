@@ -135,7 +135,7 @@ User confirmation flow
 | [`confirm_on_update?`](#authentication-add_ons-confirmation-confirm_on_update?){: #authentication-add_ons-confirmation-confirm_on_update? } | `boolean` | `true` | Generate and send a confirmation token when a resource is changed.  Triggers when an update action is executed _and_ one of the monitored fields is being set. |
 | [`inhibit_updates?`](#authentication-add_ons-confirmation-inhibit_updates?){: #authentication-add_ons-confirmation-inhibit_updates? } | `boolean` | `true` | Whether or not to wait until confirmation is received before actually changing a monitored field. See [the confirmation guide](/documentation/topics/confirmation.md) for more. |
 | [`auto_confirm_actions`](#authentication-add_ons-confirmation-auto_confirm_actions){: #authentication-add_ons-confirmation-auto_confirm_actions } | `list(atom)` |  | A list of actions that should set confirmed_at to `true` automatically. For example, you would likely want to place `:sign_in_with_magic_link` in this list if using magic link. |
-| [`confirm_action_name`](#authentication-add_ons-confirmation-confirm_action_name){: #authentication-add_ons-confirmation-confirm_action_name } | `atom` |  | The name of the action to use when performing confirmation. Will be created if it does not already exist. Defaults to confirm_<String.trim_leading(strategy_name, "confirm")> |
+| [`confirm_action_name`](#authentication-add_ons-confirmation-confirm_action_name){: #authentication-add_ons-confirmation-confirm_action_name } | `atom` |  | The name of the action to use when performing confirmation. Will be created if it does not already exist. Defaults to `:confirm` if the add-on name is `:confirm`, otherwise `confirm_<String.trim_leading(strategy_name, "confirm_")>` |
 
 
 
