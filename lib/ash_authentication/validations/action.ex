@@ -2,6 +2,8 @@ defmodule AshAuthentication.Validations.Action do
   @moduledoc """
   Validation helpers for Resource actions.
   """
+  @behaviour AshAuthentication.Validations.ActionValidators
+
   import AshAuthentication.Utils
   alias Ash.Resource.{Actions, Info}
   alias Spark.Error.DslError

@@ -2,6 +2,7 @@ spark_locals_without_parens = [
   access_token_attribute_name: 1,
   access_token_expires_at_attribute_name: 1,
   action_name: 1,
+  action_validators: 1,
   api_key: 0,
   api_key: 1,
   api_key: 2,

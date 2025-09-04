@@ -9,6 +9,7 @@ defmodule AshAuthentication.Dsl do
   import Joken.Signer, only: [algorithms: 0]
 
   alias Ash.{Domain, Resource}
+  alias AshAuthentication.Validators.ActionValidators
 
   @default_token_lifetime_days 14
 
@@ -94,6 +95,12 @@ defmodule AshAuthentication.Dsl do
             type: {:list, :atom},
             doc:
               "A list of fields that we will ensure are selected whenever a sender will be invoked.  Defaults to `[:email]` if there is an `:email` attribute on the resource, and `[]` otherwise."
+          ],
+          action_validators: [
+            type: {:behaviour, ActionValidators},
+            doc:
+              "A module that implements the `ActionValidators` behaviour. Defaults to `AshAuthentication.Validators.Action`.",
+            default: AshAuthentication.Validations.Action
           ]
         ],
         sections: [

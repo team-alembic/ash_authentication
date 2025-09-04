@@ -11,7 +11,6 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
 
   @doc false
@@ -261,20 +260,41 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   end
 
   defp validate_upsert_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
-         :ok <- validate_action_argument_option(action, :user_info, :type, [:map, Type.Map]),
-         :ok <- validate_action_argument_option(action, :user_info, :allow_nil?, [false]),
-         :ok <- validate_action_argument_option(action, :oauth_tokens, :type, [:map, Type.Map]),
-         :ok <- validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [false]),
-         :ok <- validate_action_has_change(action, UserIdentity.UpsertIdentityChange),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :user_info, :type, [
+             :map,
+             Type.Map
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :user_info, :allow_nil?, [
+             false
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :oauth_tokens, :type, [
+             :map,
+             Type.Map
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [
+             false
+           ]),
+         :ok <-
+           action_validator.validate_action_has_change(action, UserIdentity.UpsertIdentityChange),
          :ok <- validate_field_in_values(action, :type, [:create]),
          :ok <- validate_field_in_values(action, :upsert?, [true]),
          {:ok, user_id} <-
            UserIdentity.Info.user_identity_user_id_attribute_name(dsl_state),
          {:ok, user_resource} <- UserIdentity.Info.user_identity_user_resource(dsl_state),
          {:ok, user_resource_id} <- find_pk(user_resource),
-         :ok <- validate_action_argument_option(action, user_id, :type, [user_resource_id.type]),
-         :ok <- validate_action_argument_option(action, user_id, :allow_nil?, [false]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, user_id, :type, [
+             user_resource_id.type
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, user_id, :allow_nil?, [false]),
          {:ok, uid} <- UserIdentity.Info.user_identity_uid_attribute_name(dsl_state),
          {:ok, strategy} <-
            UserIdentity.Info.user_identity_strategy_attribute_name(dsl_state),
@@ -305,7 +325,9 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   end
 
   defp validate_destroy_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
          :ok <- validate_field_in_values(action, :type, [:destroy]),
          :ok <- validate_field_in_values(action, :primary?, [true]) do
       :ok
@@ -319,7 +341,9 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   end
 
   defp validate_read_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
          :ok <- validate_field_in_values(action, :type, [:read]),
          :ok <- validate_field_in_values(action, :primary?, [true]) do
       :ok

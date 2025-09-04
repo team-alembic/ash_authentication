@@ -12,7 +12,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
   import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
 
   @doc false
   @spec transform(OAuth2.t(), map) :: {:ok, OAuth2.t() | map} | {:error, Exception.t()}
@@ -76,14 +75,30 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
   end
 
   defp maybe_validate_register_action(dsl_state, strategy) when strategy.registration_enabled? do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.register_action_name),
-         :ok <- validate_action_has_argument(action, :user_info),
-         :ok <- validate_action_argument_option(action, :user_info, :type, [Type.Map, :map]),
-         :ok <- validate_action_argument_option(action, :user_info, :allow_nil?, [false]),
-         :ok <- validate_action_has_argument(action, :oauth_tokens),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.register_action_name),
+         :ok <- action_validator.validate_action_has_argument(action, :user_info),
          :ok <-
-           validate_action_argument_option(action, :oauth_tokens, :type, [Type.Map, :map]),
-         :ok <- validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [false]),
+           action_validator.validate_action_argument_option(action, :user_info, :type, [
+             Type.Map,
+             :map
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :user_info, :allow_nil?, [
+             false
+           ]),
+         :ok <- action_validator.validate_action_has_argument(action, :oauth_tokens),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :oauth_tokens, :type, [
+             Type.Map,
+             :map
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [
+             false
+           ]),
          :ok <- maybe_validate_action_has_token_change(dsl_state, action),
          :ok <- validate_field_in_values(action, :upsert?, [true]),
          :ok <-
@@ -93,7 +108,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
              &(is_atom(&1) and not is_falsy(&1)),
              "Expected `upsert_identity` to be set"
            ),
-         :ok <- maybe_validate_action_has_identity_change(action, strategy) do
+         :ok <- maybe_validate_action_has_identity_change(dsl_state, action, strategy) do
       :ok
     else
       {:error, reason} when is_binary(reason) ->
@@ -108,32 +123,51 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
 
   defp maybe_validate_action_has_token_change(dsl_state, action) do
     if Info.authentication_tokens_enabled?(dsl_state) do
-      validate_action_has_change(action, GenerateTokenChange)
+      action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+      action_validator.validate_action_has_change(action, GenerateTokenChange)
     else
       :ok
     end
   end
 
-  defp maybe_validate_action_has_identity_change(_action, strategy)
+  defp maybe_validate_action_has_identity_change(_dsl_state, _action, strategy)
        when is_falsy(strategy.identity_resource),
        do: :ok
 
-  defp maybe_validate_action_has_identity_change(action, _strategy),
-    do: validate_action_has_change(action, OAuth2.IdentityChange)
+  defp maybe_validate_action_has_identity_change(dsl_state, action, _strategy) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+    action_validator.validate_action_has_change(action, OAuth2.IdentityChange)
+  end
 
   defp maybe_validate_sign_in_action(_dsl_state, strategy) when strategy.registration_enabled?,
     do: :ok
 
   defp maybe_validate_sign_in_action(dsl_state, strategy) do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
-         :ok <- validate_action_has_argument(action, :user_info),
-         :ok <- validate_action_argument_option(action, :user_info, :type, [Ash.Type.Map, :map]),
-         :ok <- validate_action_argument_option(action, :user_info, :allow_nil?, [false]),
-         :ok <- validate_action_has_argument(action, :oauth_tokens),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.sign_in_action_name),
+         :ok <- action_validator.validate_action_has_argument(action, :user_info),
          :ok <-
-           validate_action_argument_option(action, :oauth_tokens, :type, [Ash.Type.Map, :map]),
-         :ok <- validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [false]),
-         :ok <- validate_action_has_preparation(action, OAuth2.SignInPreparation) do
+           action_validator.validate_action_argument_option(action, :user_info, :type, [
+             Ash.Type.Map,
+             :map
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :user_info, :allow_nil?, [
+             false
+           ]),
+         :ok <- action_validator.validate_action_has_argument(action, :oauth_tokens),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :oauth_tokens, :type, [
+             Ash.Type.Map,
+             :map
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [
+             false
+           ]),
+         :ok <- action_validator.validate_action_has_preparation(action, OAuth2.SignInPreparation) do
       :ok
     else
       {:error, reason} -> {:error, reason}

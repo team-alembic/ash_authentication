@@ -8,7 +8,6 @@ defmodule AshAuthentication.TokenResource.Verifier do
   require Logger
   alias Spark.{Dsl.Verifier, Error.DslError}
   import AshAuthentication.Utils
-  import AshAuthentication.Validations.Action
 
   @doc false
   @impl true
@@ -25,7 +24,9 @@ defmodule AshAuthentication.TokenResource.Verifier do
         :ok
 
       action_name ->
-        case validate_action_exists(dsl_state, action_name) do
+        action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+        case action_validator.validate_action_exists(dsl_state, action_name) do
           {:ok, action} -> validate_is_revoked_action(dsl_state, action)
           {:error, _} -> :ok
         end
@@ -34,9 +35,17 @@ defmodule AshAuthentication.TokenResource.Verifier do
 
   defp validate_is_revoked_action(dsl_state, action) do
     if action.type == :action do
-      with :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [true]),
-           :ok <- validate_action_argument_option(action, :token, :allow_nil?, [true]),
-           :ok <- validate_action_option(action, :returns, [:boolean, Ash.Type.Boolean]) do
+      action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+      with :ok <-
+             action_validator.validate_action_argument_option(action, :jti, :allow_nil?, [true]),
+           :ok <-
+             action_validator.validate_action_argument_option(action, :token, :allow_nil?, [true]),
+           :ok <-
+             action_validator.validate_action_option(action, :returns, [
+               :boolean,
+               Ash.Type.Boolean
+             ]) do
         :ok
       else
         {:error, _} ->

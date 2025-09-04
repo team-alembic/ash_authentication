@@ -12,7 +12,6 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
   import AshAuthentication.Strategy.Custom.Helpers
 
   @doc false
@@ -83,20 +82,34 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   end
 
   defp validate_log_out_action(dsl, strategy) do
-    with {:ok, action} <- validate_action_exists(dsl, strategy.action_name),
-         :ok <- validate_action_option(action, :type, [:action]),
-         :ok <- validate_action_option(action, :returns, [nil]),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl, strategy.action_name),
+         :ok <- action_validator.validate_action_option(action, :type, [:action]),
+         :ok <- action_validator.validate_action_option(action, :returns, [nil]),
          :ok <-
-           validate_action_option(action, :run, [
+           action_validator.validate_action_option(action, :run, [
              LogOutEverywhere.Action,
              {LogOutEverywhere.Action, []}
            ]),
-         :ok <- validate_action_has_argument(action, strategy.argument_name),
+         :ok <- action_validator.validate_action_has_argument(action, strategy.argument_name),
          :ok <-
-           validate_action_argument_option(action, strategy.argument_name, :type, [
-             Ash.Type.Struct
-           ]) do
-      validate_action_argument_option(action, strategy.argument_name, :allow_nil?, [false])
+           action_validator.validate_action_argument_option(
+             action,
+             strategy.argument_name,
+             :type,
+             [
+               Ash.Type.Struct
+             ]
+           ) do
+      action_validator.validate_action_argument_option(
+        action,
+        strategy.argument_name,
+        :allow_nil?,
+        [
+          false
+        ]
+      )
     end
   end
 

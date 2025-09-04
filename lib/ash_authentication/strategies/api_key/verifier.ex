@@ -8,7 +8,6 @@ defmodule AshAuthentication.Strategy.ApiKey.Verifier do
   alias Spark.Dsl.Transformer
   alias Spark.Error.DslError
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
 
   @doc false
   @spec verify(ApiKey.t(), map) :: :ok | {:error, Exception.t()}
@@ -107,17 +106,20 @@ defmodule AshAuthentication.Strategy.ApiKey.Verifier do
   end
 
   defp validate_sign_in_action(dsl_state, strategy) do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
-         :ok <- validate_action_has_argument(action, :api_key),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.sign_in_action_name),
+         :ok <- action_validator.validate_action_has_argument(action, :api_key),
          :ok <-
-           validate_action_argument_option(action, :api_key, :type, [
+           action_validator.validate_action_argument_option(action, :api_key, :type, [
              :string,
              Ash.Type.String
            ]),
          :ok <-
-           validate_action_argument_option(action, :api_key, :allow_nil?, [false]),
+           action_validator.validate_action_argument_option(action, :api_key, :allow_nil?, [false]),
          :ok <- validate_field_in_values(action, :type, [:read]) do
-      validate_action_has_preparation(action, ApiKey.SignInPreparation)
+      action_validator.validate_action_has_preparation(action, ApiKey.SignInPreparation)
     else
       {:error, message} when is_binary(message) ->
         {:error,

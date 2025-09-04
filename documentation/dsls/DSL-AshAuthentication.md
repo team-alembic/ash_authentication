@@ -125,6 +125,7 @@ Configure authentication for this resource
 | [`domain`](#authentication-domain){: #authentication-domain } | `module` |  | The name of the Ash domain to use to access this resource when doing anything authentication related. |
 | [`get_by_subject_action_name`](#authentication-get_by_subject_action_name){: #authentication-get_by_subject_action_name } | `atom` | `:get_by_subject` | The name of the read action used to retrieve records. If the action doesn't exist, one will be generated for you. |
 | [`select_for_senders`](#authentication-select_for_senders){: #authentication-select_for_senders } | `list(atom)` |  | A list of fields that we will ensure are selected whenever a sender will be invoked.  Defaults to `[:email]` if there is an `:email` attribute on the resource, and `[]` otherwise. |
+| [`action_validators`](#authentication-action_validators){: #authentication-action_validators } | `module` | `AshAuthentication.Validations.Action` | A module that implements the `ActionValidators` behaviour. Defaults to `AshAuthentication.Validators.Action`. |
 
 
 ### authentication.tokens
