@@ -124,6 +124,7 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,
     AshAuthentication.Strategy.Password,
+    AshAuthentication.Strategy.RememberMe,
     AshAuthentication.Strategy.Slack
   ]
 

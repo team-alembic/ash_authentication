@@ -4,7 +4,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
 
   alias Ash.{PlugHelpers, Resource}
-  alias AshAuthentication.{Info, Jwt, TokenResource}
+  alias AshAuthentication.{Info, Jwt, Strategy.RememberMe.Plug.Helpers, TokenResource}
   alias Plug.Conn
 
   @doc """
@@ -15,7 +15,7 @@ defmodule AshAuthentication.Plug.Helpers do
     subject_name = Info.authentication_subject_name!(user.__struct__)
 
     if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
-      Conn.put_session(conn, "#{subject_name}_token", user.__metadata__.token)
+      Conn.put_session(conn, session_key(subject_name), user.__metadata__.token)
     else
       if Info.authentication_session_identifier!(user.__struct__) == :jti do
         {:ok, %{"sub" => subject, "jti" => jti}} = Jwt.peek(user.__metadata__.token)
@@ -61,6 +61,47 @@ defmodule AshAuthentication.Plug.Helpers do
   end
 
   @doc """
+  Attempts to sign in all authenticated resources for the specificed otp_app 
+  using the RememberMe strategy if not already signed in. You can limited it to
+  specific strategies using the `strategy` opt.
+
+  Opts are forwarded to `AshAuthentication.Strategies.RememberMe.Plug.sign_in_resource_with_remember_me/3`
+  """
+  @spec sign_in_using_remember_me(Conn.t(), module, keyword) :: Conn.t()
+  def sign_in_using_remember_me(conn, otp_app, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
+    otp_app
+    |> AshAuthentication.authenticated_resources()
+    |> Stream.map(&{&1, Info.authentication_options(&1)})
+    |> Enum.reduce(conn, fn {resource, options}, conn ->
+      session_key = session_key(options.subject_name)
+
+      if Conn.get_session(conn, session_key) do
+        # Already signed in
+        conn
+      else
+        attempt_sign_in_resource_with_remember_me(conn, resource, opts)
+      end
+    end)
+  end
+
+  @doc false
+  @spec attempt_sign_in_resource_with_remember_me(Conn.t(), Resource.t(), Keyword.t()) :: Conn.t()
+  defp attempt_sign_in_resource_with_remember_me(conn, resource, opts) do
+    case Helpers.sign_in_resource_with_remember_me(conn, resource, opts) do
+      {conn, user} ->
+        store_in_session(conn, user)
+
+      conn ->
+        conn
+    end
+  end
+
+  @doc """
   Attempt to retrieve all users from the connections' session.
 
   Iterates through all configured authentication resources for `otp_app` and
@@ -86,7 +127,7 @@ defmodule AshAuthentication.Plug.Helpers do
       {resource, options, true}, conn ->
         current_subject_name = current_subject_name(options.subject_name)
         token_resource = Info.authentication_tokens_token_resource!(resource)
-        session_key = "#{options.subject_name}_token"
+        session_key = session_key(options.subject_name)
 
         with token when is_binary(token) <-
                Conn.get_session(conn, session_key),
@@ -159,7 +200,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
         assign_new.(socket, current_subject_name, fn ->
           with token when is_binary(token) <-
-                 Map.get(session, "#{options.subject_name}_token"),
+                 Map.get(session, session_key(options.subject_name)),
                {:ok, %{"sub" => subject} = claims, _}
                when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
                {:ok, user} <-
@@ -434,6 +475,8 @@ defmodule AshAuthentication.Plug.Helpers do
   # sobelow_skip ["DOS.StringToAtom"]
   defp current_subject_token_record_name(subject_name) when is_atom(subject_name),
     do: String.to_atom("current_#{subject_name}_token_record")
+
+  defp session_key(subject_name), do: "#{subject_name}_token"
 
   defp split_identifier(subject, resource) do
     if Info.authentication_session_identifier!(resource) == :jti do
