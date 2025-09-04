@@ -40,7 +40,9 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
   end
 
   defp after_action(_query, [user], %{sender: {sender, send_opts}} = strategy, _identity, context) do
-    case MagicLink.request_token_for(strategy, user, [], context) do
+    context_opts = Ash.Context.to_opts(context)
+
+    case MagicLink.request_token_for(strategy, user, context_opts, context) do
       {:ok, token} -> sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant))
       _ -> nil
     end
@@ -56,7 +58,9 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
          context
        )
        when not is_nil(identity) do
-    case MagicLink.request_token_for_identity(strategy, identity, [], context) do
+    context_opts = Ash.Context.to_opts(context)
+
+    case MagicLink.request_token_for_identity(strategy, identity, context_opts, context) do
       {:ok, token} ->
         sender.send(to_string(identity), token, Keyword.put(send_opts, :tenant, context.tenant))
 
