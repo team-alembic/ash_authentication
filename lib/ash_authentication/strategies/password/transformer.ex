@@ -12,7 +12,6 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
 
   @doc false
@@ -199,17 +198,22 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
 
   defp validate_register_action(dsl_state, strategy)
        when strategy.registration_enabled? == true do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.register_action_name),
-         :ok <- validate_password_argument(action, strategy.password_field, true),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.register_action_name),
+         :ok <- validate_password_argument(dsl_state, action, strategy.password_field, true),
          :ok <-
            validate_password_argument(
+             dsl_state,
              action,
              strategy.password_confirmation_field,
              strategy.confirmation_required?
            ),
-         :ok <- validate_action_has_change(action, Password.HashPasswordChange),
-         :ok <- validate_action_has_change(action, GenerateTokenChange) do
+         :ok <- action_validator.validate_action_has_change(action, Password.HashPasswordChange),
+         :ok <- action_validator.validate_action_has_change(action, GenerateTokenChange) do
       validate_action_has_validation(
+        dsl_state,
         action,
         Password.PasswordConfirmationValidation,
         strategy.confirmation_required?
@@ -219,18 +223,28 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
 
   defp validate_register_action(_dsl_state, _strategy), do: :ok
 
-  defp validate_password_argument(action, field, true) do
-    with :ok <- validate_action_argument_option(action, field, :type, [Ash.Type.String]) do
-      validate_action_argument_option(action, field, :sensitive?, [true])
+  defp validate_password_argument(dsl_state, action, field, true) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with :ok <-
+           action_validator.validate_action_argument_option(action, field, :type, [
+             Ash.Type.String
+           ]) do
+      action_validator.validate_action_argument_option(action, field, :sensitive?, [true])
     end
   end
 
-  defp validate_password_argument(_action, _field, _), do: :ok
+  defp validate_password_argument(_dsl_state, _action, _field, _), do: :ok
 
-  defp validate_action_has_validation(action, validation, true),
-    do: validate_action_has_validation(action, validation)
+  defp validate_action_has_validation(dsl_state, action, validation) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+    action_validator.validate_action_has_validation(action, validation)
+  end
 
-  defp validate_action_has_validation(_action, _validation, _), do: :ok
+  defp validate_action_has_validation(dsl_state, action, validation, true),
+    do: validate_action_has_validation(dsl_state, action, validation)
+
+  defp validate_action_has_validation(_dsl_state, _action, _validation, _), do: :ok
 
   defp build_sign_in_action(dsl_state, strategy) do
     identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
@@ -282,18 +296,25 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   end
 
   defp validate_sign_in_action(dsl_state, strategy) when strategy.sign_in_enabled? == true do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.sign_in_action_name),
          :ok <- validate_identity_argument(dsl_state, action, strategy.identity_field),
-         :ok <- validate_password_argument(action, strategy.password_field, true) do
-      validate_action_has_preparation(action, Password.SignInPreparation)
+         :ok <- validate_password_argument(dsl_state, action, strategy.password_field, true) do
+      action_validator.validate_action_has_preparation(action, Password.SignInPreparation)
     end
   end
 
   defp validate_sign_in_action(_dsl_state, _strategy), do: :ok
 
   defp validate_identity_argument(dsl_state, action, identity_field) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
     identity_attribute = Ash.Resource.Info.attribute(dsl_state, identity_field)
-    validate_action_argument_option(action, identity_field, :type, [identity_attribute.type])
+
+    action_validator.validate_action_argument_option(action, identity_field, :type, [
+      identity_attribute.type
+    ])
   end
 
   defp build_sign_in_with_token_action(_dsl_state, strategy) do
@@ -334,20 +355,34 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
 
   defp validate_sign_in_with_token_action(dsl_state, strategy)
        when strategy.sign_in_tokens_enabled? == true do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with {:ok, action} <-
-           validate_action_exists(dsl_state, strategy.sign_in_with_token_action_name),
-         :ok <- validate_token_argument(action) do
-      validate_action_has_preparation(action, Password.SignInWithTokenPreparation)
+           action_validator.validate_action_exists(
+             dsl_state,
+             strategy.sign_in_with_token_action_name
+           ),
+         :ok <- validate_token_argument(dsl_state, action) do
+      action_validator.validate_action_has_preparation(
+        action,
+        Password.SignInWithTokenPreparation
+      )
     end
   end
 
   defp validate_sign_in_with_token_action(_dsl_state, _strategy), do: :ok
 
-  defp validate_token_argument(action) do
+  defp validate_token_argument(dsl_state, action) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with :ok <-
-           validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_argument_option(action, :token, :allow_nil?, [false]) do
-      validate_action_argument_option(action, :token, :sensitive?, [true])
+           action_validator.validate_action_argument_option(action, :token, :type, [
+             Ash.Type.String,
+             :string
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :token, :allow_nil?, [false]) do
+      action_validator.validate_action_argument_option(action, :token, :sensitive?, [true])
     end
   end
 
@@ -424,11 +459,19 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   end
 
   defp validate_reset_request_action(dsl_state, resettable, strategy) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with {:ok, action} <-
-           validate_action_exists(dsl_state, resettable.request_password_reset_action_name),
+           action_validator.validate_action_exists(
+             dsl_state,
+             resettable.request_password_reset_action_name
+           ),
          :ok <- validate_identity_argument(dsl_state, action, strategy.identity_field) do
       if action.type == :read do
-        validate_action_has_preparation(action, Password.RequestPasswordResetPreparation)
+        action_validator.validate_action_has_preparation(
+          action,
+          Password.RequestPasswordResetPreparation
+        )
       else
         :ok
       end
@@ -510,24 +553,31 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   end
 
   defp validate_reset_action(dsl_state, resettable, strategy) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with {:ok, action} <-
-           validate_action_exists(dsl_state, resettable.password_reset_action_name),
-         :ok <- validate_action_has_validation(action, Password.ResetTokenValidation),
-         :ok <- validate_action_has_change(action, Password.HashPasswordChange),
-         :ok <- validate_password_argument(action, strategy.password_field, true),
+           action_validator.validate_action_exists(
+             dsl_state,
+             resettable.password_reset_action_name
+           ),
+         :ok <- validate_action_has_validation(dsl_state, action, Password.ResetTokenValidation),
+         :ok <- action_validator.validate_action_has_change(action, Password.HashPasswordChange),
+         :ok <- validate_password_argument(dsl_state, action, strategy.password_field, true),
          :ok <-
            validate_password_argument(
+             dsl_state,
              action,
              strategy.password_confirmation_field,
              strategy.confirmation_required?
            ),
          :ok <-
            validate_action_has_validation(
+             dsl_state,
              action,
              Password.PasswordConfirmationValidation,
              strategy.confirmation_required?
            ) do
-      validate_action_has_change(action, GenerateTokenChange)
+      action_validator.validate_action_has_change(action, GenerateTokenChange)
     end
   end
 end

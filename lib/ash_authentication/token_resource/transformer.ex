@@ -14,7 +14,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
 
   import AshAuthentication.Utils
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
 
   @doc false
@@ -264,16 +263,31 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_get_token_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
          :ok <-
-           validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_argument_option(action, :token, :allow_nil?, [true]),
-         :ok <- validate_action_argument_option(action, :token, :sensitive?, [true]),
-         :ok <- validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [true]),
+           action_validator.validate_action_argument_option(action, :token, :type, [
+             Ash.Type.String,
+             :string
+           ]),
          :ok <-
-           validate_action_argument_option(action, :purpose, :type, [Ash.Type.String, :string]) do
-      validate_action_has_preparation(action, TokenResource.GetTokenPreparation)
+           action_validator.validate_action_argument_option(action, :token, :allow_nil?, [true]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :token, :sensitive?, [true]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :jti, :type, [
+             Ash.Type.String,
+             :string
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :jti, :allow_nil?, [true]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :purpose, :type, [
+             Ash.Type.String,
+             :string
+           ]) do
+      action_validator.validate_action_has_preparation(action, TokenResource.GetTokenPreparation)
     end
   end
 
@@ -311,9 +325,11 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_store_token_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
-         :ok <- validate_token_argument(action) do
-      validate_action_has_change(action, TokenResource.StoreTokenChange)
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
+         :ok <- validate_token_argument(dsl_state, action) do
+      action_validator.validate_action_has_change(action, TokenResource.StoreTokenChange)
     end
   end
 
@@ -366,9 +382,14 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_store_confirmation_changes_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
-         :ok <- validate_token_argument(action) do
-      validate_action_has_change(action, TokenResource.StoreConfirmationChangesChange)
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
+         :ok <- validate_token_argument(dsl_state, action) do
+      action_validator.validate_action_has_change(
+        action,
+        TokenResource.StoreConfirmationChangesChange
+      )
     end
   end
 
@@ -397,10 +418,16 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_get_confirmation_changes_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
-         :ok <- validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
          :ok <-
-           validate_action_has_preparation(
+           action_validator.validate_action_argument_option(action, :jti, :type, [
+             Ash.Type.String,
+             :string
+           ]),
+         :ok <-
+           action_validator.validate_action_has_preparation(
              action,
              TokenResource.GetConfirmationChangesPreparation
            ) do
@@ -423,25 +450,44 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_read_expired_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name) do
       validate_field_in_values(action, :type, [:read])
     end
   end
 
   defp validate_is_revoked_action(dsl_state, action_name) do
-    case validate_action_exists(dsl_state, action_name) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    case action_validator.validate_action_exists(dsl_state, action_name) do
       {:ok, %{type: :read} = action} ->
         with :ok <-
-               validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
+               action_validator.validate_action_argument_option(action, :token, :type, [
+                 Ash.Type.String,
+                 :string
+               ]),
              :ok <-
-               validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]) do
-          validate_action_has_preparation(action, TokenResource.IsRevokedPreparation)
+               action_validator.validate_action_argument_option(action, :jti, :type, [
+                 Ash.Type.String,
+                 :string
+               ]) do
+          action_validator.validate_action_has_preparation(
+            action,
+            TokenResource.IsRevokedPreparation
+          )
         end
 
       {:ok, %{type: :action} = action} ->
         with :ok <-
-               validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]) do
-          validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string])
+               action_validator.validate_action_argument_option(action, :token, :type, [
+                 Ash.Type.String,
+                 :string
+               ]) do
+          action_validator.validate_action_argument_option(action, :jti, :type, [
+            Ash.Type.String,
+            :string
+          ])
         end
 
       {:ok, _} ->
@@ -487,34 +533,55 @@ defmodule AshAuthentication.TokenResource.Transformer do
     )
   end
 
-  defp validate_subject_argument(action) do
+  defp validate_subject_argument(dsl_state, action) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with :ok <-
-           validate_action_argument_option(action, :subject, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_argument_option(action, :subject, :allow_nil?, [false]) do
-      validate_action_argument_option(action, :subject, :sensitive?, [true])
+           action_validator.validate_action_argument_option(action, :subject, :type, [
+             Ash.Type.String,
+             :string
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :subject, :allow_nil?, [false]) do
+      action_validator.validate_action_argument_option(action, :subject, :sensitive?, [true])
     end
   end
 
-  defp validate_token_argument(action) do
+  defp validate_token_argument(dsl_state, action) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with :ok <-
-           validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_argument_option(action, :token, :allow_nil?, [false]) do
-      validate_action_argument_option(action, :token, :sensitive?, [true])
+           action_validator.validate_action_argument_option(action, :token, :type, [
+             Ash.Type.String,
+             :string
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :token, :allow_nil?, [false]) do
+      action_validator.validate_action_argument_option(action, :token, :sensitive?, [true])
     end
   end
 
-  defp validate_jti_argument(action) do
+  defp validate_jti_argument(dsl_state, action) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with :ok <-
-           validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]),
-         :ok <- validate_action_argument_option(action, :jti, :allow_nil?, [false]) do
-      validate_action_argument_option(action, :jti, :sensitive?, [true])
+           action_validator.validate_action_argument_option(action, :jti, :type, [
+             Ash.Type.String,
+             :string
+           ]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :jti, :allow_nil?, [false]) do
+      action_validator.validate_action_argument_option(action, :jti, :sensitive?, [true])
     end
   end
 
   defp validate_revoke_token_action(dsl_state, revoke_token_action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, revoke_token_action_name),
-         :ok <- validate_token_argument(action) do
-      validate_action_has_change(action, TokenResource.RevokeTokenChange)
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, revoke_token_action_name),
+         :ok <- validate_token_argument(dsl_state, action) do
+      action_validator.validate_action_has_change(action, TokenResource.RevokeTokenChange)
     end
   end
 
@@ -544,10 +611,13 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_revoke_jti_action(dsl_state, revoke_jti_action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, revoke_jti_action_name),
-         :ok <- validate_jti_argument(action),
-         :ok <- validate_subject_argument(action) do
-      validate_action_has_change(action, TokenResource.RevokeJtiChange)
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, revoke_jti_action_name),
+         :ok <- validate_jti_argument(dsl_state, action),
+         :ok <- validate_subject_argument(dsl_state, action) do
+      action_validator.validate_action_has_change(action, TokenResource.RevokeJtiChange)
     end
   end
 
@@ -586,10 +656,18 @@ defmodule AshAuthentication.TokenResource.Transformer do
          dsl_state,
          revoke_all_stored_for_subject_action_name
        ) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
     with {:ok, action} <-
-           validate_action_exists(dsl_state, revoke_all_stored_for_subject_action_name),
-         :ok <- validate_subject_argument(action) do
-      validate_action_has_change(action, TokenResource.RevokeAllStoredForSubjectChange)
+           action_validator.validate_action_exists(
+             dsl_state,
+             revoke_all_stored_for_subject_action_name
+           ),
+         :ok <- validate_subject_argument(dsl_state, action) do
+      action_validator.validate_action_has_change(
+        action,
+        TokenResource.RevokeAllStoredForSubjectChange
+      )
     end
   end
 
@@ -618,7 +696,9 @@ defmodule AshAuthentication.TokenResource.Transformer do
   end
 
   defp validate_expunge_expired_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name) do
       validate_field_in_values(action, :type, [:destroy])
     end
   end

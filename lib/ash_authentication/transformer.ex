@@ -12,7 +12,6 @@ defmodule AshAuthentication.Transformer do
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
 
   @doc false
   @impl true
@@ -120,7 +119,9 @@ defmodule AshAuthentication.Transformer do
     do: String.to_atom("current_#{subject_name}")
 
   defp validate_read_action(dsl_state, action_name) do
-    with {:ok, action} <- validate_action_exists(dsl_state, action_name),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <- action_validator.validate_action_exists(dsl_state, action_name),
          :ok <- validate_field_in_values(action, :type, [:read]) do
       :ok
     else

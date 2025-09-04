@@ -6,7 +6,6 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
   alias AshAuthentication.{Strategy.MagicLink}
   alias Spark.Error.DslError
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
 
   @doc false
@@ -32,39 +31,54 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
   end
 
   defp validate_request_action(dsl_state, strategy, identity_attribute) do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.request_action_name),
-         :ok <- validate_action_has_argument(action, strategy.identity_field),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.request_action_name),
+         :ok <- action_validator.validate_action_has_argument(action, strategy.identity_field),
          :ok <-
-           validate_action_argument_option(
+           action_validator.validate_action_argument_option(
              action,
              strategy.identity_field,
              :type,
              [identity_attribute.type]
            ),
          :ok <-
-           validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [
-             false
-           ]),
+           action_validator.validate_action_argument_option(
+             action,
+             strategy.identity_field,
+             :allow_nil?,
+             [
+               false
+             ]
+           ),
          :ok <- validate_field_in_values(action, :type, [:read, :action]) do
       case action.type do
         :read ->
-          validate_action_has_preparation(action, MagicLink.RequestPreparation)
+          action_validator.validate_action_has_preparation(action, MagicLink.RequestPreparation)
 
         _ ->
-          with {:ok, action} <- validate_action_exists(dsl_state, strategy.lookup_action_name),
-               :ok <- validate_action_has_argument(action, identity_attribute.name),
+          with {:ok, action} <-
+                 action_validator.validate_action_exists(dsl_state, strategy.lookup_action_name),
                :ok <-
-                 validate_action_argument_option(
+                 action_validator.validate_action_has_argument(action, identity_attribute.name),
+               :ok <-
+                 action_validator.validate_action_argument_option(
                    action,
                    strategy.identity_field,
                    :type,
                    [identity_attribute.type]
                  ),
                :ok <-
-                 validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [
-                   false
-                 ]),
-               :ok <- validate_action_option(action, :get?, [true]) do
+                 action_validator.validate_action_argument_option(
+                   action,
+                   strategy.identity_field,
+                   :allow_nil?,
+                   [
+                     false
+                   ]
+                 ),
+               :ok <- action_validator.validate_action_option(action, :get?, [true]) do
             :ok
           else
             {:error, error} ->
@@ -85,21 +99,34 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
   end
 
   defp validate_sign_in_action(dsl_state, strategy) do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.sign_in_action_name),
          :ok <- validate_sign_in_action_type(action, strategy),
-         :ok <- validate_action_has_argument(action, strategy.token_param_name),
+         :ok <- action_validator.validate_action_has_argument(action, strategy.token_param_name),
          :ok <-
-           validate_action_argument_option(action, strategy.token_param_name, :type, [
-             :string,
-             Ash.Type.String
-           ]),
+           action_validator.validate_action_argument_option(
+             action,
+             strategy.token_param_name,
+             :type,
+             [
+               :string,
+               Ash.Type.String
+             ]
+           ),
          :ok <-
-           validate_action_argument_option(action, strategy.token_param_name, :allow_nil?, [false]),
+           action_validator.validate_action_argument_option(
+             action,
+             strategy.token_param_name,
+             :allow_nil?,
+             [false]
+           ),
          :ok <- validate_field_in_values(action, :type, [:read, :create]) do
       if action.type == :read do
-        validate_action_has_preparation(action, MagicLink.SignInPreparation)
+        action_validator.validate_action_has_preparation(action, MagicLink.SignInPreparation)
       else
-        validate_action_has_change(action, MagicLink.SignInChange)
+        action_validator.validate_action_has_change(action, MagicLink.SignInChange)
       end
     else
       {:error, message} when is_binary(message) ->
@@ -126,11 +153,11 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
     message =
       if enabled? do
         """
-        When registration is not enabled for magic link authentication, 
-        the action: #{inspect(resource)}.#{name} must be a :create action. 
+        When registration is not enabled for magic link authentication,
+        the action: #{inspect(resource)}.#{name} must be a :create action.
         Got an action of type: #{inspect(type)}.
 
-        You can either remove the action definition to use the default one, 
+        You can either remove the action definition to use the default one,
         or replace it with an action like this:
 
             create :#{name} do
@@ -155,11 +182,11 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
         """
       else
         """
-        When registration is not enabled for magic link authentication, 
-        the action: #{inspect(resource)}.#{name} must be a :read action. 
+        When registration is not enabled for magic link authentication,
+        the action: #{inspect(resource)}.#{name} must be a :read action.
         Got an action of type: #{inspect(type)}.
 
-        You can either remove the action definition to use the default one, 
+        You can either remove the action definition to use the default one,
         or replace it with an action like this:
 
             read :#{name} do

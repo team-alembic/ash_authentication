@@ -5,13 +5,11 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   Ensures that there is only ever one present and that it is correctly
   configured.
   """
-
   alias Ash.{Resource, Type}
   alias AshAuthentication.{AddOn.Confirmation, GenerateTokenChange}
   alias Spark.{Dsl.Transformer, Error.DslError}
   import AshAuthentication.Utils
   import AshAuthentication.Validations
-  import AshAuthentication.Validations.Action
   import AshAuthentication.Validations.Attribute
   import AshAuthentication.Strategy.Custom.Helpers
 
@@ -172,11 +170,16 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
   end
 
   defp validate_confirm_action(dsl_state, strategy) do
-    with {:ok, action} <- validate_action_exists(dsl_state, strategy.confirm_action_name),
-         :ok <- validate_action_has_change(action, Confirmation.ConfirmChange),
-         :ok <- validate_action_argument_option(action, :confirm, :allow_nil?, [false]),
-         :ok <- validate_action_argument_option(action, :confirm, :type, [Type.String]),
-         :ok <- validate_action_has_change(action, GenerateTokenChange) do
+    action_validator = AshAuthentication.Info.authentication_action_validators!(dsl_state)
+
+    with {:ok, action} <-
+           action_validator.validate_action_exists(dsl_state, strategy.confirm_action_name),
+         :ok <- action_validator.validate_action_has_change(action, Confirmation.ConfirmChange),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :confirm, :allow_nil?, [false]),
+         :ok <-
+           action_validator.validate_action_argument_option(action, :confirm, :type, [Type.String]),
+         :ok <- action_validator.validate_action_has_change(action, GenerateTokenChange) do
       accept_fields = MapSet.new(action.accept || [])
 
       strategy.monitor_fields
