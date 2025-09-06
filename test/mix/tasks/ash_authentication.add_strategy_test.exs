@@ -410,19 +410,6 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
           data_layer: AshPostgres.DataLayer,
           authorizers: [Ash.Policy.Authorizer]
 
-        actions do
-          defaults([:read, :destroy])
-
-          create :create do
-            primary?(true)
-            accept([:user_id, :expires_at])
-
-            change(
-              {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: :test, hash: :api_key_hash}
-            )
-          end
-        end
-
         attributes do
           uuid_primary_key(:id)
 
@@ -438,6 +425,19 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
 
         relationships do
           belongs_to(:user, Test.Accounts.User)
+        end
+
+        actions do
+          defaults([:read, :destroy])
+
+          create :create do
+            primary?(true)
+            accept([:user_id, :expires_at])
+
+            change(
+              {AshAuthentication.Strategy.ApiKey.GenerateApiKey, prefix: :test, hash: :api_key_hash}
+            )
+          end
         end
 
         postgres do

@@ -165,7 +165,7 @@ In your auth controller, make sure to add a redirect to `https://[auth0_endpoint
   def sign_out(conn, _params) do
 
     conn
-    |> clear_session()
+    |> clear_session(:my_app)
     |> redirect(external: "https://[auth0_endpoint]/v2/logout?client_id=[auth0_client_id]&returnTo=#{AppWeb.Endpoint.url()}")
   end
 ```

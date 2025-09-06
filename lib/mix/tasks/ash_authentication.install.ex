@@ -2,6 +2,7 @@
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshAuthentication.Install do
     @example "mix igniter.install ash_authentication"
+    @example_custom "mix igniter.install ash_authentication --auth-strategy magic_link,password --accounts MyApp.AshAccounts --user MyApp.AshAccounts.User --token MyApp.AshAccounts.Token"
     @shortdoc "Installs AshAuthentication. Invoke with `mix igniter.install ash_authentication`"
 
     @moduledoc """
@@ -9,8 +10,17 @@ if Code.ensure_loaded?(Igniter) do
 
     ## Example
 
+    To install with default settings:
+
     ```bash
     #{@example}
+    ```
+
+    To install with a custom domain and resources:
+
+    ```bash
+    #{@example_custom}
+
     ```
 
     ## Options
@@ -54,6 +64,7 @@ if Code.ensure_loaded?(Igniter) do
         Keyword.put_new_lazy(igniter.args.options, :accounts, fn ->
           Igniter.Project.Module.module_name(igniter, "Accounts")
         end)
+        |> parse_module_option(:accounts)
 
       options =
         options
@@ -63,7 +74,6 @@ if Code.ensure_loaded?(Igniter) do
         |> Keyword.put_new_lazy(:token, fn ->
           Module.concat(options[:accounts], Token)
         end)
-        |> parse_module_option(:accounts)
         |> parse_module_option(:user)
         |> parse_module_option(:token)
 
@@ -220,15 +230,6 @@ if Code.ensure_loaded?(Igniter) do
               authorize_if always()
             end
           )
-          |> Ash.Resource.Igniter.add_policy(
-            user_resource,
-            quote do
-              always()
-            end,
-            quote do
-              forbid_if always()
-            end
-          )
         end
       end)
       |> Spark.Igniter.set_option(user_resource, [:authentication, :tokens, :enabled?], true)
@@ -362,9 +363,6 @@ if Code.ensure_loaded?(Igniter) do
       |> Ash.Resource.Igniter.add_new_attribute(token_resource, :updated_at, """
       update_timestamp :updated_at
       """)
-      # Consider moving to the extension's `install/5` callback, but we need
-      # to only run it if the resource is being created which we can't
-      # currently tell in that callback
       |> Ash.Resource.Igniter.add_new_action(token_resource, :expired, """
       read :expired do
         description "Look up all expired tokens."
@@ -384,16 +382,6 @@ if Code.ensure_loaded?(Igniter) do
             quote do
               description "AshAuthentication can interact with the token resource"
               authorize_if always()
-            end
-          )
-          |> Ash.Resource.Igniter.add_policy(
-            token_resource,
-            quote do
-              always()
-            end,
-            quote do
-              description "No one aside from AshAuthentication can interact with the tokens resource."
-              forbid_if always()
             end
           )
         end

@@ -6,7 +6,7 @@ defmodule AshAuthentication.MixProject do
   Authentication extension for the Ash Framework.
   """
 
-  @version "4.9.4"
+  @version "4.9.9"
 
   def project do
     [
@@ -224,7 +224,7 @@ defmodule AshAuthentication.MixProject do
       {:splode, "~> 0.2"},
       {:simple_sat, "~> 0.1", only: [:dev, :test]},
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
-      {:ash_graphql, "~> 1.7.2", only: [:dev, :test]},
+      {:ash_graphql, "~> 1.8.1", only: [:dev, :test]},
       {:ash_json_api, "~> 1.4.6", only: [:dev, :test]},
       {:ash_postgres, "~> 2.6 and >= 2.6.8", optional: true},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
@@ -234,7 +234,7 @@ defmodule AshAuthentication.MixProject do
       {:ex_doc, "~> 0.37-rc", only: [:dev, :test]},
       {:faker, "~> 0.18.0", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
-      {:mimic, "~> 1.7", only: [:dev, :test]},
+      {:mimic, "~> 2.0", only: [:dev, :test]},
       {:mix_audit, "~> 2.1", only: [:dev, :test]},
       {:plug_cowboy, "~> 2.5", only: [:dev, :test]},
       {:sobelow, "~> 0.12", only: [:dev, :test]}

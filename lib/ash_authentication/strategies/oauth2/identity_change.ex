@@ -40,7 +40,18 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
                "#{user_id_attribute_name}": user.id
              }) do
         user
-        |> Ash.load(strategy.identity_relationship_name, domain: Info.domain!(strategy.resource))
+        |> Ash.load(
+          [
+            {strategy.identity_relationship_name,
+             Ash.Query.new(strategy.identity_resource)
+             |> Ash.Query.set_context(%{
+               private: %{
+                 ash_authentication?: true
+               }
+             })}
+          ],
+          domain: Info.domain!(strategy.resource)
+        )
       else
         {:error, reason} -> {:error, reason}
       end

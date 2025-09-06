@@ -137,6 +137,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     options =
       options
       |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
+      |> Keyword.put_new(:skip_unknown_inputs, [:*])
 
     strategy.resource
     |> Query.new()

@@ -122,6 +122,16 @@ defmodule ExampleMultiTenant.User do
       change(ExampleMultiTenant.GenericOAuth2Change)
       change(AshAuthentication.Strategy.OAuth2.IdentityChange)
     end
+
+    read :sign_in_with_api_key_global do
+      argument :api_key, :string, allow_nil?: false
+      prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+    end
+
+    read :sign_in_with_api_key_tenant do
+      argument :api_key, :string, allow_nil?: false
+      prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+    end
   end
 
   calculations do
@@ -168,7 +178,7 @@ defmodule ExampleMultiTenant.User do
 
     strategies do
       password do
-        register_action_accept [:extra_stuff]
+        register_action_accept [:extra_stuff, :organisation_id]
         sign_in_tokens_enabled? true
         require_confirmed_with nil
 
@@ -254,6 +264,17 @@ defmodule ExampleMultiTenant.User do
         authorization_params scope: "openid profile email"
         identity_resource ExampleMultiTenant.UserIdentity
       end
+
+      api_key :api_key_global do
+        api_key_relationship :valid_api_keys
+        api_key_hash_attribute :api_key_hash
+      end
+
+      api_key :api_key_tenant do
+        api_key_relationship :valid_api_keys
+        api_key_hash_attribute :api_key_hash
+        multitenancy_relationship :organisation
+      end
     end
   end
 
@@ -270,6 +291,14 @@ defmodule ExampleMultiTenant.User do
   relationships do
     belongs_to :organisation, ExampleMultiTenant.Organisation do
       public? true
+    end
+
+    has_many :api_keys, ExampleMultiTenant.ApiKey do
+      public? true
+    end
+
+    has_many :valid_api_keys, ExampleMultiTenant.ApiKey do
+      filter expr(valid)
     end
   end
 

@@ -86,6 +86,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
 
   defp validate_sign_in_action(dsl_state, strategy) do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
+         :ok <- validate_sign_in_action_type(action, strategy),
          :ok <- validate_action_has_argument(action, strategy.token_param_name),
          :ok <-
            validate_action_argument_option(action, strategy.token_param_name, :type, [
@@ -111,6 +112,79 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
       {:error, exception} when is_exception(exception) ->
         {:error, exception}
     end
+  end
+
+  defp validate_sign_in_action_type(%{type: :create}, %{registration_enabled?: true}), do: :ok
+  defp validate_sign_in_action_type(%{type: :read}, %{registration_enabled?: false}), do: :ok
+
+  defp validate_sign_in_action_type(%{type: type, name: name}, %{
+         name: strategy_name,
+         resource: resource,
+         identity_field: identity_field,
+         registration_enabled?: enabled?
+       }) do
+    message =
+      if enabled? do
+        """
+        When registration is not enabled for magic link authentication, 
+        the action: #{inspect(resource)}.#{name} must be a :create action. 
+        Got an action of type: #{inspect(type)}.
+
+        You can either remove the action definition to use the default one, 
+        or replace it with an action like this:
+
+            create :#{name} do
+              description "Sign in or register a user with magic link."
+
+              argument :token, :string do
+                description "The token from the magic link that was sent to the user"
+                allow_nil? false
+              end
+
+              upsert? true
+              upsert_identity :unique_#{identity_field}
+              upsert_fields [:#{identity_field}]
+
+              # Uses the information from the token to create or sign in the user
+              change AshAuthentication.Strategy.MagicLink.SignInChange
+
+              metadata :token, :string do
+                allow_nil? false
+              end
+            end
+        """
+      else
+        """
+        When registration is not enabled for magic link authentication, 
+        the action: #{inspect(resource)}.#{name} must be a :read action. 
+        Got an action of type: #{inspect(type)}.
+
+        You can either remove the action definition to use the default one, 
+        or replace it with an action like this:
+
+            read :#{name} do
+              description "Sign in a user with magic link."
+
+              argument :token, :string do
+                description "The token from the magic link that was sent to the user"
+                allow_nil? false
+              end
+
+              # Uses the information from the token to sign in the user
+              prepare AshAuthentication.Strategy.MagicLink.SignInPreparation
+
+              metadata :token, :string do
+                allow_nil? false
+              end
+            end
+        """
+      end
+
+    {:error,
+     DslError.exception(
+       path: [:authentication, :strategies, strategy_name],
+       message: message
+     )}
   end
 
   defp prevent_hijacking(_dsl_state, %{prevent_hijacking?: false}), do: :ok

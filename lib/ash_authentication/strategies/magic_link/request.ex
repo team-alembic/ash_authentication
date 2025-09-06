@@ -35,7 +35,13 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
              {sender, send_opts} <- strategy.sender,
              {:ok, token} <-
                MagicLink.request_token_for_identity(strategy, identity, context_opts, context) do
-          sender.send(to_string(identity), token, Keyword.put(send_opts, :tenant, context.tenant))
+          build_opts =
+            Keyword.merge(send_opts,
+              tenant: context.tenant,
+              source_context: context.source_context
+            )
+
+          sender.send(to_string(identity), token, build_opts)
 
           :ok
         else
@@ -47,7 +53,13 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
         with {sender, send_opts} <- strategy.sender,
              {:ok, token} <-
                MagicLink.request_token_for_identity(strategy, identity, context_opts, context) do
-          sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant))
+          build_opts =
+            Keyword.merge(send_opts,
+              tenant: context.tenant,
+              source_context: context.source_context
+            )
+
+          sender.send(user, token, build_opts)
 
           :ok
         else

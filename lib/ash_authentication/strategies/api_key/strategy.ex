@@ -31,6 +31,6 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.ApiKey do
     do: ApiKey.Actions.sign_in(strategy, params, options)
 
   @doc false
-  @spec tokens_required?(ApiKey.t()) :: true
-  def tokens_required?(_), do: true
+  @spec tokens_required?(ApiKey.t()) :: false
+  def tokens_required?(_), do: false
 end

@@ -21,7 +21,7 @@ if Code.ensure_loaded?(Igniter) do
 
     @strategy_options [
                         password: [
-                          hash_provider:
+                          "hash-provider":
                             "The hash provider to use, either `bcrypt` or `argon2`.  Defaults to `bcrypt2`."
                         ]
                       ]
@@ -73,24 +73,27 @@ if Code.ensure_loaded?(Igniter) do
         ],
         schema: [
           user: :string,
+          identity_field: :string,
           api_key: :string,
           hash_provider: :string
         ],
         aliases: [
           u: :user,
-          a: :api_key
+          a: :api_key,
+          i: :identity_field
+        ],
+        defaults: [
+          identity_field: "email"
         ]
       }
     end
 
     def igniter(igniter) do
       strategies = igniter.args.positional[:strategies] || []
-      argv = igniter.args.argv
       default_user = Igniter.Project.Module.module_name(igniter, "Accounts.User")
 
       options =
-        argv
-        |> options!()
+        igniter.args.options
         |> Keyword.update(:identity_field, :email, &String.to_atom/1)
         |> Keyword.update(:user, default_user, &Igniter.Project.Module.parse/1)
 

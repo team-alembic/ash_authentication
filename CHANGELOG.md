@@ -5,6 +5,69 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.9.9](https://github.com/team-alembic/ash_authentication/compare/v4.9.8...v4.9.9) (2025-07-29)
+
+
+
+
+### Bug Fixes:
+
+* ensure tenant is set when verifying magic link tokens by Zach Daniel
+
+* resolve accounts option not affecting user/token resource defaults and add a exemple #1041 (#1045) by horberlan
+
+### Improvements:
+
+* comp-time error message on mismatching magic link action type by Zach Daniel
+
+* better error message on invalid magic link token by Zach Daniel
+
+## [v4.9.8](https://github.com/team-alembic/ash_authentication/compare/v4.9.7...v4.9.8) (2025-07-22)
+
+
+
+
+### Improvements:
+
+* API key auth for multi-tenancy resources by Steffen Beyer
+
+## [v4.9.7](https://github.com/team-alembic/ash_authentication/compare/v4.9.6...v4.9.7) (2025-07-17)
+
+
+
+
+### Bug Fixes:
+
+* add `-i` flag alias for add_strategy task by Zach Daniel
+
+## [v4.9.6](https://github.com/team-alembic/ash_authentication/compare/v4.9.5...v4.9.6) (2025-07-11)
+
+
+
+
+### Bug Fixes:
+
+* support --identity-field option in the installer by Zach Daniel
+
+### Improvements:
+
+* Pass all args to sign_in_with_token action of password strategies (#1009) by Jinkyou Son
+
+## [v4.9.5](https://github.com/team-alembic/ash_authentication/compare/v4.9.4...v4.9.5) (2025-07-02)
+
+
+
+
+### Bug Fixes:
+
+* set private ash authentication context on query loads by Zach Daniel
+
+* don't require session identifier if tokens not enabled by Zach Daniel
+
+* don't require token resource for API keys by Zach Daniel
+
+* Send opts to validate token (#1031) by Josep Jaume Rey
+
 ## [v4.9.4](https://github.com/team-alembic/ash_authentication/compare/v4.9.3...v4.9.4) (2025-06-19)
 
 
