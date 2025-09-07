@@ -13,7 +13,7 @@ enabled that supports remember me.
 
 ### Example Usage
 
-Add the Remember Me strategy to your authenticated resource and update another
+Add the Remember Me strategy to your authenticated resource and udpate another
 strategy to the generate the remember_me token.
 
 ```elixir
@@ -54,7 +54,7 @@ defmodule MyApp.Accounts.User do
 
       # Add the remember me Strategy
       remember_me :remember_me do
-        sign_in_action_name :sign_in_with_remember_me # Optional defaults to :sign_in_with_[:strategy_name]
+        sign_in_action_name :sign_in_with_remember_me. # Optional defaults to :sign_in_with_[:strategy_name]
         cookie_name :remember_me # Optional. Defaults to :remember_me
         token_lifetime {30, :days} # Optional. Defaults to {30, :days}
       end
@@ -92,7 +92,7 @@ defmodule MyApp.Accounts.User do
         sensitive? true
       end
 
-      # validates the provided remember me token and generates a token for the session
+      # validates the provided the remember me token and generates a token for the session
       prepare AshAuthentication.Strategy.RememberMe.SignInPreparation
 
       metadata :token, :string do
@@ -116,6 +116,7 @@ defmodule MyAppWeb.AuthController do
   use MyAppWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
+  @impl AshAuthentication.Phoenix.Controller
   def put_remember_me_cookie(conn, cookie_name, %{token: token, max_age: max_age}) do
     cookie_options = %{
       max_age: max_age, # matches the token lifetime
@@ -124,7 +125,7 @@ defmodule MyAppWeb.AuthController do
       same_site: :lax # prevents the cookie from being sent with cross-site requests
     }
     conn
-    |> put_resp_cookie(cookie_name, token, cookie_options)
+    |> put_resp_cookie(cookie_name, cookie_value, cookie_options)
   end
 end
 ```
@@ -151,6 +152,7 @@ defmodule MyAppWeb.AuthController do
   use MyAppWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
+  @impl AshAuthentication.Phoenix.Controller
   def sign_out(conn, _params) do
     return_to = get_session(conn, :return_to) || ~p"/"
 

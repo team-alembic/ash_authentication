@@ -105,7 +105,6 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
       conn =
         conn(:get, "/")
         |> put_req_cookie("remember_me", "token1")
-        |> put_req_cookie("custom", "token2")
         |> put_req_cookie("other_cookie", "value")
 
       assert %{
@@ -116,16 +115,9 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
                    same_site: "Lax",
                    secure: true,
                    universal_time: {{1970, 1, 1}, {0, 0, 0}}
-                 },
-                 "custom" => %{
-                   http_only: true,
-                   max_age: 0,
-                   same_site: "Lax",
-                   secure: true,
-                   universal_time: {{1970, 1, 1}, {0, 0, 0}}
                  }
                }
-             } = Helpers.delete_all_remember_me_cookies(conn)
+             } = Helpers.delete_all_remember_me_cookies(conn, :ash_authentication)
     end
   end
 

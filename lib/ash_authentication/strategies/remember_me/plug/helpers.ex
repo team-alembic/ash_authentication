@@ -45,11 +45,11 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
          resource,
          %RememberMe{cookie_name: cookie_name} = strategy
        ) do
-    full_cookie_name = RememberMe.Cookie.cookie_name(cookie_name)
+    cookie_name = to_string(cookie_name)
 
     conn
     |> Plug.Conn.get_cookies()
-    |> Map.get(full_cookie_name)
+    |> Map.get(cookie_name)
     |> case do
       nil ->
         conn
@@ -71,7 +71,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
 
           {:error, _reason} ->
             # Cookie is invalid, delete it
-            Plug.Conn.delete_resp_cookie(conn, full_cookie_name)
+            Plug.Conn.delete_resp_cookie(conn, cookie_name)
         end
     end
   end
@@ -130,9 +130,9 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   @doc """
   Delete all the remember me tokens from the response cookies.
   """
-  @spec delete_all_remember_me_cookies(Conn.t()) :: Conn.t()
-  def delete_all_remember_me_cookies(%{cookies: %Plug.Conn.Unfetched{}} = conn) do
-    delete_all_remember_me_cookies(Conn.fetch_cookies(conn))
+  @spec delete_all_remember_me_cookies(Conn.t(), atom) :: Conn.t()
+  def delete_all_remember_me_cookies(%{cookies: %Plug.Conn.Unfetched{}} = conn, otp_app) do
+    delete_all_remember_me_cookies(Conn.fetch_cookies(conn), otp_app)
   end
 
   def delete_all_remember_me_cookies(conn, otp_app) do
@@ -152,7 +152,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   def maybe_put_remember_me_cookies({conn, {:ok, user} = result}, return_to)
       when is_map(user.__metadata__.remember_me) do
     remember_me = user.__metadata__.remember_me
-    cookie_name = RememberMe.Cookie.cookie_name(remember_me.cookie_name)
+    cookie_name = to_string(remember_me.cookie_name)
 
     conn =
       conn
