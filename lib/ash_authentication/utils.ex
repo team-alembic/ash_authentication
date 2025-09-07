@@ -276,8 +276,7 @@ defmodule AshAuthentication.Utils do
   """
   @spec lifetime_to_seconds(
           lifetime ::
-            String.t()
-            | integer
+            integer
             | {integer, :seconds}
             | {integer, :minutes}
             | {integer, :hours}
