@@ -181,16 +181,16 @@ defmodule MyAppWeb.AuthController do
     conn
     |> clear_session(:my_otp_app)
     # Add this to delete all the remember me cookies on explicit signout.
+    # This will delete any remember_me tokens in the current connection's
+    # cookies and revoke them. Other remember_me tokens for the user are
+    # still valid.
     |> delete_all_remember_me_cookies(:my_otp_app)
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
   end
-
   ...
 
-  # The following three callbacks are optional and will be available
-  # by `use AshAuthentication.Phoenix.Controller` but are all overridable
-  # if you want to change the cookie options
+  # define put_rememeber_me callback to set your cookie options
   @remember_me_cookie_options [
     http_only: true, # cookie is only readable by HTTP/S
     secure: true, # only send the cookie over HTTPS
@@ -203,21 +203,6 @@ defmodule MyAppWeb.AuthController do
 
     conn
     |> put_resp_cookie(cookie_name, token, cookie_options)
-  end
-
-  @impl AshAuthentication.Phoenix.Controller
-  def delete_remember_me_cookie(conn, cookie_name) do
-    cookie_options = Keyword.put(@remember_me_cookie_options, :max_age, 0)
-    conn
-    |> delete_resp_cookie(cookie_name, cookie_options)
-  end
-
-  @impl AshAuthentication.Phoenix.Controller
-  def delete_all_remember_me_cookies(conn) do
-    all_remember_me_cookie_names
-    |> Enum.reduce(conn, fn cookie_name, conn ->
-      delete_remember_me_cookie(conn, cookie_name)
-    end)
   end
 end
 ```
