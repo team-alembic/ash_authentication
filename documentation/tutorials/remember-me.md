@@ -179,9 +179,9 @@ defmodule MyAppWeb.AuthController do
     return_to = get_session(conn, :return_to) || ~p"/"
 
     conn
-    |> clear_session()
+    |> clear_session(:my_otp_app)
     # Add this to delete all the remember me cookies on explicit signout.
-    |> delete_all_remember_me_cookies()
+    |> delete_all_remember_me_cookies(:my_otp_app)
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
   end
@@ -214,14 +214,9 @@ defmodule MyAppWeb.AuthController do
 
   @impl AshAuthentication.Phoenix.Controller
   def delete_all_remember_me_cookies(conn) do
-    conn
-    |> Conn.get_cookies()
-    |> Enum.reduce(conn, fn {key, _}, conn ->
-      if String.starts_with?(key, AshAuthentication.Strategy.RememberMe.Cookie.prefix()) do
-        delete_remember_me_cookie(conn, key)
-      else
-        conn
-      end
+    all_remember_me_cookie_names
+    |> Enum.reduce(conn, fn cookie_name, conn ->
+      delete_remember_me_cookie(conn, cookie_name)
     end)
   end
 end

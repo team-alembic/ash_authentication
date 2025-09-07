@@ -39,7 +39,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
     test "deletes invalid cookie and returns conn" do
       conn =
         conn(:get, "/")
-        |> put_req_cookie("ash_auth:remember_me", "invalid_token")
+        |> put_req_cookie("remember_me", "invalid_token")
 
       strategy = %RememberMe{
         cookie_name: :remember_me,
@@ -58,12 +58,12 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
   describe "put_remember_me_cookie/3" do
     test "puts cookie with correct options" do
       conn = conn(:get, "/")
-      cookie_name = "ash_auth:remember_me"
+      cookie_name = "remember_me"
       token_data = %{token: "test_token", max_age: 2_592_000}
 
       assert %{
                resp_cookies: %{
-                 "ash_auth:remember_me" => %{
+                 "remember_me" => %{
                    value: "test_token",
                    max_age: 2_592_000,
                    http_only: true,
@@ -75,14 +75,20 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
     end
   end
 
+  describe "all_remember_me_cookie_names/1" do
+    test "returns all remember me cookie names" do
+      assert Helpers.all_remember_me_cookie_names(:ash_authentication) == ["remember_me"]
+    end
+  end
+
   describe "delete_remember_me_cookie/2" do
     test "deletes cookie with correct options" do
       conn = conn(:get, "/")
-      cookie_name = "ash_auth:remember_me"
+      cookie_name = "remember_me"
 
       assert %{
                resp_cookies: %{
-                 "ash_auth:remember_me" => %{
+                 "remember_me" => %{
                    http_only: true,
                    max_age: 0,
                    same_site: "Lax",
@@ -98,20 +104,20 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
     test "deletes all remember me cookies" do
       conn =
         conn(:get, "/")
-        |> put_req_cookie("ash_auth:remember_me", "token1")
-        |> put_req_cookie("ash_auth:remember_me:custom", "token2")
+        |> put_req_cookie("remember_me", "token1")
+        |> put_req_cookie("custom", "token2")
         |> put_req_cookie("other_cookie", "value")
 
       assert %{
                resp_cookies: %{
-                 "ash_auth:remember_me" => %{
+                 "remember_me" => %{
                    http_only: true,
                    max_age: 0,
                    same_site: "Lax",
                    secure: true,
                    universal_time: {{1970, 1, 1}, {0, 0, 0}}
                  },
-                 "ash_auth:remember_me:custom" => %{
+                 "custom" => %{
                    http_only: true,
                    max_age: 0,
                    same_site: "Lax",

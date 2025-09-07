@@ -382,7 +382,11 @@ defmodule AshAuthentication.Plug.HelpersTest do
     test "when a remember_me token is present, it revokes successfully", %{conn: conn} do
       user = build_user()
 
-      {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "remember_me"}, purpose: :remember_me, token_lifetime: {30, :days})
+      {:ok, token, _claims} =
+        AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "remember_me"},
+          purpose: :remember_me,
+          token_lifetime: {30, :days}
+        )
 
       conn =
         conn
@@ -471,7 +475,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       conn =
         :get
         |> conn("/", %{})
-        |> put_req_cookie("ash_auth:remember_me", remember_me_token)
+        |> put_req_cookie("remember_me", remember_me_token)
         |> SessionPipeline.call([])
         |> Helpers.sign_in_using_remember_me(:ash_authentication)
 
@@ -484,12 +488,12 @@ defmodule AshAuthentication.Plug.HelpersTest do
       conn =
         :get
         |> conn("/", %{})
-        |> put_req_cookie("ash_auth:remember_me", "invalid_token")
+        |> put_req_cookie("remember_me", "invalid_token")
         |> SessionPipeline.call([])
         |> Helpers.sign_in_using_remember_me(:ash_authentication)
 
       # Should delete the invalid cookie
-      assert conn.resp_cookies["ash_auth:remember_me"][:max_age] == 0
+      assert conn.resp_cookies["remember_me"][:max_age] == 0
       # Should not be in session
       refute conn.private.plug_session["user_with_remember_me"]
     end
@@ -514,7 +518,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
       conn =
         :get
         |> conn("/", %{})
-        |> put_req_cookie("ash_auth:remember_me", remember_me_token)
+        |> put_req_cookie("remember_me", remember_me_token)
         |> SessionPipeline.call([])
         |> Ash.PlugHelpers.set_tenant("test_tenant")
         |> Ash.PlugHelpers.set_context(%{test: "context"})

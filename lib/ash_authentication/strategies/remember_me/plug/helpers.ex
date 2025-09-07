@@ -17,10 +17,10 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
 
   If a remember me strategy is found, but no token is found, do nothing.
 
-  If a remember me strategy is found, and a token is found in the cookies, 
+  If a remember me strategy is found, and a token is found in the cookies,
   and the token is valid, login the user.
 
-  If a remember me strategy is found, and a token is found in the cookies, 
+  If a remember me strategy is found, and a token is found in the cookies,
   and the token is invalid, delete the cookie.
   """
   @spec sign_in_resource_with_remember_me(Plug.Conn.t(), Ash.Resource.t(), Keyword.t()) ::
@@ -110,6 +110,24 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   end
 
   @doc """
+  Get all the remember me cookie names for the given otp_app.
+  """
+  @spec all_remember_me_cookie_names(atom) :: [String.t()]
+  def all_remember_me_cookie_names(otp_app) do
+    otp_app
+    |> AshAuthentication.authenticated_resources()
+    |> Enum.flat_map(fn resource ->
+      Info.authentication_strategies(resource)
+    end)
+    |> Enum.reduce([], fn strategy, acc ->
+      case strategy do
+        %RememberMe{cookie_name: cookie_name} -> acc ++ [to_string(cookie_name)]
+        _ -> acc
+      end
+    end)
+  end
+
+  @doc """
   Delete all the remember me tokens from the response cookies.
   """
   @spec delete_all_remember_me_cookies(Conn.t()) :: Conn.t()
@@ -117,15 +135,11 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
     delete_all_remember_me_cookies(Conn.fetch_cookies(conn))
   end
 
-  def delete_all_remember_me_cookies(conn) do
-    conn
-    |> Conn.get_cookies()
-    |> Enum.reduce(conn, fn {key, _}, conn ->
-      if String.starts_with?(key, AshAuthentication.Strategy.RememberMe.Cookie.prefix()) do
-        delete_remember_me_cookie(conn, key)
-      else
-        conn
-      end
+  def delete_all_remember_me_cookies(conn, otp_app) do
+    otp_app
+    |> all_remember_me_cookie_names()
+    |> Enum.reduce(conn, fn cookie_name, conn ->
+      delete_remember_me_cookie(conn, cookie_name)
     end)
   end
 
