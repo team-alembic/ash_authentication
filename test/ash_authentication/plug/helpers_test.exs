@@ -456,7 +456,6 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> SessionPipeline.call([])
         |> Helpers.sign_in_using_remember_me(:ash_authentication)
 
-      # Should have the user_with_remember_me_token stored in session (when require_token_presence_for_authentication? is true)
       assert conn.private.plug_session["user_with_remember_me_token"]
     end
 
@@ -504,7 +503,6 @@ defmodule AshAuthentication.Plug.HelpersTest do
           context: %{test: "context"}
         )
 
-      # Should have the user_with_remember_me_token stored in session (when require_token_presence_for_authentication? is true)
       assert conn.private.plug_session["user_with_remember_me_token"]
     end
 
