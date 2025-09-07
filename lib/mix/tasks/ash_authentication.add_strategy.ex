@@ -485,13 +485,12 @@ if Code.ensure_loaded?(Igniter) do
         """
         read :get_by_#{options[:identity_field]} do
           description "Looks up a user by their #{options[:identity_field]}"
-          get? true
 
           argument :#{options[:identity_field]}, :ci_string do
             allow_nil? false
           end
 
-          filter expr(#{options[:identity_field]} == ^arg(:#{options[:identity_field]}))
+          get_by :#{options[:identity_field]}
         end
         """
       )
