@@ -13,7 +13,7 @@ enabled that supports remember me.
 
 ### Example Usage
 
-Add the Remember Me strategy to your authenticated resource and udpate another
+Add the Remember Me strategy to your authenticated resource and update another
 strategy to the generate the remember_me token.
 
 ```elixir
