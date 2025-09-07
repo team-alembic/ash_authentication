@@ -184,6 +184,8 @@ defmodule MyAppWeb.AuthController do
     # This will delete any remember_me tokens in the current connection's
     # cookies and revoke them. Other remember_me tokens for the user are
     # still valid.
+    #  Provided by `use AshAuthentication.Phoenix.Controller` or you can
+    #  import AshAuthentication.Strategy.RememberMe.Plug.Helpers
     |> delete_all_remember_me_cookies(:my_otp_app)
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
@@ -222,6 +224,7 @@ defmodule MyAppWeb.Router do
   pipeline :browser do
     ...
     # Add the sign_in_with_remember_me plug *before* load_from_session
+    # It will come from either `use AshAuthentication.Plug` or `use AshAuthentication.Phoenix.Router`
     plug :sign_in_with_remember_me
     plug :load_from_session
   end
