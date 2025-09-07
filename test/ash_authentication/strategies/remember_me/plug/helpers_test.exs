@@ -4,13 +4,52 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
 
   alias AshAuthentication.Strategy.RememberMe
   alias AshAuthentication.Strategy.RememberMe.Plug.Helpers
+  alias AshAuthentication.Strategy.RememberMe.Token
   alias Example.UserWithRememberMe
   alias Plug.Conn
 
   use Mimic
   import Plug.Test
 
+  setup :verify_on_exit!
+
+  setup do
+    Mimic.copy(Ash)
+    :ok
+  end
+
   describe "sign_in_resource_with_remember_me/3" do
+    test "returns conn with user when remember me token is valid" do
+      user = build_user_with_remember_me()
+      {:ok, token} = generate_remember_me_token(user)
+
+      conn =
+        conn(:get, "/")
+        |> put_req_cookie("remember_me", token)
+        |> Conn.fetch_cookies()
+
+      result = Helpers.sign_in_resource_with_remember_me(conn, UserWithRememberMe, [])
+      assert {_conn, returned_user} = result
+      assert returned_user.id == user.id
+      assert returned_user.username == user.username
+    end
+
+    test "returns conn unchanged when remember me token is revoked" do
+      user = build_user_with_remember_me()
+      {:ok, token} = generate_remember_me_token(user)
+
+      conn =
+        conn(:get, "/")
+        |> put_req_cookie("remember_me", token)
+        |> Conn.fetch_cookies()
+
+      Token.Helpers.revoke_remember_me_token(token, :ash_authentication)
+      result = Helpers.sign_in_resource_with_remember_me(conn, UserWithRememberMe, [])
+      assert %{private: %{}} = result
+      assert result.resp_cookies["remember_me"][:max_age] == 0
+      assert result.resp_cookies["remember_me"][:value] == nil
+    end
+
     test "returns conn unchanged when no remember me strategies found" do
       conn = conn(:get, "/") |> Conn.fetch_cookies()
 
@@ -50,8 +89,10 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
       |> expect(:authentication_strategies, fn UserWithRememberMe -> [strategy] end)
       |> expect(:domain!, fn UserWithRememberMe -> Example end)
 
-      assert %{private: %{}} =
-               Helpers.sign_in_resource_with_remember_me(conn, UserWithRememberMe, [])
+      result = Helpers.sign_in_resource_with_remember_me(conn, UserWithRememberMe, [])
+      assert %{private: %{}} = result
+      assert result.resp_cookies["remember_me"][:max_age] == 0
+      assert result.resp_cookies["remember_me"][:value] == nil
     end
   end
 

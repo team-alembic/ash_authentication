@@ -7,6 +7,8 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   alias AshAuthentication.{Info, Strategy.RememberMe}
   alias Plug.Conn
 
+  import AshAuthentication.Strategy.RememberMe.Token.Helpers
+
   @doc """
   Sign in the given Ash Resource with the AshAuthentication RememberMe strategy.
   To sign in with any Ash Resource see sign_in_resource_with_remember_me.
@@ -139,6 +141,14 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
     otp_app
     |> all_remember_me_cookie_names()
     |> Enum.reduce(conn, fn cookie_name, conn ->
+      token = Plug.Conn.get_cookies(conn) |> Map.get(cookie_name)
+
+      opts =
+        []
+        |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+        |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
+      revoke_remember_me_token(token, otp_app, opts)
       delete_remember_me_cookie(conn, cookie_name)
     end)
   end
