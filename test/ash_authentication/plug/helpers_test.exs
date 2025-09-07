@@ -456,8 +456,8 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> SessionPipeline.call([])
         |> Helpers.sign_in_using_remember_me(:ash_authentication)
 
-      # Should have the user_with_remember_me stored in session
-      assert conn.private.plug_session["user_with_remember_me"]
+      # Should have the user_with_remember_me_token stored in session (when require_token_presence_for_authentication? is true)
+      assert conn.private.plug_session["user_with_remember_me_token"]
     end
 
     test "when remember me cookie is present but invalid, it deletes the cookie" do
@@ -504,8 +504,8 @@ defmodule AshAuthentication.Plug.HelpersTest do
           context: %{test: "context"}
         )
 
-      # Should have the user assigned
-      assert conn.private.plug_session["user_with_remember_me"]
+      # Should have the user_with_remember_me_token stored in session (when require_token_presence_for_authentication? is true)
+      assert conn.private.plug_session["user_with_remember_me_token"]
     end
 
     test "it handles multiple authenticated resources", %{conn: conn} do
