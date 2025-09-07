@@ -51,6 +51,22 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
     end
   end
 
+  test "log_out_everywhere revokes remember_me tokens" do
+    user = build_user_with_remember_me()
+    {:ok, remember_me_token} = generate_remember_me_token(user)
+
+    {:ok, _session_token, %{"jti" => session_jti}} = Jwt.token_for_user(user)
+
+    refute TokenResource.token_revoked?(Example.Token, remember_me_token)
+    refute TokenResource.jti_revoked?(Example.Token, session_jti)
+
+    strategy = Info.strategy!(Example.UserWithRememberMe, :log_out_everywhere)
+
+    assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user})
+    assert TokenResource.token_revoked?(Example.Token, remember_me_token)
+    assert TokenResource.jti_revoked?(Example.Token, session_jti)
+  end
+
   test "atomic updates to non-`hashed_password` fields do not trigger the log_out_everywhere functionality" do
     user =
       Example.UserWithTokenRequired

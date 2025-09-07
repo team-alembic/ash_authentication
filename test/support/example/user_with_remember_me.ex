@@ -105,6 +105,7 @@ defmodule Example.UserWithRememberMe do
     tokens do
       enabled? true
       store_all_tokens? true
+      require_token_presence_for_authentication? true
       token_resource Example.Token
       signing_secret &get_config/2
     end
@@ -120,6 +121,13 @@ defmodule Example.UserWithRememberMe do
         sign_in_action_name :sign_in_with_remember_me
         cookie_name :remember_me
         token_lifetime {30, :days}
+      end
+    end
+
+    add_ons do
+      log_out_everywhere :log_out_everywhere do
+        action_name :log_out_everywhere
+        argument_name :user
       end
     end
   end
