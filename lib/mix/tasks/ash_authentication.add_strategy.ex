@@ -485,11 +485,6 @@ if Code.ensure_loaded?(Igniter) do
         """
         read :get_by_#{options[:identity_field]} do
           description "Looks up a user by their #{options[:identity_field]}"
-
-          argument :#{options[:identity_field]}, :ci_string do
-            allow_nil? false
-          end
-
           get_by :#{options[:identity_field]}
         end
         """
