@@ -194,9 +194,13 @@ defmodule MyAppWeb.AuthController do
 
   # define put_rememeber_me callback to set your cookie options
   @remember_me_cookie_options [
-    http_only: true, # cookie is only readable by HTTP/S
-    secure: true, # only send the cookie over HTTPS
-    same_site: "Lax" # prevents the cookie from being sent with cross-site requests
+    # cookie is only readable by HTTP/S
+    http_only: true,
+    # only send the cookie over HTTPS, except in development
+    # otherwise Safari will block the cookie
+    secure: Mix.env() != :dev,
+    # prevents the cookie from being sent with cross-site requests
+    same_site: "Lax"
   ]
 
   @impl AshAuthentication.Phoenix.Controller

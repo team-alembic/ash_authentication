@@ -81,10 +81,11 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   defp attempt_sign_in_resource_with_remember_me(conn, _resource, _strategy), do: conn
 
   @remember_me_cookie_options [
-    # prevents the cookie from being accessed by JavaScript
+    # cookie is only readable by HTTP/S
     http_only: true,
-    # only send the cookie over HTTPS
-    secure: true,
+    # only send the cookie over HTTPS, except in development
+    # otherwise Safari will block the cookie
+    secure: Mix.env() != :dev,
     # prevents the cookie from being sent with cross-site requests
     same_site: "Lax"
   ]

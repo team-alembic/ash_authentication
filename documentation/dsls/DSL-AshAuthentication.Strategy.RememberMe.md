@@ -130,7 +130,6 @@ defmodule MyAppWeb.AuthController do
 end
 ```
 
-If you're not use AshAuthenticationPhoenix,
 Update your router to sign in the user with the remember me token.
 
 ```elixir
