@@ -143,12 +143,20 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
     |> Enum.reduce(conn, fn cookie_name, conn ->
       token = Plug.Conn.get_cookies(conn) |> Map.get(cookie_name)
 
-      opts =
-        []
-        |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
-        |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+      case token do
+        nil ->
+          conn
 
-      revoke_remember_me_token(token, otp_app, opts)
+        token ->
+          opts =
+            []
+            |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+            |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
+          revoke_remember_me_token(token, otp_app, opts)
+          delete_remember_me_cookie(conn, cookie_name)
+      end
+
       delete_remember_me_cookie(conn, cookie_name)
     end)
   end
