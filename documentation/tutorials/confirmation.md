@@ -232,7 +232,7 @@ If `require_confirmed_with` is not set or set to `nil`, no confirmation check is
 
 You may want to require a user to perform a confirmation when a certain field changes. For example if a user changes their email address we can send them a new confirmation request.
 
-First, let's start by defining a new confirmation add-on in our resource:
+First, let's start by defining a new confirmation add-on in our resource.
 
 ```elixir
 defmodule MyApp.Accounts.User do
@@ -242,11 +242,13 @@ defmodule MyApp.Accounts.User do
     # ...
 
     add_ons do
-      confirmation :confirm_change do
+      confirmation :confirm_email_change do
         monitor_fields [:email]
         confirm_on_create? false
         confirm_on_update? true
-        confirm_action_name :confirm_change
+        inhibit_updates? true
+        confirmed_at_field :email_change_confirmed_at
+        confirm_action_name :confirm_email_change
         require_interaction? true
         sender MyApp.Accounts.User.Senders.SendEmailChangeConfirmationEmail
       end
@@ -255,9 +257,11 @@ defmodule MyApp.Accounts.User do
 end
 ```
 
-> #### Why two confirmation configurations? {: .info}
->
-> While you can perform both of these confirmations with a single confirmation add-on, in general the Ash philosophy is to be more explicit. Each confirmation will have it's own URL (based on the name) and tokens for one will not be able to be used for the other.
+We set `confirm_on_create? false` and `confirm_on_update? true` so that this only applies when an existing user changes their email address, and not for new users.
+
+We specify `confirmed_at_field` so that the state of this confirmation is kept separate to the new user confirmation.  If we leave this out, the same default `confirmed_at_field` would be used, and then a user who has changed but not yet confirmed their email address would be in the same unconfirmed state as when they have created their account and not completed the initial confirmation.
+
+`inhibit_updates? true` causes any changes to be stored temporarily in the [token resource](documentation/dsls/DSL-AshAuthentication.TokenResource.md), and are applied to the `user` resource only upon confirmation.  Without this option, a change to the `email` attribute is applied immediately
 
 Next, let's define our new sender:
 
@@ -270,9 +274,13 @@ defmodule MyApp.Accounts.User.Senders.SendEmailChangeConfirmationEmail do
   use MyAppWeb, :verified_routes
 
   @impl AshAuthentication.Sender
-  def send(user, token, _opts) do
+  def send(user, token, opts) do
+    {changeset, _opts} = Keyword.pop!(opts, :changeset)
+    new_email_address = changeset.attributes.email
+
     MyApp.Accounts.Emails.deliver_email_change_confirmation_instructions(
       user,
+      new_email_address,
       url(~p"/auth/user/confirm_change?#{[confirm: token]}")
     )
   end
@@ -285,12 +293,12 @@ And our new email template:
 defmodule MyApp.Accounts.Emails do
   # ...
 
-  def deliver_email_change_confirmation_instructions(user, url) do
+  def deliver_email_change_confirmation_instructions(user, new_email_address, url) do
     if !url do
       raise "Cannot deliver confirmation instructions without a url"
     end
 
-    deliver(user.email, "Confirm your new email address", """
+    deliver(user.new_email_address, "Confirm your new email address", """
       <p>
         Hi #{user.email},
       </p>
@@ -309,11 +317,7 @@ defmodule MyApp.Accounts.Emails do
 end
 ```
 
-> #### Inhibiting changes {: .tip}
->
-> Depending on whether you want the user's changes to be applied _before_ or _after_ confirmation, you can enable the [`inhibit_updates?` DSL option](documentation/dsls/DSL-AshAuthentication.AddOn.Confirmation.md#authentication-add_ons-confirmation-inhibit_updates?).
->
-> When this option is enabled, then any potential changes to monitored fields are instead temporarily stored in the [token resource](documentation/dsls/DSL-AshAuthentication.TokenResource.md) and applied when the confirmation action is run.
+Note that we send this to the user's *new* email address in the changeset from the update action that triggered this confirmation.  You may also want to send a notification to the user's *current* email address, as a security measure, which you can do from the same sender.
 
 ## Customising the confirmation action
 
