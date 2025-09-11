@@ -257,7 +257,7 @@ defmodule MyApp.Accounts.User do
 end
 ```
 
-We set `confirm_on_create? false` and `confir_on_update? true` so that this only applies when an existing user changes their email address, and not for new users.
+We set `confirm_on_create? false` and `confirm_on_update? true` so that this only applies when an existing user changes their email address, and not for new users.
 
 We specify `confirmed_at_field` so that the state of this confirmation is kept separate to the new user confirmation.  If we leave this out, the same default `confirmed_at_field` would be used, and then a user who has changed but not yet confirmed their email address would be in the same unconfirmed state as when they have created their account and not completed the initial confirmation.
 
