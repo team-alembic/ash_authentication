@@ -4,7 +4,7 @@ defmodule AshAuthentication.VerifierTest do
 
   defmodule TestDomain do
     @moduledoc false
-    use Ash.Domain
+    use Ash.Domain, validate_config_inclusion?: false
 
     resources do
       allow_unregistered? true
@@ -33,6 +33,7 @@ defmodule AshAuthentication.VerifierTest do
             argument :confirm, :string, allow_nil?: false
             change AshAuthentication.GenerateTokenChange
             change AshAuthentication.AddOn.Confirmation.ConfirmChange
+            require_atomic? false
           end
         end
 
@@ -84,6 +85,7 @@ defmodule AshAuthentication.VerifierTest do
             argument :confirm, :string, allow_nil?: false
             change AshAuthentication.GenerateTokenChange
             change AshAuthentication.AddOn.Confirmation.ConfirmChange
+            require_atomic? false
           end
 
           update :confirm_phone do
@@ -91,6 +93,7 @@ defmodule AshAuthentication.VerifierTest do
             argument :confirm, :string, allow_nil?: false
             change AshAuthentication.GenerateTokenChange
             change AshAuthentication.AddOn.Confirmation.ConfirmChange
+            require_atomic? false
           end
         end
 
@@ -153,6 +156,7 @@ defmodule AshAuthentication.VerifierTest do
                            argument :confirm, :string, allow_nil?: false
                            change AshAuthentication.GenerateTokenChange
                            change AshAuthentication.AddOn.Confirmation.ConfirmChange
+                           require_atomic? false
                          end
                        end
 
@@ -212,6 +216,7 @@ defmodule AshAuthentication.VerifierTest do
                 argument :confirm, :string, allow_nil?: false
                 change AshAuthentication.GenerateTokenChange
                 change AshAuthentication.AddOn.Confirmation.ConfirmChange
+                require_atomic? false
               end
             end
 
