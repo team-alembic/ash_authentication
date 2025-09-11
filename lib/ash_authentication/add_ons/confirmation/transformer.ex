@@ -229,20 +229,9 @@ defmodule AshAuthentication.AddOn.Confirmation.Transformer do
     end
   end
 
-  # sobelow_skip ["DOS.StringToAtom"]
   defp maybe_set_confirm_action_name(strategy)
        when is_nil(strategy.confirm_action_name),
-       do: %{
-         strategy
-         | confirm_action_name:
-             case strategy.name do
-               :confirm ->
-                 :confirm
-
-               name ->
-                 String.to_atom("confirm_#{String.trim_leading(to_string(name), "confirm_")}")
-             end
-       }
+       do: %{strategy | confirm_action_name: strategy.name}
 
   defp maybe_set_confirm_action_name(strategy), do: strategy
 end
