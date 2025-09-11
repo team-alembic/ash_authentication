@@ -59,21 +59,11 @@ defmodule AshAuthentication.Strategy.Apple.Dsl do
       {:client_authentication_method, method} ->
         {:client_authentication_method, method}
 
-      {:openid_configuration, config} ->
-        {:openid_configuration, atomize_keys(config)}
-
       {key, value} ->
         {key, value}
     end)
     |> Keyword.put(:assent_strategy, strategy)
     |> Keyword.merge(params)
-  end
-
-  # sobelow_skip ["DOS.StringToAtom"]
-  defp atomize_keys(map) do
-    map
-    |> Enum.map(fn {key, value} -> {String.to_atom(key), value} end)
-    |> Enum.into(%{})
   end
 
   defp strategy_override_docs(strategy) do
