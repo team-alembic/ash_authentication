@@ -45,17 +45,31 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
   def change(changeset, options, context) do
     changeset
     |> Changeset.before_action(fn changeset ->
-      with {:ok, strategy} <- Info.find_strategy(changeset, context, options),
-           value when is_binary(value) <-
-             Changeset.get_argument(changeset, strategy.password_field),
-           {:ok, hash} <- strategy.hash_provider.hash(value) do
-        Changeset.force_change_attribute(changeset, strategy.hashed_password_field, hash)
-      else
-        :error ->
-          raise AssumptionFailed, message: "Error hashing password."
+      case Info.find_strategy(changeset, context, options) do
+        {:ok, strategy} ->
+          value = Changeset.get_argument(changeset, strategy.password_field)
+          if is_binary(value) do
+            case strategy.hash_provider.hash(value) do
+              {:ok, hash} ->
+                Changeset.force_change_attribute(changeset, strategy.hashed_password_field, hash)
+              :error ->
+                raise AssumptionFailed, message: "Error hashing password with #{inspect(strategy.hash_provider)}."
+            end
+          else
+            changeset
+          end
 
-        _ ->
-          changeset
+        :error ->
+          raise AssumptionFailed,
+            message: """
+            Strategy not found for action #{changeset.action.name}.
+
+            Add strategy context to your action:
+            change set_context(%{strategy_name: :password})
+
+            Or set it on the changeset:
+            changeset |> Ash.Changeset.set_context(%{strategy_name: :password})
+            """
       end
     end)
   end
