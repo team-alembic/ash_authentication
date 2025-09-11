@@ -114,7 +114,19 @@ defmodule AshAuthentication.Validations.Action do
       |> Map.get(:changes, [])
       |> Enum.map(&Map.get(&1, :change))
       |> Enum.reject(&is_nil/1)
-      |> Enum.any?(&(elem(&1, 0) == change_module))
+      |> Enum.any?(fn {module, opts} ->
+        cond do
+          module == change_module ->
+            true
+
+          module == AshEvents.Events.ReplayChangeWrapper ->
+            wrapped_change = opts[:change].change |> elem(0)
+            wrapped_change == change_module
+
+          true ->
+            false
+        end
+      end)
 
     if has_change?,
       do: :ok,
