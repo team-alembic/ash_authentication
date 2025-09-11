@@ -128,6 +128,7 @@ defmodule AshAuthentication.Plug do
             |> Module.concat()
       end
 
+      Macros.define_sign_in_with_remember_me(unquote(otp_app))
       Macros.define_load_from_session(unquote(otp_app))
       Macros.define_load_from_bearer(unquote(otp_app))
       Macros.define_revoke_bearer_tokens(unquote(otp_app))

@@ -9,6 +9,7 @@ defmodule AshAuthenticationTest do
       assert [
                Example.User,
                Example.UserWithTokenRequired,
+               Example.UserWithRememberMe,
                Example.UserWithRegisterMagicLink,
                ExampleMultiTenant.User,
                ExampleMultiTenant.GlobalUser,
