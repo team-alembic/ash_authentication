@@ -5,6 +5,37 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.10.0](https://github.com/team-alembic/ash_authentication/compare/v4.9.9...v4.10.0) (2025-09-11)
+
+
+
+
+### Features:
+
+* remember me strategy (#1016) by Robert Graff
+
+### Bug Fixes:
+
+* Enforce unique actions per confirmation. (#1054) by James Harton
+
+* Enforce unique actions per confirmation. by James Harton
+
+* Don't atomize keys for Apple strategy (#1065) by Aake Gregertsen
+
+* MagicLink: Propagate context opts in request preparation (#1061) by Arjan Scherpenisse
+
+* no need to apply atomic constraints on hashed password by Zach Daniel
+
+* remove confusing and unnecessary policies from installer by Zach Daniel
+
+### Improvements:
+
+* default confirm action name to add-on name by James Harton
+
+* add support for AshEvents.Events.ReplayChangeWrapper in validate_action_has_change (#1066) by Torkild Gundersen Kjevik
+
+* pass magic link request source context to mail sender (#1048) by marcnnn
+
 ## [v4.9.9](https://github.com/team-alembic/ash_authentication/compare/v4.9.8...v4.9.9) (2025-07-29)
 
 
