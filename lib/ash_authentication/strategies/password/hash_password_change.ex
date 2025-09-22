@@ -43,20 +43,8 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
   @impl true
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
   def change(changeset, options, context) do
-    changeset
-    |> Changeset.before_action(fn changeset ->
-      with {:ok, strategy} <- Info.find_strategy(changeset, context, options),
-           value when is_binary(value) <-
-             Changeset.get_argument(changeset, strategy.password_field),
-           {:ok, hash} <- strategy.hash_provider.hash(value) do
-        Changeset.force_change_attribute(changeset, strategy.hashed_password_field, hash)
-      else
-        :error ->
-          raise AssumptionFailed, message: "Error hashing password."
-
-        _ ->
-          changeset
-      end
+    Changeset.before_action(changeset, fn changeset ->
+      hash_password_in_changeset(changeset, context, options)
     end)
   end
 
@@ -85,5 +73,46 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
       :error ->
         raise AssumptionFailed, message: "Error hashing password."
     end
+  end
+
+  defp hash_password_in_changeset(changeset, context, options) do
+    case Info.find_strategy(changeset, context, options) do
+      {:ok, strategy} -> apply_password_hashing(changeset, strategy)
+      :error -> raise_strategy_not_found_error(changeset)
+    end
+  end
+
+  defp apply_password_hashing(changeset, strategy) do
+    value = Changeset.get_argument(changeset, strategy.password_field)
+
+    if is_binary(value) do
+      hash_and_update_changeset(changeset, strategy, value)
+    else
+      changeset
+    end
+  end
+
+  defp hash_and_update_changeset(changeset, strategy, value) do
+    case strategy.hash_provider.hash(value) do
+      {:ok, hash} ->
+        Changeset.force_change_attribute(changeset, strategy.hashed_password_field, hash)
+
+      :error ->
+        raise AssumptionFailed,
+          message: "Error hashing password with #{inspect(strategy.hash_provider)}."
+    end
+  end
+
+  defp raise_strategy_not_found_error(changeset) do
+    raise AssumptionFailed,
+      message: """
+      Strategy not found for action #{changeset.action.name}.
+
+      Add strategy context to your action:
+      change set_context(%{strategy_name: :password})
+
+      Or set it on the changeset:
+      changeset |> Ash.Changeset.set_context(%{strategy_name: :password})
+      """
   end
 end
