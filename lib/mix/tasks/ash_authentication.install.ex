@@ -91,7 +91,7 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.Project.Config.configure("test.exs", :bcrypt_elixir, [:log_rounds], 1)
       |> Spark.Igniter.prepend_to_section_order(
         :"Ash.Resource",
-        [:authentication, :user_identity]
+        [:authentication, :token, :user_identity]
       )
       |> Igniter.compose_task(
         "ash.gen.domain",
