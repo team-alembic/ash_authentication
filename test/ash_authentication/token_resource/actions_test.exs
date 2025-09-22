@@ -19,7 +19,7 @@ defmodule AshAuthentication.TokenResource.ActionsTest do
         -3..-1
         |> Enum.concat(1..3)
         |> Enum.map(fn i ->
-          {:ok, token, %{"jti" => jti}} = Jwt.token_for_user(user, %{"exp" => now + i})
+          {:ok, token, %{"jti" => jti}} = Jwt.token_for_user(user, %{"exp" => now + i * 10})
           :ok = Actions.revoke(Example.Token, token)
           {jti, i}
         end)
