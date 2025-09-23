@@ -123,7 +123,7 @@ defmodule AshAuthentication.Jwt do
   @doc """
   Given a resource, generate a signed JWT with a set of claims.
   """
-  @spec token_for_resource(Resource.t(), extra_claims :: map, options :: keyword) ::
+  @spec token_for_resource(Resource.t(), extra_claims :: map, options :: keyword, context :: map) ::
           {:ok, token, claims} | :error
   def token_for_resource(resource, extra_claims, opts \\ [], context) do
     {purpose, opts} = Keyword.pop(opts, :purpose, :user)
