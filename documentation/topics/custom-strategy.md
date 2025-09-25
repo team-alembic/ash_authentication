@@ -108,7 +108,11 @@ it's attached to during compilation.
 
 ```elixir
 defmodule OnlyMartiesAtTheParty do
-  defstruct name: :marty, case_sensitive?: false, name_field: nil, resource: nil
+  defstruct name: :marty,
+            case_sensitive?: false,
+            name_field: nil,
+            resource: nil,
+            __spark_metadata__: nil
 
   # ...
 

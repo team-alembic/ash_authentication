@@ -177,7 +177,8 @@ defmodule AshAuthentication.Strategy.RememberMe do
             registration_enabled?: false,
             resource: nil,
             token_lifetime: {30, :days},
-            sign_in_action_name: nil
+            sign_in_action_name: nil,
+            __spark_metadata__: nil
 
   use Custom, entity: Dsl.dsl()
 
@@ -193,6 +194,7 @@ defmodule AshAuthentication.Strategy.RememberMe do
           identity_field: atom,
           cookie_name: atom,
           sign_in_action_name: :atom,
-          token_lifetime: pos_integer
+          token_lifetime: pos_integer,
+          __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 end

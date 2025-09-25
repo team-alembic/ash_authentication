@@ -112,7 +112,8 @@ defmodule AshAuthentication.Strategy.Password do
             sign_in_enabled?: true,
             sign_in_token_lifetime: 60,
             sign_in_tokens_enabled?: false,
-            sign_in_with_token_action_name: nil
+            sign_in_with_token_action_name: nil,
+            __spark_metadata__: nil
 
   alias Ash.Resource
 
@@ -146,7 +147,8 @@ defmodule AshAuthentication.Strategy.Password do
           sign_in_enabled?: boolean,
           sign_in_token_lifetime: pos_integer,
           sign_in_tokens_enabled?: boolean,
-          sign_in_with_token_action_name: atom
+          sign_in_with_token_action_name: atom,
+          __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 
   @doc false

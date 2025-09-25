@@ -28,7 +28,8 @@ defmodule AshAuthentication.Strategy.ApiKey do
             sign_in_action_name: nil,
             api_key_hash_attribute: nil,
             api_key_relationship: nil,
-            multitenancy_relationship: nil
+            multitenancy_relationship: nil,
+            __spark_metadata__: nil
 
   alias AshAuthentication.Strategy.{ApiKey, ApiKey.Transformer, ApiKey.Verifier}
 
@@ -40,7 +41,8 @@ defmodule AshAuthentication.Strategy.ApiKey do
           sign_in_action_name: atom(),
           api_key_hash_attribute: atom(),
           api_key_relationship: atom(),
-          multitenancy_relationship: atom()
+          multitenancy_relationship: atom(),
+          __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 
   @doc false

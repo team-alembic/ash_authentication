@@ -132,7 +132,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
             sign_in_action_name: nil,
             single_use_token?: true,
             token_lifetime: {10, :minutes},
-            token_param_name: :token
+            token_param_name: :token,
+            __spark_metadata__: nil
 
   use AshAuthentication.Strategy.Custom, entity: Dsl.dsl()
 
@@ -152,7 +153,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
           sign_in_action_name: atom,
           single_use_token?: boolean,
           token_lifetime: pos_integer(),
-          token_param_name: atom
+          token_param_name: atom,
+          __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 
   defdelegate transform(strategy, dsl_state), to: Transformer
