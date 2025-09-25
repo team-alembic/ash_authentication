@@ -6,7 +6,8 @@ defmodule Example.OnlyMartiesAtTheParty do
   defstruct name: :marty,
             case_sensitive?: false,
             name_field: nil,
-            resource: nil
+            resource: nil,
+            __spark_metadata__: nil
 
   @entity %Spark.Dsl.Entity{
     name: :only_marty,

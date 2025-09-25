@@ -115,7 +115,8 @@ defmodule AshAuthentication.AddOn.Confirmation do
             provider: :confirmation,
             resource: nil,
             sender: nil,
-            token_lifetime: nil
+            token_lifetime: nil,
+            __spark_metadata__: nil
 
   alias Ash.{Changeset, Resource}
   alias AshAuthentication.{AddOn.Confirmation, Jwt, Strategy.Custom}
@@ -135,7 +136,8 @@ defmodule AshAuthentication.AddOn.Confirmation do
           provider: :confirmation,
           resource: module,
           sender: nil | {module, keyword},
-          token_lifetime: hours :: pos_integer
+          token_lifetime: hours :: pos_integer,
+          __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 
   defdelegate transform(strategy, dsl_state), to: Transformer
