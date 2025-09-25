@@ -57,7 +57,8 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere do
             include_purposes: nil,
             exclude_purposes: ["revocation"],
             provider: :log_out_everywhere,
-            resource: nil
+            resource: nil,
+            __spark_metadata__: nil
 
   alias __MODULE__.{Dsl, Transformer, Verifier}
   alias AshAuthentication.Strategy.Custom
@@ -70,7 +71,8 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere do
           argument_name: nil,
           name: :log_out_everywhere,
           provider: :log_out_everywhere,
-          resource: module
+          resource: module,
+          __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 
   defdelegate transform(strategy, dsl), to: Transformer
