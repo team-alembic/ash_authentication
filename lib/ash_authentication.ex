@@ -94,6 +94,10 @@ defmodule AshAuthentication do
   1. `AshAuthentication.AddOn.Confirmation`
      - allows you to force the user to confirm changes using a confirmation
        token (eg. sending a confirmation email when a new user registers).
+  2. `AshAuthentication.AddOn.LogOutEverywhere`
+     - allows you to revoke all of a user's tokens on sign out.
+  3. `AshAuthentication.AddOn.AuditLog`
+     - provides audit logging for other add-ons and strategies.
 
   ## Supervisor
 
@@ -117,6 +121,7 @@ defmodule AshAuthentication do
   alias Spark.Dsl.Extension
 
   @built_in_strategies [
+    AshAuthentication.AddOn.AuditLog,
     AshAuthentication.AddOn.Confirmation,
     AshAuthentication.AddOn.LogOutEverywhere,
     AshAuthentication.Strategy.ApiKey,

@@ -35,3 +35,5 @@ ash_authentication-*.tar
 .env*
 
 priv/plts
+
+.claude

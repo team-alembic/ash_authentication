@@ -190,4 +190,78 @@ defmodule DataCase do
       :error -> :error
     end
   end
+
+  @doc "User with audit log factory"
+  @spec build_user_with_audit_log(keyword) :: Example.UserWithAuditLog.t() | no_return
+  def build_user_with_audit_log(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithAuditLog
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with excluded strategies factory"
+  @spec build_user_with_excluded_strategies(keyword) ::
+          Example.UserWithExcludedStrategies.t() | no_return
+  def build_user_with_excluded_strategies(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithExcludedStrategies
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with excluded actions factory"
+  @spec build_user_with_excluded_actions(keyword) ::
+          Example.UserWithExcludedActions.t() | no_return
+  def build_user_with_excluded_actions(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithExcludedActions
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
 end
