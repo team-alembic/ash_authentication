@@ -6,8 +6,11 @@ defmodule AshAuthenticationTest do
 
   describe "authenticated_resources/0" do
     test "it correctly locates all authenticatable resources" do
-      assert [
+      assert Enum.sort([
                Example.User,
+               Example.UserWithAuditLog,
+               Example.UserWithExcludedActions,
+               Example.UserWithExcludedStrategies,
                Example.UserWithTokenRequired,
                Example.UserWithRememberMe,
                Example.UserWithRegisterMagicLink,
@@ -15,8 +18,8 @@ defmodule AshAuthenticationTest do
                ExampleMultiTenant.GlobalUser,
                ExampleMultiTenant.UserWithTokenRequired,
                ExampleMultiTenant.UserWithRegisterMagicLink
-             ] =
-               authenticated_resources(:ash_authentication)
+             ]) ==
+               Enum.sort(authenticated_resources(:ash_authentication))
     end
   end
 end
