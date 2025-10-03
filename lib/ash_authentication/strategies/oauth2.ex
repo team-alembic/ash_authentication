@@ -254,7 +254,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     trusted_audiences: nil,
     user_url: nil,
     code_verifier: false,
-            __spark_metadata__: nil
+    __spark_metadata__: nil
   ]
 
   defstruct @struct_fields
