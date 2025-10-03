@@ -110,13 +110,35 @@ defmodule AshAuthentication.Jwt do
     default_claims = Config.default_claims(resource, action_opts)
     signer = Config.token_signer(resource, opts, context)
 
-    with {:ok, token, claims} <- Joken.generate_and_sign(default_claims, extra_claims, signer),
+    with {:ok, more_extra_claims} <- extra_claims_for_user(purpose, user, opts),
+         {:ok, token, claims} <-
+           Joken.generate_and_sign(
+             default_claims,
+             Map.merge(extra_claims, more_extra_claims),
+             signer
+           ),
          :ok <- maybe_store_token(token, resource, user, purpose, action_opts) do
       {:ok, token, claims}
     else
       {:error, reason} ->
         Logger.error("Failed to generate token for user: #{inspect(reason, pretty: true)}")
         :error
+    end
+  end
+
+  defp extra_claims_for_user(:user, user, opts) do
+    case AshAuthentication.Info.authentication_tokens_extra_claims(user) do
+      :error ->
+        %{}
+
+      {:ok, nil} ->
+        %{}
+
+      {:ok, extra_claims} when is_map(extra_claims) ->
+        extra_claims
+
+      {:ok, extra_claims} when is_function(extra_claims) ->
+        extra_claims.(user, opts)
     end
   end
 
