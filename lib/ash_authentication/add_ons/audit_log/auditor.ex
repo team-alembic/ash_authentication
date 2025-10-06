@@ -87,12 +87,27 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
 
     status =
       case result do
-        ok when elem(ok, 0) == :ok -> :success
-        error when elem(error, 0) == :error -> :failure
-        :error -> :failure
-        {ok, _} when elem(ok, 0) == :ok -> :success
-        {error, _} when elem(error, 0) == :error -> :failure
-        _ -> :unknown
+        :ok ->
+          :success
+
+        {:ok, _} ->
+          :success
+
+        {:ok, _, _} ->
+          :success
+
+        {:error, _} ->
+          :failure
+
+        :error ->
+          :failure
+
+        other ->
+          Logger.warning(
+            "Auditor after_transaction hook received unexpected result: `#{inspect(other)}`"
+          )
+
+          :unknown
       end
 
     subject =
