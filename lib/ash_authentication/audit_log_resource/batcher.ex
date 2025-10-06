@@ -169,7 +169,6 @@ defmodule AshAuthentication.AuditLogResource.Batcher do
       config.queue
       |> Stream.map(& &1.attributes)
       |> Ash.bulk_create(resource, config.action,
-        authorize?: false,
         domain: config.domain,
         return_errors?: true,
         assume_casted?: true,
