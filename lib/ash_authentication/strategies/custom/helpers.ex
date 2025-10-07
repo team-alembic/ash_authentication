@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.Custom.Helpers do
   @moduledoc """
   Helpers for use within custom strategies.

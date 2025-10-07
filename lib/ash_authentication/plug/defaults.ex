@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Plug.Defaults do
   @moduledoc """
   Provides the default implementations of `handle_success/3` and

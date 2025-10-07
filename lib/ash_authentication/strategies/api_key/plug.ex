@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.ApiKey.Plug do
   @moduledoc """
   Plug for authenticating using API keys.

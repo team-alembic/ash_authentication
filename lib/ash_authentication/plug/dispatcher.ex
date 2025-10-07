@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Plug.Dispatcher do
   @moduledoc """
   Route requests and callbacks to the correct provider plugs.

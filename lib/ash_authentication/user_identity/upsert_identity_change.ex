@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
   @moduledoc """
   A change which upserts a user's identity into the user identity resource.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.SenderFunction do
   @moduledoc """
   Implements `AshAuthentication.Sender` for functions that are provided to the

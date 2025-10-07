@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.LogOutEverywhere.OnPasswordChange do
   @moduledoc "Logs a user out from everywhere by revoking all stored tokens."
   use Ash.Resource.Change

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Checks.UsingApiKey do
   @moduledoc """
   This check is true if `user.__metadata__[:using_api_key?]` is set to true.

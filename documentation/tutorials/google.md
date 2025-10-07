@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 # Google Tutorial
 
 This is a quick tutorial on how to configure Google authentication.

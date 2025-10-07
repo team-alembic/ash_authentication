@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.TokenResource.RevokeAllStoredForSubjectChange do
   @moduledoc """
   Updates all tokens for a given subject to have the purpose revocation

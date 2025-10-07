@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule ExampleMultiTenant.AuthPlug do
   @moduledoc false
   use AshAuthentication.Plug, otp_app: :ash_authentication

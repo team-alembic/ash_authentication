@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.Confirmation.Verifier do
   @moduledoc """
   DSL verifier for confirmation add-on.

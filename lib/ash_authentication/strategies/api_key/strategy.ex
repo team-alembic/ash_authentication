@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.ApiKey do
   @moduledoc false
   alias Ash.Resource

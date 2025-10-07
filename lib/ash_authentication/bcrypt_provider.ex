@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.BcryptProvider do
   @moduledoc """
   Provides the default implementation of `AshAuthentication.HashProvider` using `Bcrypt`.

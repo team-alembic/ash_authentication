@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 # Testing
 
 Tips and tricks to help test your apps.

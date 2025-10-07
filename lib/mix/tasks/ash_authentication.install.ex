@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshAuthentication.Install do

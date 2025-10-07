@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 ![Logo](https://github.com/ash-project/ash/blob/main/logos/cropped-for-header-black-text.png?raw=true#gh-light-mode-only)
 ![Logo](https://github.com/ash-project/ash/blob/main/logos/cropped-for-header-white-text.png?raw=true#gh-dark-mode-only)
 
@@ -5,6 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hex version badge](https://img.shields.io/hexpm/v/ash_authentication.svg)](https://hex.pm/packages/ash_authentication)
 [![Hexdocs badge](https://img.shields.io/badge/docs-hexdocs-purple)](https://hexdocs.pm/ash_authentication)
+[![REUSE status](https://api.reuse.software/badge/github.com/team-alembic/ash_authentication)](https://api.reuse.software/info/github.com/team-alembic/ash_authentication)
 
 # Ash Authentication
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.TokenResource.IsRevoked do
   @moduledoc """
   Checks for the existence of a revocation token for the provided token revocation token for the provided token.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule :"Elixir.Example.Repo.Migrations.Multi-tenancyApiKey" do
   @moduledoc """
   Updates resources based on their most recent snapshots.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Errors.UnconfirmedUser do
   @moduledoc """
   The user is unconfirmed and so the operation cannot be executed.

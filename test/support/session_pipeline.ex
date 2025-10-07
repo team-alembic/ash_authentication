@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule SessionPipeline do
   @moduledoc """
   A simple plug pipeline that ensures that the session is set up ready to be consumed.

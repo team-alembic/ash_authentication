@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule Example.Repo.Migrations.InstallAshFunctionsExtension420241009220833 do
   @moduledoc """
   Installs any extensions that are mentioned in the repo's `installed_extensions/0` callback

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   @moduledoc """
   Performs a change based on the contents of a confirmation token.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Argon2Provider do
   @moduledoc """
   Provides an implementation of `AshAuthentication.HashProvider` using `Argon2`.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
   @moduledoc """
   Updates the identity resource when a user is registered.

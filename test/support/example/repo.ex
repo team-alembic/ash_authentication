@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule Example.Repo do
   @moduledoc false
   use AshPostgres.Repo, otp_app: :ash_authentication

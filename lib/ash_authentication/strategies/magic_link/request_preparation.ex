@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
   @moduledoc """
   Prepare a query for a magic link request.

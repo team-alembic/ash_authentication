@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 # Confirmation Tutorial
 
 This add-on allows you to confirm changes to a user record by generating and

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.SecretFunction do
   @moduledoc """
   Implements `AshAuthentication.Secret` for functions that are provided to the
