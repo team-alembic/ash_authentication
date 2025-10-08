@@ -11,6 +11,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.11.0](https://github.com/team-alembic/ash_authentication/compare/v4.10.0...v4.11.0) (2025-10-08)
+
+
+
+
+### Features:
+
+* enhance error messages in hash_password_change.ex (#1058) by pupdogg
+
+### Bug Fixes:
+
+* Jwt.token_for_resource typespec. by James Harton
+
+* Add only existing sections into Ash.Resource of config.exs by aifrak
+
 ## [v4.10.0](https://github.com/team-alembic/ash_authentication/compare/v4.9.9...v4.10.0) (2025-09-11)
 
 
