@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   @moduledoc """
   DSL transformer the the log-out-everywhere add-on.

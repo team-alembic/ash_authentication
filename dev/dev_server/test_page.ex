@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule DevServer.TestPage do
   @moduledoc """
   Displays a very basic login form according to the currently configured providers.

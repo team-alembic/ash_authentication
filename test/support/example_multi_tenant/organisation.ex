@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule ExampleMultiTenant.Organisation do
   @moduledoc false
   use Ash.Resource,

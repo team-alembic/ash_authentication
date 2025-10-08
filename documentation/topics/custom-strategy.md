@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 # Defining Custom Authentication Strategies
 
 AshAuthentication allows you to bring your own authentication strategy without

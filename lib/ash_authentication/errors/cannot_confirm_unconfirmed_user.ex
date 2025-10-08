@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Errors.CannotConfirmUnconfirmedUser do
   @moduledoc """
   An unconfirmed user cannot be confirmed outside of explicit actions.

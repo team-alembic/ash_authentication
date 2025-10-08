@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 # Remember Me Authentication Tutorial
 
 The Remember Me strategy allows authenticating users with long lived tokens

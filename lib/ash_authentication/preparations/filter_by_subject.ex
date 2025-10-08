@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Preparations.FilterBySubject do
   @moduledoc "Filters a user by the identifier in the subject of a JWT."
   use Ash.Resource.Preparation

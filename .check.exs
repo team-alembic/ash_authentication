@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 [
   ## don't run tools concurrently
   # parallel: false,
@@ -31,6 +35,7 @@
     {:credo, "mix credo --strict"},
     {:spark_formatter, "mix spark.formatter --check"},
     {:spark_cheat_sheets, "mix spark.cheat_sheets --check"},
-    {:generate_migrations, "mix ash_postgres.generate_migrations --check"}
+    {:generate_migrations, "mix ash_postgres.generate_migrations --check"},
+    {:reuse, command: ["pipx", "run", "reuse", "lint", "-q"]}
   ]
 ]

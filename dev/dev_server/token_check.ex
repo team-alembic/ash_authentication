@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule DevServer.TokenCheck do
   @moduledoc """
   Verifies a submitted token and reports the contents.

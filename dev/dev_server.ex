@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule DevServer do
   @moduledoc """
   This module provides an extremely simplified authentication UI, mainly for

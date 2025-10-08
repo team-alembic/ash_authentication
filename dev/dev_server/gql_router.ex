@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule DevServer.GqlRouter do
   @moduledoc """
   Router for GraphQL requests.

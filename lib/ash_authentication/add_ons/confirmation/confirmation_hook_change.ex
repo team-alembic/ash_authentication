@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
   @moduledoc """
   Triggers a confirmation flow when one of the monitored fields is changed.

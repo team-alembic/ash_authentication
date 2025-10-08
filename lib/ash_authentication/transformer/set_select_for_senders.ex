@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Transformer.SetSelectForSenders do
   @moduledoc """
   Sets the `select_for_senders` options to its default value.

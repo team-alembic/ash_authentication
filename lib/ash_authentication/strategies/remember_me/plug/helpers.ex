@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   @moduledoc """
   Plug for signing in with remember me token in cookies.

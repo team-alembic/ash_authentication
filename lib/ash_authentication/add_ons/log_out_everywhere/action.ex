@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
   @moduledoc """
   Revokes all tokens for the specified user.

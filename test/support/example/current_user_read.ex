@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule Example.CurrentUserRead do
   @moduledoc """
   There's no need to actually go to the database to get the current user, when

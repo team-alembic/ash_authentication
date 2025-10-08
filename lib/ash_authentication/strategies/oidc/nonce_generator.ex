@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.Oidc.NonceGenerator do
   @moduledoc """
   An implmentation of `AshAuthentication.Secret` that generates nonces for

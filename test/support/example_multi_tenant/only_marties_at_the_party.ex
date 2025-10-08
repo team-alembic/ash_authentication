@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule ExampleMultiTenant.OnlyMartiesAtTheParty do
   @moduledoc """
   A really dumb custom strategy that lets anyone named Marty sign in.

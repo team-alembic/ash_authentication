@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.MixProject do
   @moduledoc false
   use Mix.Project
@@ -40,7 +44,11 @@ defmodule AshAuthentication.MixProject do
       licenses: ["MIT"],
       links: %{
         "Source" => "https://github.com/team-alembic/ash_authentication",
-        "Phoenix Support" => "https://github.com/team-alembic/ash_authentication_phoenix"
+        "Phoenix Support" => "https://github.com/team-alembic/ash_authentication_phoenix",
+        "Changelog" =>
+          "https://github.com/team-alembic/ash_authentication/blob/main/CHANGELOG.md",
+        "REUSE Compliance" =>
+          "https://api.reuse.software/info/github.com/team-alembic/ash_authentication"
       },
       source_url: "https://github.com/team-alembic/ash_authentication",
       files:

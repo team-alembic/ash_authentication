@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   @moduledoc """
   Prepare a query for sign in via token.

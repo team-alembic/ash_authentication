@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 # Auth0 Tutorial
 
 This is a quick tutorial on how to configure your application to use Auth0 for authentication.

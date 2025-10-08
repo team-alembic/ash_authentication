@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule DevServer.Session do
   @moduledoc """
   Does nothing but own an ETS table for the session to be stored in.

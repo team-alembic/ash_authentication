@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.TokenResource.GetTokenPreparation do
   @moduledoc """
   Constrains a query to only records which match the `jti` or `token` argument

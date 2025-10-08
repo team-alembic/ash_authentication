@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 spark_locals_without_parens = [
   access_token_attribute_name: 1,
   access_token_expires_at_attribute_name: 1,

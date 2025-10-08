@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defprotocol AshAuthentication.Strategy do
   @moduledoc """
   The protocol used for interacting with authentication strategies.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule DevServer.ClearSession do
   @moduledoc """
   Resets the session storage, to 'log out" all users.

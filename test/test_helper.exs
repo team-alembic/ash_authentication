@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 Mimic.copy(AshAuthentication.AddOn.Confirmation.Actions)
 Mimic.copy(AshAuthentication.AddOn.Confirmation.Plug)
 Mimic.copy(AshAuthentication.Info)
