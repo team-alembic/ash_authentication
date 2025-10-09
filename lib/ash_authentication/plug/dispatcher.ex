@@ -29,7 +29,11 @@ defmodule AshAuthentication.Plug.Dispatcher do
   @spec call(Conn.t(), config | any) :: Conn.t()
   def call(conn, {phase, strategy, return_to}) do
     activity = {Strategy.name(strategy), phase}
-    conn = %{conn | params: Map.drop(conn.params, ["glob"])}
+
+    conn =
+      conn
+      |> drop_params(["glob"])
+      |> add_request_context()
 
     strategy
     |> Strategy.plug(phase, conn)
@@ -64,5 +68,25 @@ defmodule AshAuthentication.Plug.Dispatcher do
 
   def call(conn, return_to) do
     return_to.handle_failure(conn, {nil, nil}, :not_found)
+  end
+
+  defp drop_params(conn, keys), do: %{conn | params: Map.drop(conn.params, keys)}
+
+  defp add_request_context(conn) do
+    peer_data = Conn.get_peer_data(conn)
+
+    context =
+      %{
+        ash_authentication_request: %{
+          remote_ip: peer_data.address |> :inet.ntoa() |> to_string(),
+          remote_port: peer_data.port,
+          http_host: conn.host,
+          http_method: conn.method,
+          forwarded: Conn.get_req_header(conn, "forwarded"),
+          x_forwarded_for: Conn.get_req_header(conn, "x-forwarded-for")
+        }
+      }
+
+    Ash.PlugHelpers.set_context(conn, context)
   end
 end
