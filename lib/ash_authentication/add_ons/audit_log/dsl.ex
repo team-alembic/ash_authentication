@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.AuditLog.Dsl do
   @moduledoc """
   Defines the Spark DSL entity for this add on.

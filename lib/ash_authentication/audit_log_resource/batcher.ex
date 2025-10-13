@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AuditLogResource.Batcher do
   @moduledoc """
   A `GenServer` which batches up writes to the audit log to reduce write pressure in busy environments.

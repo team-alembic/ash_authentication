@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.AuditLog.Verifier do
   @moduledoc """
   Provides configuration validation for the AuditLog add-on.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.AuditLog.Auditor do
   @moduledoc """
   Provides common audit logging behaviour for Ash actions.

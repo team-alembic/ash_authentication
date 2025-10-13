@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+
+SPDX-License-Identifier: MIT
+-->
+
 # Audit Log Tutorial
 
 The audit log add-on provides automatic logging of authentication events (sign in, registration, failures, etc.) to help you track security-relevant activities in your application.

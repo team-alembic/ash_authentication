@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
 defmodule Mix.Tasks.AshAuthentication.AddAddOnTest do
   use ExUnit.Case
