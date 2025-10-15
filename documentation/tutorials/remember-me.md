@@ -33,12 +33,10 @@ authentication do
 
   addons do
     ...
-    add_ons do
-      # Recommended: use the logout everywhere add on to revoke
-      # Remember Me tokens on password change.
-      log_out_everywhere do
-        apply_on_password_change? true
-      end
+    # Recommended: use the logout everywhere add on to revoke
+    # Remember Me tokens on password change.
+    log_out_everywhere do
+      apply_on_password_change? true
     end
   end
 
@@ -125,7 +123,6 @@ actions do
     # prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me, argument: :remember_me}
     prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
 
-
     metadata :token, :string do
       description "A JWT that can be used to authenticate the user."
       allow_nil? false
@@ -157,7 +154,8 @@ actions do
     prepare AshAuthentication.Strategy.Password.SignInWithTokenPreparation
 
     # 2 of 3: Add the preparation
-    prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me}
+    # prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation, strategy_name: :remember_me, argument: :remember_me}
+    prepare AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation
 
     metadata :token, :string do
       description "A JWT that can be used to authenticate the user."
@@ -175,24 +173,23 @@ end
 
 ## Update your AuthController
 
+### Using AshAuthentication.Phoenix
+
+Implement the `put_remember_me_cookie/3` callback with your desired cookie options
+
 ```elixir
 # lib/my_app_web/controllers/auth_controller.ex
 defmodule MyAppWeb.AuthController do
   use MyAppWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
+  # The `clear_session/2` provided by AshAuthentication.Phoenix  will call 
+  # `delete_all_remember_me_cookies/2` for you.
   def sign_out(conn, _params) do
     return_to = get_session(conn, :return_to) || ~p"/"
 
     conn
     |> clear_session(:my_otp_app)
-    # Add this to delete all the remember me cookies on explicit signout.
-    # This will delete any remember_me tokens in the current connection's
-    # cookies and revoke them. Other remember_me tokens for the user are
-    # still valid.
-    #  Provided by `use AshAuthentication.Phoenix.Controller` or you can
-    #  import AshAuthentication.Strategy.RememberMe.Plug.Helpers
-    |> delete_all_remember_me_cookies(:my_otp_app)
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
   end
@@ -218,6 +215,19 @@ defmodule MyAppWeb.AuthController do
   end
 end
 ```
+
+### Without AshAuthenticationPhoenix
+
+On successful sign in, set the cookie with:
+```elixir
+AshAuthentication.Strategy.RememberMe.Plug.Helpers.maybe_put_remember_me_cookies(conn, auth_result)
+```
+
+On sign out, remove all remember me cookies with:
+```elixir
+AshAuthentication.Strategy.RememberMe.Plug.Helpers.delete_all_remember_me_cookies(conn, :my_otp_app)
+```
+
 
 ## Update your router
 
