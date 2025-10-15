@@ -186,7 +186,6 @@ defmodule AshAuthentication.Strategy.RememberMe do
 
   use Custom, entity: Dsl.dsl()
 
-  defdelegate dsl(), to: Dsl
   defdelegate transform(strategy, dsl_state), to: Transformer
   defdelegate verify(strategy, dsl_state), to: Verifier
 

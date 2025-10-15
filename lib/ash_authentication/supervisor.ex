@@ -38,7 +38,11 @@ defmodule AshAuthentication.Supervisor do
     |> Keyword.fetch(:otp_app)
     |> case do
       {:ok, otp_app} ->
-        [{AshAuthentication.TokenResource.Expunger, otp_app: otp_app}]
+        [
+          {AshAuthentication.TokenResource.Expunger, otp_app: otp_app},
+          {AshAuthentication.AuditLogResource.Batcher, otp_app: otp_app},
+          {AshAuthentication.AuditLogResource.Expunger, otp_app: otp_app}
+        ]
         |> Supervisor.init(strategy: :one_for_one)
 
       :error ->

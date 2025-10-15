@@ -113,6 +113,7 @@ defmodule AshAuthentication.MixProject do
         "documentation/topics/tokens.md",
         "documentation/topics/upgrading.md",
         {"documentation/tutorials/api-keys.md", title: "API Keys"},
+        "documentation/tutorials/audit-log.md",
         "documentation/tutorials/auth0.md",
         "documentation/tutorials/confirmation.md",
         "documentation/tutorials/get-started.md",
@@ -253,8 +254,10 @@ defmodule AshAuthentication.MixProject do
   defp aliases do
     extensions = [
       "AshAuthentication",
+      "AshAuthentication.AddOn.AuditLog",
       "AshAuthentication.AddOn.Confirmation",
       "AshAuthentication.AddOn.LogOutEverywhere",
+      "AshAuthentication.AuditLogResource",
       "AshAuthentication.Strategy.ApiKey",
       "AshAuthentication.Strategy.Apple",
       "AshAuthentication.Strategy.Auth0",
