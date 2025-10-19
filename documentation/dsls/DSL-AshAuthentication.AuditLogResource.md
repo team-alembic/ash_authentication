@@ -13,7 +13,7 @@ The information stored in this resource is essentially time-series, and should b
 
 ## Usage
 
-There is no need to define any attributes of actions (thought you can if you want). The extension will wire up everything that's needed for the audit log to function.
+There is no need to define any attributes or actions (thought you can if you want). The extension will wire up everything that's needed for the audit log to function.
 
 ```elixir
 defmodule MyApp.Accounts.AuditLog do

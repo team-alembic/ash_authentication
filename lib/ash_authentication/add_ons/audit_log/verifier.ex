@@ -12,8 +12,9 @@ defmodule AshAuthentication.AddOn.AuditLog.Verifier do
   @doc false
   def verify(strategy, _dsl) do
     with :ok <- verify_audit_log_resource(strategy),
-         :ok <- verify_exclude_strategies(strategy) do
-      verify_exclude_actions(strategy)
+         :ok <- verify_exclude_strategies(strategy),
+         :ok <- verify_exclude_actions(strategy) do
+      verify_sensitive_fields(strategy)
     end
   end
 
@@ -107,5 +108,64 @@ defmodule AshAuthentication.AddOn.AuditLog.Verifier do
            """
          )}
     end
+  end
+
+  defp verify_sensitive_fields(strategy) when strategy.include_fields == [], do: :ok
+
+  defp verify_sensitive_fields(strategy) do
+    # Find all attributes and action arguments that are sensitive
+    attributes = Ash.Resource.Info.attributes(strategy.resource)
+    actions = Ash.Resource.Info.actions(strategy.resource)
+
+    # Collect all arguments from all actions
+    all_arguments =
+      actions
+      |> Enum.flat_map(& &1.arguments)
+      |> Enum.uniq_by(& &1.name)
+
+    # Find sensitive fields that are being explicitly included
+    sensitive_fields_included =
+      strategy.include_fields
+      |> Enum.filter(fn field_name ->
+        # Check if field is a sensitive attribute
+        attribute_sensitive? =
+          attributes
+          |> Enum.find(&(&1.name == field_name))
+          |> case do
+            nil -> false
+            attr -> attr.sensitive?
+          end
+
+        # Check if field is a sensitive argument
+        argument_sensitive? =
+          all_arguments
+          |> Enum.find(&(&1.name == field_name))
+          |> case do
+            nil -> false
+            arg -> Map.get(arg, :sensitive?, false)
+          end
+
+        attribute_sensitive? || argument_sensitive?
+      end)
+
+    if sensitive_fields_included != [] &&
+         !Application.get_env(:ash_authentication, :suppress_sensitive_field_warnings?, false) do
+      field_list = Enum.map_join(sensitive_fields_included, ", ", &inspect/1)
+
+      IO.warn("""
+      AuditLog is configured to log sensitive fields: [#{field_list}]
+
+      Sensitive fields are being explicitly included in audit logs for resource #{inspect(strategy.resource)}.
+      This may expose sensitive user data in your audit logs.
+
+      To suppress this warning, add the following to your config:
+
+          config :ash_authentication, suppress_sensitive_field_warnings?: true
+
+      Only suppress this warning if you have verified that logging these sensitive fields is intentional and complies with your security policies.
+      """)
+    end
+
+    :ok
   end
 end

@@ -6,7 +6,7 @@ defmodule AshAuthentication.AddOn.AuditLog do
   @moduledoc """
   Audit logging support.
 
-  Provides audit-logging support for authentication strategies by adding a changes and preparations to all their actions.
+  Provides audit-logging support for authentication strategies by adding changes and preparations to all their actions.
 
   In order to use this add-on you must have at least one resource configured with the `AshAuthentication.AuditLogResource` extension added.
 

@@ -129,15 +129,26 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
 
   defp determine_status(result) do
     case result do
-      :ok -> :success
-      {:ok, _} -> :success
-      {:ok, _, _} -> :success
-      {:error, _} -> :failure
-      :error -> :failure
+      :ok ->
+        :success
+
+      {:ok, _} ->
+        :success
+
+      {:ok, _, _} ->
+        :success
+
+      {:error, _} ->
+        :failure
+
+      :error ->
+        :failure
+
       other ->
         Logger.warning(
           "Auditor after_transaction hook received unexpected result: `#{inspect(other)}`"
         )
+
         :unknown
     end
   end
@@ -146,6 +157,7 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
     case result do
       {:ok, user} when is_struct(user, resource) ->
         AshAuthentication.user_to_subject(user)
+
       _ ->
         nil
     end
