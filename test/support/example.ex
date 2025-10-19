@@ -14,11 +14,15 @@ defmodule Example do
     resource Example.User
     resource Example.UserIdentity
     resource Example.UserWithAuditLog
+    resource Example.UserWithEmptyIncludes
     resource Example.UserWithExcludedActions
     resource Example.UserWithExcludedStrategies
+    resource Example.UserWithExplicitIncludes
     resource Example.UserWithRegisterMagicLink
     resource Example.UserWithRememberMe
+    resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired
+    resource Example.UserWithWildcardAndExclusions
   end
 
   json_api do

@@ -8,7 +8,8 @@ defmodule AshAuthentication.AddOn.AuditLog.Transformer do
 
   @doc false
   def transform(strategy, dsl) do
-    with {:ok, logged_actions} <- find_logged_actions(strategy, dsl),
+    with {:ok, strategy, dsl} <- prefill_included(strategy, dsl),
+         {:ok, logged_actions} <- find_logged_actions(strategy, dsl),
          {:ok, dsl} <- persist_logged_actions(strategy, dsl, logged_actions),
          {:ok, dsl} <- persist_logged_fields(strategy, dsl, logged_actions),
          {:ok, dsl} <- add_global_change(strategy, dsl) do
@@ -16,22 +17,55 @@ defmodule AshAuthentication.AddOn.AuditLog.Transformer do
     end
   end
 
-  defp find_logged_actions(strategy, dsl) do
-    logged_actions =
+  defp prefill_included(strategy, dsl) do
+    with {:ok, strategy} <- prefill_included_strategies(strategy, dsl),
+         {:ok, strategy} <- prefill_included_actions(strategy, dsl) do
+      {:ok, strategy,
+       Transformer.replace_entity(
+         dsl,
+         [:authentication, :add_ons],
+         strategy,
+         &(&1.name == strategy.name)
+       )}
+    end
+  end
+
+  defp prefill_included_strategies(strategy, dsl) when strategy.include_strategies == [:*] do
+    strategy_names =
+      dsl
+      |> AshAuthentication.Info.list_strategies()
+      |> Enum.map(& &1.name)
+
+    {:ok, %{strategy | include_strategies: strategy_names}}
+  end
+
+  defp prefill_included_strategies(strategy, _dsl), do: {:ok, strategy}
+
+  defp prefill_included_actions(strategy, dsl) when strategy.include_actions == [:*] do
+    action_names =
       dsl
       |> Ash.Resource.Info.actions()
-      |> Stream.map(& &1.name)
-      |> Stream.reject(&(&1 in strategy.exclude_actions))
-      |> Enum.reject(fn action_name ->
-        case AshAuthentication.Info.strategy_for_action(dsl, action_name) do
-          {:ok, target_strategy} ->
-            target_strategy in strategy.exclude_strategies ||
-              target_strategy.provider == :audit_log
+      |> Enum.map(& &1.name)
 
-          :error ->
-            true
+    {:ok, %{strategy | include_actions: action_names}}
+  end
+
+  defp prefill_included_actions(strategy, _dsl), do: {:ok, strategy}
+
+  defp find_logged_actions(strategy, dsl) do
+    logged_actions =
+      strategy.include_actions
+      |> Stream.map(fn action_name ->
+        # For actions that belong to a strategy, use the strategy name
+        # For actions that don't belong to any strategy, use :audit_log as the strategy
+        case AshAuthentication.Info.strategy_for_action(dsl, action_name) do
+          {:ok, action_strategy} -> {action_name, action_strategy.name}
+          :error -> {action_name, :audit_log}
         end
       end)
+      |> Stream.reject(&(elem(&1, 0) in strategy.exclude_actions))
+      |> Stream.reject(&(elem(&1, 1) in strategy.exclude_strategies))
+      |> Enum.to_list()
 
     {:ok, logged_actions}
   end
@@ -48,8 +82,11 @@ defmodule AshAuthentication.AddOn.AuditLog.Transformer do
     attributes = Ash.Resource.Info.attributes(dsl)
     actions = Ash.Resource.Info.actions(dsl)
 
+    # Extract just the action names from the tuples
+    logged_action_names = Enum.map(logged_actions, &elem(&1, 0))
+
     actions
-    |> Enum.filter(&(&1.name in logged_actions))
+    |> Enum.filter(&(&1.name in logged_action_names))
     |> Enum.reduce({:ok, dsl}, fn action, {:ok, dsl} ->
       argument_names =
         action.arguments

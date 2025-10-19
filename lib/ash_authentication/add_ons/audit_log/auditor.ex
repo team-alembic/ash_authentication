@@ -78,62 +78,24 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
   @doc false
   @spec get_tracked_actions(Ash.Resource.t(), atom) :: [atom]
   def get_tracked_actions(resource, strategy_name) do
-    Extension.get_persisted(resource, {:audit_log, strategy_name, :actions}) || []
+    persisted = Extension.get_persisted(resource, {:audit_log, strategy_name, :actions}) || []
+    # Extract just the action names from the tuples
+    Enum.map(persisted, fn
+      {action_name, _strategy_name} -> action_name
+      action_name -> action_name
+    end)
   end
 
   @doc false
   @spec after_transaction(input, result, atom, map) :: result
   def after_transaction(input, result, strategy_name, context) do
     audit_strategy = AshAuthentication.Info.strategy!(input.resource, strategy_name)
+    action_strategy = get_action_strategy(input, audit_strategy)
 
-    action_strategy =
-      AshAuthentication.Info.strategy_for_action!(input.resource, input.action.name)
-
-    status =
-      case result do
-        :ok ->
-          :success
-
-        {:ok, _} ->
-          :success
-
-        {:ok, _, _} ->
-          :success
-
-        {:error, _} ->
-          :failure
-
-        :error ->
-          :failure
-
-        other ->
-          Logger.warning(
-            "Auditor after_transaction hook received unexpected result: `#{inspect(other)}`"
-          )
-
-          :unknown
-      end
-
-    subject =
-      case result do
-        {:ok, user} when is_struct(user, input.resource) ->
-          AshAuthentication.user_to_subject(user)
-
-        _ ->
-          nil
-      end
-
-    request =
-      context
-      |> Map.get(:source_context, %{})
-      |> Map.get(:ash_authentication_request, %{})
-      |> Map.merge(Map.get(context, :ash_authentication_request, %{}))
-
-    extra_data =
-      context
-      |> Map.take([:actor, :tenant])
-      |> Map.put(:request, request)
-      |> Map.put(:params, get_params(input, audit_strategy))
+    status = determine_status(result)
+    subject = extract_subject(result, input.resource)
+    request = extract_request(context)
+    extra_data = build_extra_data(context, request, input, audit_strategy)
 
     params = %{
       strategy: action_strategy.name,
@@ -156,6 +118,51 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
     end
 
     result
+  end
+
+  defp get_action_strategy(input, audit_strategy) do
+    case AshAuthentication.Info.strategy_for_action(input.resource, input.action.name) do
+      {:ok, strategy} -> strategy
+      :error -> audit_strategy
+    end
+  end
+
+  defp determine_status(result) do
+    case result do
+      :ok -> :success
+      {:ok, _} -> :success
+      {:ok, _, _} -> :success
+      {:error, _} -> :failure
+      :error -> :failure
+      other ->
+        Logger.warning(
+          "Auditor after_transaction hook received unexpected result: `#{inspect(other)}`"
+        )
+        :unknown
+    end
+  end
+
+  defp extract_subject(result, resource) do
+    case result do
+      {:ok, user} when is_struct(user, resource) ->
+        AshAuthentication.user_to_subject(user)
+      _ ->
+        nil
+    end
+  end
+
+  defp extract_request(context) do
+    context
+    |> Map.get(:source_context, %{})
+    |> Map.get(:ash_authentication_request, %{})
+    |> Map.merge(Map.get(context, :ash_authentication_request, %{}))
+  end
+
+  defp build_extra_data(context, request, input, audit_strategy) do
+    context
+    |> Map.take([:actor, :tenant])
+    |> Map.put(:request, request)
+    |> Map.put(:params, get_params(input, audit_strategy))
   end
 
   defp get_params(input, audit_strategy) do

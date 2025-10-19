@@ -51,6 +51,8 @@ Audit log add-on
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`audit_log_resource`](#authentication-add_ons-audit_log-audit_log_resource){: #authentication-add_ons-audit_log-audit_log_resource .spark-required} | `module` |  | The name of the Audit Log resource. |
+| [`include_strategies`](#authentication-add_ons-audit_log-include_strategies){: #authentication-add_ons-audit_log-include_strategies } | `nil` | `[:*]` | Explicitly allow events from the named strategies. |
+| [`include_actions`](#authentication-add_ons-audit_log-include_actions){: #authentication-add_ons-audit_log-include_actions } | `nil` | `[:*]` | Explicitly allow events from the named actions. |
 | [`exclude_strategies`](#authentication-add_ons-audit_log-exclude_strategies){: #authentication-add_ons-audit_log-exclude_strategies } | `atom \| list(atom)` | `[]` | Explicitly ignore events from the named strategies. |
 | [`exclude_actions`](#authentication-add_ons-audit_log-exclude_actions){: #authentication-add_ons-audit_log-exclude_actions } | `atom \| list(atom)` | `[]` | Explicitly ignore events from the named actions. |
 | [`include_fields`](#authentication-add_ons-audit_log-include_fields){: #authentication-add_ons-audit_log-include_fields } | `atom \| list(atom)` | `[]` | Explicitly include named attributes and arguments in the audit log regardless of their sensitivity setting. |

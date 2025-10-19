@@ -18,6 +18,16 @@ defmodule AshAuthentication.Info do
   @type dsl_or_resource :: module | map
 
   @doc """
+  Retrieve a list of all strategies and add-ons.
+  """
+  @spec list_strategies(dsl_or_resource) :: [strategy] when strategy: struct
+  def list_strategies(dsl_or_resource) do
+    dsl_or_resource
+    |> authentication_strategies()
+    |> Enum.concat(authentication_add_ons(dsl_or_resource))
+  end
+
+  @doc """
   Retrieve a named strategy from a resource.
   """
   @spec strategy(dsl_or_resource | module, atom) :: {:ok, strategy} | :error

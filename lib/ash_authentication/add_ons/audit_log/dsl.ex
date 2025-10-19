@@ -27,6 +27,14 @@ defmodule AshAuthentication.AddOn.AuditLog.Dsl do
           doc: "The name of the Audit Log resource.",
           required: true
         ],
+        include_strategies: [
+          doc: "Explicitly allow events from the named strategies.",
+          default: [:*]
+        ],
+        include_actions: [
+          doc: "Explicitly allow events from the named actions.",
+          default: [:*]
+        ],
         exclude_strategies: [
           type: {:wrap_list, :atom},
           doc: "Explicitly ignore events from the named strategies.",

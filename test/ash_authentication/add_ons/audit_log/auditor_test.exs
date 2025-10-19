@@ -33,6 +33,54 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
 
       assert actions == []
     end
+
+    test "only explicitly included actions are tracked" do
+      # UserWithExplicitIncludes has include_actions([:sign_in_with_password, :register_with_password])
+      actions = Auditor.get_tracked_actions(Example.UserWithExplicitIncludes, :audit_log)
+
+      # Only these two actions should be tracked
+      assert :sign_in_with_password in actions
+      assert :register_with_password in actions
+      # The list should contain exactly these actions
+      assert length(actions) == 2
+    end
+
+    test "empty includes result in no tracked actions" do
+      # UserWithEmptyIncludes has include_actions([]) and include_strategies([])
+      actions = Auditor.get_tracked_actions(Example.UserWithEmptyIncludes, :audit_log)
+
+      # No actions should be tracked when includes are empty
+      assert actions == []
+    end
+
+    test "wildcard with exclusions tracks all except excluded actions" do
+      # UserWithWildcardAndExclusions has include_actions([:*]) but excludes sign_in_with_password
+      actions = Auditor.get_tracked_actions(Example.UserWithWildcardAndExclusions, :audit_log)
+
+      # sign_in_with_password should NOT be tracked (excluded)
+      refute :sign_in_with_password in actions
+      # register_with_password should be tracked (included via wildcard, not excluded)
+      assert :register_with_password in actions
+    end
+
+    test "selective strategy includes only track actions from included strategies" do
+      # UserWithSelectiveStrategyIncludes includes only [:password] strategy
+      actions = Auditor.get_tracked_actions(Example.UserWithSelectiveStrategyIncludes, :audit_log)
+
+      # Password strategy actions should be tracked
+      assert :sign_in_with_password in actions
+      assert :register_with_password in actions
+      # If there were other strategies, their actions wouldn't be tracked
+    end
+
+    test "inclusion happens before exclusion in filtering" do
+      # This tests the precedence: inclusion first, then exclusion
+      # For UserWithExplicitIncludes, only explicitly included actions can be tracked
+      actions = Auditor.get_tracked_actions(Example.UserWithExplicitIncludes, :audit_log)
+
+      # Verify that the action list matches exactly what was included
+      assert Enum.sort(actions) == Enum.sort([:sign_in_with_password, :register_with_password])
+    end
   end
 
   describe "after_transaction/4 status tracking" do

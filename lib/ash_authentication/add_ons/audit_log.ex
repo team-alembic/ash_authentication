@@ -30,6 +30,8 @@ defmodule AshAuthentication.AddOn.AuditLog do
   """
 
   defstruct audit_log_resource: nil,
+            include_strategies: [:*],
+            include_actions: [:*],
             exclude_strategies: [],
             exclude_actions: [],
             name: :audit_log,
@@ -42,6 +44,8 @@ defmodule AshAuthentication.AddOn.AuditLog do
 
   @type t :: %__MODULE__{
           audit_log_resource: Ash.Resource.t(),
+          include_strategies: [atom],
+          include_actions: [atom],
           exclude_strategies: [atom],
           exclude_actions: [atom],
           name: atom,
