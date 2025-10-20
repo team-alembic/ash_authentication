@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.12.0](https://github.com/team-alembic/ash_authentication/compare/v4.11.0...v4.12.0) (2025-10-20)
+
+
+
+
+### Features:
+
+* Audit Logging add-on. (#1074) by James Harton
+
 ## [v4.11.0](https://github.com/team-alembic/ash_authentication/compare/v4.10.0...v4.11.0) (2025-10-08)
 
 
