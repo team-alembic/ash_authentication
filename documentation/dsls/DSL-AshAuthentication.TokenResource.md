@@ -71,7 +71,7 @@ Configuration options for this token resource
 | [`created_at_attribute_name`](#token-created_at_attribute_name){: #token-created_at_attribute_name } | `atom` | `:created_at` | The name of the `created_at` attribute on this resource. |
 | [`expunge_expired_action_name`](#token-expunge_expired_action_name){: #token-expunge_expired_action_name } | `atom` | `:expunge_expired` | The name of the action used to remove expired tokens. |
 | [`read_expired_action_name`](#token-read_expired_action_name){: #token-read_expired_action_name } | `atom` | `:read_expired` | The name of the action use to find all expired tokens. |
-| [`expunge_interval`](#token-expunge_interval){: #token-expunge_interval } | `pos_integer` | `12` | How often to scan this resource for records which have expired, and thus can be removed. |
+| [`expunge_interval`](#token-expunge_interval){: #token-expunge_interval } | `pos_integer` | `12` | How often (in hours) to scan this resource for records which have expired and thus can be removed. |
 | [`store_token_action_name`](#token-store_token_action_name){: #token-store_token_action_name } | `atom` | `:store_token` | The name of the action to use to store a token, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
 | [`get_token_action_name`](#token-get_token_action_name){: #token-get_token_action_name } | `atom` | `:get_token` | The name of the action used to retrieve tokens from the store, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
 

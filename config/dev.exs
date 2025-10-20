@@ -74,4 +74,6 @@ config :ash_authentication,
 
 # config :ash_authentication, debug_authentication_failures?: true
 
-config :ash_authentication, extra_strategies: [Example.OnlyMartiesAtTheParty]
+config :ash_authentication,
+  extra_strategies: [Example.OnlyMartiesAtTheParty],
+  suppress_sensitive_field_warnings?: true

@@ -38,7 +38,7 @@ defmodule AshAuthentication.TokenResource do
         expunge_interval: [
           type: :pos_integer,
           doc:
-            "How often to scan this resource for records which have expired, and thus can be removed.",
+            "How often (in hours) to scan this resource for records which have expired and thus can be removed.",
           default: @default_expunge_interval_hrs
         ],
         store_token_action_name: [

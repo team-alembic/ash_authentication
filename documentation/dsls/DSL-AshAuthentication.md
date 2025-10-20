@@ -91,6 +91,10 @@ Current add-ons:
 1. `AshAuthentication.AddOn.Confirmation`
    - allows you to force the user to confirm changes using a confirmation
      token (eg. sending a confirmation email when a new user registers).
+2. `AshAuthentication.AddOn.LogOutEverywhere`
+   - allows you to revoke all of a user's tokens on sign out.
+3. `AshAuthentication.AddOn.AuditLog`
+   - provides audit logging for other add-ons and strategies.
 
 ## Supervisor
 

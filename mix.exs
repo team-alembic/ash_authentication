@@ -113,6 +113,7 @@ defmodule AshAuthentication.MixProject do
         "documentation/topics/tokens.md",
         "documentation/topics/upgrading.md",
         {"documentation/tutorials/api-keys.md", title: "API Keys"},
+        "documentation/tutorials/audit-log.md",
         "documentation/tutorials/auth0.md",
         "documentation/tutorials/confirmation.md",
         "documentation/tutorials/get-started.md",
@@ -219,7 +220,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:usage_rules, "~> 0.1", only: [:dev]},
-      {:ash, ash_version("~> 3.0 and >= 3.4.29")},
+      {:ash, ash_version("~> 3.7")},
       {:igniter, "~> 0.4", optional: true},
       {:assent, "~> 0.2.13"},
       {:bcrypt_elixir, "~> 3.0"},
@@ -253,8 +254,10 @@ defmodule AshAuthentication.MixProject do
   defp aliases do
     extensions = [
       "AshAuthentication",
+      "AshAuthentication.AddOn.AuditLog",
       "AshAuthentication.AddOn.Confirmation",
       "AshAuthentication.AddOn.LogOutEverywhere",
+      "AshAuthentication.AuditLogResource",
       "AshAuthentication.Strategy.ApiKey",
       "AshAuthentication.Strategy.Apple",
       "AshAuthentication.Strategy.Auth0",

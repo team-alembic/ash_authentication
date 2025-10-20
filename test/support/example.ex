@@ -7,14 +7,22 @@ defmodule Example do
   use Ash.Domain, otp_app: :ash_authentication, extensions: [AshGraphql.Domain, AshJsonApi.Domain]
 
   resources do
-    resource Example.User
-    resource Example.UserWithTokenRequired
-    resource Example.UserWithRememberMe
+    resource Example.ApiKey
+    resource Example.AuditLog
     resource Example.Token
     resource Example.TokenWithCustomCreateTimestamp
+    resource Example.User
     resource Example.UserIdentity
+    resource Example.UserWithAuditLog
+    resource Example.UserWithEmptyIncludes
+    resource Example.UserWithExcludedActions
+    resource Example.UserWithExcludedStrategies
+    resource Example.UserWithExplicitIncludes
     resource Example.UserWithRegisterMagicLink
-    resource Example.ApiKey
+    resource Example.UserWithRememberMe
+    resource Example.UserWithSelectiveStrategyIncludes
+    resource Example.UserWithTokenRequired
+    resource Example.UserWithWildcardAndExclusions
   end
 
   json_api do

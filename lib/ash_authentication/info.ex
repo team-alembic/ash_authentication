@@ -18,6 +18,16 @@ defmodule AshAuthentication.Info do
   @type dsl_or_resource :: module | map
 
   @doc """
+  Retrieve a list of all strategies and add-ons.
+  """
+  @spec list_strategies(dsl_or_resource) :: [strategy] when strategy: struct
+  def list_strategies(dsl_or_resource) do
+    dsl_or_resource
+    |> authentication_strategies()
+    |> Enum.concat(authentication_add_ons(dsl_or_resource))
+  end
+
+  @doc """
   Retrieve a named strategy from a resource.
   """
   @spec strategy(dsl_or_resource | module, atom) :: {:ok, strategy} | :error
@@ -44,6 +54,28 @@ defmodule AshAuthentication.Info do
       :error ->
         raise "No strategy named `#{inspect(name)}` found on resource `#{inspect(dsl_or_resource)}`"
     end
+  end
+
+  @doc """
+  Is the named strategy present on the resource?
+  """
+  @spec strategy_present?(dsl_or_resource | module, atom) :: boolean
+  def strategy_present?(dsl_or_resource, name) do
+    dsl_or_resource
+    |> authentication_strategies()
+    |> Stream.concat(authentication_add_ons(dsl_or_resource))
+    |> Enum.any?(&(&1.name == name))
+  end
+
+  @doc """
+  Is at least one strategy of the provided type available?
+  """
+  @spec strategy_enabled?(dsl_or_resource, atom) :: boolean
+  def strategy_enabled?(dsl_or_resource, type) do
+    dsl_or_resource
+    |> authentication_strategies()
+    |> Stream.concat(authentication_add_ons(dsl_or_resource))
+    |> Enum.any?(&(&1.provider == type))
   end
 
   @doc """

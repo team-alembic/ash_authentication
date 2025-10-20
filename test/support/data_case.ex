@@ -190,4 +190,178 @@ defmodule DataCase do
       :error -> :error
     end
   end
+
+  @doc "User with audit log factory"
+  @spec build_user_with_audit_log(keyword) :: Example.UserWithAuditLog.t() | no_return
+  def build_user_with_audit_log(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithAuditLog
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with excluded strategies factory"
+  @spec build_user_with_excluded_strategies(keyword) ::
+          Example.UserWithExcludedStrategies.t() | no_return
+  def build_user_with_excluded_strategies(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithExcludedStrategies
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with excluded actions factory"
+  @spec build_user_with_excluded_actions(keyword) ::
+          Example.UserWithExcludedActions.t() | no_return
+  def build_user_with_excluded_actions(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithExcludedActions
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with explicit includes factory"
+  @spec build_user_with_explicit_includes(keyword) ::
+          Example.UserWithExplicitIncludes.t() | no_return
+  def build_user_with_explicit_includes(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithExplicitIncludes
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with wildcard and exclusions factory"
+  @spec build_user_with_wildcard_and_exclusions(keyword) ::
+          Example.UserWithWildcardAndExclusions.t() | no_return
+  def build_user_with_wildcard_and_exclusions(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithWildcardAndExclusions
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with selective strategy includes factory"
+  @spec build_user_with_selective_strategy_includes(keyword) ::
+          Example.UserWithSelectiveStrategyIncludes.t() | no_return
+  def build_user_with_selective_strategy_includes(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithSelectiveStrategyIncludes
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with empty includes factory"
+  @spec build_user_with_empty_includes(keyword) ::
+          Example.UserWithEmptyIncludes.t() | no_return
+  def build_user_with_empty_includes(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithEmptyIncludes
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
 end

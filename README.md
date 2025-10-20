@@ -54,6 +54,7 @@ Welcome! Here you will find everything you need to know to get started with and 
 - [Authenticate with Magic Links](documentation/tutorials/magic-links.md)
 - [Authenticate with Slack](documentation/tutorials/slack.md)
 - [Authenticate with Passwords](documentation/tutorials/password.md)
+- [Audit Logging](documentation/tutorials/audit-log.md)
 - [Confirmation](documentation/tutorials/confirmation.md)
 
 ---
