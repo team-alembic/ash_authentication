@@ -13,7 +13,8 @@ defmodule AshAuthentication.AddOn.AuditLog.Verifier do
   def verify(strategy, _dsl) do
     with :ok <- verify_audit_log_resource(strategy),
          :ok <- verify_exclude_strategies(strategy),
-         :ok <- verify_exclude_actions(strategy) do
+         :ok <- verify_exclude_actions(strategy),
+         :ok <- verify_truncation_masks(strategy) do
       verify_sensitive_fields(strategy)
     end
   end
@@ -73,6 +74,42 @@ defmodule AshAuthentication.AddOn.AuditLog.Verifier do
            - #{missing_strategies}
            """
          )}
+    end
+  end
+
+  defp verify_truncation_masks(strategy) do
+    with :ok <- verify_ipv4_mask(strategy) do
+      verify_ipv6_mask(strategy)
+    end
+  end
+
+  defp verify_ipv4_mask(strategy) do
+    mask = Map.get(strategy, :ipv4_truncation_mask, 24)
+
+    if mask >= 0 and mask <= 32 do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         module: strategy.resource,
+         path: [:authentication, :add_ons, :audit_log, strategy.name, :ipv4_truncation_mask],
+         message: "IPv4 truncation mask must be between 0 and 32, got #{mask}"
+       )}
+    end
+  end
+
+  defp verify_ipv6_mask(strategy) do
+    mask = Map.get(strategy, :ipv6_truncation_mask, 48)
+
+    if mask >= 0 and mask <= 128 do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         module: strategy.resource,
+         path: [:authentication, :add_ons, :audit_log, strategy.name, :ipv6_truncation_mask],
+         message: "IPv6 truncation mask must be between 0 and 128, got #{mask}"
+       )}
     end
   end
 

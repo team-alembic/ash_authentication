@@ -37,6 +37,9 @@ defmodule AshAuthentication.AddOn.AuditLog do
             name: :audit_log,
             provider: :audit_log,
             include_fields: [],
+            ip_privacy_mode: :none,
+            ipv4_truncation_mask: 24,
+            ipv6_truncation_mask: 48,
             resource: nil,
             __spark_metadata__: nil
 
@@ -51,6 +54,9 @@ defmodule AshAuthentication.AddOn.AuditLog do
           name: atom,
           provider: :audit_log,
           include_fields: [atom],
+          ip_privacy_mode: :none | :hash | :truncate | :exclude,
+          ipv4_truncation_mask: pos_integer(),
+          ipv6_truncation_mask: pos_integer(),
           resource: Ash.Resource.t(),
           __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }

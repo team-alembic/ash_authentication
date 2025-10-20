@@ -291,6 +291,67 @@ audit_log do
 end
 ```
 
+### Configure IP address privacy
+
+To comply with privacy regulations like GDPR, you can control how IP addresses are stored in audit logs:
+
+```elixir
+authentication do
+  add_ons do
+    audit_log do
+      audit_log_resource MyApp.Accounts.AuditLog
+
+      # IP privacy options: :none | :hash | :truncate | :exclude
+      ip_privacy_mode :truncate
+
+      # Network masks for truncation (optional, these are the defaults)
+      ipv4_truncation_mask 24  # Keep first 3 octets
+      ipv6_truncation_mask 48  # Keep first 3 segments
+    end
+  end
+end
+```
+
+Available IP privacy modes:
+
+- `:none` (default) - Store IP addresses as-is without modification
+- `:hash` - Hash IP addresses using SHA256 with application secret as salt
+- `:truncate` - Truncate IP addresses to a network prefix (e.g., 192.168.1.100 → 192.168.1.0/24)
+- `:exclude` - Don't store IP addresses at all
+
+When using `:truncate` mode, the default masks are:
+- IPv4: `/24` - Keeps first 3 octets (e.g., 192.168.1.0/24)
+- IPv6: `/48` - Keeps first 3 segments (e.g., 2001:db8:85a3::/48)
+
+Example configurations:
+
+```elixir
+# Hash all IP addresses for privacy
+audit_log do
+  audit_log_resource MyApp.Accounts.AuditLog
+  ip_privacy_mode :hash
+end
+
+# Truncate with more aggressive masking
+audit_log do
+  audit_log_resource MyApp.Accounts.AuditLog
+  ip_privacy_mode :truncate
+  ipv4_truncation_mask 16  # Keep first 2 octets (more privacy)
+  ipv6_truncation_mask 32  # Keep first 2 segments (more privacy)
+end
+
+# Exclude IP addresses entirely
+audit_log do
+  audit_log_resource MyApp.Accounts.AuditLog
+  ip_privacy_mode :exclude
+end
+```
+
+The IP privacy transformation applies to all IP-related fields in the request metadata:
+- `remote_ip` - The direct client IP
+- `x_forwarded_for` - Proxy chain IPs
+- `forwarded` - Standard forwarded header with IP information
+
 ## Audit log attributes
 
 Each audit log entry contains:
@@ -312,6 +373,7 @@ Each audit log entry contains:
 ## Security considerations
 
 - Sensitive fields (passwords, tokens, API keys) are automatically filtered from audit logs unless explicitly included via `include_fields`
+- IP addresses can be hashed, truncated, or excluded for privacy compliance using the `ip_privacy_mode` option
 - Audit logs should be stored in a resilient data layer like PostgreSQL
 - Consider setting up alerts for suspicious patterns (multiple failed logins, etc.)
 - Ensure proper access controls on the audit log resource using Ash policies

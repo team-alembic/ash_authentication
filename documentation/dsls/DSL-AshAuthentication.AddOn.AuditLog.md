@@ -35,9 +35,31 @@ audit_log name \\ :audit_log
 ```
 
 
-Audit log add-on
+Adds automatic audit logging for authentication events.
+
+The audit log add-on records all authentication-related events (sign in, registration, password reset, etc.)
+to a dedicated audit log resource. This provides a comprehensive security trail that can be used for
+compliance, security monitoring, and user activity analysis.
+
+Events are batched for performance and automatically expire based on configured retention periods.
+Sensitive fields are filtered by default but can be explicitly included when necessary.
+IP addresses can be transformed for privacy compliance using hashing, truncation, or exclusion.
 
 
+
+
+### Examples
+```
+audit_log do
+  audit_log_resource MyApp.Accounts.AuditLog
+  include_strategies [:password, :oauth2]
+  exclude_actions [:sign_in_with_token]
+  ip_privacy_mode :truncate
+  ipv4_truncation_mask 24
+  ipv6_truncation_mask 48
+end
+
+```
 
 
 
@@ -56,6 +78,9 @@ Audit log add-on
 | [`exclude_strategies`](#authentication-add_ons-audit_log-exclude_strategies){: #authentication-add_ons-audit_log-exclude_strategies } | `atom \| list(atom)` | `[]` | Explicitly ignore events from the named strategies. |
 | [`exclude_actions`](#authentication-add_ons-audit_log-exclude_actions){: #authentication-add_ons-audit_log-exclude_actions } | `atom \| list(atom)` | `[]` | Explicitly ignore events from the named actions. |
 | [`include_fields`](#authentication-add_ons-audit_log-include_fields){: #authentication-add_ons-audit_log-include_fields } | `atom \| list(atom)` | `[]` | Explicitly include named attributes and arguments in the audit log regardless of their sensitivity setting. |
+| [`ip_privacy_mode`](#authentication-add_ons-audit_log-ip_privacy_mode){: #authentication-add_ons-audit_log-ip_privacy_mode } | `:none \| :hash \| :truncate \| :exclude` | `:none` | How to handle IP addresses for privacy - :none (store as-is), :hash (SHA256), :truncate (network prefix), or :exclude (don't store). |
+| [`ipv4_truncation_mask`](#authentication-add_ons-audit_log-ipv4_truncation_mask){: #authentication-add_ons-audit_log-ipv4_truncation_mask } | `pos_integer` | `24` | IPv4 network mask bits for truncation (0-32). Default 24 keeps first 3 octets. |
+| [`ipv6_truncation_mask`](#authentication-add_ons-audit_log-ipv6_truncation_mask){: #authentication-add_ons-audit_log-ipv6_truncation_mask } | `pos_integer` | `48` | IPv6 network prefix bits for truncation (0-128). Default 48 keeps first 3 segments. |
 
 
 
