@@ -220,7 +220,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:usage_rules, "~> 0.1", only: [:dev]},
-      {:ash, ash_version("~> 3.0 and >= 3.4.29")},
+      {:ash, ash_version("~> 3.7")},
       {:igniter, "~> 0.4", optional: true},
       {:assent, "~> 0.2.13"},
       {:bcrypt_elixir, "~> 3.0"},
