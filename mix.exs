@@ -219,20 +219,20 @@ defmodule AshAuthentication.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:usage_rules, "~> 0.1", only: [:dev]},
+      {:argon2_elixir, "~> 4.0", optional: true},
       {:ash, ash_version("~> 3.7")},
-      {:igniter, "~> 0.4", optional: true},
       {:assent, "~> 0.2.13"},
       {:bcrypt_elixir, "~> 3.0"},
-      {:argon2_elixir, "~> 4.0", optional: true},
       {:castore, "~> 1.0"},
       {:finch, "~> 0.19"},
+      {:igniter, "~> 0.4", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
       {:plug, "~> 1.13"},
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
-      {:simple_sat, "~> 0.1", only: [:dev, :test]},
+
+      # Dev/test
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
       {:ash_graphql, "~> 1.8.1", only: [:dev, :test]},
       {:ash_json_api, "~> 1.4.6", only: [:dev, :test]},
@@ -247,7 +247,9 @@ defmodule AshAuthentication.MixProject do
       {:mimic, "~> 2.0", only: [:dev, :test]},
       {:mix_audit, "~> 2.1", only: [:dev, :test]},
       {:plug_cowboy, "~> 2.5", only: [:dev, :test]},
-      {:sobelow, "~> 0.12", only: [:dev, :test]}
+      {:simple_sat, "~> 0.1", only: [:dev, :test]},
+      {:sobelow, "~> 0.12", only: [:dev, :test]},
+      {:usage_rules, "~> 0.1", only: [:dev]}
     ]
   end
 
