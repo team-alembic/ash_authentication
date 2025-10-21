@@ -60,7 +60,7 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
   end
 
   describe "authentication with API key using plug" do
-    test "succeeeds when API key is present in header", %{
+    test "succeeds when API key is present in header", %{
       plaintext_api_key: plaintext_api_key,
       user: user
     } do
@@ -75,7 +75,7 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
       assert conn.assigns.current_user.id == user.id
     end
 
-    test "succeeeds when API key is present in header with regex prefix", %{
+    test "succeeds when API key is present in header with regex prefix", %{
       plaintext_api_key: plaintext_api_key,
       user: user
     } do

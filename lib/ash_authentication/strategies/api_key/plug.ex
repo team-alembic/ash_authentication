@@ -74,7 +74,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
     assign = Keyword.get(opts, :assign, :"current_#{subject_name}")
 
     header_prefix = Keyword.get(opts, :header_prefix, "Bearer ")
-    :ok = validate_header_prefix(header_prefix)
+    validate_header_prefix!(header_prefix)
 
     strategy =
       case Keyword.fetch(opts, :strategy) do
@@ -195,9 +195,9 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
     )
   end
 
-  defp validate_header_prefix(prefix) when is_binary(prefix), do: :ok
+  defp validate_header_prefix!(prefix) when is_binary(prefix), do: :ok
 
-  defp validate_header_prefix(%Regex{} = prefix) do
+  defp validate_header_prefix!(%Regex{} = prefix) do
     if String.starts_with?(inspect(prefix), "~r/^") do
       :ok
     else
