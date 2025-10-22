@@ -7,10 +7,15 @@ if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshAuthentication.Gen.Password do
     use Igniter.Mix.Task
     @example "mix ash_authentication.gen.password"
-    @shortdoc "Adds the provided password to your user resource"
+    @shortdoc "Adds the password strategy to your user resource"
 
     @moduledoc """
     #{@shortdoc}
+
+    ## Example
+    ```bash
+    #{@example}
+    ```
 
     ## Options
 
