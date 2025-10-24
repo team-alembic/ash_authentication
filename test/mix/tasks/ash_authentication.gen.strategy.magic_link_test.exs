@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
-defmodule Mix.Tasks.AshAuthenticatioin.Gen.MagicLinkTest do
+defmodule Mix.Tasks.AshAuthenticatioin.Gen.Strategy.MagicLinkTest do
   use ExUnit.Case
 
   import Igniter.Test
@@ -25,9 +25,9 @@ defmodule Mix.Tasks.AshAuthenticatioin.Gen.MagicLinkTest do
 
   test "makes hashed_password optional", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> apply_igniter!()
-    |> Igniter.compose_task("ash_authentication.gen.magic_link")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.magic_link")
     |> assert_has_patch("lib/test/accounts/user.ex", """
       |    attribute :hashed_password, :string do
     - |      allow_nil?(false)

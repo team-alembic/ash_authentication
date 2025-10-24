@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
-defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
+defmodule Mix.Tasks.AshAuthentication.Gen.Strategy.PasswordTest do
   use ExUnit.Case
 
   import Igniter.Test
@@ -25,7 +25,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "adds the password strategy to the user", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> assert_has_patch("lib/test/accounts/user.ex", """
     + |    strategies do
     + |      password :password do
@@ -45,7 +45,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "the `bcrypt` hash provider can be selected", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password", [
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password", [
       "--hash-provider",
       "bcrypt"
     ])
@@ -68,7 +68,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "the `argon2` hash provider can be selected", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password", [
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password", [
       "--hash-provider",
       "argon2"
     ])
@@ -91,7 +91,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "an arbitrary hash provider can be entered", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password", [
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password", [
       "--hash-provider",
       "MyApp.ExampleHashProvider"
     ])
@@ -114,7 +114,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "adds the identity to the user resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> assert_has_patch("lib/test/accounts/user.ex", """
     + |  identities do
     + |    identity(:unique_email, [:email])
@@ -124,7 +124,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "adds the attributes to the user resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> assert_has_patch("lib/test/accounts/user.ex", """
     + |    attribute :email, :ci_string do
     + |      allow_nil?(false)
@@ -142,7 +142,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "adds the password actions to the user resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> assert_has_patch("lib/test/accounts/user.ex", """
     + |    read :sign_in_with_password do
     + |      description("Attempt to sign in using a email and password.")
@@ -287,7 +287,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
     igniter: igniter
   } do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> assert_has_patch("mix.exs", """
     + |      {:bcrypt_elixir, "~> 3.0"},
     """)
@@ -297,7 +297,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
     igniter: igniter
   } do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password", [
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password", [
       "--hash-provider",
       "bcrypt"
     ])
@@ -310,7 +310,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
     igniter: igniter
   } do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password", [
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password", [
       "--hash-provider",
       "argon2"
     ])
@@ -322,7 +322,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
   test "creates a phoenix-idiomatic password reset sender", %{igniter: igniter} do
     igniter
     |> Igniter.Project.Module.create_module(TestWeb, "")
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> assert_creates("lib/test/accounts/user/senders/send_password_reset_email.ex", """
     defmodule Test.Accounts.User.Senders.SendPasswordResetEmail do
       @moduledoc \"\"\"
@@ -352,7 +352,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.PasswordTest do
 
   test "creates a plain password reset sender if you are not using phoenix", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.password")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.password")
     |> assert_creates("lib/test/accounts/user/senders/send_password_reset_email.ex", """
     defmodule Test.Accounts.User.Senders.SendPasswordResetEmail do
       @moduledoc \"\"\"

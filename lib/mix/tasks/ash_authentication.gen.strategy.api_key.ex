@@ -4,10 +4,10 @@
 
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
 if Code.ensure_loaded?(Igniter) do
-  defmodule Mix.Tasks.AshAuthentication.Gen.ApiKey do
+  defmodule Mix.Tasks.AshAuthentication.Gen.Strategy.ApiKey do
     use Igniter.Mix.Task
 
-    @example "mix ash_authentication.gen.api_key"
+    @example "mix ash_authentication.gen.strategy.api_key"
     @shortdoc "Adds the api key strategy to your user resource"
 
     @moduledoc """
@@ -199,7 +199,7 @@ if Code.ensure_loaded?(Igniter) do
     end
   end
 else
-  defmodule Mix.Tasks.AshAuthentication.Gen.ApiKey do
+  defmodule Mix.Tasks.AshAuthentication.Gen.Strategy.ApiKey do
     @shortdoc "Adds the api key strategy to your user resource"
 
     @moduledoc @shortdoc
@@ -208,7 +208,7 @@ else
 
     def run(_argv) do
       Mix.shell().error("""
-      The task 'ash_authentication.gen.api_key' requires igniter to be run.
+      The task 'ash_authentication.gen.strategy.api_key' requires igniter to be run.
 
       Please install igniter and try again.
 

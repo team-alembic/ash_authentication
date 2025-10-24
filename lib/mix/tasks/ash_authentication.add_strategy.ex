@@ -162,7 +162,7 @@ if Code.ensure_loaded?(Igniter) do
                 end)
 
               igniter
-              |> Igniter.compose_task(Mix.Tasks.AshAuthentication.Gen.ApiKey, options)
+              |> Igniter.compose_task(Mix.Tasks.AshAuthentication.Gen.Strategy.ApiKey, options)
           end)
 
         {false, igniter} ->

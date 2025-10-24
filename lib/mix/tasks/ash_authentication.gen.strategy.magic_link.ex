@@ -4,10 +4,10 @@
 
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
 if Code.ensure_loaded?(Igniter) do
-  defmodule Mix.Tasks.AshAuthentication.Gen.MagicLink do
+  defmodule Mix.Tasks.AshAuthentication.Gen.Strategy.MagicLink do
     use Igniter.Mix.Task
 
-    @example "mix ash_authentication.gen.magic_link"
+    @example "mix ash_authentication.gen.strategy.magic_link"
     @shortdoc "Adds the magic link strategy to your user resource"
 
     @moduledoc """
@@ -72,7 +72,7 @@ if Code.ensure_loaded?(Igniter) do
         Mix.shell().error("""
         Could not add magic link strategy with identity field #{inspect(options[:identity_field])}.
 
-        Please run `mix ash_authentication.gen.magic_link` without specifying a default
+        Please run `mix ash_authentication.gen.strategy.magic_link` without specifying a default
         """)
 
         exit({:shutdown, 1})
@@ -320,7 +320,7 @@ if Code.ensure_loaded?(Igniter) do
     end
   end
 else
-  defmodule Mix.Tasks.AshAuthentication.Gen.MagicLink do
+  defmodule Mix.Tasks.AshAuthentication.Gen.Stratey.MagicLink do
     @shortdoc "Adds the magic link strategy to your user resource"
 
     @moduledoc @shortdoc
@@ -329,7 +329,7 @@ else
 
     def run(_argv) do
       Mix.shell().error("""
-      The task 'ash_authentication.gen.magic_link' requires igniter to be run.
+      The task 'ash_authentication.gen.strategy.magic_link' requires igniter to be run.
 
       Please install igniter and try again.
 

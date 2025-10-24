@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
-defmodule Mix.Tasks.AshAuthentication.Gen.ApiKeyTest do
+defmodule Mix.Tasks.AshAuthentication.Gen.Strategy.ApiKeyTest do
   use ExUnit.Case
 
   import Igniter.Test
@@ -25,7 +25,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.ApiKeyTest do
 
   test "adds the api_key strategy to the user", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.api_key")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.api_key")
     |> assert_has_patch("lib/test/accounts/user.ex", """
     + | api_key :api_key do
     + |   api_key_relationship(:valid_api_keys)
@@ -41,7 +41,7 @@ defmodule Mix.Tasks.AshAuthentication.Gen.ApiKeyTest do
 
   test "creates the api key resource", %{igniter: igniter} do
     igniter
-    |> Igniter.compose_task("ash_authentication.gen.api_key")
+    |> Igniter.compose_task("ash_authentication.gen.strategy.api_key")
     |> assert_creates("lib/test/accounts/api_key.ex", """
     defmodule Test.Accounts.ApiKey do
       use Ash.Resource,

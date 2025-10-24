@@ -4,9 +4,9 @@
 
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
 if Code.ensure_loaded?(Igniter) do
-  defmodule Mix.Tasks.AshAuthentication.Gen.Password do
+  defmodule Mix.Tasks.AshAuthentication.Gen.Strategy.Password do
     use Igniter.Mix.Task
-    @example "mix ash_authentication.gen.password"
+    @example "mix ash_authentication.gen.strategy.password"
     @shortdoc "Adds the password strategy to your user resource"
 
     @moduledoc """
@@ -569,7 +569,7 @@ if Code.ensure_loaded?(Igniter) do
     end
   end
 else
-  defmodule Mix.Tasks.AshAuthentication.Gen.Password do
+  defmodule Mix.Tasks.AshAuthentication.Gen.Strategy.Password do
     @shortdoc "Adds the password strategy to your user resource"
 
     @moduledoc @shortdoc
@@ -578,7 +578,7 @@ else
 
     def run(_argv) do
       Mix.shell().error("""
-      The task 'ash_authentication.gen.password' requires igniter to be run.
+      The task 'ash_authentication.gen.strategy.password' requires igniter to be run.
 
       Please install igniter and try again.
 
