@@ -159,6 +159,10 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
       {:ok, user} when is_struct(user, resource) ->
         AshAuthentication.user_to_subject(user)
 
+      # Read actions with get? true return {:ok, [user]}
+      {:ok, [user]} when is_struct(user, resource) ->
+        AshAuthentication.user_to_subject(user)
+
       _ ->
         nil
     end
