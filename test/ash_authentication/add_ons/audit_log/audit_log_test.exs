@@ -35,7 +35,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       assert sign_in_log.strategy == :password
       assert sign_in_log.action_name == :sign_in_with_password
       assert sign_in_log.status == :success
-      assert is_nil(sign_in_log.subject)
+      assert sign_in_log.subject == "user_with_audit_log?id=#{user.id}"
       assert sign_in_log.resource == Example.UserWithAuditLog
     end
 
