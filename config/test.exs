@@ -39,3 +39,5 @@ config :ash_authentication,
   ]
 
 config :ash_authentication, extra_strategies: [Example.OnlyMartiesAtTheParty]
+
+config :ash_authentication, suppress_sensitive_field_warnings?: true

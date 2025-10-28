@@ -51,6 +51,15 @@ defmodule AshAuthentication.AddOn.AuditLog.VerifierTest do
   end
 
   describe "verify_sensitive_fields/1" do
+    setup do
+      original = Application.get_env(:ash_authentication, :suppress_sensitive_field_warnings?)
+      Application.put_env(:ash_authentication, :suppress_sensitive_field_warnings?, false)
+
+      on_exit(fn ->
+        Application.put_env(:ash_authentication, :suppress_sensitive_field_warnings?, original)
+      end)
+    end
+
     test "shows warning when sensitive attributes are included in audit log" do
       log_output =
         capture_io(:stderr, fn ->
