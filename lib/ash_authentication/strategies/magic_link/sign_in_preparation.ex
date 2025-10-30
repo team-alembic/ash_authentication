@@ -8,8 +8,8 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
   """
 
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Info, Jwt, TokenResource}
   alias Ash.{Query, Resource, Resource.Preparation}
+  alias AshAuthentication.{Info, Jwt, TokenResource}
   require Ash.Query
   import Ash.Expr
 
@@ -56,7 +56,15 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
             :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
           end
 
-          {:ok, token, _claims} = Jwt.token_for_user(record, %{}, Ash.Context.to_opts(context))
+          extra_claims =
+            case strategy.extra_claims do
+              nil -> %{}
+              fun when is_function(fun, 4) -> fun.(record, strategy, claims, context)
+            end
+
+          {:ok, token, _claims} =
+            Jwt.token_for_user(record, extra_claims, Ash.Context.to_opts(context))
+
           {:ok, [Resource.put_metadata(record, :token, token)]}
 
         _query, [] ->
