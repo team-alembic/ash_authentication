@@ -63,6 +63,12 @@ defmodule AshAuthentication.Strategy.MagicLink.Dsl do
           doc:
             "The action to use when looking up a user by their identity. Defaults to `get_by_<identity_field>`"
         ],
+        extra_claims: [
+          type: {:fun, 4},
+          doc: """
+          A function that receives the user, strategy, magic link claims, and preparation context and returns a map of extra claims to include in the user's authenticated JWT.
+          """
+        ],
         single_use_token?: [
           type: :boolean,
           doc: """

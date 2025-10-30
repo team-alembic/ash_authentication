@@ -50,6 +50,7 @@ spark_locals_without_parens = [
   exclude_strategies: 1,
   expunge_expired_action_name: 1,
   expunge_interval: 1,
+  extra_claims: 1,
   extra_data: 1,
   get_by_subject_action_name: 1,
   get_changes_action_name: 1,
