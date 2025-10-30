@@ -128,6 +128,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
             lookup_action_name: nil,
             name: nil,
             prevent_hijacking?: true,
+            extra_claims: nil,
             registration_enabled?: false,
             request_action_name: nil,
             require_interaction?: false,
