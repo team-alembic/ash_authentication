@@ -11,6 +11,61 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.0](https://github.com/team-alembic/ash_authentication/compare/v4.12.0...v4.13.0) (2025-11-17)
+
+
+
+
+### Features:
+
+* Audit Logging add-on. (#1074) by James Harton
+
+* Audit logging add-on. by James Harton
+
+* enhance error messages in hash_password_change.ex (#1058) by pupdogg
+
+* remember me strategy (#1016) by Robert Graff
+
+### Bug Fixes:
+
+* AuditLog Extract subject from read actions returning lists to prevent NULL subject in DB (#1080) by grempe
+
+* don't use authorize?: false in the batcher by James Harton
+
+* Jwt.token_for_resource typespec. by James Harton
+
+* Add only existing sections into Ash.Resource of config.exs by aifrak
+
+* Enforce unique actions per confirmation. (#1054) by James Harton
+
+* Enforce unique actions per confirmation. by James Harton
+
+* Don't atomize keys for Apple strategy (#1065) by Aake Gregertsen
+
+* MagicLink: Propagate context opts in request preparation (#1061) by Arjan Scherpenisse
+
+* no need to apply atomic constraints on hashed password by Zach Daniel
+
+* remove confusing and unnecessary policies from installer by Zach Daniel
+
+### Improvements:
+
+* allow setting extra context on magic links (#1081) by Zach Daniel
+
+* more conventional action result status by James Harton
+
+* add allowlist for actions and strategies by James Harton
+
+* Add warning message when logging sensitive fields by James Harton
+
+* audit_log: add IP address privacy options with configurable truncation masks by James Harton
+
+* default confirm action name to add-on name by James Harton
+
+* add support for AshEvents.Events.ReplayChangeWrapper in validate_action_has_change (#1066) by Torkild Gundersen Kjevik
+
+* pass magic link request source context to mail sender (#1048) by marcnnn
+
 ## [v4.12.0](https://github.com/team-alembic/ash_authentication/compare/v4.11.0...v4.12.0) (2025-10-20)
 
 
