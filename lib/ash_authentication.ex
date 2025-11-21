@@ -134,7 +134,8 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.Oidc,
     AshAuthentication.Strategy.Password,
     AshAuthentication.Strategy.RememberMe,
-    AshAuthentication.Strategy.Slack
+    AshAuthentication.Strategy.Slack,
+    AshAuthentication.Strategy.Totp
   ]
 
   use Spark.Dsl.Extension,

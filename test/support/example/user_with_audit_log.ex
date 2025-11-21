@@ -15,6 +15,10 @@ defmodule Example.UserWithAuditLog do
     attribute :email, :ci_string, allow_nil?: false, public?: true, sensitive?: true
     attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
 
+    attribute :totp_secret, :string, allow_nil?: true, sensitive?: true, public?: false
+
+    attribute :last_totp_at, :datetime, allow_nil?: true, sensitive?: true, public?: false
+
     timestamps()
   end
 
@@ -47,6 +51,11 @@ defmodule Example.UserWithAuditLog do
     strategies do
       password do
         identity_field :email
+      end
+
+      totp do
+        identity_field :email
+        brute_force_strategy({:audit_log, :audit_log})
       end
     end
   end

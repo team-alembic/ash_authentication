@@ -30,7 +30,7 @@ defmodule AshAuthentication.Strategy.Totp.Dsl do
             {:or,
              [
                {:literal, :rate_limit},
-               {:tuple, [{:literal, :audit_lot}, :atom]},
+               {:tuple, [{:literal, :audit_log}, :atom]},
                {:tuple, [{:literal, :preparation}, {:behaviour, Ash.Resource.Preparation}]}
              ]},
           doc: "How you are mitigating brute-force token checks.",
@@ -73,10 +73,43 @@ defmodule AshAuthentication.Strategy.Totp.Dsl do
           default: 30,
           required: false
         ],
+        setup_enabled?: [
+          type: :boolean,
+          doc:
+            "If you do not want the setup action to be generated/validated you disable it by setting this to false.",
+          required: false,
+          default: true
+        ],
         setup_action_name: [
           type: :atom,
           doc: "The name to use for the setup action. Defaults to `setup_with_<strategy_name>`.",
           required: false
+        ],
+        totp_url_field: [
+          type: :atom,
+          doc:
+            "The name to use for the TOTP URL calculation. Defaults to `totp_url_for_<strategy_name>`.",
+          required: false
+        ],
+        sign_in_enabled?: [
+          type: :boolean,
+          doc:
+            "If you do not want users to be able to sign in using this strategy, set this to false.",
+          required: false,
+          default: false
+        ],
+        sign_in_action_name: [
+          type: :atom,
+          doc:
+            "The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>`.",
+          required: false
+        ],
+        verify_enabled?: [
+          type: :boolean,
+          doc:
+            "If you do not want users to be able to verify their TOTP codes outside of the sign-in action (or you want to handle it yourself), set this to false.",
+          required: false,
+          default: true
         ],
         verify_action_name: [
           type: :atom,
