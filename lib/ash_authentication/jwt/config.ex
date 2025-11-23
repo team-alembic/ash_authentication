@@ -101,11 +101,7 @@ defmodule AshAuthentication.Jwt.Config do
   Validate that the "tenant" claim matches the provided tenant option.
   """
   @spec validate_tenant(nil | :null | String.t(), nil | String.t()) :: boolean()
-  def validate_tenant(maybe_tenant, tenant), do: normalize_null(maybe_tenant) == tenant
-
-  # To support JOSE 1.11.11+ and Erlang's built-in JSON module, it sends :null instead of nil.
-  defp normalize_null(:null), do: nil
-  defp normalize_null(value), do: value
+  def validate_tenant(maybe_tenant, tenant), do: Utils.normalize_null(maybe_tenant) == tenant
 
   @doc """
   The validation function used to validate the "aud" claim.

@@ -291,4 +291,17 @@ defmodule AshAuthentication.Utils do
   def lifetime_to_seconds({minutes, :minutes}), do: minutes * 60
   def lifetime_to_seconds({hours, :hours}), do: hours * 60 * 60
   def lifetime_to_seconds({days, :days}), do: days * 60 * 60 * 24
+
+  @doc """
+  Normalize claim tenant :null atom to nil.
+
+  > To support JOSE 1.11.11+ and Erlang's built-in JSON module, it sends :null instead of nil.
+  """
+  @spec normalize_null(term()) :: term()
+  def normalize_null(:null), do: nil
+
+  def normalize_null(map) when is_map(map),
+    do: Map.new(map, fn {k, v} -> {k, normalize_null(v)} end)
+
+  def normalize_null(value), do: value
 end
