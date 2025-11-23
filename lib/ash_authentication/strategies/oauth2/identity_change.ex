@@ -8,8 +8,8 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{Info, Strategy, UserIdentity}
   alias Ash.{Changeset, Error.Framework.AssumptionFailed, Resource.Change}
+  alias AshAuthentication.{Info, Strategy, UserIdentity}
   import AshAuthentication.Utils, only: [is_falsy: 1]
 
   @doc false

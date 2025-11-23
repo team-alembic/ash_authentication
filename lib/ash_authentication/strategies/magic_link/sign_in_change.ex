@@ -8,8 +8,8 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{Errors.InvalidToken, Info, Jwt, TokenResource}
   alias Ash.{Changeset, Resource, Resource.Change}
+  alias AshAuthentication.{Errors.InvalidToken, Info, Jwt, TokenResource}
 
   @doc false
   @impl true
