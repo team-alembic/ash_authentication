@@ -221,7 +221,7 @@ defmodule AshAuthentication.MixProject do
     [
       {:argon2_elixir, "~> 4.0", optional: true},
       {:ash, ash_version("~> 3.7")},
-      {:assent, "~> 0.2.13"},
+      {:assent, "~> 0.3"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
       {:finch, "~> 0.19"},
@@ -234,14 +234,14 @@ defmodule AshAuthentication.MixProject do
 
       # Dev/test
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
-      {:ash_graphql, "~> 1.8.1", only: [:dev, :test]},
-      {:ash_json_api, "~> 1.4.6", only: [:dev, :test]},
+      {:ash_graphql, "~> 1.8", only: [:dev, :test]},
+      {:ash_json_api, "~> 1.5", only: [:dev, :test]},
       {:ash_postgres, "~> 2.6 and >= 2.6.8", optional: true},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
       {:ex_check, "~> 0.15", only: [:dev, :test]},
-      {:ex_doc, "~> 0.37-rc", only: [:dev, :test]},
+      {:ex_doc, "~> 0.39", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
       {:mimic, "~> 2.0", only: [:dev, :test]},
       {:mix_audit, "~> 2.1", only: [:dev, :test]},
