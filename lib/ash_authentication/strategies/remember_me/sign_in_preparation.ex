@@ -10,8 +10,8 @@ defmodule AshAuthentication.Strategy.RememberMe.SignInPreparation do
   from it and constrains the query to a matching user.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
   alias Ash.{Query, Resource, Resource.Preparation}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
   require Ash.Query
 
   @doc false

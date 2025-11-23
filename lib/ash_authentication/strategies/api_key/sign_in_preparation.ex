@@ -8,8 +8,8 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
   """
 
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info}
   alias Ash.{Query, Resource.Preparation}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info}
   require Ash.Query
 
   @doc false
