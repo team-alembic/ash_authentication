@@ -109,7 +109,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
       params = %{
         "user" => %{
           "username" => user.username,
-          "password" => password()
+          "password" => "wrong password"
         }
       }
 

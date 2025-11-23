@@ -31,7 +31,7 @@ defmodule AshAuthentication.Strategy.Password.PasswordValidationTest do
       assert {:error, %AuthenticationFailed{field: :current_password}} =
                user
                |> Changeset.new()
-               |> Changeset.set_argument(:current_password, password())
+               |> Changeset.set_argument(:current_password, "wrong password")
                |> PasswordValidation.validate(
                  [
                    strategy_name: :password,

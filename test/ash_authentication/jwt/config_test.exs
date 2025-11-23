@@ -32,7 +32,7 @@ defmodule AshAuthentication.Jwt.ConfigTest do
     end
 
     test "is false otherwise" do
-      garbage = 2 |> Faker.Lorem.words() |> Enum.join(" ")
+      garbage = "some invalid issuer"
       refute Config.validate_issuer(garbage, nil, nil)
     end
   end
