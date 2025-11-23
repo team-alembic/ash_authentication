@@ -100,8 +100,8 @@ defmodule AshAuthentication.Jwt.Config do
   @doc """
   Validate that the "tenant" claim matches the provided tenant option.
   """
-  @spec validate_tenant(nil | String.t(), nil | String) :: boolean()
-  def validate_tenant(maybe_tenant, tenant), do: maybe_tenant == tenant
+  @spec validate_tenant(nil | :null | String.t(), nil | String.t()) :: boolean()
+  def validate_tenant(maybe_tenant, tenant), do: Utils.normalize_null(maybe_tenant) == tenant
 
   @doc """
   The validation function used to validate the "aud" claim.

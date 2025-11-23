@@ -6,7 +6,7 @@ defmodule AshAuthentication.Jwt do
   @default_algorithm "HS256"
   @default_lifetime_days 7
   @supported_algorithms Joken.Signer.algorithms()
-  import AshAuthentication.Utils, only: [to_sentence: 2]
+  import AshAuthentication.Utils, only: [to_sentence: 2, normalize_null: 1]
 
   @moduledoc """
   Uses the excellent `joken` hex package to generate and sign Json Web Tokens.
@@ -203,7 +203,7 @@ defmodule AshAuthentication.Jwt do
          {:ok, claims} <- Joken.verify(token, signer),
          defaults <- Config.default_claims(resource, opts),
          {:ok, claims} <- Joken.validate(defaults, claims, resource) do
-      {:ok, claims, resource}
+      {:ok, normalize_null(claims), resource}
     else
       _ -> :error
     end
@@ -215,7 +215,7 @@ defmodule AshAuthentication.Jwt do
          {:ok, claims} <- Joken.verify(token, signer),
          defaults <- Config.default_claims(resource, opts),
          {:ok, claims} <- Joken.validate(defaults, claims, resource) do
-      {:ok, claims, resource}
+      {:ok, normalize_null(claims), resource}
     else
       _ -> :error
     end
