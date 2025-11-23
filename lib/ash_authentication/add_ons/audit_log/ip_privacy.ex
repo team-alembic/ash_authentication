@@ -267,7 +267,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacy do
 
     # Create mask: all 1s for the prefix, all 0s for the rest
     # For mask=24: 0xFFFFFF00
-    mask_bits = if mask == 0, do: 0, else: ~~~((1 <<< (32 - mask)) - 1)
+    mask_bits = if mask == 0, do: 0, else: Bitwise.bnot((1 <<< (32 - mask)) - 1)
 
     # Apply mask
     masked_int = ip_int &&& mask_bits
@@ -293,7 +293,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacy do
         (e <<< 48) + (f <<< 32) + (g <<< 16) + h
 
     # Create mask: all 1s for the prefix, all 0s for the rest
-    mask_bits = if mask == 0, do: 0, else: ~~~((1 <<< (128 - mask)) - 1)
+    mask_bits = if mask == 0, do: 0, else: Bitwise.bnot((1 <<< (128 - mask)) - 1)
 
     # Apply mask
     masked_int = ip_int &&& mask_bits
