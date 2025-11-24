@@ -178,7 +178,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
            user,
            %{
              "act" => strategy.sign_in_action_name,
-             "identity" => Map.get(user, strategy.identity_field)
+             "identity" => user |> Map.get(strategy.identity_field) |> to_string()
            },
            Keyword.merge(opts,
              token_lifetime: strategy.token_lifetime,
