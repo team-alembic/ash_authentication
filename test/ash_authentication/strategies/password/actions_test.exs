@@ -42,7 +42,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert {:error, %AuthenticationFailed{}} =
                Actions.sign_in(
                  strategy,
-                 %{"username" => user.username, "password" => password()},
+                 %{"username" => user.username, "password" => "wrong password"},
                  []
                )
     end
@@ -183,7 +183,7 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
                  %{
                    "username" => username(),
                    "password" => password(),
-                   "password_confirmation" => password()
+                   "password_confirmation" => "different password"
                  },
                  []
                )

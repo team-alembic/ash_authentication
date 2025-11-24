@@ -143,7 +143,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
     for action <- ~w[register sign_in reset_request reset]a do
       test "it delegates to `Password.Actions.#{action}/2` for the #{action} action" do
         strategy = %Password{}
-        params = %{"username" => Faker.Internet.user_name()}
+        params = %{"username" => "test_user"}
 
         Password.Actions
         |> expect(unquote(action), fn rx_strategy, rx_params, _opts ->

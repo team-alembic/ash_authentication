@@ -63,13 +63,13 @@ defmodule DataCase do
     end)
   end
 
-  @doc "Generate a random username using Faker"
+  @doc "Generate a test username"
   @spec username :: String.t()
-  def username, do: Faker.Internet.user_name()
+  def username, do: "test_user_#{System.unique_integer([:positive])}"
 
-  @doc "Generate a random password using Faker"
+  @doc "Generate a test password"
   @spec password :: String.t()
-  def password, do: Faker.Lorem.words(4) |> Enum.join(" ")
+  def password, do: "correct horse battery staple"
 
   @doc "User factory"
   @spec build_user(keyword) :: Example.User.t() | no_return
@@ -105,7 +105,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -135,7 +135,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:username, Faker.Internet.user_name())
+      |> Map.put_new(:username, "test_user_#{System.unique_integer([:positive])}")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -159,7 +159,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:username, Faker.Internet.user_name())
+      |> Map.put_new(:username, "test_user_#{System.unique_integer([:positive])}")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -199,7 +199,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -224,7 +224,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -249,7 +249,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -274,7 +274,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -299,7 +299,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_1234@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -324,7 +324,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_1234@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
@@ -349,7 +349,7 @@ defmodule DataCase do
     attrs =
       attrs
       |> Map.new()
-      |> Map.put_new(:email, Faker.Internet.email())
+      |> Map.put_new(:email, "user_1234@example.com")
       |> Map.put_new(:password, password)
       |> Map.put_new(:password_confirmation, password)
 
