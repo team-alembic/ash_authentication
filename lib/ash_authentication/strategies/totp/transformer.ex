@@ -11,6 +11,7 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
   alias Spark.Dsl.Transformer
   alias Spark.Error.DslError
 
+  import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
@@ -26,9 +27,18 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
          {:ok, dsl, strategy} <- handle_setup_action(dsl, strategy),
          {:ok, dsl, strategy} <- handle_sign_in_action(dsl, strategy),
          {:ok, dsl, strategy} <- handle_verify_action(dsl, strategy),
-         {:ok, dsl, strategy} <- handle_totp_url_calculation(dsl, strategy),
+         {:ok, dsl} <- handle_totp_url_calculation(dsl, strategy),
          {:ok, resource} <- persisted_option(dsl, :module) do
       strategy = %{strategy | resource: resource}
+
+      dsl =
+        [
+          strategy.setup_enabled? && strategy.setup_action_name,
+          strategy.sign_in_enabled? && strategy.sign_in_action_name,
+          strategy.verify_enabled? && strategy.verify_action_name
+        ]
+        |> Enum.reject(&(!&1))
+        |> register_strategy_actions(dsl, strategy)
 
       {:ok,
        Transformer.replace_entity(
@@ -82,21 +92,10 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
         )
       ]
 
-    arguments = [
-      Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :update], :argument,
-        name: :force?,
-        type: Ash.Type.Boolean,
-        allow_nil?: false,
-        default: false,
-        description: "Replace an existing TOTP secret if one is already present."
-      )
-    ]
-
     Transformer.build_entity(Ash.Resource.Dsl, [:actions], :update,
       name: strategy.setup_action_name,
       accept: [],
       changes: changes,
-      arguments: arguments,
       description:
         "Generate a new TOTP secret and store it in the `#{inspect(strategy.secret_field)}` attribute."
     )
@@ -334,23 +333,70 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
     calculation = Ash.Resource.Info.calculation(dsl, strategy.totp_url_field)
 
     if calculation do
-      with :ok <- validate_totp_url_calculation(dsl, strategy) do
-        {:ok, dsl, strategy}
+      with :ok <- validate_totp_url_calculation(dsl, strategy, calculation) do
+        {:ok, dsl}
       end
     else
-      with {:ok, dsl} <- build_totp_url_calculation(dsl, strategy),
-           :ok <- validate_totp_url_calculation(dsl, strategy) do
-        {:ok, dsl, strategy}
+      with {:ok, entity} <-
+             Transformer.build_entity(Ash.Resource.Dsl, [:calculations], :calculate,
+               sensitive?: true,
+               name: strategy.totp_url_field,
+               type: :string,
+               calculation:
+                 {AshAuthentication.Strategy.Totp.TotpUrlCalculation,
+                  strategy_name: strategy.name}
+             ) do
+        {:ok, Transformer.add_entity(dsl, [:calculations], entity)}
       end
     end
   end
 
-  defp build_totp_url_calculation(dsl, strategy) do
-    {:ok, dsl}
+  defp validate_totp_url_calculation(dsl, strategy, calculation) do
+    with :ok <- validate_calculation_sensitivity(dsl, calculation, true),
+         :ok <- validate_calculation_type(dsl, calculation, [:string, Ash.Type.String]) do
+      validate_calculation_calculation(
+        dsl,
+        calculation,
+        {AshAuthentication.Strategy.Totp, strategy_name: strategy.name}
+      )
+    end
   end
 
-  defp validate_totp_url_calculation(dsl, strategy) do
-    :ok
+  defp validate_calculation_sensitivity(dsl, %{sensitive?: value}, value), do: :ok
+
+  defp validate_calculation_sensitivity(dsl, calculation, value) do
+    module = Transformer.get_persisted(dsl, :module)
+
+    {:error,
+     DslError.exception(
+       module: module,
+       path: [:calculations, :calculate, calculation.name],
+       message: """
+       This calculation should #{if !value, do: "not "}be marked as sensitive.
+       """
+     )}
+  end
+
+  defp validate_calculation_type(dsl, calculation, types) do
+    with {:error, message} <- validate_field_in_values(calculation, :type, types) do
+      {:error,
+       DslError.exception(
+         module: Transformer.get_persisted(dsl, :module),
+         path: [:calculations, :calculate, calculation.name],
+         message: message
+       )}
+    end
+  end
+
+  defp validate_calculation_calculation(dsl, calculation, value) do
+    with {:error, message} <- validate_field_in_values(calculation, :calculation, [value]) do
+      {:error,
+       DslError.exception(
+         module: Transformer.get_persisted(dsl, :module),
+         path: [:calculations, :calculate, calculation.name],
+         message: message
+       )}
+    end
   end
 
   defp validate_last_totp_at_field(field, dsl) do
