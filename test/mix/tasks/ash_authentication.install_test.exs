@@ -10,11 +10,13 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
 
   @moduletag :igniter
 
-  setup do
+  setup(context) do
+    igniter_args = Map.get(context, :igniter_args, [])
+
     igniter =
       test_project()
       |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
-      |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+      |> Igniter.compose_task("ash_authentication.install", ["--yes" | igniter_args])
       |> Igniter.Project.Formatter.remove_formatter_plugin(Spark.Formatter)
 
     [igniter: igniter]
@@ -27,6 +29,55 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
     |> apply_igniter!()
     |> Igniter.compose_task("ash_authentication.install", ["--yes"])
     |> assert_unchanged()
+  end
+
+  test "installation creates an accounts domain", %{igniter: igniter} do
+    igniter
+    |> assert_creates("lib/test/accounts.ex", """
+    defmodule Test.Accounts do
+      use Ash.Domain,
+        otp_app: :test
+
+      resources do
+        resource(Test.Accounts.Token)
+        resource(Test.Accounts.User)
+      end
+    end
+    """)
+  end
+
+  @tag igniter_args: ["--accounts", "Test.Banana"]
+  test "installation honours the accounts argument", %{igniter: igniter} do
+    igniter
+    |> assert_creates("lib/test/banana.ex", """
+    defmodule Test.Banana do
+      use Ash.Domain,
+        otp_app: :test
+
+      resources do
+        resource(Test.Banana.Token)
+        resource(Test.Banana.User)
+      end
+    end
+    """)
+    |> assert_creates("lib/test/banana/user.ex")
+  end
+
+  @tag igniter_args: ["--accounts", "Test.Banana", "--auth-strategy", "password"]
+  test "installation hours the accounts and strategy options together", %{igniter: igniter} do
+    assert igniter.issues == []
+  end
+
+  @tag igniter_args: ["--user", "Test.Accounts.Admin"]
+  test "installation honours the user argument", %{igniter: igniter} do
+    igniter
+    |> assert_creates("lib/test/accounts/admin.ex")
+  end
+
+  @tag igniter_args: ["--token", "Test.Accounts.JWT"]
+  test "installation honours the token argument", %{igniter: igniter} do
+    igniter
+    |> assert_creates("lib/test/accounts/jwt.ex")
   end
 
   test "installation creates a secrets module", %{igniter: igniter} do
