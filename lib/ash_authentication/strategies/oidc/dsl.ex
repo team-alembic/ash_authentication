@@ -31,6 +31,8 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
   end
 
   defp patch_schema do
+    secret_type = AshAuthentication.Dsl.secret_type()
+
     OAuth2.dsl()
     |> Map.get(:schema, [])
     |> make_required!(:base_url)
@@ -39,7 +41,7 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
     |> Keyword.delete(:user_url)
     |> Keyword.merge(
       openid_configuration_uri: [
-        type: :string,
+        type: secret_type,
         default: "/.well-known/openid-configuration",
         doc: "The URI for the OpenID provider",
         required: false
@@ -82,7 +84,7 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
         default: nil
       ],
       nonce: [
-        type: {:or, [:boolean, AshAuthentication.Dsl.secret_type()]},
+        type: {:or, [:boolean, secret_type]},
         doc:
           "A function for generating the session nonce, `true` to automatically generate it with `AshAuthentication.Strategy.Oidc.NonceGenerator`, or `false` to disable.",
         default: true,
