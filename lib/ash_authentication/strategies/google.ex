@@ -8,7 +8,7 @@ defmodule AshAuthentication.Strategy.Google do
   @moduledoc """
   Strategy for authenticating using [Google](https://google.com)
 
-  This strategy builds on-top of `AshAuthentication.Strategy.OAuth2` and
+  This strategy builds on-top of `AshAuthentication.Strategy.Oidc` and
   [`assent`](https://hex.pm/packages/assent).
 
   In order to use Google you need to provide the following minimum configuration:
@@ -16,18 +16,21 @@ defmodule AshAuthentication.Strategy.Google do
     - `client_id`
     - `redirect_uri`
     - `client_secret`
-    - `site`
+
+  As of Assent v0.3.0, the Google strategy uses OpenID Connect (OIDC) and
+  automatically retrieves configuration (token URL, user info URL, etc.)
+  from Google's discovery endpoint.
 
   ## More documentation:
-  - The [Google OAuth 2.0 Overview](https://developers.google.com/identity/protocols/oauth2).
+  - The [Google OpenID Connect Overview](https://developers.google.com/identity/openid-connect/openid-connect).
   - The [Google Tutorial](/documentation/tutorial/google.md)
-  - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
+  - The [OIDC documentation](`AshAuthentication.Strategy.Oidc`)
   """
 
-  alias AshAuthentication.Strategy.{Custom, OAuth2}
+  alias AshAuthentication.Strategy.{Custom, Oidc}
 
   use Custom, entity: Dsl.dsl()
 
-  defdelegate transform(strategy, dsl_state), to: OAuth2
-  defdelegate verify(strategy, dsl_state), to: OAuth2
+  defdelegate transform(strategy, dsl_state), to: Oidc
+  defdelegate verify(strategy, dsl_state), to: Oidc
 end
