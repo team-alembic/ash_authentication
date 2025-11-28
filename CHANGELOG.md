@@ -11,6 +11,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.1](https://github.com/team-alembic/ash_authentication/compare/v4.13.0...v4.13.1) (2025-11-28)
+
+
+
+
+### Bug Fixes:
+
+* add `--accounts` flag to add_strategy task (#1096) by James Harton
+
+* fix failing test by Josh Price
+
+* support :null atom from JOSE 1.11.11+ in JWT tenant validation (#1092) by Shahryar Tavakkoli
+
+* support :null atom from JOSE 1.11.12 in JWT tenant validation by Shahryar Tavakkoli
+
 ## [v4.13.0](https://github.com/team-alembic/ash_authentication/compare/v4.12.0...v4.13.0) (2025-11-17)
 
 
