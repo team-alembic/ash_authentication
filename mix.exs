@@ -228,6 +228,7 @@ defmodule AshAuthentication.MixProject do
       {:igniter, "~> 0.4", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
+      {:nimble_totp, "~> 1.0"},
       {:plug, "~> 1.13"},
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
