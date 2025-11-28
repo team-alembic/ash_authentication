@@ -10,8 +10,8 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   from it and constrains the query to a matching user.
   """
   use Ash.Resource.Preparation
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
   alias Ash.{Error.Unknown, Query, Resource, Resource.Preparation}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
   require Ash.Query
 
   @doc false
