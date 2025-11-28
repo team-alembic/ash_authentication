@@ -49,6 +49,7 @@ if Code.ensure_loaded?(Igniter) do
         %{
           "4.4.9" => [&fix_token_is_revoked_action/2],
           "4.13.4" => [&add_remember_me_to_magic_link_sign_in/2],
+          "4.14.0" => [&fix_google_hd_field/2],
           "5.0.0" => [&convert_revoked_read_action_to_generic/2]
         }
 
@@ -71,6 +72,81 @@ if Code.ensure_loaded?(Igniter) do
             maybe_fix_is_revoked_action(igniter, resource)
           end)
       end
+    end
+
+    @doc """
+    Fixes the Google strategy field name change from "google_hd" to "hd".
+
+    The Google strategy now uses OIDC which returns standard
+    claims. The hosted domain claim changed from "google_hd" to "hd".
+    """
+    def fix_google_hd_field(igniter, _opts) do
+      igniter
+      |> replace_google_hd_strings()
+      |> Igniter.add_notice("""
+      Google Strategy Breaking Change:
+
+      The `email_verified` field in `user_info` is now a `boolean` instead of a `string`.
+
+      If your code checks `user_info["email_verified"] == "true"`, update it to:
+        user_info["email_verified"] == true
+
+      Please review your `register_with_google` action and any code that accesses
+      the `email_verified` field from Google OAuth responses.
+      """)
+    end
+
+    defp replace_google_hd_strings(igniter) do
+      igniter = Igniter.include_all_elixir_files(igniter)
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.filter(&match?(%Rewrite.Source{filetype: %Rewrite.Source.Ex{}}, &1))
+      |> Enum.reduce(igniter, fn source, igniter ->
+        zipper =
+          source
+          |> Rewrite.Source.get(:quoted)
+          |> Sourceror.Zipper.zip()
+
+        case replace_google_hd_in_zipper(zipper) do
+          {:ok, new_zipper} ->
+            new_quoted = Sourceror.Zipper.topmost_root(new_zipper)
+            new_source = Igniter.update_source(source, igniter, :quoted, new_quoted)
+            %{igniter | rewrite: Rewrite.update!(igniter.rewrite, new_source)}
+
+          :unchanged ->
+            igniter
+        end
+      end)
+    end
+
+    defp replace_google_hd_in_zipper(zipper) do
+      {new_zipper, changed?} =
+        Sourceror.Zipper.traverse(zipper, false, fn zipper, changed? ->
+          if google_hd_string?(zipper) do
+            {replace_with_hd(zipper), true}
+          else
+            {zipper, changed?}
+          end
+        end)
+
+      if changed? do
+        {:ok, new_zipper}
+      else
+        :unchanged
+      end
+    end
+
+    defp google_hd_string?(%{node: "google_hd"}), do: true
+    defp google_hd_string?(%{node: {:__block__, meta, ["google_hd"]}}) when is_list(meta), do: true
+    defp google_hd_string?(_), do: false
+
+    defp replace_with_hd(%{node: "google_hd"} = zipper) do
+      Sourceror.Zipper.replace(zipper, "hd")
+    end
+
+    defp replace_with_hd(%{node: {:__block__, meta, ["google_hd"]}} = zipper) do
+      Sourceror.Zipper.replace(zipper, {:__block__, meta, ["hd"]})
     end
 
     defp find_all_token_resources(igniter) do
