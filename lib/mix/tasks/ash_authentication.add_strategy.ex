@@ -76,14 +76,15 @@ if Code.ensure_loaded?(Igniter) do
           strategies: [rest: true]
         ],
         schema: [
+          accounts: :string,
           user: :string,
           identity_field: :string,
           api_key: :string,
           hash_provider: :string
         ],
         aliases: [
+          a: :accounts,
           u: :user,
-          a: :api_key,
           i: :identity_field
         ],
         defaults: [
@@ -94,12 +95,21 @@ if Code.ensure_loaded?(Igniter) do
 
     def igniter(igniter) do
       strategies = igniter.args.positional[:strategies] || []
-      default_user = Igniter.Project.Module.module_name(igniter, "Accounts.User")
 
       options =
         igniter.args.options
+        |> Keyword.put_new_lazy(:accounts, fn ->
+          Igniter.Project.Module.module_name(igniter, "Accounts")
+        end)
+
+      options =
+        options
+        |> Keyword.put_new_lazy(:user, fn ->
+          Module.concat(options[:accounts], User)
+        end)
         |> Keyword.update(:identity_field, :email, &String.to_atom/1)
-        |> Keyword.update(:user, default_user, &Igniter.Project.Module.parse/1)
+        |> Keyword.update!(:accounts, &maybe_parse_module/1)
+        |> Keyword.update!(:user, &maybe_parse_module/1)
 
       if invalid_strategy = Enum.find(strategies, &(&1 not in @strategy_names)) do
         Mix.shell().error("""
@@ -988,6 +998,11 @@ if Code.ensure_loaded?(Igniter) do
       end
       """)
     end
+
+    defp maybe_parse_module(atom) when is_atom(atom), do: atom
+
+    defp maybe_parse_module(string) when is_binary(string),
+      do: Igniter.Project.Module.parse(string)
   end
 else
   defmodule Mix.Tasks.AshAuthentication.AddStrategy do
