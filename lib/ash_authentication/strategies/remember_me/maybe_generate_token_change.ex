@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange do
   @moduledoc """
   Maybe generate a remember me token and put it in the metadata of the resource to
@@ -26,8 +30,8 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange do
   ```
   """
   use Ash.Resource.Change
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
   alias Ash.{Error.Unknown, Resource}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
 
   @impl true
   def change(changeset, options, context) do

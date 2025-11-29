@@ -107,6 +107,10 @@ end
 When the user successfully signs in, the user.__metadata__.remember_me field will contain a map
 with the token and max_age.
 
+For `create` actions, such as registering a new user and signing them in immediately,
+use `AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange`. This serves as
+an alternative to the preparation used for read actions and mirrors the behavior of the Magic Link strategy.
+
 If you're using AshAuthentication.Phoenix, update your AuthController to store the cookie with
 a `put_remember_me_cookie/3` callback. Other callbacks include delete_remember_me_cookie/2,
 and delete_all_remember_me_cookies/1
@@ -118,14 +122,14 @@ defmodule MyAppWeb.AuthController do
 
   @impl AshAuthentication.Phoenix.Controller
   def put_remember_me_cookie(conn, cookie_name, %{token: token, max_age: max_age}) do
-    cookie_options = %{
+    cookie_options = [
       max_age: max_age, # matches the token lifetime
       http_only: true, # prevents the cookie from being accessed by JavaScript
       secure: true, # only send the cookie over HTTPS
-      same_site: :lax # prevents the cookie from being sent with cross-site requests
-    }
+      same_site: "lax" # prevents the cookie from being sent with cross-site requests
+    ]
     conn
-    |> put_resp_cookie(cookie_name, cookie_value, cookie_options)
+    |> put_resp_cookie(cookie_name, token, cookie_options)
   end
 end
 ```
@@ -157,7 +161,7 @@ defmodule MyAppWeb.AuthController do
 
     conn
     |> clear_session(:my_otp_app)
-    |> delete_all_remember_me_cookies(:my_otp_app)
+    |> AshAuthentication.Strategy.RememberMe.Plug.Helpers.delete_all_remember_me_cookies(:my_otp_app)
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
   end
