@@ -138,7 +138,10 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp google_hd_string?(%{node: "google_hd"}), do: true
-    defp google_hd_string?(%{node: {:__block__, meta, ["google_hd"]}}) when is_list(meta), do: true
+
+    defp google_hd_string?(%{node: {:__block__, meta, ["google_hd"]}}) when is_list(meta),
+      do: true
+
     defp google_hd_string?(_), do: false
 
     defp replace_with_hd(%{node: "google_hd"} = zipper) do
