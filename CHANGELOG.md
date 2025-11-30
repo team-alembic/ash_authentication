@@ -11,6 +11,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.2](https://github.com/team-alembic/ash_authentication/compare/v4.13.1...v4.13.2) (2025-11-30)
+
+
+
+
+### Bug Fixes:
+
+* lock assent at 0.2 until the next major release by James Harton
+
+### Improvements:
+
+* Add MaybeGenerateTokenChange for remember me support in create actions (#1093) by weljoda
+
+* Openid configuration uri type change (#1095) by andreas-ementio
+
 ## [v4.13.1](https://github.com/team-alembic/ash_authentication/compare/v4.13.0...v4.13.1) (2025-11-28)
 
 
