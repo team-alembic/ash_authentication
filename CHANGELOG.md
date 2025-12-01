@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.3](https://github.com/team-alembic/ash_authentication/compare/v4.13.2...v4.13.3) (2025-12-01)
+
+
+
+
+### Bug Fixes:
+
+* correctly lock out assent 0.3 by James Harton
+
 ## [v4.13.2](https://github.com/team-alembic/ash_authentication/compare/v4.13.1...v4.13.2) (2025-11-30)
 
 
