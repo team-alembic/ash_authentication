@@ -33,7 +33,7 @@ defmodule AshAuthentication.AddOn.AuditLog.TransformerTest do
       # The password strategy actions should be tracked
       tracked_actions = Auditor.get_tracked_actions(Example.UserWithAuditLog, :audit_log)
 
-      assert length(tracked_actions) > 0
+      refute Enum.empty?(tracked_actions)
     end
 
     test "empty include lists remain empty after transformation" do
@@ -55,7 +55,7 @@ defmodule AshAuthentication.AddOn.AuditLog.TransformerTest do
       # Should have exactly the explicitly included actions
       assert :sign_in_with_password in tracked_actions
       assert :register_with_password in tracked_actions
-      assert length(tracked_actions) == 2
+      assert [_, _] = tracked_actions
     end
   end
 
@@ -146,7 +146,7 @@ defmodule AshAuthentication.AddOn.AuditLog.TransformerTest do
 
       # Verify the actual contents match what we expect
       # (only public non-sensitive fields and explicitly included fields)
-      assert length(register_attributes) > 0
+      refute Enum.empty?(register_attributes)
     end
 
     test "fields are correctly categorized between arguments and attributes" do
@@ -196,7 +196,7 @@ defmodule AshAuthentication.AddOn.AuditLog.TransformerTest do
 
       # All tracked actions should have the necessary changes/preparations
       # This is proven by the fact that they appear in tracked_actions
-      assert length(tracked_actions) > 0
+      refute Enum.empty?(tracked_actions)
     end
   end
 

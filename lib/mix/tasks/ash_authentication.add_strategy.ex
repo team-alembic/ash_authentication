@@ -111,7 +111,9 @@ if Code.ensure_loaded?(Igniter) do
         |> Keyword.update!(:accounts, &maybe_parse_module/1)
         |> Keyword.update!(:user, &maybe_parse_module/1)
 
-      if invalid_strategy = Enum.find(strategies, &(&1 not in @strategy_names)) do
+      invalid_strategy = Enum.find(strategies, &(&1 not in @strategy_names))
+
+      if invalid_strategy do
         Mix.shell().error("""
         Invalid strategy provided: `#{invalid_strategy}`
 
