@@ -122,7 +122,9 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
 
   describe "all_remember_me_cookie_names/1" do
     test "returns all remember me cookie names" do
-      assert Helpers.all_remember_me_cookie_names(:ash_authentication) == ["remember_me"]
+      cookie_names = Helpers.all_remember_me_cookie_names(:ash_authentication)
+      assert "remember_me" in cookie_names
+      assert "remember_me_audit_log" in cookie_names
     end
   end
 

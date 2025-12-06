@@ -5,7 +5,15 @@
 defmodule AshAuthentication.AddOn.AuditLogTest do
   @moduledoc false
   use DataCase, async: false
-  alias AshAuthentication.{AuditLogResource.Batcher, Info, Strategy}
+
+  alias AshAuthentication.{
+    AuditLogResource.Batcher,
+    Info,
+    Strategy,
+    Strategy.MagicLink,
+    Strategy.Password
+  }
+
   require Ash.Query
 
   setup do
@@ -39,6 +47,31 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       assert sign_in_log.resource == Example.UserWithAuditLog
     end
 
+    test "it creates an audit log entry on successful magic link sign in" do
+      user = build_user_with_audit_log()
+      strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
+
+      assert {:ok, token} = MagicLink.request_token_for(strategy, user)
+
+      params = %{
+        "token" => token
+      }
+
+      assert {:ok, signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert signed_in_user.id == user.id
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      sign_in_log = Enum.find(logs, &(&1.action_name == :sign_in_with_magic_link))
+      assert sign_in_log.strategy == :magic_link
+      assert sign_in_log.action_name == :sign_in_with_magic_link
+      assert sign_in_log.status == :success
+      assert sign_in_log.subject == "user_with_audit_log?id=#{user.id}"
+      assert sign_in_log.resource == Example.UserWithAuditLog
+    end
+
     test "it creates an audit log entry on failed sign in" do
       params = %{
         "email" => "nonexistent@example.com",
@@ -59,6 +92,183 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       assert log.status == :failure
       assert is_nil(log.subject)
       assert log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates an audit log entry on failed magic link sign in" do
+      params = %{
+        "token" => "invalid_token"
+      }
+
+      strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
+
+      assert {:error, _} = Strategy.action(strategy, :sign_in, params)
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      assert [log] = logs
+      assert log.strategy == :magic_link
+      assert log.action_name == :sign_in_with_magic_link
+      assert log.status == :failure
+      assert is_nil(log.subject)
+      assert log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates an audit log entry on successful remember me sign in" do
+      user = build_user_with_audit_log()
+
+      claims = %{"purpose" => "remember_me"}
+
+      opts = [
+        purpose: :remember_me,
+        token_lifetime: {30, :days}
+      ]
+
+      assert {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(user, claims, opts)
+
+      assert {:ok, [signed_in_user]} =
+               Example.UserWithAuditLog
+               |> Ash.Query.new()
+               |> Ash.Query.for_read(:sign_in_with_remember_me, %{token: token})
+               |> Ash.read()
+
+      assert signed_in_user.id == user.id
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      sign_in_log = Enum.find(logs, &(&1.action_name == :sign_in_with_remember_me))
+      assert sign_in_log.strategy == :remember_me
+      assert sign_in_log.action_name == :sign_in_with_remember_me
+      assert sign_in_log.status == :success
+      assert sign_in_log.subject == "user_with_audit_log?id=#{user.id}"
+      assert sign_in_log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates an audit log entry on failed remember me sign in" do
+      assert {:error, _} =
+               Example.UserWithAuditLog
+               |> Ash.Query.new()
+               |> Ash.Query.for_read(:sign_in_with_remember_me, %{token: "invalid_token"})
+               |> Ash.read()
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      assert [log] = logs
+      assert log.strategy == :remember_me
+      assert log.action_name == :sign_in_with_remember_me
+      assert log.status == :failure
+      assert is_nil(log.subject)
+      assert log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates an audit log entry on password reset request" do
+      user = build_user_with_audit_log()
+      strategy = Info.strategy!(Example.UserWithAuditLog, :password)
+
+      params = %{
+        "email" => user.email
+      }
+
+      assert :ok = Strategy.action(strategy, :reset_request, params)
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      reset_request_log =
+        Enum.find(logs, &(&1.action_name == :request_password_reset_with_password))
+
+      assert reset_request_log.strategy == :password
+      assert reset_request_log.action_name == :request_password_reset_with_password
+      assert reset_request_log.status == :success
+      # reset_request returns :ok (not a user record) for security, so subject is nil
+      assert is_nil(reset_request_log.subject)
+      assert reset_request_log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates an audit log entry on password reset request for non-existent user" do
+      strategy = Info.strategy!(Example.UserWithAuditLog, :password)
+
+      params = %{
+        "email" => "nonexistent@example.com"
+      }
+
+      assert :ok = Strategy.action(strategy, :reset_request, params)
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      reset_request_log =
+        Enum.find(logs, &(&1.action_name == :request_password_reset_with_password))
+
+      assert reset_request_log.strategy == :password
+      assert reset_request_log.action_name == :request_password_reset_with_password
+      assert reset_request_log.status == :success
+      # For security, reset_request always returns :ok even if user doesn't exist
+      assert is_nil(reset_request_log.subject)
+      assert reset_request_log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates an audit log entry on successful password reset" do
+      user = build_user_with_audit_log()
+      strategy = Info.strategy!(Example.UserWithAuditLog, :password)
+
+      assert {:ok, reset_token} = Password.reset_token_for(strategy, user)
+
+      params = %{
+        "reset_token" => reset_token,
+        "password" => "new_password123",
+        "password_confirmation" => "new_password123"
+      }
+
+      assert {:ok, updated_user} = Strategy.action(strategy, :reset, params)
+      assert updated_user.id == user.id
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      reset_log = Enum.find(logs, &(&1.action_name == :password_reset_with_password))
+      assert reset_log.strategy == :password
+      assert reset_log.action_name == :password_reset_with_password
+      assert reset_log.status == :success
+      assert reset_log.subject == "user_with_audit_log?id=#{user.id}"
+      assert reset_log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates an audit log entry on failed password reset" do
+      user = build_user_with_audit_log()
+      strategy = Info.strategy!(Example.UserWithAuditLog, :password)
+
+      assert {:ok, reset_token} = Password.reset_token_for(strategy, user)
+
+      # Use password confirmation mismatch to trigger a validation error
+      # This will cause the changeset to be created and run, so audit log will be created
+      params = %{
+        "reset_token" => reset_token,
+        "password" => "new_password123",
+        "password_confirmation" => "different_password"
+      }
+
+      assert {:error, _} = Strategy.action(strategy, :reset, params)
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      reset_log = Enum.find(logs, &(&1.action_name == :password_reset_with_password))
+      assert reset_log.strategy == :password
+      assert reset_log.action_name == :password_reset_with_password
+      assert reset_log.status == :failure
+      # When validation fails, the result is {:error, changeset}, so subject is nil
+      assert is_nil(reset_log.subject)
+      assert reset_log.resource == Example.UserWithAuditLog
     end
 
     test "it creates an audit log entry on registration" do

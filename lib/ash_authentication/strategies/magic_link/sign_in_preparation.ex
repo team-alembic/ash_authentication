@@ -9,7 +9,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
 
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource, Resource.Preparation}
-  alias AshAuthentication.{Info, Jwt, TokenResource}
+  alias AshAuthentication.{Errors, Info, Jwt, TokenResource}
   require Ash.Query
   import Ash.Expr
 
@@ -71,7 +71,24 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
           {:ok, []}
       end)
     else
-      _ -> Query.do_filter(query, false)
+      _error ->
+        {:ok, strategy} = Info.strategy_for_action(query.resource, query.action.name)
+
+        query
+        |> Query.do_filter(false)
+        |> Query.after_action(fn _query, _result ->
+          {:error,
+           Errors.AuthenticationFailed.exception(
+             strategy: strategy,
+             query: query,
+             caused_by:
+               Errors.InvalidToken.exception(
+                 field: strategy.token_param_name,
+                 reason: "Token did not pass verification",
+                 type: :magic_link
+               )
+           )}
+        end)
     end
   end
 end
