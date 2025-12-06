@@ -47,6 +47,21 @@ defmodule Example.UserWithAuditLog do
     strategies do
       password do
         identity_field :email
+
+        resettable do
+          sender fn _user, _token, _opts -> :ok end
+        end
+      end
+
+      magic_link do
+        identity_field :email
+        sender fn _user, _token, _opts -> :ok end
+      end
+
+      remember_me :remember_me do
+        sign_in_action_name :sign_in_with_remember_me
+        cookie_name :remember_me_audit_log
+        token_lifetime {30, :days}
       end
     end
   end
