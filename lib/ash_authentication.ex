@@ -85,6 +85,23 @@ defmodule AshAuthentication do
   See [`assent's documentation`](https://hexdocs.pm/assent/README.html#http-client) for more details on the supported
   http clients and their configuration.
 
+  ### Magic Link configuration
+
+  When using the `MagicLink` strategy, you can configure whether invalid
+  magic link tokens should return an error or an empty result. The current
+  default for backward compatibility is to return an empty result when a
+  token is invalid. However, this makes it difficult to distinguish between
+  a successful sign-in with no matching user and a failed sign-in due to
+  an invalid token.
+
+  To return an error when an invalid token is provided (recommended), set:
+
+  `config :ash_authentication, return_error_on_invalid_magic_link_token?: true`
+
+  This is especially important if you're using the `AuditLog` add-on, as it
+  ensures failed sign-in attempts are logged correctly. In the next major
+  version, returning an error will be the default behavior.
+
   ## Add-ons
 
   Add-ons are like strategies, except that they don't actually provide

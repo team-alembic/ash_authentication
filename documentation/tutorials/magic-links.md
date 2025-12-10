@@ -46,6 +46,18 @@ Some email clients, virus scanners, etc will retrieve a link automatically witho
 
 See also `AshAuthentication.Phoenix.Router.magic_sign_in_route/3`.
 
+### Configuration
+
+By default, when an invalid magic link token is provided, the sign-in action returns an empty result (for backwards compatibility). However, this makes it difficult to distinguish between a successful sign-in with no matching user and a failed sign-in due to an invalid token.
+
+To return an error when an invalid token is provided (recommended), add the following to your configuration:
+
+```elixir
+config :ash_authentication, return_error_on_invalid_magic_link_token?: true
+```
+
+This is especially important if you're using the `AuditLog` add-on, as it ensures failed sign-in attempts are logged correctly. This configuration is automatically added when you use `mix ash_authentication.add_strategy magic_link`. In the next major version, returning an error will be the default behavior.
+
 ## Create an email sender and email template
 
 Inside `/lib/example/accounts/user/senders/send_magic_link.ex`

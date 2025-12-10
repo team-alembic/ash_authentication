@@ -22,6 +22,21 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
   end
 
   describe "audit log add-on" do
+    setup do
+      original_return_error =
+        Application.get_env(:ash_authentication, :return_error_on_invalid_magic_link_token?)
+
+      on_exit(fn ->
+        Application.put_env(
+          :ash_authentication,
+          :return_error_on_invalid_magic_link_token?,
+          original_return_error
+        )
+      end)
+
+      :ok
+    end
+
     test "it creates an audit log entry on successful sign in" do
       user = build_user_with_audit_log()
 
@@ -94,7 +109,9 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       assert log.resource == Example.UserWithAuditLog
     end
 
-    test "it creates an audit log entry on failed magic link sign in" do
+    test "it creates a successful audit log entry on failed magic link sign in with return_error_on_invalid_magic_link_token? set to false" do
+      Application.put_env(:ash_authentication, :return_error_on_invalid_magic_link_token?, false)
+
       params = %{
         "token" => "invalid_token"
       }
@@ -110,6 +127,33 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       assert [log] = logs
       assert log.strategy == :magic_link
       assert log.action_name == :sign_in_with_magic_link
+
+      # return_error_on_invalid_magic_link_token? is false, so the query is successful and the log's status is success
+      assert log.status == :success
+      assert is_nil(log.subject)
+      assert log.resource == Example.UserWithAuditLog
+    end
+
+    test "it creates a failed audit log entry on failed magic link sign in with return_error_on_invalid_magic_link_token? set to true" do
+      Application.put_env(:ash_authentication, :return_error_on_invalid_magic_link_token?, true)
+
+      params = %{
+        "token" => "invalid_token"
+      }
+
+      strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
+
+      assert {:error, _} = Strategy.action(strategy, :sign_in, params)
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      assert [log] = logs
+      assert log.strategy == :magic_link
+      assert log.action_name == :sign_in_with_magic_link
+
+      # return_error_on_invalid_magic_link_token? is true, so the query errors and the log's status is failure
       assert log.status == :failure
       assert is_nil(log.subject)
       assert log.resource == Example.UserWithAuditLog

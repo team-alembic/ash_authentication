@@ -354,6 +354,19 @@ if Code.ensure_loaded?(Igniter) do
       end
       """)
       |> create_new_magic_link_sender(sender, options)
+      |> add_magic_link_config()
+    end
+
+    defp add_magic_link_config(igniter) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+
+      igniter
+      |> Igniter.Project.Config.configure_new(
+        "config.exs",
+        otp_app,
+        [:ash_authentication, :return_error_on_invalid_magic_link_token?],
+        true
+      )
     end
 
     defp make_hashed_password_optional(igniter, options) do
