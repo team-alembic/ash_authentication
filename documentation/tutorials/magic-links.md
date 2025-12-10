@@ -48,7 +48,7 @@ See also `AshAuthentication.Phoenix.Router.magic_sign_in_route/3`.
 
 ### Configuration
 
-By default, when an invalid magic link token is provided, the sign-in action returns an empty result (for backwards compatibility). However, this makes it difficult to distinguish between a successful sign-in with no matching user and a failed sign-in due to an invalid token.
+By default, when an invalid magic link token is provided, the sign-in action returns an empty result (for backwards compatibility). However, this makes it difficult to distinguish between a successful sign-in and a failed sign-in due to an invalid token.
 
 To return an error when an invalid token is provided (recommended), add the following to your configuration:
 

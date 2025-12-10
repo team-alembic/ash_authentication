@@ -88,7 +88,7 @@ When using the `MagicLink` strategy, you can configure whether invalid
 magic link tokens should return an error or an empty result. By default, 
 invalid tokens return an empty result (for backwards compatibility). 
 However, this makes it difficult to distinguish between a successful 
-sign-in with no matching user and a failed sign-in due to an invalid token.
+sign-in and a failed sign-in due to an invalid token.
 
 To opt-in to the then new behaviour and return an error when an invalid 
 token is provided (recommended), set:

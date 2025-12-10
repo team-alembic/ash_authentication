@@ -91,8 +91,7 @@ defmodule AshAuthentication do
   magic link tokens should return an error or an empty result. The current
   default for backward compatibility is to return an empty result when a
   token is invalid. However, this makes it difficult to distinguish between
-  a successful sign-in with no matching user and a failed sign-in due to
-  an invalid token.
+  a successful sign-in and a failed sign-in due to an invalid token.
 
   To return an error when an invalid token is provided (recommended), set:
 
