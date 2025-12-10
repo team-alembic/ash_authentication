@@ -11,6 +11,7 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
   alias Ash.{Query, Resource, Resource.Preparation}
   alias AshAuthentication.{Errors, Info, Jwt, TokenResource}
   require Ash.Query
+  require Logger
   import Ash.Expr
 
   @doc false
@@ -72,23 +73,53 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
       end)
     else
       _error ->
-        {:ok, strategy} = Info.strategy_for_action(query.resource, query.action.name)
-
         query
         |> Query.do_filter(false)
-        |> Query.after_action(fn _query, _result ->
-          {:error,
-           Errors.AuthenticationFailed.exception(
-             strategy: strategy,
-             query: query,
-             caused_by:
-               Errors.InvalidToken.exception(
-                 field: strategy.token_param_name,
-                 reason: "Token did not pass verification",
-                 type: :magic_link
-               )
-           )}
-        end)
+        |> maybe_add_error_on_invalid_token()
     end
+  end
+
+  defp maybe_add_error_on_invalid_token(query) do
+    return_error =
+      Application.get_env(:ash_authentication, :return_error_on_invalid_magic_link_token?)
+
+    if is_nil(return_error) && Info.strategy_present?(query.resource, :audit_log) do
+      Logger.warning("""
+      return_error_on_invalid_magic_link_token? is not set and the AshAuthentication audit_log add-on is present.
+
+      The backward compatible behaviour is for the query to be successful and return an empty list if the token is
+      invalid. This will be logged as a success in the audit log even though the sign in failed.
+
+      The new behaviour is to return an error and log the sign in attempt as a failure in the audit log. In the
+      next major version this will be the default behaviour.
+
+      To suppress this warning, set return_error_on_invalid_magic_link_token? in your config:
+      config :ash_authentication, return_error_on_invalid_magic_link_token?: true
+      """)
+    end
+
+    if return_error do
+      query |> add_error_on_invalid_token()
+    else
+      query
+    end
+  end
+
+  defp add_error_on_invalid_token(query) do
+    {:ok, strategy} = Info.strategy_for_action(query.resource, query.action.name)
+
+    Query.after_action(query, fn query, _result ->
+      {:error,
+       Errors.AuthenticationFailed.exception(
+         strategy: strategy,
+         query: query,
+         caused_by:
+           Errors.InvalidToken.exception(
+             field: strategy.token_param_name,
+             reason: "Token did not pass verification",
+             type: :magic_link
+           )
+       )}
+    end)
   end
 end
