@@ -127,7 +127,7 @@ defprotocol AshAuthentication.Strategy do
   Any options passed to the action will be passed to the underlying `Ash.Domain` function.
   """
   @spec action(t, action, params :: map, options :: keyword) ::
-          :ok | {:ok, Resource.record()} | {:error, any}
+          :ok | {:ok, Resource.record()} | {:ok, boolean} | {:error, any}
   def action(strategy, action_name, params, options \\ [])
 
   @doc """
