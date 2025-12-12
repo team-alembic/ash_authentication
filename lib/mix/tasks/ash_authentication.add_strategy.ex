@@ -323,12 +323,20 @@ if Code.ensure_loaded?(Igniter) do
           allow_nil? false
         end
 
+        argument :remember_me, :boolean do
+          description "Whether to generate a remember me token"
+          allow_nil? true
+        end
+
         upsert? true
         upsert_identity :unique_#{options[:identity_field]}
         upsert_fields [:#{options[:identity_field]}]
 
         # Uses the information from the token to create or sign in the user
         change AshAuthentication.Strategy.MagicLink.SignInChange
+
+        change {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange,
+                strategy_name: :remember_me}
 
         metadata :token, :string do
           allow_nil? false

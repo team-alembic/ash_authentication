@@ -47,7 +47,8 @@ if Code.ensure_loaded?(Igniter) do
 
       upgrades =
         %{
-          "4.4.9" => [&fix_token_is_revoked_action/2]
+          "4.4.9" => [&fix_token_is_revoked_action/2],
+          "4.13.4" => [&add_remember_me_to_magic_link_sign_in/2]
         }
 
       # For each version that requires a change, add it to this map
@@ -155,6 +156,141 @@ if Code.ensure_loaded?(Igniter) do
           )
         end
       end
+    end
+
+    def add_remember_me_to_magic_link_sign_in(igniter, _opts) do
+      case find_resources_with_magic_link_and_remember_me(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources} ->
+          Enum.reduce(resources, igniter, fn resource, igniter ->
+            maybe_add_remember_me_to_magic_link_action(igniter, resource)
+          end)
+      end
+    end
+
+    defp find_resources_with_magic_link_and_remember_me(igniter) do
+      Igniter.Project.Module.find_all_matching_modules(igniter, fn _module, zipper ->
+        with {:ok, zipper} <- enter_auth_strategies(zipper),
+             true <- has_strategy?(zipper, :magic_link),
+             true <- has_strategy?(zipper, :remember_me) do
+          true
+        else
+          _ -> false
+        end
+      end)
+    end
+
+    defp enter_auth_strategies(zipper) do
+      with {:ok, zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :authentication,
+               1
+             ),
+           {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
+           {:ok, zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :strategies,
+               1
+             ) do
+        Igniter.Code.Common.move_to_do_block(zipper)
+      end
+    end
+
+    defp has_strategy?(zipper, strategy_type) do
+      match?(
+        {:ok, _},
+        Igniter.Code.Function.move_to_function_call_in_current_scope(
+          zipper,
+          strategy_type,
+          [1, 2]
+        )
+      )
+    end
+
+    defp maybe_add_remember_me_to_magic_link_action(igniter, resource) do
+      Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+        with {:ok, action_zipper} <- move_to_action(zipper, :create, :sign_in_with_magic_link),
+             {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(action_zipper) do
+          do_block_zipper
+          |> maybe_add_remember_me_argument()
+          |> maybe_add_remember_me_change()
+        else
+          :error -> {:ok, zipper}
+        end
+      end)
+    end
+
+    defp maybe_add_remember_me_argument(zipper) do
+      if has_remember_me_argument?(zipper) do
+        zipper
+      else
+        add_remember_me_argument(zipper)
+      end
+    end
+
+    defp has_remember_me_argument?(zipper) do
+      match?(
+        {:ok, _},
+        Igniter.Code.Function.move_to_function_call_in_current_scope(
+          zipper,
+          :argument,
+          [2, 3],
+          &Igniter.Code.Function.argument_equals?(&1, 0, :remember_me)
+        )
+      )
+    end
+
+    defp add_remember_me_argument(zipper) do
+      argument_code = """
+      argument :remember_me, :boolean do
+        description "Whether to generate a remember me token"
+        allow_nil? true
+      end
+      """
+
+      Igniter.Code.Common.add_code(zipper, argument_code)
+    end
+
+    defp maybe_add_remember_me_change(zipper) do
+      if has_remember_me_change?(zipper) do
+        {:ok, zipper}
+      else
+        {:ok, add_remember_me_change(zipper)}
+      end
+    end
+
+    defp has_remember_me_change?(zipper) do
+      match?(
+        {:ok, _},
+        Igniter.Code.Function.move_to_function_call_in_current_scope(
+          zipper,
+          :change,
+          1,
+          fn change_zipper ->
+            case Igniter.Code.Function.move_to_nth_argument(change_zipper, 0) do
+              {:ok, arg_zipper} ->
+                source = Sourceror.Zipper.node(arg_zipper) |> Sourceror.to_string()
+                String.contains?(source, "MaybeGenerateTokenChange")
+
+              _ ->
+                false
+            end
+          end
+        )
+      )
+    end
+
+    defp add_remember_me_change(zipper) do
+      change_code = """
+      change {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange,
+              strategy_name: :remember_me}
+      """
+
+      Igniter.Code.Common.add_code(zipper, change_code)
     end
   end
 else
