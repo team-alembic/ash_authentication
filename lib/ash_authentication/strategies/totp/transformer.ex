@@ -27,6 +27,9 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
          :ok <- validate_secret_field(strategy.secret_field, dsl),
          :ok <- validate_last_totp_at_field(strategy.last_totp_at_field, dsl),
          :ok <- validate_confirm_setup_requirements(strategy, dsl),
+         :ok <- validate_confirm_setup_requires_setup(strategy, dsl),
+         :ok <- warn_period_range(strategy, dsl),
+         :ok <- warn_secret_length(strategy, dsl),
          {:ok, dsl, strategy} <- handle_setup_action(dsl, strategy),
          {:ok, dsl, strategy} <- handle_confirm_setup_action(dsl, strategy),
          {:ok, dsl, strategy} <- handle_sign_in_action(dsl, strategy),
@@ -134,6 +137,72 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
          """
        )}
     end
+  end
+
+  defp validate_confirm_setup_requires_setup(strategy, dsl) do
+    if strategy.confirm_setup_enabled? and not strategy.setup_enabled? do
+      {:error,
+       DslError.exception(
+         module: Transformer.get_persisted(dsl, :module),
+         path: [:authentication, :strategies, :totp, strategy.name],
+         message: """
+         The `confirm_setup_enabled?` option requires `setup_enabled?` to be true.
+
+         Either enable setup:
+
+             totp :totp do
+               setup_enabled? true
+               confirm_setup_enabled? true
+             end
+
+         Or disable confirm_setup:
+
+             totp :totp do
+               confirm_setup_enabled? false
+             end
+         """
+       )}
+    else
+      :ok
+    end
+  end
+
+  defp warn_period_range(strategy, dsl) do
+    module = Transformer.get_persisted(dsl, :module)
+
+    cond do
+      strategy.period < 15 ->
+        IO.warn("""
+        TOTP period #{strategy.period}s is very short for #{inspect(module)}.
+        Consider at least 15 seconds. Very short periods may cause clock synchronisation issues.
+        """)
+
+        :ok
+
+      strategy.period > 300 ->
+        IO.warn("""
+        TOTP period #{strategy.period}s is very long for #{inspect(module)}.
+        Consider at most 300 seconds. Long periods increase the attack window for stolen codes.
+        """)
+
+        :ok
+
+      true ->
+        :ok
+    end
+  end
+
+  defp warn_secret_length(strategy, dsl) do
+    if strategy.secret_length < 16 do
+      module = Transformer.get_persisted(dsl, :module)
+
+      IO.warn("""
+      TOTP secret_length #{strategy.secret_length} bytes is below RFC 4226 recommendation for #{inspect(module)}.
+      The RFC recommends at least 16 bytes (128 bits) for security.
+      """)
+    end
+
+    :ok
   end
 
   defp handle_setup_action(dsl, strategy) when strategy.setup_enabled? != true,

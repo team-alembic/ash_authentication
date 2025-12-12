@@ -26,6 +26,7 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogChange do
 
   alias Ash.Changeset
   alias AshAuthentication.{AuditLogResource, Errors.AuthenticationFailed, Info}
+  alias AshAuthentication.Strategy.Totp.Helpers
 
   @impl true
   def init(opts), do: {:ok, opts}
@@ -58,27 +59,40 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogChange do
 
   defp check_rate_limit(user, strategy, audit_log, opts) do
     subject = AshAuthentication.user_to_subject(user)
-    window = strategy.audit_log_window
+    window = Helpers.time_to_seconds(strategy.audit_log_window)
     max_failures = strategy.audit_log_max_failures
     cutoff = DateTime.add(DateTime.utc_now(), -window, :second)
 
-    failure_count = count_failures(audit_log, subject, cutoff)
+    case count_failures(audit_log, subject, cutoff) do
+      {:ok, failure_count} when failure_count >= max_failures ->
+        action_name = Keyword.get(opts, :action_name, :unknown)
 
-    if failure_count >= max_failures do
-      action_name = Keyword.get(opts, :action_name, :unknown)
-
-      {:error,
-       AuthenticationFailed.exception(
-         strategy: strategy,
-         caused_by: %{
-           module: __MODULE__,
+        {:error,
+         AuthenticationFailed.exception(
            strategy: strategy,
-           action: action_name,
-           message: "Too many failed TOTP attempts"
-         }
-       )}
-    else
-      :ok
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: action_name,
+             message: "Too many failed TOTP attempts"
+           }
+         )}
+
+      {:ok, _failure_count} ->
+        :ok
+
+      {:error, reason} ->
+        {:error,
+         AuthenticationFailed.exception(
+           strategy: strategy,
+           caused_by: %{
+             module: __MODULE__,
+             strategy: strategy,
+             action: Keyword.get(opts, :action_name, :unknown),
+             message: "Audit log unavailable",
+             reason: reason
+           }
+         )}
     end
   end
 
@@ -97,10 +111,8 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogChange do
       |> Ash.Query.filter(^ref(strategy_attr) == :totp)
       |> Ash.Query.filter(^ref(status_attr) == :failure)
       |> Ash.Query.filter(^ref(logged_at_attr) >= ^cutoff)
+      |> Ash.Query.lock("FOR UPDATE")
 
-    case Ash.count(query, authorize?: false) do
-      {:ok, count} -> count
-      {:error, _} -> 0
-    end
+    Ash.count(query, authorize?: false)
   end
 end

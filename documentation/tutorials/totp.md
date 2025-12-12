@@ -222,12 +222,12 @@ svg = EQRCode.svg(qr_code)
 | `secret_field` | `:totp_secret` | Attribute storing the TOTP secret |
 | `last_totp_at_field` | `:last_totp_at` | Attribute tracking last successful auth |
 | `issuer` | Strategy name | Displayed in authenticator apps |
-| `period` | `30` | Code validity period in seconds |
-| `secret_length` | `20` | Secret length in bytes |
+| `period` | `30` | Code validity period in seconds (recommended: 15-300) |
+| `secret_length` | `20` | Secret length in bytes (recommended: 16+, per RFC 4226) |
 | `setup_enabled?` | `true` | Generate setup action |
 | `sign_in_enabled?` | `false` | Generate sign-in action |
 | `verify_enabled?` | `true` | Generate verify action |
-| `confirm_setup_enabled?` | `false` | Use two-step setup flow |
+| `confirm_setup_enabled?` | `false` | Use two-step setup flow (requires `setup_enabled?`) |
 | `setup_token_lifetime` | `{10, :minutes}` | How long setup tokens are valid |
 
 ## Security Considerations

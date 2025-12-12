@@ -8,11 +8,15 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
 
   This change is used when `confirm_setup_enabled?` is true. It:
 
-  1. Verifies the setup_token JWT
-  2. Retrieves the pending secret from the token resource
-  3. Verifies the TOTP code against the secret
-  4. Revokes the setup token
+  1. Validates the TOTP code format (6 digits)
+  2. Verifies the setup_token JWT
+  3. Retrieves the pending secret from the token resource
+  4. Verifies the TOTP code against the secret
   5. Stores the secret on the user
+  6. Revokes the setup token (after successful storage)
+
+  Token revocation is performed after the secret is stored to avoid losing the
+  token if storage fails for any reason.
 
   This ensures the user has correctly saved their TOTP secret before it's activated.
   """
@@ -22,6 +26,7 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
   alias Ash.Error.Changes.Required
   alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
+  alias AshAuthentication.Strategy.Totp.Helpers
 
   @doc false
   @impl true
@@ -42,13 +47,25 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
     |> Changeset.before_action(fn changeset ->
       with {:ok, setup_token} <- get_argument(changeset, :setup_token),
            {:ok, code} <- get_argument(changeset, :code),
+           :ok <- validate_code_format(code, strategy),
            {:ok, secret} <- verify_token_and_get_secret(setup_token, strategy),
-           :ok <- verify_code(secret, code, strategy),
-           :ok <- revoke_token(setup_token, strategy) do
-        Changeset.force_change_attribute(changeset, strategy.secret_field, secret)
+           :ok <- verify_code(secret, code, strategy) do
+        changeset
+        |> Changeset.force_change_attribute(strategy.secret_field, secret)
+        |> Changeset.put_context(:setup_token_to_revoke, setup_token)
       else
         {:error, reason} ->
           Changeset.add_error(changeset, reason)
+      end
+    end)
+    |> Changeset.after_action(fn changeset, result ->
+      case changeset.context[:setup_token_to_revoke] do
+        nil ->
+          {:ok, result}
+
+        setup_token ->
+          revoke_token(setup_token, strategy)
+          {:ok, result}
       end
     end)
   end
@@ -66,6 +83,13 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
       field: argument,
       type: :argument
     )
+  end
+
+  defp validate_code_format(code, strategy) do
+    case Helpers.validate_totp_code(code) do
+      :ok -> :ok
+      {:error, :invalid_format} -> {:error, invalid_code_format_error(strategy)}
+    end
   end
 
   defp verify_token_and_get_secret(setup_token, strategy) do
@@ -138,6 +162,18 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
         strategy: strategy,
         action: :confirm_setup,
         message: "Invalid TOTP code"
+      }
+    )
+  end
+
+  defp invalid_code_format_error(strategy) do
+    AuthenticationFailed.exception(
+      strategy: strategy,
+      caused_by: %{
+        module: __MODULE__,
+        strategy: strategy,
+        action: :confirm_setup,
+        message: "Invalid TOTP code format"
       }
     )
   end

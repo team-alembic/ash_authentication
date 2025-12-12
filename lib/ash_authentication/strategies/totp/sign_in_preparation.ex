@@ -8,10 +8,19 @@ defmodule AshAuthentication.Strategy.Totp.SignInPreparation do
 
   Verifies the TOTP code against the user's secret and generates a token
   on successful authentication.
+
+  ## Replay Attack Protection
+
+  TOTP codes can only be used once. After a successful authentication, the
+  `last_totp_at` field is updated to the code's timestamp to prevent replay
+  attacks. This update is performed atomically with a filter condition to
+  prevent race conditions where concurrent requests could both use the same code.
   """
   use Ash.Resource.Preparation
+  require Ash.Expr
   alias Ash.{Changeset, Query, Resource}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt}
+  alias AshAuthentication.Strategy.Totp.Helpers
 
   @doc false
   @impl true
@@ -37,68 +46,107 @@ defmodule AshAuthentication.Strategy.Totp.SignInPreparation do
       end)
       |> Query.after_action(fn
         query, [record] when is_binary(:erlang.map_get(strategy.secret_field, record)) ->
-          secret = Map.get(record, strategy.secret_field)
-          last_totp_at = datetime_to_unix(Map.get(record, strategy.last_totp_at_field))
-
-          if NimbleTOTP.valid?(secret, totp_code,
-               since: last_totp_at,
-               period: strategy.period
-             ) do
-            opts = Ash.Context.to_opts(context)
-
-            with {:ok, record} <- update_last_totp_at(record, strategy, opts) do
-              {:ok, [maybe_generate_token(record, strategy, opts)]}
-            end
-          else
-            {:error,
-             AuthenticationFailed.exception(
-               strategy: strategy,
-               query: query,
-               caused_by: %{
-                 module: __MODULE__,
-                 strategy: strategy,
-                 action: :sign_in,
-                 message: "Invalid TOTP code"
-               }
-             )}
-          end
+          verify_and_authenticate(record, totp_code, query, strategy, context)
 
         query, [] ->
-          {:error,
-           AuthenticationFailed.exception(
-             strategy: strategy,
-             query: query,
-             caused_by: %{
-               module: __MODULE__,
-               strategy: strategy,
-               action: :sign_in,
-               message: "Query returned no users"
-             }
-           )}
+          {:error, auth_failed(strategy, query, "Query returned no users")}
 
         query, users when is_list(users) ->
-          {:error,
-           AuthenticationFailed.exception(
-             strategy: strategy,
-             query: query,
-             caused_by: %{
-               module: __MODULE__,
-               strategy: strategy,
-               action: :sign_in,
-               message: "Query returned too many users"
-             }
-           )}
+          {:error, auth_failed(strategy, query, "Query returned too many users")}
       end)
     end
   end
 
-  defp update_last_totp_at(record, strategy, opts) do
+  defp verify_and_authenticate(record, totp_code, query, strategy, context) do
+    with :ok <- Helpers.validate_totp_code(totp_code),
+         :ok <- verify_totp_code(record, totp_code, strategy) do
+      complete_authentication(record, query, strategy, context)
+    else
+      {:error, :invalid_format} ->
+        {:error, auth_failed(strategy, query, "Invalid TOTP code format")}
+
+      {:error, :invalid_code} ->
+        {:error, auth_failed(strategy, query, "Invalid TOTP code")}
+    end
+  end
+
+  defp verify_totp_code(record, totp_code, strategy) do
+    secret = Map.get(record, strategy.secret_field)
+    last_totp_at = Helpers.datetime_to_unix(Map.get(record, strategy.last_totp_at_field))
+
+    if NimbleTOTP.valid?(secret, totp_code, since: last_totp_at, period: strategy.period) do
+      :ok
+    else
+      {:error, :invalid_code}
+    end
+  end
+
+  defp complete_authentication(record, query, strategy, context) do
+    opts = Ash.Context.to_opts(context)
+    code_timestamp = current_code_timestamp(strategy.period)
+
+    case atomic_update_last_totp_at(record, strategy, code_timestamp, opts) do
+      {:ok, record} ->
+        {:ok, [maybe_generate_token(record, strategy, opts)]}
+
+      {:error, :code_already_used} ->
+        {:error, auth_failed(strategy, query, "TOTP code has already been used")}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp auth_failed(strategy, query, message) do
+    AuthenticationFailed.exception(
+      strategy: strategy,
+      query: query,
+      caused_by: %{
+        module: __MODULE__,
+        strategy: strategy,
+        action: :sign_in,
+        message: message
+      }
+    )
+  end
+
+  defp atomic_update_last_totp_at(record, strategy, code_timestamp, opts) do
+    # Use atomic update with filter to prevent race conditions.
+    # The filter ensures only one concurrent request can succeed with the same code.
+    code_datetime = DateTime.from_unix!(code_timestamp)
+    last_totp_at_field = strategy.last_totp_at_field
+
     record
     |> Changeset.new()
     |> Changeset.set_context(%{private: %{ash_authentication?: true}})
     |> Changeset.for_update(:update, %{})
-    |> Changeset.force_change_attribute(strategy.last_totp_at_field, DateTime.utc_now())
+    |> Changeset.filter(
+      Ash.Expr.expr(
+        is_nil(^ref(last_totp_at_field)) or
+          ^ref(last_totp_at_field) < ^code_datetime
+      )
+    )
+    |> Changeset.force_change_attribute(last_totp_at_field, code_datetime)
     |> Ash.update(opts)
+    |> case do
+      {:ok, updated} ->
+        {:ok, updated}
+
+      {:error, %Ash.Error.Invalid{errors: errors}} ->
+        if Enum.any?(errors, &match?(%Ash.Error.Changes.StaleRecord{}, &1)) do
+          {:error, :code_already_used}
+        else
+          {:error, %Ash.Error.Invalid{errors: errors}}
+        end
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp current_code_timestamp(period) do
+    now = System.system_time(:second)
+    div(now, period) * period
   end
 
   defp maybe_generate_token(record, _strategy, opts) do
@@ -109,8 +157,4 @@ defmodule AshAuthentication.Strategy.Totp.SignInPreparation do
       record
     end
   end
-
-  defp datetime_to_unix(nil), do: 0
-  defp datetime_to_unix(%DateTime{} = dt), do: DateTime.to_unix(dt)
-  defp datetime_to_unix(unix) when is_integer(unix), do: unix
 end

@@ -32,7 +32,7 @@ defmodule AshAuthentication.Strategy.Totp do
       uuid_primary_key :id
       attribute :email, :ci_string, allow_nil?: false, public?: true
       attribute :totp_secret, :binary, sensitive?: true
-      attribute :last_totp_at, :datetime, sensitive?: true
+      attribute :last_totp_at, :utc_datetime, sensitive?: true
     end
 
     authentication do
