@@ -11,6 +11,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.4](https://github.com/team-alembic/ash_authentication/compare/v4.13.3...v4.13.4) (2025-12-12)
+
+
+
+
+### Bug Fixes:
+
+* Add `remember_me` argument to generated magic link sign in action (#1108) by sevenseacat
+
+* Add `remember_me` argument to generated magic link sign in action by sevenseacat
+
+* add upgrader to add remember_me to magic link sign-in actions by sevenseacat
+
+* correct assert_has_patch assertion in upgrade test by sevenseacat
+
+* audit_log: invalid magic links log as failure by Robert Graff
+
+### Improvements:
+
+* add return_error_on_invalid_magic_link_token? config by Robert Graff
+
 ## [v4.13.3](https://github.com/team-alembic/ash_authentication/compare/v4.13.2...v4.13.3) (2025-12-01)
 
 
