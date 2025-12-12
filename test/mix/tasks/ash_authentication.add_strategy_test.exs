@@ -251,6 +251,10 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |    read :get_by_email do
       + |      description("Looks up a user by their email")
       + |      get_by(:email)
+      + |
+      + |      argument :email, :ci_string do
+      + |        allow_nil?(false)
+      + |      end
       + |    end
       + |
       + |    update :reset_password_with_token do
