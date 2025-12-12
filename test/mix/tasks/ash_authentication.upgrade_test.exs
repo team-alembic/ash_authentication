@@ -113,7 +113,6 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
       + |      argument :remember_me, :boolean do
       + |        description("Whether to generate a remember me token")
       + |        allow_nil?(true)
-      + |      end
       """)
       |> assert_has_patch("lib/test/accounts/user.ex", """
       + |      change(
