@@ -17,8 +17,9 @@ config :ash_authentication, Example.Repo,
 config :bcrypt_elixir, :log_rounds, 4
 config :argon2_elixir, t_cost: 1, m_cost: 8
 
-config :ash, :disable_async?, true
-config :ash, :read_action_after_action_hooks_in_order?, true
+config :ash,
+  disable_async?: true,
+  read_action_after_action_hooks_in_order?: true
 
 config :ash_authentication,
   authentication: [
