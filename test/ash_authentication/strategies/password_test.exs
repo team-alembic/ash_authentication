@@ -131,5 +131,37 @@ defmodule AshAuthentication.Strategy.PasswordTest do
       assert error.caused_by.module == AshAuthentication.Strategy.Password.SignInPreparation
       assert error.caused_by.message =~ ~r/no users/i
     end
+
+    test "sign_in_with_token returns error when user doesn't exist" do
+      user = build_user()
+      strategy = AshAuthentication.Info.strategy!(User, :password)
+
+      {:ok, signed_in_user} =
+        Strategy.action(
+          strategy,
+          :sign_in,
+          %{
+            username: user.username,
+            password: user.__metadata__.password
+          },
+          context: [token_type: :sign_in]
+        )
+
+      sign_in_token = signed_in_user.__metadata__.token
+
+      # Delete the user so the token points to a non-existent user
+      Ash.destroy!(user, authorize?: false)
+
+      assert {:error, error} =
+               Strategy.action(
+                 strategy,
+                 :sign_in_with_token,
+                 %{
+                   token: sign_in_token
+                 }
+               )
+
+      assert Exception.message(error) =~ ~r/authentication failed/i
+    end
   end
 end
