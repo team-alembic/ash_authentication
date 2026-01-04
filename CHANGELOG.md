@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.6](https://github.com/team-alembic/ash_authentication/compare/v4.13.5...v4.13.6) (2026-01-04)
+
+
+
+
+### Improvements:
+
+* properly configure remember_me strategy in installer by Zach Daniel
+
 ## [v4.13.5](https://github.com/team-alembic/ash_authentication/compare/v4.13.4...v4.13.5) (2026-01-04)
 
 
