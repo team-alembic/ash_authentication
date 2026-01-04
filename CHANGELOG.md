@@ -11,6 +11,45 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.5](https://github.com/team-alembic/ash_authentication/compare/v4.13.4...v4.13.5) (2026-01-04)
+
+
+
+
+### Bug Fixes:
+
+* check for expr compatibility in hash password changej (#1114) by Zach Daniel
+
+* Add `remember_me` argument to generated magic link sign in action (#1108) by sevenseacat
+
+* Add `remember_me` argument to generated magic link sign in action by sevenseacat
+
+* add upgrader to add remember_me to magic link sign-in actions by sevenseacat
+
+* correct assert_has_patch assertion in upgrade test by sevenseacat
+
+* audit_log: invalid magic links log as failure by Robert Graff
+
+* correctly lock out assent 0.3 by James Harton
+
+* lock assent at 0.2 until the next major release by James Harton
+
+* add `--accounts` flag to add_strategy task (#1096) by James Harton
+
+* fix failing test by Josh Price
+
+* support :null atom from JOSE 1.11.11+ in JWT tenant validation (#1092) by Shahryar Tavakkoli
+
+* support :null atom from JOSE 1.11.12 in JWT tenant validation by Shahryar Tavakkoli
+
+### Improvements:
+
+* add return_error_on_invalid_magic_link_token? config by Robert Graff
+
+* Add MaybeGenerateTokenChange for remember me support in create actions (#1093) by weljoda
+
+* Openid configuration uri type change (#1095) by andreas-ementio
+
 ## [v4.13.4](https://github.com/team-alembic/ash_authentication/compare/v4.13.3...v4.13.4) (2025-12-12)
 
 
