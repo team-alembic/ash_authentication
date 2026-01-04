@@ -60,12 +60,10 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
       :error ->
         Query.add_error(
           query,
-          Unknown.exception(
-            message: """
-            Invalid configuration detected. A remember me token was requested for the #{remember_me_strategy_name} strategy on #{inspect(query.resource)},
-            but that strategy was not found.
-            """
-          )
+          """
+          Invalid configuration detected. A remember me token was requested for the #{remember_me_strategy_name} strategy on #{inspect(query.resource)},
+          but that strategy was not found.
+          """
         )
     end
   end

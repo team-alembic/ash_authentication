@@ -146,12 +146,10 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
        when query.context.token_type == :sign_in and not strategy.sign_in_tokens_enabled? do
     Query.add_error(
       query,
-      Unknown.exception(
-        message: """
-        Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
-        does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
-        """
-      )
+      """
+      Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
+      does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
+      """
     )
   end
 
