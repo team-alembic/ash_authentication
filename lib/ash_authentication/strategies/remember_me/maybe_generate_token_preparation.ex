@@ -30,7 +30,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   ```
   """
   use Ash.Resource.Preparation
-  alias Ash.{Error.Unknown, Query, Resource, Resource.Preparation}
+  alias Ash.{Query, Resource, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
   require Ash.Query
 

@@ -30,7 +30,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange do
   ```
   """
   use Ash.Resource.Change
-  alias Ash.{Error.Unknown, Resource}
+  alias Ash.Resource
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
 
   @impl true

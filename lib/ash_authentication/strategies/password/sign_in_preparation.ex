@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   an authentication failed error.
   """
   use Ash.Resource.Preparation
-  alias Ash.{Error.Unknown, Query, Resource.Preparation}
+  alias Ash.{Query, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Errors.UnconfirmedUser, Info, Jwt}
   require Ash.Query
 
