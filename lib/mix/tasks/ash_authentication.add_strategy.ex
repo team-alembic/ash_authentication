@@ -138,11 +138,13 @@ if Code.ensure_loaded?(Igniter) do
             "password", igniter ->
               igniter
               |> password(options)
+              |> add_remember_me_strategy(options)
               |> Ash.Igniter.codegen("add_password_auth")
 
             "magic_link", igniter ->
               igniter
               |> magic_link(options)
+              |> add_remember_me_strategy(options)
               |> Ash.Igniter.codegen("add_magic_link_auth")
 
             "api_key", igniter ->
@@ -158,6 +160,18 @@ if Code.ensure_loaded?(Igniter) do
           Perhaps you have not yet installed ash_authentication?
           """)
       end
+    end
+
+    defp add_remember_me_strategy(igniter, options) do
+      igniter
+      |> AshAuthentication.Igniter.add_new_strategy(
+        options[:user],
+        :remember_me,
+        :remember_me,
+        """
+        remember_me :remember_me
+        """
+      )
     end
 
     defp api_key(igniter, options) do
