@@ -89,6 +89,14 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     end
   end
 
+  defp revoke_sign_in_token(query, [], strategy, _context) do
+    no_users_returned(query, strategy)
+  end
+
+  defp revoke_sign_in_token(query, users, strategy, _context) when is_list(users) do
+    too_many_users_returned(query, strategy)
+  end
+
   defp verify_result(query, [user], strategy, context) do
     claims =
       query.context
@@ -115,31 +123,11 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   end
 
   defp verify_result(query, [], strategy, _context) do
-    {:error,
-     AuthenticationFailed.exception(
-       strategy: strategy,
-       query: query,
-       caused_by: %{
-         module: __MODULE__,
-         action: query.action,
-         resource: query.resource,
-         message: "Query returned no users"
-       }
-     )}
+    no_users_returned(query, strategy)
   end
 
   defp verify_result(query, users, strategy, _context) when is_list(users) do
-    {:error,
-     AuthenticationFailed.exception(
-       strategy: strategy,
-       query: query,
-       caused_by: %{
-         module: __MODULE__,
-         action: query.action,
-         resource: query.resource,
-         message: "Query returned too many users"
-       }
-     )}
+    too_many_users_returned(query, strategy)
   end
 
   defp check_sign_in_token_configuration(query, strategy)
@@ -185,4 +173,32 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
 
   defp extract_primary_keys_from_subject(_, _),
     do: {:error, "The token does not contain a subject"}
+
+  defp no_users_returned(query, strategy) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       query: query,
+       caused_by: %{
+         module: __MODULE__,
+         action: query.action,
+         resource: query.resource,
+         message: "Query returned no users"
+       }
+     )}
+  end
+
+  defp too_many_users_returned(query, strategy) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       query: query,
+       caused_by: %{
+         module: __MODULE__,
+         action: query.action,
+         resource: query.resource,
+         message: "Query returned too many users"
+       }
+     )}
+  end
 end
