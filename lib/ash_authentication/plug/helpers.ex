@@ -263,6 +263,8 @@ defmodule AshAuthentication.Plug.Helpers do
              ),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do
+        user = Ash.Resource.set_metadata(user, %{claims: claims})
+
         conn
         |> Conn.assign(current_subject_name, user)
         |> maybe_assign_token_record(token_record, subject_name)
