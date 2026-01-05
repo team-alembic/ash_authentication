@@ -6,11 +6,24 @@ defmodule AshAuthentication.AddOn.AuditLog.Verifier do
   @moduledoc """
   Provides configuration validation for the AuditLog add-on.
   """
-
+  use Spark.Dsl.Verifier
   alias Spark.Error.DslError
 
   @doc false
-  def verify(strategy, _dsl) do
+  @impl true
+  def verify(dsl) do
+    dsl
+    |> AshAuthentication.Info.list_strategies()
+    |> Enum.filter(&is_struct(&1, AshAuthentication.AddOn.AuditLog))
+    |> Enum.reduce_while(:ok, fn strategy, :ok ->
+      case do_verify(strategy) do
+        :ok -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp do_verify(strategy) do
     with :ok <- verify_audit_log_resource(strategy),
          :ok <- verify_exclude_strategies(strategy),
          :ok <- verify_exclude_actions(strategy),
