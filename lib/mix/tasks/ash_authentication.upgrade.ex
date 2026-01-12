@@ -49,8 +49,7 @@ if Code.ensure_loaded?(Igniter) do
         %{
           "4.4.9" => [&fix_token_is_revoked_action/2],
           "4.13.4" => [&add_remember_me_to_magic_link_sign_in/2],
-          "4.14.0" => [&fix_google_hd_field/2],
-          "5.0.0" => [&convert_revoked_read_action_to_generic/2]
+          "5.0.0" => [&fix_google_hd_field/2, &convert_revoked_read_action_to_generic/2]
         }
 
       # For each version that requires a change, add it to this map
