@@ -38,14 +38,20 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   @impl true
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, options, context) do
-    remember_me_argument = Keyword.get(options, :argument, :remember_me)
+    # Skip token generation if the caller will handle remember_me via redirect
+    # (e.g. AshAuthentication.Phoenix with sign_in_tokens_enabled?)
+    if query.context[:private][:skip_remember_me_token_generation] do
+      query
+    else
+      remember_me_argument = Keyword.get(options, :argument, :remember_me)
 
-    case Query.get_argument(query, remember_me_argument) do
-      true ->
-        prepare_after_action(query, options, context)
+      case Query.get_argument(query, remember_me_argument) do
+        true ->
+          prepare_after_action(query, options, context)
 
-      _ ->
-        query
+        _ ->
+          query
+      end
     end
   end
 
