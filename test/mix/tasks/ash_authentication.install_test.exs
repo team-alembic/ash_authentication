@@ -307,4 +307,32 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
     end
     """)
   end
+
+  test "installation does not add filter_parameters without Phoenix", %{igniter: igniter} do
+    diff = diff(igniter)
+    refute diff =~ "filter_parameters"
+  end
+
+  describe "with Phoenix" do
+    setup do
+      igniter =
+        test_project()
+        |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
+        |> Igniter.create_new_file("lib/test_web.ex", """
+        defmodule TestWeb do
+        end
+        """)
+        |> apply_igniter!()
+        |> Igniter.compose_task("ash_authentication.install", ["--yes"])
+        |> Igniter.Project.Formatter.remove_formatter_plugin(Spark.Formatter)
+
+      [igniter: igniter]
+    end
+
+    test "installation adds token to filter_parameters", %{igniter: igniter} do
+      diff = diff(igniter)
+      assert diff =~ "filter_parameters"
+      assert diff =~ ~s|["password", "token"]|
+    end
+  end
 end

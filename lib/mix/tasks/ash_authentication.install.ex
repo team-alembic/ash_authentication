@@ -93,6 +93,7 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.Project.Formatter.import_dep(:ash_authentication)
       |> Igniter.Project.Formatter.add_formatter_plugin(Spark.Formatter)
       |> Igniter.Project.Config.configure("test.exs", :bcrypt_elixir, [:log_rounds], 1)
+      |> configure_filter_parameters()
       |> Spark.Igniter.prepend_to_section_order(
         :"Ash.Resource",
         [:authentication, :token, :user_identity]
@@ -495,6 +496,26 @@ if Code.ensure_loaded?(Igniter) do
           value
         end
       end)
+    end
+
+    defp configure_filter_parameters(igniter) do
+      web_module = Igniter.Libs.Phoenix.web_module(igniter)
+      {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+
+      if web_module_exists? do
+        Igniter.Project.Config.configure(
+          igniter,
+          "config.exs",
+          :phoenix,
+          [:filter_parameters],
+          ["password", "token"],
+          updater: fn zipper ->
+            Igniter.Code.List.append_new_to_list(zipper, "token")
+          end
+        )
+      else
+        igniter
+      end
     end
   end
 else
