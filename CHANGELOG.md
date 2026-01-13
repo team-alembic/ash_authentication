@@ -11,6 +11,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.13.7](https://github.com/team-alembic/ash_authentication/compare/v4.13.6...v4.13.7) (2026-01-13)
+
+
+
+
+### Bug Fixes:
+
+* skip remember_me token generation when AAP handles it via redirect (#1119) by James Harton
+
+* error caused by after_action ordering (#1112) by capoccias
+
 ## [v4.13.6](https://github.com/team-alembic/ash_authentication/compare/v4.13.5...v4.13.6) (2026-01-04)
 
 
