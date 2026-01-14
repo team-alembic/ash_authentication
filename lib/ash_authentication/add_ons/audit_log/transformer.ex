@@ -4,10 +4,33 @@
 
 defmodule AshAuthentication.AddOn.AuditLog.Transformer do
   @moduledoc false
+  use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
 
   @doc false
-  def transform(strategy, dsl) do
+  @impl true
+  def after?(AshAuthentication.Strategy.Custom.Transformer), do: true
+  def after?(_), do: false
+
+  @doc false
+  @impl true
+  def before?(_), do: false
+
+  @doc false
+  @impl true
+  def transform(dsl) do
+    dsl
+    |> AshAuthentication.Info.list_strategies()
+    |> Enum.filter(&is_struct(&1, AshAuthentication.AddOn.AuditLog))
+    |> Enum.reduce_while({:ok, dsl}, fn strategy, {:ok, dsl} ->
+      case transform(strategy, dsl) do
+        {:ok, dsl} -> {:cont, {:ok, dsl}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp transform(strategy, dsl) do
     with {:ok, strategy, dsl} <- prefill_included(strategy, dsl),
          {:ok, logged_actions} <- find_logged_actions(strategy, dsl),
          {:ok, dsl} <- persist_logged_actions(strategy, dsl, logged_actions),

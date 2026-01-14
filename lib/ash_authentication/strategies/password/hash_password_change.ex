@@ -54,21 +54,17 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
 
   @impl true
   def atomic(changeset, options, context) do
-    if Ash.DataLayer.data_layer_can?(changeset.resource, :expr_error) do
-      with {:ok, strategy} <- Info.find_strategy(changeset, context, options),
-           value when is_binary(value) <-
-             Changeset.get_argument(changeset, strategy.password_field) do
-        {:atomic, changeset,
-         %{
-           strategy.hashed_password_field =>
-             {:atomic, expr(lazy({__MODULE__, :hash_or_raise, [strategy.hash_provider, value]}))}
-         }}
-      else
-        _ ->
-          changeset
-      end
+    with {:ok, strategy} <- Info.find_strategy(changeset, context, options),
+         value when is_binary(value) <-
+           Changeset.get_argument(changeset, strategy.password_field) do
+      {:atomic, changeset,
+       %{
+         strategy.hashed_password_field =>
+           {:atomic, expr(lazy({__MODULE__, :hash_or_raise, [strategy.hash_provider, value]}))}
+       }}
     else
-      {:not_atomic, "Data layer does not support atomic expressions."}
+      _ ->
+        changeset
     end
   end
 

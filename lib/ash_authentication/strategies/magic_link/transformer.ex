@@ -217,7 +217,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
         If you would like to keep the old behaviour and remove this warning then you can
         do so by adding the following configuration
 
-            config :ash_authentication,
+            config :ash_authentication.
               :bypass_require_interaction_for_magic_link?, true
         """
       end)

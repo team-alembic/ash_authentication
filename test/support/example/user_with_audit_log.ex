@@ -15,6 +15,10 @@ defmodule Example.UserWithAuditLog do
     attribute :email, :ci_string, allow_nil?: false, public?: true, sensitive?: true
     attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
 
+    attribute :totp_secret, :binary, allow_nil?: true, sensitive?: true, public?: false
+
+    attribute :last_totp_at, :datetime, allow_nil?: true, sensitive?: true, public?: false
+
     timestamps()
   end
 
@@ -63,6 +67,12 @@ defmodule Example.UserWithAuditLog do
         cookie_name :remember_me_audit_log
         token_lifetime {30, :days}
       end
+
+      totp do
+        identity_field :email
+        sign_in_enabled? true
+        brute_force_strategy({:audit_log, :audit_log})
+      end
     end
   end
 
@@ -73,6 +83,13 @@ defmodule Example.UserWithAuditLog do
   code_interface do
     define :sign_in_with_password
   end
+
+  # calculations do
+  #   calculate :totp_url_for_totp,
+  #             :string,
+  #             {AshAuthentication.Strategy.Totp.TotpUrlCalculation, strategy_name: :totp},
+  #             load: [:email, :totp_secret]
+  # end
 
   def get_config(path, _resource) do
     value =

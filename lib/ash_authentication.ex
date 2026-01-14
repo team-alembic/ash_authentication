@@ -150,7 +150,8 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.Oidc,
     AshAuthentication.Strategy.Password,
     AshAuthentication.Strategy.RememberMe,
-    AshAuthentication.Strategy.Slack
+    AshAuthentication.Strategy.Slack,
+    AshAuthentication.Strategy.Totp
   ]
 
   use Spark.Dsl.Extension,
@@ -159,11 +160,13 @@ defmodule AshAuthentication do
     transformers: [
       AshAuthentication.Transformer,
       AshAuthentication.Transformer.SetSelectForSenders,
-      AshAuthentication.Strategy.Custom.Transformer
+      AshAuthentication.Strategy.Custom.Transformer,
+      AshAuthentication.AddOn.AuditLog.Transformer
     ],
     verifiers: [
       AshAuthentication.Verifier,
-      AshAuthentication.Strategy.Custom.Verifier
+      AshAuthentication.Strategy.Custom.Verifier,
+      AshAuthentication.AddOn.AuditLog.Verifier
     ]
 
   require Ash.Query

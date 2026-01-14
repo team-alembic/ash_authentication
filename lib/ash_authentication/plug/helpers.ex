@@ -13,26 +13,62 @@ defmodule AshAuthentication.Plug.Helpers do
 
   @doc """
   Store the user in the connections' session.
+
+  Stores both the session identifier (token, jti:subject, or subject) and any
+  authentication metadata from the user. The metadata is stored separately and
+  will be restored onto the user when loading from the session.
   """
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
   def store_in_session(conn, user) when is_struct(user) do
     subject_name = Info.authentication_subject_name!(user.__struct__)
 
-    if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
-      Conn.put_session(conn, session_key(subject_name), user.__metadata__.token)
-    else
-      if Info.authentication_session_identifier!(user.__struct__) == :jti do
-        {:ok, %{"sub" => subject, "jti" => jti}} = Jwt.peek(user.__metadata__.token)
+    conn =
+      cond do
+        # If tokens are required, store the token directly
+        Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) ->
+          Conn.put_session(conn, session_key(subject_name), user.__metadata__.token)
 
-        Conn.put_session(conn, subject_name, jti <> ":" <> subject)
-      else
-        subject = AshAuthentication.user_to_subject(user)
-        Conn.put_session(conn, subject_name, subject)
+        # If using JTI session identifier, extract JTI from token
+        Info.authentication_session_identifier!(user.__struct__) == :jti ->
+          {:ok, %{"sub" => subject, "jti" => jti}} = Jwt.peek(user.__metadata__.token)
+          Conn.put_session(conn, subject_name, jti <> ":" <> subject)
+
+        # Otherwise use subject directly
+        true ->
+          subject = AshAuthentication.user_to_subject(user)
+          Conn.put_session(conn, subject_name, subject)
       end
-    end
+
+    # Store authentication metadata separately (if we have any)
+    store_metadata_in_session(conn, user, subject_name)
   end
 
   def store_in_session(conn, _), do: conn
+
+  # Keys that should be persisted in the session metadata
+  @session_metadata_keys [:token, :authentication_strategies, :totp_verified_at]
+
+  defp store_metadata_in_session(conn, user, subject_name) do
+    metadata = user.__metadata__ || %{}
+
+    # Only store relevant authentication metadata
+    session_metadata =
+      @session_metadata_keys
+      |> Enum.reduce(%{}, fn key, acc ->
+        case Map.get(metadata, key) do
+          nil -> acc
+          value -> Map.put(acc, key, value)
+        end
+      end)
+
+    if map_size(session_metadata) > 0 do
+      Conn.put_session(conn, metadata_key(subject_name), session_metadata)
+    else
+      conn
+    end
+  end
+
+  defp metadata_key(subject_name), do: "#{subject_name}_metadata"
 
   @doc """
   Given a list of subjects, turn as many as possible into users.
@@ -173,17 +209,22 @@ defmodule AshAuthentication.Plug.Helpers do
         conn,
         authenticate_resource_from_session(resource, session, otp_app, opts),
         resource,
-        options
+        options,
+        session
       )
     end)
   end
 
-  defp handle_session_auth_result(conn, {:ok, user}, _resource, options) do
+  defp handle_session_auth_result(conn, {:ok, user}, _resource, options, session) do
     current_subject_name = current_subject_name(options.subject_name)
+
+    # Restore authentication metadata from the session onto the user
+    user = restore_metadata_from_session(user, options.subject_name, session)
+
     Conn.assign(conn, current_subject_name, user)
   end
 
-  defp handle_session_auth_result(conn, :error, resource, options) do
+  defp handle_session_auth_result(conn, :error, resource, options, _session) do
     current_subject_name = current_subject_name(options.subject_name)
 
     require_token? =
@@ -195,6 +236,21 @@ defmodule AshAuthentication.Plug.Helpers do
     conn
     |> Conn.assign(current_subject_name, nil)
     |> Conn.delete_session(session_key)
+  end
+
+  defp restore_metadata_from_session(user, subject_name, session) do
+    case Map.get(session, metadata_key(subject_name)) do
+      nil ->
+        user
+
+      metadata when is_map(metadata) ->
+        Enum.reduce(metadata, user, fn {key, value}, user ->
+          Ash.Resource.put_metadata(user, key, value)
+        end)
+
+      _ ->
+        user
+    end
   end
 
   @doc """
@@ -215,15 +271,19 @@ defmodule AshAuthentication.Plug.Helpers do
       current_subject_name = current_subject_name(options.subject_name)
 
       assign_new.(socket, current_subject_name, fn ->
-        load_user_from_session(resource, session, otp_app, opts)
+        load_user_from_session(resource, session, options.subject_name, otp_app, opts)
       end)
     end)
   end
 
-  defp load_user_from_session(resource, session, otp_app, opts) do
+  defp load_user_from_session(resource, session, subject_name, otp_app, opts) do
     case authenticate_resource_from_session(resource, session, otp_app, opts) do
-      {:ok, user} -> user
-      :error -> nil
+      {:ok, user} ->
+        # Restore authentication metadata from the session onto the user
+        restore_metadata_from_session(user, subject_name, session)
+
+      :error ->
+        nil
     end
   end
 

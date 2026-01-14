@@ -10,7 +10,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   from it and constrains the query to a matching user.
   """
   use Ash.Resource.Preparation
-  alias Ash.{Query, Resource, Resource.Preparation}
+  alias Ash.{Error.Unknown, Query, Resource, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
   require Ash.Query
 
@@ -123,14 +123,44 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     too_many_users_returned(query, strategy)
   end
 
+  defp no_users_returned(query, strategy) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       query: query,
+       caused_by: %{
+         module: __MODULE__,
+         action: query.action,
+         resource: query.resource,
+         message: "Query returned no users"
+       }
+     )}
+  end
+
+  defp too_many_users_returned(query, strategy) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       query: query,
+       caused_by: %{
+         module: __MODULE__,
+         action: query.action,
+         resource: query.resource,
+         message: "Query returned too many users"
+       }
+     )}
+  end
+
   defp check_sign_in_token_configuration(query, strategy)
        when query.context.token_type == :sign_in and not strategy.sign_in_tokens_enabled? do
     Query.add_error(
       query,
-      """
-      Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
-      does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
-      """
+      Unknown.exception(
+        message: """
+        Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
+        does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
+        """
+      )
     )
   end
 
@@ -166,32 +196,4 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
 
   defp extract_primary_keys_from_subject(_, _),
     do: {:error, "The token does not contain a subject"}
-
-  defp no_users_returned(query, strategy) do
-    {:error,
-     AuthenticationFailed.exception(
-       strategy: strategy,
-       query: query,
-       caused_by: %{
-         module: __MODULE__,
-         action: query.action,
-         resource: query.resource,
-         message: "Query returned no users"
-       }
-     )}
-  end
-
-  defp too_many_users_returned(query, strategy) do
-    {:error,
-     AuthenticationFailed.exception(
-       strategy: strategy,
-       query: query,
-       caused_by: %{
-         module: __MODULE__,
-         action: query.action,
-         resource: query.resource,
-         message: "Query returned too many users"
-       }
-     )}
-  end
 end

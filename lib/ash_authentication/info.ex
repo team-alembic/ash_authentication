@@ -11,7 +11,7 @@ defmodule AshAuthentication.Info do
     extension: AshAuthentication,
     sections: [:authentication]
 
-  alias Ash.{Changeset, Domain, Query, Resource}
+  alias Ash.{ActionInput, Changeset, Domain, Query, Resource}
   alias AshAuthentication.Strategy
   alias Spark.Dsl.Extension
 
@@ -123,7 +123,8 @@ defmodule AshAuthentication.Info do
 
   Or via the passed-in context on calling the action.
   """
-  @spec find_strategy(Query.t() | Changeset.t(), context, options) :: {:ok, Strategy.t()} | :error
+  @spec find_strategy(Query.t() | Changeset.t() | ActionInput.t(), context, options) ::
+          {:ok, Strategy.t()} | :error
         when context: map, options: Keyword.t()
   def find_strategy(queryset, context \\ %{}, options) do
     with :error <- Keyword.fetch(options, :strategy_name),

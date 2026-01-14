@@ -61,6 +61,9 @@ defmodule AshAuthentication.AddOn.AuditLog do
           __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 
-  defdelegate transform(strategy, dsl), to: __MODULE__.Transformer
-  defdelegate verify(strategy, dsl), to: __MODULE__.Verifier
+  @doc false
+  def transform(_strategy, dsl), do: {:ok, dsl}
+
+  @doc false
+  def verify(_strategy, _dsl), do: :ok
 end

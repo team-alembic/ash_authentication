@@ -138,13 +138,11 @@ if Code.ensure_loaded?(Igniter) do
             "password", igniter ->
               igniter
               |> password(options)
-              |> add_remember_me_strategy(options)
               |> Ash.Igniter.codegen("add_password_auth")
 
             "magic_link", igniter ->
               igniter
               |> magic_link(options)
-              |> add_remember_me_strategy(options)
               |> Ash.Igniter.codegen("add_magic_link_auth")
 
             "api_key", igniter ->
@@ -160,18 +158,6 @@ if Code.ensure_loaded?(Igniter) do
           Perhaps you have not yet installed ash_authentication?
           """)
       end
-    end
-
-    defp add_remember_me_strategy(igniter, options) do
-      igniter
-      |> AshAuthentication.Igniter.add_new_strategy(
-        options[:user],
-        :remember_me,
-        :remember_me,
-        """
-        remember_me :remember_me
-        """
-      )
     end
 
     defp api_key(igniter, options) do
@@ -337,20 +323,12 @@ if Code.ensure_loaded?(Igniter) do
           allow_nil? false
         end
 
-        argument :remember_me, :boolean do
-          description "Whether to generate a remember me token"
-          allow_nil? true
-        end
-
         upsert? true
         upsert_identity :unique_#{options[:identity_field]}
         upsert_fields [:#{options[:identity_field]}]
 
         # Uses the information from the token to create or sign in the user
         change AshAuthentication.Strategy.MagicLink.SignInChange
-
-        change {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange,
-                strategy_name: :remember_me}
 
         metadata :token, :string do
           allow_nil? false
