@@ -28,17 +28,10 @@ defmodule AshAuthentication.Strategy.Totp.SignInPreparation do
     with {:ok, strategy} <- Info.find_strategy(query, context, opts),
          {:ok, identity} <- Query.fetch_argument(query, strategy.identity_field),
          {:ok, totp_code} <- Query.fetch_argument(query, :code) do
-      identity_field = strategy.identity_field
-
       query =
-        if is_nil(identity) do
-          # This will fail due to the argument being `nil`, so this is just a formality
-          Query.filter(query, false)
-        else
-          query
-          |> Query.filter(^ref(identity_field) == ^identity)
-          |> Query.filter(not is_nil(^ref(strategy.secret_field)))
-        end
+        query
+        |> Query.filter(^ref(strategy.identity_field) == ^identity)
+        |> Query.filter(not is_nil(^ref(strategy.secret_field)))
 
       query
       |> Query.before_action(fn query ->

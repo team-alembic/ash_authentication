@@ -23,7 +23,6 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
   use Ash.Resource.Change
 
   alias Ash.Changeset
-  alias Ash.Error.Changes.Required
   alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
   alias AshAuthentication.Strategy.Totp.Helpers
@@ -45,9 +44,10 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
     changeset
     |> Changeset.set_context(%{private: %{ash_authentication?: true}})
     |> Changeset.before_action(fn changeset ->
-      with {:ok, setup_token} <- get_argument(changeset, :setup_token),
-           {:ok, code} <- get_argument(changeset, :code),
-           :ok <- validate_code_format(code, strategy),
+      setup_token = Changeset.get_argument(changeset, :setup_token)
+      code = Changeset.get_argument(changeset, :code)
+
+      with :ok <- validate_code_format(code, strategy),
            {:ok, secret} <- verify_token_and_get_secret(setup_token, strategy),
            :ok <- verify_code(secret, code, strategy) do
         changeset
@@ -69,21 +69,6 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
       end
     end)
     |> Changeset.after_action(&preserve_authentication_metadata/2)
-  end
-
-  defp get_argument(changeset, name) do
-    case Changeset.get_argument(changeset, name) do
-      nil -> {:error, missing_argument_error(changeset, name)}
-      value -> {:ok, value}
-    end
-  end
-
-  defp missing_argument_error(changeset, argument) do
-    Required.exception(
-      resource: changeset.resource,
-      field: argument,
-      type: :argument
-    )
   end
 
   defp validate_code_format(code, strategy) do

@@ -19,11 +19,10 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
   for the same user, not per-action.
   """
   use Ash.Resource.Preparation
-  require Ash.Query
 
   alias Ash.ActionInput
-  alias AshAuthentication.{AuditLogResource, Errors.AuthenticationFailed, Info}
-  alias AshAuthentication.Strategy.Totp.Helpers
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info}
+  alias AshAuthentication.Strategy.Totp.{AuditLogHelpers, Helpers}
 
   @impl true
   def init(opts), do: {:ok, opts}
@@ -47,7 +46,7 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
          {:ok, audit_log} <- get_audit_log(query.resource, strategy) do
       Ash.Query.after_action(
         query,
-        &check_rate_limit_after_action(&1, &2, strategy, audit_log, opts, context)
+        &check_rate_limit_after_action(&1, &2, strategy, audit_log, opts)
       )
     else
       _ -> query
@@ -58,16 +57,16 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
     with {:ok, strategy} <- Info.find_strategy(input, context, opts),
          {:ok, audit_log} <- get_audit_log(input.resource, strategy),
          user when not is_nil(user) <- ActionInput.get_argument(input, :user) do
-      check_rate_limit_for_input(input, user, strategy, audit_log, opts, context)
+      check_rate_limit_for_input(input, user, strategy, audit_log, opts)
     else
       _ -> input
     end
   end
 
-  defp check_rate_limit_after_action(_query, results, strategy, audit_log, opts, context) do
+  defp check_rate_limit_after_action(_query, results, strategy, audit_log, opts) do
     case results do
       [user] when is_struct(user) ->
-        case check_rate_limit(user, strategy, audit_log, opts, context) do
+        case check_rate_limit(user, strategy, audit_log, opts) do
           :ok -> {:ok, results}
           {:error, _} = error -> error
         end
@@ -77,8 +76,8 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
     end
   end
 
-  defp check_rate_limit_for_input(input, user, strategy, audit_log, opts, context) do
-    case check_rate_limit(user, strategy, audit_log, opts, context) do
+  defp check_rate_limit_for_input(input, user, strategy, audit_log, opts) do
+    case check_rate_limit(user, strategy, audit_log, opts) do
       :ok -> input
       {:error, error} -> ActionInput.add_error(input, error)
     end
@@ -94,13 +93,13 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
     end
   end
 
-  defp check_rate_limit(user, strategy, audit_log, opts, context) do
+  defp check_rate_limit(user, strategy, audit_log, opts) do
     subject = AshAuthentication.user_to_subject(user)
     window = Helpers.time_to_seconds(strategy.audit_log_window)
     max_failures = strategy.audit_log_max_failures
     cutoff = DateTime.add(DateTime.utc_now(), -window, :second)
 
-    case count_failures(audit_log, subject, cutoff, context) do
+    case AuditLogHelpers.count_failures(audit_log, subject, cutoff) do
       {:ok, failure_count} when failure_count >= max_failures ->
         action_name = Keyword.get(opts, :action_name, :unknown)
 
@@ -131,26 +130,5 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
            }
          )}
     end
-  end
-
-  defp count_failures(audit_log, subject, cutoff, _context) do
-    audit_log_resource = audit_log.audit_log_resource
-
-    subject_attr = AuditLogResource.Info.audit_log_attributes_subject!(audit_log_resource)
-    strategy_attr = AuditLogResource.Info.audit_log_attributes_strategy!(audit_log_resource)
-    status_attr = AuditLogResource.Info.audit_log_attributes_status!(audit_log_resource)
-    logged_at_attr = AuditLogResource.Info.audit_log_attributes_logged_at!(audit_log_resource)
-
-    query =
-      audit_log_resource
-      |> Ash.Query.new()
-      |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Ash.Query.filter(^ref(subject_attr) == ^subject)
-      |> Ash.Query.filter(^ref(strategy_attr) == :totp)
-      |> Ash.Query.filter(^ref(status_attr) == :failure)
-      |> Ash.Query.filter(^ref(logged_at_attr) >= ^cutoff)
-      |> Ash.Query.lock("FOR UPDATE")
-
-    Ash.count(query)
   end
 end
