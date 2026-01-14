@@ -133,7 +133,7 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
     end
   end
 
-  defp count_failures(audit_log, subject, cutoff, context) do
+  defp count_failures(audit_log, subject, cutoff, _context) do
     audit_log_resource = audit_log.audit_log_resource
 
     subject_attr = AuditLogResource.Info.audit_log_attributes_subject!(audit_log_resource)
@@ -141,20 +141,16 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
     status_attr = AuditLogResource.Info.audit_log_attributes_status!(audit_log_resource)
     logged_at_attr = AuditLogResource.Info.audit_log_attributes_logged_at!(audit_log_resource)
 
-    opts =
-      context
-      |> Ash.Context.to_opts()
-      |> Keyword.put(:authorize?, false)
-
     query =
       audit_log_resource
       |> Ash.Query.new()
+      |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
       |> Ash.Query.filter(^ref(subject_attr) == ^subject)
       |> Ash.Query.filter(^ref(strategy_attr) == :totp)
       |> Ash.Query.filter(^ref(status_attr) == :failure)
       |> Ash.Query.filter(^ref(logged_at_attr) >= ^cutoff)
       |> Ash.Query.lock("FOR UPDATE")
 
-    Ash.count(query, opts)
+    Ash.count(query)
   end
 end

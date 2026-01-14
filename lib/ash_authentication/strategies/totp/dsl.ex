@@ -40,7 +40,8 @@ defmodule AshAuthentication.Strategy.Totp.Dsl do
           type: :atom,
           doc:
             "The name of the attribute which uniquely identifies the user, usually something like `username` or `email_address`.",
-          default: :username
+          default: :username,
+          required: false
         ],
         issuer: [
           type: :string,

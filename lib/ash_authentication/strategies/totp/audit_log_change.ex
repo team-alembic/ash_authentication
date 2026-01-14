@@ -107,12 +107,13 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogChange do
     query =
       audit_log_resource
       |> Ash.Query.new()
+      |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
       |> Ash.Query.filter(^ref(subject_attr) == ^subject)
       |> Ash.Query.filter(^ref(strategy_attr) == :totp)
       |> Ash.Query.filter(^ref(status_attr) == :failure)
       |> Ash.Query.filter(^ref(logged_at_attr) >= ^cutoff)
       |> Ash.Query.lock("FOR UPDATE")
 
-    Ash.count(query, authorize?: false)
+    Ash.count(query)
   end
 end

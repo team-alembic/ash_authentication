@@ -20,6 +20,13 @@ defmodule AshAuthentication.Strategy.Totp.Actions do
   Takes a user record and runs the setup action which generates a new TOTP
   secret. The user can then retrieve the `totp_url` calculation to display
   a QR code for scanning with an authenticator app.
+
+  ## Options
+
+    * `:domain` - The domain to use for the action. Defaults to the domain
+      configured on the user resource. This allows the strategy to work when
+      invoked from a different domain context (e.g., an admin domain managing
+      users from an accounts domain).
   """
   @spec setup(Totp.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def setup(strategy, params, options) do
@@ -68,6 +75,11 @@ defmodule AshAuthentication.Strategy.Totp.Actions do
   Used when `confirm_setup_enabled?` is true. Takes a user, setup_token, and
   TOTP code. If the code is valid, the secret is stored on the user and the
   setup token is revoked.
+
+  ## Options
+
+    * `:domain` - The domain to use for the action. Defaults to the domain
+      configured on the user resource.
   """
   @spec confirm_setup(Totp.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def confirm_setup(strategy, params, options) do
@@ -121,6 +133,11 @@ defmodule AshAuthentication.Strategy.Totp.Actions do
 
   Takes an identity (e.g., email) and a TOTP code, and returns the user if
   the code is valid.
+
+  ## Options
+
+    * `:domain` - The domain to use for the action. Defaults to the domain
+      configured on the user resource.
   """
   @spec sign_in(Totp.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
   def sign_in(strategy, params, options) do
@@ -187,6 +204,11 @@ defmodule AshAuthentication.Strategy.Totp.Actions do
 
   Takes a user and a TOTP code, and returns `{:ok, true}` if the code is valid
   or `{:ok, false}` if it is not.
+
+  ## Options
+
+    * `:domain` - The domain to use for the action. Defaults to the domain
+      configured on the user resource.
   """
   @spec verify(Totp.t(), map, keyword) :: {:ok, boolean} | {:error, any}
   def verify(strategy, params, options) do

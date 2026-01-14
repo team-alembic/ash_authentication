@@ -117,8 +117,11 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
       :error ->
         {:error, invalid_token_error(strategy, "Invalid setup token")}
 
-      {:error, reason} ->
+      {:error, reason} when is_exception(reason) ->
         {:error, reason}
+
+      {:error, reason} ->
+        {:error, invalid_token_error(strategy, "Token verification failed: #{inspect(reason)}")}
     end
   end
 
