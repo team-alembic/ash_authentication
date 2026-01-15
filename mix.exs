@@ -10,7 +10,7 @@ defmodule AshAuthentication.MixProject do
   Authentication extension for the Ash Framework.
   """
 
-  @version "4.13.3"
+  @version "4.13.7"
 
   def project do
     [
@@ -106,8 +106,6 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Password)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Slack.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Slack)},
-        {"documentation/dsls/DSL-AshAuthentication.Strategy.Totp.md",
-         search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Totp)},
         {"documentation/dsls/DSL-AshAuthentication.TokenResource.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.TokenResource)},
         {"documentation/dsls/DSL-AshAuthentication.UserIdentity.md",
@@ -127,8 +125,7 @@ defmodule AshAuthentication.MixProject do
         "documentation/tutorials/google.md",
         "documentation/tutorials/magic-links.md",
         "documentation/tutorials/password.md",
-        "documentation/tutorials/slack.md",
-        "documentation/tutorials/totp.md"
+        "documentation/tutorials/slack.md"
       ],
       groups_for_extras: [
         "Start Here": [
@@ -184,8 +181,7 @@ defmodule AshAuthentication.MixProject do
           AshAuthentication.Strategy.OAuth2,
           AshAuthentication.Strategy.Oidc,
           AshAuthentication.Strategy.Password,
-          AshAuthentication.Strategy.Slack,
-          AshAuthentication.Strategy.Totp
+          AshAuthentication.Strategy.Slack
         ],
         Cryptography: [
           AshAuthentication.HashProvider,
@@ -236,7 +232,6 @@ defmodule AshAuthentication.MixProject do
       {:igniter, "~> 0.4", optional: true},
       {:jason, "~> 1.4"},
       {:joken, "~> 2.5"},
-      {:nimble_totp, "~> 1.0"},
       {:plug, "~> 1.13"},
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
@@ -279,7 +274,6 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.Password",
       "AshAuthentication.Strategy.RememberMe",
       "AshAuthentication.Strategy.Slack",
-      "AshAuthentication.Strategy.Totp",
       "AshAuthentication.TokenResource",
       "AshAuthentication.UserIdentity"
     ]

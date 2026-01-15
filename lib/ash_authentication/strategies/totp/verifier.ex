@@ -30,6 +30,7 @@ defmodule AshAuthentication.Strategy.Totp.Verifier do
          %{brute_force_strategy: {:audit_log, audit_log}} = strategy
        ) do
     with {:ok, audit_log} <- validate_audit_log_exists(dsl, strategy, audit_log),
+         :ok <- maybe_validate_verify_audit_log(dsl, strategy, audit_log),
          :ok <- maybe_validate_confirm_setup_audit_log(dsl, strategy, audit_log) do
       maybe_validate_sign_in_audit_log(dsl, strategy, audit_log)
     end
@@ -123,6 +124,11 @@ defmodule AshAuthentication.Strategy.Totp.Verifier do
   defp get_preparation_supports({module, opts}) when is_atom(module) do
     module.supports(opts)
   end
+
+  defp maybe_validate_verify_audit_log(dsl, strategy, audit_log) when strategy.verify_enabled?,
+    do: validate_action_audit_logged(dsl, strategy, strategy.verify_action_name, audit_log)
+
+  defp maybe_validate_verify_audit_log(_, _, _), do: :ok
 
   defp maybe_validate_confirm_setup_audit_log(dsl, strategy, audit_log)
        when strategy.confirm_setup_enabled?,
