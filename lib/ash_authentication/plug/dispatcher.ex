@@ -75,18 +75,18 @@ defmodule AshAuthentication.Plug.Dispatcher do
   defp add_request_context(conn) do
     peer_data = Conn.get_peer_data(conn)
 
-    context =
-      %{
-        ash_authentication_request: %{
-          remote_ip: peer_data.address |> :inet.ntoa() |> to_string(),
-          remote_port: peer_data.port,
-          http_host: conn.host,
-          http_method: conn.method,
-          forwarded: Conn.get_req_header(conn, "forwarded"),
-          x_forwarded_for: Conn.get_req_header(conn, "x-forwarded-for")
-        }
+    request_context = %{
+      ash_authentication_request: %{
+        remote_ip: peer_data.address |> :inet.ntoa() |> to_string(),
+        remote_port: peer_data.port,
+        http_host: conn.host,
+        http_method: conn.method,
+        forwarded: Conn.get_req_header(conn, "forwarded"),
+        x_forwarded_for: Conn.get_req_header(conn, "x-forwarded-for")
       }
+    }
 
-    Ash.PlugHelpers.set_context(conn, context)
+    existing_context = Ash.PlugHelpers.get_context(conn) || %{}
+    Ash.PlugHelpers.set_context(conn, Map.merge(existing_context, request_context))
   end
 end
