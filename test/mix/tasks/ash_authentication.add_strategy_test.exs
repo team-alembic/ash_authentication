@@ -40,6 +40,8 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |          request_password_reset_action_name(:request_password_reset_token)
       + |        end
       + |      end
+      + |
+      + |      remember_me(:remember_me)
       + |    end
       """)
     end
@@ -64,6 +66,8 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |          request_password_reset_action_name(:request_password_reset_token)
       + |        end
       + |      end
+      + |
+      + |      remember_me(:remember_me)
       + |    end
       """)
     end
@@ -88,6 +92,8 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |          request_password_reset_action_name(:request_password_reset_token)
       + |        end
       + |      end
+      + |
+      + |      remember_me(:remember_me)
       + |    end
       """)
     end
@@ -112,6 +118,8 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |          request_password_reset_action_name(:request_password_reset_token)
       + |        end
       + |      end
+      + |
+      + |      remember_me(:remember_me)
       + |    end
       """)
     end

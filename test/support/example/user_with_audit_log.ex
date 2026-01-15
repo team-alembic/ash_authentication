@@ -84,13 +84,6 @@ defmodule Example.UserWithAuditLog do
     define :sign_in_with_password
   end
 
-  # calculations do
-  #   calculate :totp_url_for_totp,
-  #             :string,
-  #             {AshAuthentication.Strategy.Totp.TotpUrlCalculation, strategy_name: :totp},
-  #             load: [:email, :totp_secret]
-  # end
-
   def get_config(path, _resource) do
     value =
       :ash_authentication
