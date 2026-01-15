@@ -61,7 +61,7 @@ defmodule AshAuthentication.Strategy.TotpTest do
           []
         )
 
-      # Reload user from database to check last_totp_at
+      # Reload to verify database persistence (sign_in_preparation updates via a separate changeset)
       {:ok, reloaded_user} = Ash.get(Example.UserWithTotp, signed_in_user.id, authorize?: false)
 
       # last_totp_at should be updated

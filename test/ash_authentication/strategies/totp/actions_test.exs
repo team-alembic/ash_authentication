@@ -56,6 +56,7 @@ defmodule AshAuthentication.Strategy.Totp.ActionsTest do
                )
 
       assert signed_in_user.id == user.id
+      assert signed_in_user.__metadata__.token
     end
 
     test "it returns an error with invalid code" do
