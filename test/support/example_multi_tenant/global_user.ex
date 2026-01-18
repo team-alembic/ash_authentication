@@ -9,8 +9,6 @@ defmodule ExampleMultiTenant.GlobalUser do
     extensions: [AshAuthentication],
     domain: ExampleMultiTenant
 
-  require Logger
-
   attributes do
     uuid_primary_key(:id, writable?: true)
 

@@ -76,7 +76,6 @@ defmodule AshAuthentication.Plug do
   alias Ash.Resource
   alias AshAuthentication.Plug.{Defaults, Helpers, Macros}
   alias Plug.Conn
-  require Macros
 
   @type activity :: {atom, atom}
   @type token :: String.t()

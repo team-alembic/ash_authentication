@@ -16,7 +16,6 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, UserIdentity}
-  require Ash.Query
   import AshAuthentication.Utils, only: [is_falsy: 1]
 
   @doc false

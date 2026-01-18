@@ -6,7 +6,6 @@ defmodule AshAuthentication.AuditLogResource.BatcherTest do
   @moduledoc false
   use DataCase, async: false
   alias AshAuthentication.{AuditLogResource.Batcher, Info, Strategy}
-  require Ash.Query
 
   describe "GenServer lifecycle" do
     test "starts successfully with audit log resources" do

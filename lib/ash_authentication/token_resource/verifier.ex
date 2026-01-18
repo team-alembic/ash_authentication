@@ -8,7 +8,6 @@ defmodule AshAuthentication.TokenResource.Verifier do
   """
 
   use Spark.Dsl.Verifier
-  require Ash.Expr
   require Logger
   alias Spark.{Dsl.Verifier, Error.DslError}
   import AshAuthentication.Utils

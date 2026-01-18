@@ -14,7 +14,6 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
   """
   use Ash.Resource.Actions.Implementation
   alias AshAuthentication.{Info, Strategy.Password}
-  require Ash.Query
   require Logger
 
   @doc false

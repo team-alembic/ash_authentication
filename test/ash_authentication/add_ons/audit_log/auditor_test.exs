@@ -6,7 +6,6 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
   @moduledoc false
   use DataCase, async: false
   alias AshAuthentication.{AddOn.AuditLog.Auditor, AuditLogResource.Batcher, Info}
-  require Ash.Query
 
   setup do
     start_supervised!({Batcher, otp_app: :ash_authentication})

@@ -13,8 +13,6 @@ defmodule Example.UserWithRememberMe do
     ],
     domain: Example
 
-  require Logger
-
   @type t :: %__MODULE__{
           id: Ecto.UUID.t(),
           username: String.t(),
