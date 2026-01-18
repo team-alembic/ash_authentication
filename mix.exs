@@ -30,7 +30,6 @@ defmodule AshAuthentication.MixProject do
       docs: &docs/0,
       aliases: aliases(),
       description: @description,
-      preferred_cli_env: [ci: :test],
       consolidate_protocols: Mix.env() == :prod
     ]
   end
@@ -54,6 +53,10 @@ defmodule AshAuthentication.MixProject do
       files:
         ~w[lib .formatter.exs mix.exs README* LICENSE* CHANGELOG* documentation usage-rules.md]
     ]
+  end
+
+  def cli do
+    [preferred_envs: [ci: :test]]
   end
 
   # Run "mix help compile.app" to learn about applications.
