@@ -54,6 +54,12 @@ defmodule AshAuthentication.Strategy.Totp.Dsl do
           default: :totp_secret,
           required: false
         ],
+        read_secret_from: [
+          type: :atom,
+          doc:
+            "The attribute or calculation to read the TOTP secret from. Defaults to `secret_field`. Useful with AshCloak where encrypted values are read via calculations.",
+          required: false
+        ],
         secret_length: [
           type: :pos_integer,
           doc:
@@ -120,11 +126,8 @@ defmodule AshAuthentication.Strategy.Totp.Dsl do
         ],
         confirm_setup_enabled?: [
           type: :boolean,
-          doc: """
-          When enabled, the setup action will not store the secret directly on the user.
-          Instead, it generates a setup token that must be confirmed with a valid TOTP code.
-          This provides additional security by verifying the user has correctly saved their secret.
-          """,
+          doc:
+            "When enabled, setup generates a token that must be confirmed with a valid TOTP code before the secret is stored.",
           required: false,
           default: false
         ],

@@ -27,8 +27,8 @@ defmodule AshAuthentication.Strategy.Totp.VerifyAction do
     with :ok <- Helpers.validate_totp_code(totp_code),
          {:ok, strategy} <- Info.strategy_for_action(input.resource, input.action.name),
          {:ok, user} <-
-           Ash.load(user, [strategy.secret_field, strategy.last_totp_at_field], load_opts) do
-      secret = Map.get(user, strategy.secret_field)
+           Ash.load(user, [strategy.read_secret_from, strategy.last_totp_at_field], load_opts) do
+      secret = Map.get(user, strategy.read_secret_from)
       last_totp_at = Helpers.datetime_to_unix(Map.get(user, strategy.last_totp_at_field))
       {:ok, NimbleTOTP.valid?(secret, totp_code, since: last_totp_at, period: strategy.period)}
     else

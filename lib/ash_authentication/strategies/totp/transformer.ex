@@ -21,6 +21,7 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
   @spec transform(Totp.t(), map) :: {:ok, Totp.t() | map} | {:error, Exception.t()}
   def transform(strategy, dsl) do
     with strategy <- maybe_set_field_lazy(strategy, :issuer, &to_string(&1.name)),
+         strategy <- maybe_set_field_lazy(strategy, :read_secret_from, & &1.secret_field),
          strategy <- transform_setup_token_lifetime(strategy),
          strategy <- transform_audit_log_window(strategy),
          :ok <- validate_identity_field(strategy.identity_field, dsl),

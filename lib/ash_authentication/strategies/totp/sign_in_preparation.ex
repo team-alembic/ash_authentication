@@ -35,10 +35,10 @@ defmodule AshAuthentication.Strategy.Totp.SignInPreparation do
 
       query
       |> Query.before_action(fn query ->
-        Query.ensure_selected(query, [strategy.secret_field, strategy.last_totp_at_field])
+        Query.ensure_selected(query, [strategy.read_secret_from, strategy.last_totp_at_field])
       end)
       |> Query.after_action(fn
-        query, [record] when is_binary(:erlang.map_get(strategy.secret_field, record)) ->
+        query, [record] when is_binary(:erlang.map_get(strategy.read_secret_from, record)) ->
           verify_and_authenticate(record, totp_code, query, strategy, context)
 
         query, [] ->
@@ -67,7 +67,7 @@ defmodule AshAuthentication.Strategy.Totp.SignInPreparation do
   end
 
   defp verify_totp_code(record, totp_code, strategy) do
-    secret = Map.get(record, strategy.secret_field)
+    secret = Map.get(record, strategy.read_secret_from)
     last_totp_at = Helpers.datetime_to_unix(Map.get(record, strategy.last_totp_at_field))
 
     if NimbleTOTP.valid?(secret, totp_code, since: last_totp_at, period: strategy.period) do

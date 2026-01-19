@@ -59,7 +59,7 @@ defmodule AshAuthentication.Strategy.Totp.TotpUrlCalculation do
     strategy_name = Keyword.fetch!(opts, :strategy_name)
     strategy = AshAuthentication.Info.strategy!(query.resource, strategy_name)
 
-    [strategy.secret_field, strategy.identity_field]
+    [strategy.read_secret_from, strategy.identity_field]
   end
 
   @impl true
@@ -74,7 +74,7 @@ defmodule AshAuthentication.Strategy.Totp.TotpUrlCalculation do
   end
 
   defp build_totp_url(record, strategy) do
-    secret = Map.get(record, strategy.secret_field)
+    secret = Map.get(record, strategy.read_secret_from)
 
     if is_nil(secret) or secret == "" do
       nil

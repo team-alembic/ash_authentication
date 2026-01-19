@@ -124,6 +124,7 @@ spark_locals_without_parens = [
   private_key_path: 1,
   read_action_name: 1,
   read_expired_action_name: 1,
+  read_secret_from: 1,
   redirect_uri: 1,
   refresh_token_attribute_name: 1,
   register_action_accept: 1,
