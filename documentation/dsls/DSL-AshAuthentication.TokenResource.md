@@ -74,6 +74,8 @@ Configuration options for this token resource
 | [`expunge_interval`](#token-expunge_interval){: #token-expunge_interval } | `pos_integer` | `12` | How often (in hours) to scan this resource for records which have expired and thus can be removed. |
 | [`store_token_action_name`](#token-store_token_action_name){: #token-store_token_action_name } | `atom` | `:store_token` | The name of the action to use to store a token, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
 | [`get_token_action_name`](#token-get_token_action_name){: #token-get_token_action_name } | `atom` | `:get_token` | The name of the action used to retrieve tokens from the store, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
+| [`endpoints`](#token-endpoints){: #token-endpoints } | `module \| list(module)` | `[]` | The list of the endpoints where we will propagate the disconnect notification, when the user logs out or triggers log out from all devices. |
+| [`live_socket_id_template`](#token-live_socket_id_template){: #token-live_socket_id_template } | `(any -> any)` |  | Either a template string or a function that takes in the token resource and returns the livesocket id. |
 
 
 ### token.revocation
