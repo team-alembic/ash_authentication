@@ -52,6 +52,17 @@ defmodule AshAuthentication.TokenResource do
           doc:
             "The name of the action used to retrieve tokens from the store, if `require_tokens_for_authentication?` is enabled in your authentication resource.",
           default: :get_token
+        ],
+        endpoints: [
+          type: {:wrap_list, {:behaviour, Phoenix.Endpoint}},
+          doc:
+            "The list of the endpoints where we will propagate the disconnect notification, when the user logs out or triggers log out from all devices.",
+          default: []
+        ],
+        live_socket_id_template: [
+          type: {:fun, 1},
+          doc:
+            "A function that receives a map containing `%{jti: jti}` and returns the live socket ID string. Additional keys may be added in future versions."
         ]
       ],
       sections: [
