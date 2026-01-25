@@ -62,7 +62,7 @@ defmodule AshAuthentication.TokenResource do
         live_socket_id_template: [
           type: {:fun, 1},
           doc:
-            "Either a template string or a function that takes in the token resource and returns the livesocket id."
+            "A function that receives a map containing `%{jti: jti}` and returns the live socket ID string. Additional keys may be added in future versions."
         ]
       ],
       sections: [
