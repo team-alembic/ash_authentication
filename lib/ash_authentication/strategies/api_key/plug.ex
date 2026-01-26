@@ -70,9 +70,11 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
     required? = Keyword.get(opts, :required?, true)
     source = Keyword.get(opts, :source, :header)
     param_name = Keyword.get(opts, :param_name, "api_key")
-    header_prefix = Keyword.get(opts, :header_prefix, "Bearer ")
     subject_name = AshAuthentication.Info.authentication_subject_name!(resource)
     assign = Keyword.get(opts, :assign, :"current_#{subject_name}")
+
+    header_prefix = Keyword.get(opts, :header_prefix, "Bearer ")
+    validate_header_prefix!(header_prefix)
 
     strategy =
       case Keyword.fetch(opts, :strategy) do
@@ -142,10 +144,15 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
   defp get_api_key(conn, %{source: :header, header_prefix: prefix}) do
     case Conn.get_req_header(conn, "authorization") do
       [header_value | _] ->
-        if String.starts_with?(header_value, prefix) do
-          {:ok, String.replace_prefix(header_value, prefix, "")}
-        else
-          {:error, :invalid_api_key}
+        cond do
+          match?(%Regex{}, prefix) && header_value =~ prefix ->
+            {:ok, String.trim(Regex.replace(prefix, header_value, ""))}
+
+          String.starts_with?(header_value, prefix) ->
+            {:ok, String.trim(String.replace_prefix(header_value, prefix, ""))}
+
+          true ->
+            {:error, :invalid_api_key}
         end
 
       _ ->
@@ -186,5 +193,12 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
       tenant: tenant,
       context: context
     )
+  end
+
+  defp validate_header_prefix!(prefix) when is_binary(prefix), do: :ok
+  defp validate_header_prefix!(%Regex{source: "^" <> _rest}), do: :ok
+
+  defp validate_header_prefix!(%Regex{} = regex) do
+    raise "Invalid header_prefix regex. Regexes must begin with `^`, got: #{inspect(regex)}"
   end
 end
