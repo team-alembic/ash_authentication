@@ -341,6 +341,55 @@ defmodule DataCase do
     end)
   end
 
+  @doc "User with TOTP factory"
+  @spec build_user_with_totp(keyword) :: Example.UserWithTotp.t() | no_return
+  def build_user_with_totp(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithTotp
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc "User with TOTP confirm setup factory"
+  @spec build_user_with_totp_confirm_setup(keyword) ::
+          Example.UserWithTotpConfirmSetup.t() | no_return
+  def build_user_with_totp_confirm_setup(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithTotpConfirmSetup
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
   @doc "User with empty includes factory"
   @spec build_user_with_empty_includes(keyword) ::
           Example.UserWithEmptyIncludes.t() | no_return

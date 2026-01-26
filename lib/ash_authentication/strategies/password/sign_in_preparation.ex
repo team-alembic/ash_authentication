@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   an authentication failed error.
   """
   use Ash.Resource.Preparation
-  alias Ash.{Query, Resource.Preparation}
+  alias Ash.{Error.Unknown, Query, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Errors.UnconfirmedUser, Info, Jwt}
   require Ash.Query
 
@@ -140,10 +140,12 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
        when query.context.token_type == :sign_in and not strategy.sign_in_tokens_enabled? do
     Query.add_error(
       query,
-      """
-      Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
-      does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
-      """
+      Unknown.exception(
+        message: """
+        Invalid configuration detected. A sign in token was requested for the #{strategy.name} strategy on #{inspect(query.resource)}, but that strategy
+        does not support sign in tokens. See `sign_in_tokens_enabled?` for more.
+        """
+      )
     )
   end
 
@@ -156,12 +158,14 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
       generate_token(purpose, record, strategy, extra_claims, opts)
     else
-      {:ok, record}
+      maybe_add_authentication_metadata(purpose, record)
     end
   end
 
   defp generate_token(:sign_in, record, strategy, extra_claims, opts)
        when strategy.sign_in_tokens_enabled? do
+    # Sign-in tokens are intermediate tokens (e.g., for sign-in links)
+    # Don't add authentication_strategies metadata since auth isn't complete
     claims = Map.put(extra_claims, "purpose", "sign_in")
 
     case Jwt.token_for_user(
@@ -181,6 +185,8 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   end
 
   defp generate_token(purpose, record, _strategy, extra_claims, opts) do
+    # Full authentication - add metadata tracking
+    record = add_authentication_metadata(record)
     claims = Map.put(extra_claims, "purpose", to_string(purpose))
 
     case Jwt.token_for_user(record, claims, opts) do
@@ -189,6 +195,28 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
       {:error, error} ->
         {:error, error}
+    end
+  end
+
+  defp maybe_add_authentication_metadata(:user, record) do
+    add_authentication_metadata(record)
+  end
+
+  defp maybe_add_authentication_metadata(_purpose, record) do
+    record
+  end
+
+  defp add_authentication_metadata(record) do
+    existing_strategies = get_existing_strategies(record)
+    strategies = Enum.uniq(existing_strategies ++ [:password])
+
+    Ash.Resource.put_metadata(record, :authentication_strategies, strategies)
+  end
+
+  defp get_existing_strategies(record) do
+    case record.__metadata__ do
+      %{authentication_strategies: strategies} when is_list(strategies) -> strategies
+      _ -> []
     end
   end
 

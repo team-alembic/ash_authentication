@@ -22,6 +22,8 @@ defmodule Example do
     resource Example.UserWithRememberMe
     resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired
+    resource Example.UserWithTotp
+    resource Example.UserWithTotpConfirmSetup
     resource Example.UserWithWildcardAndExclusions
     resource Example.UserWithExtraClaims
   end

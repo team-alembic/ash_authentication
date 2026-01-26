@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule Example.UserWithAuditLog do
+defmodule Example.UserWithTotp do
   @moduledoc false
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
@@ -12,11 +12,9 @@ defmodule Example.UserWithAuditLog do
   attributes do
     uuid_primary_key :id, writable?: true
 
-    attribute :email, :ci_string, allow_nil?: false, public?: true, sensitive?: true
+    attribute :email, :ci_string, allow_nil?: false, public?: true
     attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
-
     attribute :totp_secret, :binary, allow_nil?: true, sensitive?: true, public?: false
-
     attribute :last_totp_at, :datetime, allow_nil?: true, sensitive?: true, public?: false
 
     timestamps()
@@ -27,7 +25,7 @@ defmodule Example.UserWithAuditLog do
   end
 
   postgres do
-    table "audit_logged_users"
+    table "totp_users"
     repo(Example.Repo)
   end
 
@@ -36,52 +34,25 @@ defmodule Example.UserWithAuditLog do
 
     tokens do
       enabled? true
-
       token_resource Example.Token
       signing_secret &get_config/2
-    end
-
-    add_ons do
-      audit_log do
-        audit_log_resource(Example.AuditLog)
-        include_fields([:email])
-      end
     end
 
     strategies do
       password do
         identity_field :email
-
-        resettable do
-          sender fn _user, _token, _opts -> :ok end
-        end
-      end
-
-      magic_link do
-        identity_field :email
-        sender fn _user, _token, _opts -> :ok end
-      end
-
-      remember_me :remember_me do
-        sign_in_action_name :sign_in_with_remember_me
-        cookie_name :remember_me_audit_log
-        token_lifetime {30, :days}
       end
 
       totp do
         identity_field :email
         sign_in_enabled? true
-        brute_force_strategy({:audit_log, :audit_log})
+        brute_force_strategy({:preparation, Example.TotpNoopPreparation})
       end
     end
   end
 
   identities do
     identity :unique_email, [:email]
-  end
-
-  code_interface do
-    define :sign_in_with_password
   end
 
   def get_config(path, _resource) do
