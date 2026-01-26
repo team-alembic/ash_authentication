@@ -10,4 +10,6 @@ config :mime, :types, %{
 
 config :ash, :utc_datetime_type, :datetime
 
+config :ash_authentication, bypass_require_interaction_for_magic_link?: true
+
 import_config "#{config_env()}.exs"
