@@ -198,7 +198,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Plug do
   defp validate_header_prefix!(prefix) when is_binary(prefix), do: :ok
   defp validate_header_prefix!(%Regex{source: "^" <> _rest}), do: :ok
 
-  defp validate_header_prefix!(%Regex{source: regex_string}) do
-    raise "Invalid header_prefix regex. Regexes must begin with `^`, got: #{regex_string}"
+  defp validate_header_prefix!(%Regex{} = regex) do
+    raise "Invalid header_prefix regex. Regexes must begin with `^`, got: #{inspect(regex)}"
   end
 end
