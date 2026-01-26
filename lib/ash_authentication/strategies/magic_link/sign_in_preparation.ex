@@ -57,14 +57,18 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
             :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
           end
 
-          extra_claims =
+          query_extra_claims = query.context[:extra_token_claims] || %{}
+
+          strategy_extra_claims =
             case strategy.extra_claims do
               nil -> %{}
               fun when is_function(fun, 4) -> fun.(record, strategy, claims, context)
             end
 
+          all_extra_claims = Map.merge(strategy_extra_claims, query_extra_claims)
+
           {:ok, token, _claims} =
-            Jwt.token_for_user(record, extra_claims, Ash.Context.to_opts(context))
+            Jwt.token_for_user(record, all_extra_claims, Ash.Context.to_opts(context))
 
           {:ok, [Resource.put_metadata(record, :token, token)]}
 

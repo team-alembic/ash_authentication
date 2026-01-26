@@ -98,10 +98,6 @@ defmodule AshAuthentication.Jwt do
 
     subject = AshAuthentication.user_to_subject(user)
 
-    extra_claims =
-      extra_claims
-      |> Map.put("sub", subject)
-
     action_opts =
       case Map.fetch(user.__metadata__, :tenant) do
         {:ok, tenant} ->
@@ -111,17 +107,48 @@ defmodule AshAuthentication.Jwt do
           opts
       end
 
+    dsl_claims = get_dsl_extra_claims(resource, user, action_opts)
+
+    all_extra_claims =
+      dsl_claims
+      |> Map.merge(extra_claims)
+      |> Map.put("sub", subject)
+
     default_claims = Config.default_claims(resource, action_opts)
     signer = Config.token_signer(resource, opts, context)
 
-    with {:ok, token, claims} <- Joken.generate_and_sign(default_claims, extra_claims, signer),
-         :ok <- maybe_store_token(token, resource, user, purpose, action_opts) do
+    storable_extra_claims = Map.drop(all_extra_claims, ["sub", "purpose"])
+
+    with {:ok, token, claims} <-
+           Joken.generate_and_sign(default_claims, all_extra_claims, signer),
+         :ok <-
+           maybe_store_token(token, resource, user, purpose, action_opts, storable_extra_claims) do
       {:ok, token, claims}
     else
       {:error, reason} ->
         Logger.error("Failed to generate token for user: #{inspect(reason, pretty: true)}")
         :error
     end
+  end
+
+  defp get_dsl_extra_claims(resource, user, opts) do
+    case Info.authentication_tokens_extra_claims(resource) do
+      {:ok, extra_claims_fn} when is_function(extra_claims_fn, 2) ->
+        case extra_claims_fn.(user, opts) do
+          claims when is_map(claims) -> stringify_keys(claims)
+          _ -> %{}
+        end
+
+      {:ok, extra_claims} when is_map(extra_claims) ->
+        stringify_keys(extra_claims)
+
+      _ ->
+        %{}
+    end
+  end
+
+  defp stringify_keys(map) when is_map(map) do
+    Map.new(map, fn {k, v} -> {to_string(k), v} end)
   end
 
   @doc """
@@ -156,7 +183,7 @@ defmodule AshAuthentication.Jwt do
     end
   end
 
-  defp maybe_store_token(token, resource, user, purpose, opts) do
+  defp maybe_store_token(token, resource, user, purpose, opts, extra_claims \\ %{}) do
     if Info.authentication_tokens_store_all_tokens?(resource) do
       with {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
         context_patch = %{
@@ -164,12 +191,16 @@ defmodule AshAuthentication.Jwt do
           private: %{ash_authentication?: true}
         }
 
-        TokenResource.Actions.store_token(
-          token_resource,
+        params =
           %{
             "token" => token,
             "purpose" => to_string(purpose)
-          },
+          }
+          |> maybe_add_extra_data(extra_claims)
+
+        TokenResource.Actions.store_token(
+          token_resource,
+          params,
           Keyword.update(opts, :context, context_patch, &Map.merge(&1, context_patch))
         )
       end
@@ -177,6 +208,9 @@ defmodule AshAuthentication.Jwt do
       :ok
     end
   end
+
+  defp maybe_add_extra_data(params, extra_claims) when map_size(extra_claims) == 0, do: params
+  defp maybe_add_extra_data(params, extra_claims), do: Map.put(params, "extra_data", extra_claims)
 
   @doc """
   Given a token, read it's claims without validating.

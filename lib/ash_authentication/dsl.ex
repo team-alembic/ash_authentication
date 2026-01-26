@@ -151,6 +151,11 @@ defmodule AshAuthentication.Dsl do
               signing_secret: [
                 type: secret_type,
                 doc: "The secret used to sign tokens.  #{secret_doc}"
+              ],
+              extra_claims: [
+                type: {:or, [{:fun, 2}, :map]},
+                doc:
+                  "A 2-arity function `(user, opts) -> claims_map` or a static map of extra claims to include in tokens. See the tokens guide for more."
               ]
             ]
           },

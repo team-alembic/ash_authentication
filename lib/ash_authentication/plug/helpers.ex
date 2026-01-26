@@ -121,7 +121,7 @@ defmodule AshAuthentication.Plug.Helpers do
       with token when is_binary(token) <- Map.get(session, session_key),
            {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
            when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
-           {:ok, [_]} <-
+           {:ok, [token_record]} <-
              TokenResource.Actions.get_token(
                token_resource,
                %{"jti" => jti, "purpose" => "user"},
@@ -129,7 +129,7 @@ defmodule AshAuthentication.Plug.Helpers do
              ),
            {:ok, user} <-
              AshAuthentication.subject_to_user(subject, resource, opts) do
-        {:ok, user}
+        {:ok, maybe_add_token_claims(user, token_record)}
       else
         _ -> :error
       end
@@ -263,6 +263,8 @@ defmodule AshAuthentication.Plug.Helpers do
              ),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do
+        user = maybe_add_token_claims(user, token_record)
+
         conn
         |> Conn.assign(current_subject_name, user)
         |> maybe_assign_token_record(token_record, subject_name)
@@ -270,6 +272,18 @@ defmodule AshAuthentication.Plug.Helpers do
         _ -> conn
       end
     end)
+  end
+
+  defp maybe_add_token_claims(user, nil), do: user
+
+  defp maybe_add_token_claims(user, token_record) do
+    case Map.get(token_record, :extra_data) do
+      extra_data when is_map(extra_data) and map_size(extra_data) > 0 ->
+        Ash.Resource.put_metadata(user, :token_claims, extra_data)
+
+      _ ->
+        user
+    end
   end
 
   defp maybe_assign_token_record(conn, _token_record, subject_name) when is_nil(subject_name) do
