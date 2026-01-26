@@ -31,7 +31,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource, Resource.Preparation}
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
+  alias AshAuthentication.{Info, Jwt, Utils}
 
   @doc false
   @impl true
@@ -100,18 +100,8 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
 
         {:ok, [user]}
 
-      :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           query: query,
-           caused_by: %{
-             module: __MODULE__,
-             action: query.action,
-             resource: query.resource,
-             message: "Unable to generate remember me token"
-           }
-         )}
+      {:error, error} ->
+        {:error, error}
     end
   end
 

@@ -29,57 +29,69 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
            Jwt.verify(token, query.resource, Ash.Context.to_opts(context)),
          ^token_action <- to_string(strategy.sign_in_action_name),
          %URI{path: ^subject_name, query: primary_key} <- URI.parse(subject) do
-      query
-      |> Query.set_context(%{private: %{ash_authentication?: true}})
-      |> then(fn query ->
-        cond do
-          not is_nil(primary_key) ->
-            primary_key =
-              primary_key
-              |> URI.decode_query()
-              |> Enum.to_list()
-
-            Query.filter(query, ^primary_key)
-
-          identity = claims["identity"] ->
-            identity_field = strategy.identity_field
-
-            Query.filter(query, ^ref(identity_field) == ^identity)
-
-          true ->
-            Query.do_filter(query, false)
-        end
-      end)
-      |> Query.after_action(fn
-        query, [record] ->
-          if strategy.single_use_token? do
-            token_resource = Info.authentication_tokens_token_resource!(query.resource)
-            :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
-          end
-
-          query_extra_claims = query.context[:extra_token_claims] || %{}
-
-          strategy_extra_claims =
-            case strategy.extra_claims do
-              nil -> %{}
-              fun when is_function(fun, 4) -> fun.(record, strategy, claims, context)
-            end
-
-          all_extra_claims = Map.merge(strategy_extra_claims, query_extra_claims)
-
-          {:ok, token, _claims} =
-            Jwt.token_for_user(record, all_extra_claims, Ash.Context.to_opts(context))
-
-          {:ok, [Resource.put_metadata(record, :token, token)]}
-
-        _query, [] ->
-          {:ok, []}
-      end)
+      prepare_valid_token_query(query, strategy, claims, primary_key, token, context)
     else
       _error ->
         query
         |> Query.do_filter(false)
         |> maybe_add_error_on_invalid_token()
+    end
+  end
+
+  defp prepare_valid_token_query(query, strategy, claims, primary_key, token, context) do
+    query
+    |> Query.set_context(%{private: %{ash_authentication?: true}})
+    |> filter_by_identity(primary_key, claims, strategy)
+    |> Query.after_action(&handle_sign_in_result(&1, &2, strategy, claims, token, context))
+  end
+
+  defp filter_by_identity(query, primary_key, _claims, _strategy) when not is_nil(primary_key) do
+    primary_key =
+      primary_key
+      |> URI.decode_query()
+      |> Enum.to_list()
+
+    Query.filter(query, ^primary_key)
+  end
+
+  defp filter_by_identity(query, _primary_key, %{"identity" => identity}, strategy) do
+    Query.filter(query, ^ref(strategy.identity_field) == ^identity)
+  end
+
+  defp filter_by_identity(query, _primary_key, _claims, _strategy) do
+    Query.do_filter(query, false)
+  end
+
+  defp handle_sign_in_result(query, [record], strategy, claims, token, context) do
+    revoke_single_use_token!(strategy, query, token, context)
+    generate_token_for_record(record, query, strategy, claims, context)
+  end
+
+  defp handle_sign_in_result(_query, [], _strategy, _claims, _token, _context) do
+    {:ok, []}
+  end
+
+  defp revoke_single_use_token!(strategy, query, token, context) do
+    if strategy.single_use_token? do
+      token_resource = Info.authentication_tokens_token_resource!(query.resource)
+      :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
+    end
+  end
+
+  defp generate_token_for_record(record, query, strategy, claims, context) do
+    query_extra_claims = query.context[:extra_token_claims] || %{}
+
+    strategy_extra_claims =
+      case strategy.extra_claims do
+        nil -> %{}
+        fun when is_function(fun, 4) -> fun.(record, strategy, claims, context)
+      end
+
+    all_extra_claims = Map.merge(strategy_extra_claims, query_extra_claims)
+
+    case Jwt.token_for_user(record, all_extra_claims, Ash.Context.to_opts(context)) do
+      {:ok, token, _claims} -> {:ok, [Resource.put_metadata(record, :token, token)]}
+      {:error, error} -> {:error, error}
     end
   end
 

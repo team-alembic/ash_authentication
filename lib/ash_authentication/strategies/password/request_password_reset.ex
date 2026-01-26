@@ -53,12 +53,6 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
         {:ok, nil} ->
           :ok
 
-        :error ->
-          Logger.warning("""
-          Something went wrong generating a token during password reset
-          for: #{inspect(action_input.resource)} `#{identity}`
-          """)
-
         {:error, error} ->
           Logger.warning("""
           Something went wrong resetting password for #{inspect(action_input.resource)} `#{identity}`

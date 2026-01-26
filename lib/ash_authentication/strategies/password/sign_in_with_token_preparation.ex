@@ -97,7 +97,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     too_many_users_returned(query, strategy)
   end
 
-  defp verify_result(query, [user], strategy, context) do
+  defp verify_result(query, [user], _strategy, context) do
     extra_claims = query.context[:extra_token_claims] || %{}
 
     claims =
@@ -110,18 +110,8 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
       {:ok, token, _claims} ->
         {:ok, [Resource.put_metadata(user, :token, token)]}
 
-      :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           query: query,
-           caused_by: %{
-             module: __MODULE__,
-             action: query.action,
-             resource: query.resource,
-             message: "Unable to generate token for user"
-           }
-         )}
+      {:error, error} ->
+        {:error, error}
     end
   end
 

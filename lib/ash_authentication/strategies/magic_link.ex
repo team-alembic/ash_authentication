@@ -171,7 +171,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
   Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
   """
   @spec request_token_for(t, Resource.record(), opts :: Keyword.t(), context :: map()) ::
-          {:ok, binary} | :error
+          {:ok, binary} | {:error, AshAuthentication.Errors.AuthenticationFailed.t()}
   def request_token_for(strategy, user, opts \\ [], context \\ %{})
       when is_struct(strategy, __MODULE__) and is_struct(user, strategy.resource) do
     case Jwt.token_for_user(
@@ -187,7 +187,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
            context
          ) do
       {:ok, token, _claims} -> {:ok, token}
-      :error -> :error
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -196,6 +196,8 @@ defmodule AshAuthentication.Strategy.MagicLink do
 
   Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
   """
+  @spec request_token_for_identity(t, term(), opts :: Keyword.t(), context :: map()) ::
+          {:ok, binary} | {:error, AshAuthentication.Errors.AuthenticationFailed.t()}
   def request_token_for_identity(strategy, identity, opts \\ [], context \\ %{})
       when is_struct(strategy, __MODULE__) do
     case Jwt.token_for_resource(
@@ -208,7 +210,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
            context
          ) do
       {:ok, token, _claims} -> {:ok, token}
-      :error -> :error
+      {:error, error} -> {:error, error}
     end
   end
 end

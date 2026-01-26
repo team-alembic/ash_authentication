@@ -61,7 +61,7 @@ defmodule AshAuthentication.Jwt do
   require Logger
 
   alias Ash.Resource
-  alias AshAuthentication.{Info, Jwt.Config, TokenResource}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt.Config, TokenResource}
 
   @typedoc """
   A string likely to contain a valid JWT.
@@ -90,7 +90,7 @@ defmodule AshAuthentication.Jwt do
   Given a user, generate a signed JWT for use while authenticating.
   """
   @spec token_for_user(Resource.record(), extra_claims :: map, options :: keyword, context :: map) ::
-          {:ok, token, claims} | :error
+          {:ok, token, claims} | {:error, AuthenticationFailed.t()}
   def token_for_user(user, extra_claims \\ %{}, opts \\ [], context \\ %{}) do
     resource = user.__struct__
 
@@ -127,7 +127,16 @@ defmodule AshAuthentication.Jwt do
     else
       {:error, reason} ->
         Logger.error("Failed to generate token for user: #{inspect(reason, pretty: true)}")
-        :error
+
+        {:error,
+         AuthenticationFailed.exception(
+           caused_by: %{
+             module: __MODULE__,
+             function: :token_for_user,
+             resource: resource,
+             reason: reason
+           }
+         )}
     end
   end
 
@@ -155,7 +164,7 @@ defmodule AshAuthentication.Jwt do
   Given a resource, generate a signed JWT with a set of claims.
   """
   @spec token_for_resource(Resource.t(), extra_claims :: map, options :: keyword, context :: map) ::
-          {:ok, token, claims} | :error
+          {:ok, token, claims} | {:error, AuthenticationFailed.t()}
   def token_for_resource(resource, extra_claims, opts \\ [], context) do
     {purpose, opts} = Keyword.pop(opts, :purpose, :user)
 
@@ -179,7 +188,15 @@ defmodule AshAuthentication.Jwt do
           "Failed to generate token for #{inspect(resource)}: #{inspect(reason, pretty: true)}"
         )
 
-        :error
+        {:error,
+         AuthenticationFailed.exception(
+           caused_by: %{
+             module: __MODULE__,
+             function: :token_for_resource,
+             resource: resource,
+             reason: reason
+           }
+         )}
     end
   end
 

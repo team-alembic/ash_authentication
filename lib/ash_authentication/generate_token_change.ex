@@ -22,14 +22,13 @@ defmodule AshAuthentication.GenerateTokenChange do
       if Info.authentication_tokens_enabled?(result.__struct__) do
         extra_claims = changeset.context[:extra_token_claims] || %{}
 
-        {:ok,
-         generate_token(
-           changeset.context[:token_type] || :user,
-           result,
-           strategy,
-           context,
-           extra_claims
-         )}
+        generate_token(
+          changeset.context[:token_type] || :user,
+          result,
+          strategy,
+          context,
+          extra_claims
+        )
       else
         {:ok, result}
       end
@@ -46,33 +45,36 @@ defmodule AshAuthentication.GenerateTokenChange do
     opts = Ash.Context.to_opts(context, token_lifetime: strategy.sign_in_token_lifetime)
     claims = Map.put(action_claims, "purpose", to_string(purpose))
 
-    {:ok, token, _claims} =
-      Jwt.token_for_user(
-        record,
-        claims,
-        opts,
-        context
-      )
+    case Jwt.token_for_user(record, claims, opts, context) do
+      {:ok, token, _claims} ->
+        all_extra_claims = merge_dsl_claims(record, action_claims, opts)
 
-    all_extra_claims = merge_dsl_claims(record, action_claims, opts)
+        {:ok,
+         record
+         |> Ash.Resource.put_metadata(:token, token)
+         |> maybe_put_claims_metadata(all_extra_claims)}
 
-    record
-    |> Ash.Resource.put_metadata(:token, token)
-    |> maybe_put_claims_metadata(all_extra_claims)
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   defp generate_token(purpose, record, _strategy, context, action_claims) do
     opts = Ash.Context.to_opts(context)
     claims = Map.put(action_claims, "purpose", to_string(purpose))
 
-    {:ok, token, _claims} =
-      Jwt.token_for_user(record, claims, opts)
+    case Jwt.token_for_user(record, claims, opts) do
+      {:ok, token, _claims} ->
+        all_extra_claims = merge_dsl_claims(record, action_claims, opts)
 
-    all_extra_claims = merge_dsl_claims(record, action_claims, opts)
+        {:ok,
+         record
+         |> Ash.Resource.put_metadata(:token, token)
+         |> maybe_put_claims_metadata(all_extra_claims)}
 
-    record
-    |> Ash.Resource.put_metadata(:token, token)
-    |> maybe_put_claims_metadata(all_extra_claims)
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   defp merge_dsl_claims(record, action_claims, opts) do

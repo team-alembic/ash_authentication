@@ -159,7 +159,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
           Resource.record(),
           opts :: Keyword.t()
         ) ::
-          {:ok, String.t()} | :error | {:error, any}
+          {:ok, String.t()} | {:error, any}
   def confirmation_token(strategy, changeset, user, opts \\ []) do
     claims = %{"act" => strategy.confirm_action_name}
 

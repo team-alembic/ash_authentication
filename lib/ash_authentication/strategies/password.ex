@@ -122,6 +122,7 @@ defmodule AshAuthentication.Strategy.Password do
   alias Ash.Resource
 
   alias AshAuthentication.{
+    Errors.AuthenticationFailed,
     Jwt,
     Strategy.Custom,
     Strategy.Password,
@@ -165,7 +166,8 @@ defmodule AshAuthentication.Strategy.Password do
 
   Used by `AshAuthentication.Strategy.Password.RequestPasswordResetPreparation`.
   """
-  @spec reset_token_for(t(), Resource.record()) :: {:ok, String.t()} | :error
+  @spec reset_token_for(t(), Resource.record()) ::
+          {:ok, String.t()} | {:error, AuthenticationFailed.t()}
   def reset_token_for(
         %Password{resettable: %Resettable{} = resettable} = _strategy,
         user
@@ -174,9 +176,18 @@ defmodule AshAuthentication.Strategy.Password do
            token_lifetime: resettable.token_lifetime
          ) do
       {:ok, token, _claims} -> {:ok, token}
-      :error -> :error
+      {:error, error} -> {:error, error}
     end
   end
 
-  def reset_token_for(_strategy, _user), do: :error
+  def reset_token_for(_strategy, _user),
+    do:
+      {:error,
+       AuthenticationFailed.exception(
+         caused_by: %{
+           module: __MODULE__,
+           function: :reset_token_for,
+           message: "Strategy does not have a resettable configuration"
+         }
+       )}
 end
