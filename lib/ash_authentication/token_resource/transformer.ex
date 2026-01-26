@@ -434,14 +434,6 @@ defmodule AshAuthentication.TokenResource.Transformer do
 
   defp validate_is_revoked_action(dsl_state, action_name) do
     case validate_action_exists(dsl_state, action_name) do
-      {:ok, %{type: :read} = action} ->
-        with :ok <-
-               validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]),
-             :ok <-
-               validate_action_argument_option(action, :jti, :type, [Ash.Type.String, :string]) do
-          validate_action_has_preparation(action, TokenResource.IsRevokedPreparation)
-        end
-
       {:ok, %{type: :action} = action} ->
         with :ok <-
                validate_action_argument_option(action, :token, :type, [Ash.Type.String, :string]) do
@@ -453,7 +445,7 @@ defmodule AshAuthentication.TokenResource.Transformer do
          DslError.exception(
            module: Transformer.get_persisted(dsl_state, :module),
            path: [:actions, :is_revoked],
-           message: "The action `:is_revoked` must be a read action or a generic action"
+           message: "The action `#{action_name}` must be a generic action"
          )}
 
       _ ->
@@ -463,13 +455,13 @@ defmodule AshAuthentication.TokenResource.Transformer do
 
   defp build_is_revoked_action(_dsl_state, action_name) do
     arguments = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+      Transformer.build_entity!(Resource.Dsl, [:actions, :action], :argument,
         name: :token,
         type: :string,
         allow_nil?: true,
         sensitive?: true
       ),
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+      Transformer.build_entity!(Resource.Dsl, [:actions, :action], :argument,
         name: :jti,
         type: :string,
         allow_nil?: true,
@@ -477,17 +469,11 @@ defmodule AshAuthentication.TokenResource.Transformer do
       )
     ]
 
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: TokenResource.IsRevokedPreparation
-      )
-    ]
-
-    Transformer.build_entity(Resource.Dsl, [:actions], :read,
+    Transformer.build_entity(Resource.Dsl, [:actions], :action,
       name: action_name,
-      get?: true,
-      preparations: preparations,
-      arguments: arguments
+      returns: :boolean,
+      arguments: arguments,
+      run: TokenResource.IsRevoked
     )
   end
 

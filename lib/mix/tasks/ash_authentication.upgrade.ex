@@ -48,7 +48,8 @@ if Code.ensure_loaded?(Igniter) do
       upgrades =
         %{
           "4.4.9" => [&fix_token_is_revoked_action/2],
-          "4.13.4" => [&add_remember_me_to_magic_link_sign_in/2]
+          "4.13.4" => [&add_remember_me_to_magic_link_sign_in/2],
+          "5.0.0" => [&convert_revoked_read_action_to_generic/2]
         }
 
       # For each version that requires a change, add it to this map
@@ -291,6 +292,68 @@ if Code.ensure_loaded?(Igniter) do
       """
 
       Igniter.Code.Common.add_code(zipper, change_code)
+    end
+
+    def convert_revoked_read_action_to_generic(igniter, _opts) do
+      case find_all_token_resources(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources} ->
+          Enum.reduce(resources, igniter, fn resource, igniter ->
+            maybe_convert_revoked_read_to_generic(igniter, resource)
+          end)
+      end
+    end
+
+    defp maybe_convert_revoked_read_to_generic(igniter, resource) do
+      Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+        with {:ok, action_zipper} <- move_to_action(zipper, :read, :revoked?),
+             {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(action_zipper) do
+          convert_read_to_generic_action(do_block_zipper)
+        else
+          :error -> {:ok, zipper}
+        end
+      end)
+    end
+
+    defp convert_read_to_generic_action(do_block_zipper) do
+      do_block_zipper =
+        Igniter.Code.Common.remove(
+          do_block_zipper,
+          &Igniter.Code.Function.function_call?(&1, :get?, 1)
+        )
+
+      do_block_zipper =
+        Igniter.Code.Common.remove(
+          do_block_zipper,
+          &Igniter.Code.Function.function_call?(&1, :prepare, 1)
+        )
+
+      do_block_zipper =
+        Igniter.Code.Common.add_code(
+          do_block_zipper,
+          "run AshAuthentication.TokenResource.IsRevoked"
+        )
+
+      zipper = Sourceror.Zipper.top(do_block_zipper)
+
+      with {:ok, zipper} <- move_to_action(zipper, :read, :revoked?) do
+        new_node =
+          Sourceror.Zipper.node(zipper)
+          |> replace_read_with_action()
+          |> insert_boolean_return_type()
+
+        {:ok, Sourceror.Zipper.replace(zipper, new_node)}
+      end
+    end
+
+    defp replace_read_with_action({:read, meta, args}) do
+      {:action, meta, args}
+    end
+
+    defp insert_boolean_return_type({:action, meta, [name | rest]}) do
+      {:action, meta, [name, :boolean | rest]}
     end
   end
 else
