@@ -64,10 +64,13 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange do
   end
 
   defp generate_token(changeset, user, strategy, context) do
+    extra_claims = changeset.context[:extra_token_claims] || %{}
+
     claims =
       changeset.context
       |> Map.get(:token_claims, %{})
       |> Map.take(["tenant"])
+      |> Map.merge(extra_claims)
       |> Map.put("purpose", "remember_me")
 
     opts =

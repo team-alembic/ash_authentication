@@ -70,10 +70,13 @@ defmodule AshAuthentication.Strategy.RememberMe.SignInPreparation do
   end
 
   defp verify_result(query, [user], strategy, context) do
+    extra_claims = query.context[:extra_token_claims] || %{}
+
     claims =
       query.context
       |> Map.get(:token_claims, %{})
       |> Map.take(["tenant"])
+      |> Map.merge(extra_claims)
 
     case Jwt.token_for_user(user, claims, Ash.Context.to_opts(context)) do
       {:ok, token, _claims} ->

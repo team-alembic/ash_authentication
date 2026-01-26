@@ -74,10 +74,13 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
   end
 
   defp verify_result(query, [user], strategy, context) do
+    extra_claims = query.context[:extra_token_claims] || %{}
+
     claims =
       query.context
       |> Map.get(:token_claims, %{})
       |> Map.take(["tenant"])
+      |> Map.merge(extra_claims)
       |> Map.put("purpose", "remember_me")
 
     opts =

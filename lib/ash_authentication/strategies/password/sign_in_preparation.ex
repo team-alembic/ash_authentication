@@ -90,8 +90,18 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
        ) do
       if user_confirmed_if_needed(record, strategy) do
         token_type = query.context[:token_type] || :user
+        extra_claims = query.context[:extra_token_claims] || %{}
 
-        {:ok, [maybe_generate_token(token_type, record, strategy, Ash.Context.to_opts(context))]}
+        {:ok,
+         [
+           maybe_generate_token(
+             token_type,
+             record,
+             strategy,
+             extra_claims,
+             Ash.Context.to_opts(context)
+           )
+         ]}
       else
         {:error,
          AuthenticationFailed.exception(
@@ -135,19 +145,23 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     query
   end
 
-  defp maybe_generate_token(purpose, record, strategy, opts) when purpose in [:user, :sign_in] do
+  defp maybe_generate_token(purpose, record, strategy, extra_claims, opts)
+       when purpose in [:user, :sign_in] do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
-      generate_token(purpose, record, strategy, opts)
+      generate_token(purpose, record, strategy, extra_claims, opts)
     else
       record
     end
   end
 
-  defp generate_token(:sign_in, record, strategy, opts) when strategy.sign_in_tokens_enabled? do
+  defp generate_token(:sign_in, record, strategy, extra_claims, opts)
+       when strategy.sign_in_tokens_enabled? do
+    claims = Map.put(extra_claims, "purpose", "sign_in")
+
     {:ok, token, _claims} =
       Jwt.token_for_user(
         record,
-        %{"purpose" => "sign_in"},
+        claims,
         Keyword.merge(opts,
           token_lifetime: strategy.sign_in_token_lifetime,
           purpose: :sign_in
@@ -157,8 +171,9 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     Ash.Resource.put_metadata(record, :token, token)
   end
 
-  defp generate_token(purpose, record, _strategy, opts) do
-    {:ok, token, _claims} = Jwt.token_for_user(record, %{"purpose" => to_string(purpose)}, opts)
+  defp generate_token(purpose, record, _strategy, extra_claims, opts) do
+    claims = Map.put(extra_claims, "purpose", to_string(purpose))
+    {:ok, token, _claims} = Jwt.token_for_user(record, claims, opts)
 
     Ash.Resource.put_metadata(record, :token, token)
   end

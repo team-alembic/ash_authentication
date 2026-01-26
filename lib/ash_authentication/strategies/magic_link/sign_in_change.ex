@@ -35,11 +35,12 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
           changeset
           |> Changeset.force_change_attribute(strategy.identity_field, identity)
           |> Changeset.after_transaction(fn
-            _changeset, {:ok, record} ->
+            changeset, {:ok, record} ->
               revoke_single_use_token!(strategy, changeset, token, context)
+              extra_claims = changeset.context[:extra_token_claims] || %{}
 
               {:ok, token, _claims} =
-                Jwt.token_for_user(record, %{}, Ash.Context.to_opts(context))
+                Jwt.token_for_user(record, extra_claims, Ash.Context.to_opts(context))
 
               {:ok, Resource.put_metadata(record, :token, token)}
 

@@ -166,6 +166,7 @@ Configure JWT settings for this resource
 | [`signing_algorithm`](#authentication-tokens-signing_algorithm){: #authentication-tokens-signing_algorithm } | `String.t` | `"HS256"` | The algorithm to use for token signing. Available signing algorithms are; EdDSA, Ed448ph, Ed448, Ed25519ph, Ed25519, PS512, PS384, PS256, ES512, ES384, ES256, RS512, RS384, RS256, HS512, HS384 and HS256. |
 | [`token_lifetime`](#authentication-tokens-token_lifetime){: #authentication-tokens-token_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{14, :days}` | How long a token should be valid. See [the tokens guide](/documentation/topics/tokens.md) for more. |
 | [`signing_secret`](#authentication-tokens-signing_secret){: #authentication-tokens-signing_secret } | `(any, any -> any) \| module \| String.t` |  | The secret used to sign tokens.  Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`extra_claims`](#authentication-tokens-extra_claims){: #authentication-tokens-extra_claims } | `(any, any -> any) \| map` |  | A 2-arity function `(user, opts) -> claims_map` or a static map of extra claims to include in tokens. See the tokens guide for more. |
 
 
 

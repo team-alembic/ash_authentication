@@ -304,6 +304,50 @@ defmodule AshAuthentication do
     end
   end
 
+  @doc """
+  Add extra claims to be included in the generated token.
+
+  Works with changesets, queries, and action inputs.
+
+  ## Examples
+
+  For create actions (like registration):
+
+      create :register_with_password do
+        # ...
+        change AshAuthentication.GenerateTokenChange
+        change fn changeset, _ctx ->
+          AshAuthentication.add_token_claims(changeset, %{"session_type" => "web"})
+        end
+      end
+
+  For read actions (like sign-in):
+
+      MyApp.User
+      |> Ash.Query.for_read(:sign_in_with_password, %{email: email, password: password})
+      |> AshAuthentication.add_token_claims(%{"session_type" => "api"})
+      |> Ash.read_one!()
+
+  These claims will be merged with any claims configured via the `extra_claims`
+  DSL option, with action-level claims taking precedence.
+  """
+  @spec add_token_claims(Ash.Changeset.t() | Ash.Query.t() | Ash.ActionInput.t(), map) ::
+          Ash.Changeset.t() | Ash.Query.t() | Ash.ActionInput.t()
+  def add_token_claims(%Ash.Changeset{} = changeset, claims) when is_map(claims) do
+    existing = changeset.context[:extra_token_claims] || %{}
+    Ash.Changeset.set_context(changeset, %{extra_token_claims: Map.merge(existing, claims)})
+  end
+
+  def add_token_claims(%Ash.Query{} = query, claims) when is_map(claims) do
+    existing = query.context[:extra_token_claims] || %{}
+    Ash.Query.set_context(query, %{extra_token_claims: Map.merge(existing, claims)})
+  end
+
+  def add_token_claims(%Ash.ActionInput{} = input, claims) when is_map(claims) do
+    existing = input.context[:extra_token_claims] || %{}
+    Ash.ActionInput.set_context(input, %{extra_token_claims: Map.merge(existing, claims)})
+  end
+
   @doc false
   @spec __built_in_strategies__ :: [module]
   def __built_in_strategies__, do: @built_in_strategies
