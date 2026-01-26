@@ -13,6 +13,7 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   alias Ash.{Resource, Type}
   alias AshAuthentication.{GenerateTokenChange, Strategy, Strategy.Password}
   alias Spark.Dsl.Transformer
+  alias Spark.Error.DslError
   import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -374,6 +375,12 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
          {:ok, dsl_state} <-
            maybe_build_action(
              dsl_state,
+             :"get_by_#{strategy.identity_field}",
+             &build_get_by_action(&1, strategy)
+           ),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
              resettable.request_password_reset_action_name,
              &build_reset_request_action(&1, resettable, strategy)
            ),
@@ -401,7 +408,8 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     end
   end
 
-  defp build_reset_request_action(dsl_state, resettable, strategy) do
+  # sobelow_skip ["DOS.BinToAtom"]
+  defp build_get_by_action(dsl_state, strategy) do
     identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
 
     arguments = [
@@ -409,20 +417,36 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
         name: strategy.identity_field,
         type: identity_attribute.type,
         allow_nil?: false,
-        description: "The proposed identity to send reset instructions to."
-      )
-    ]
-
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: Password.RequestPasswordResetPreparation
+        description: "The #{strategy.identity_field} to look up."
       )
     ]
 
     Transformer.build_entity(Resource.Dsl, [:actions], :read,
+      name: :"get_by_#{strategy.identity_field}",
+      arguments: arguments,
+      get_by: [strategy.identity_field],
+      get?: true,
+      description: "Look up a user by #{strategy.identity_field}."
+    )
+  end
+
+  # sobelow_skip ["DOS.BinToAtom"]
+  defp build_reset_request_action(dsl_state, resettable, strategy) do
+    identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
+
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :action], :argument,
+        name: strategy.identity_field,
+        type: identity_attribute.type,
+        allow_nil?: false,
+        description: "The identity to send reset instructions to."
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :action,
       name: resettable.request_password_reset_action_name,
       arguments: arguments,
-      preparations: preparations,
+      run: {Password.RequestPasswordReset, action: :"get_by_#{strategy.identity_field}"},
       description: "Send password reset instructions to a user if they exist."
     )
   end
@@ -431,12 +455,21 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
     with {:ok, action} <-
            validate_action_exists(dsl_state, resettable.request_password_reset_action_name),
          :ok <- validate_identity_argument(dsl_state, action, strategy.identity_field) do
-      if action.type == :read do
-        validate_action_has_preparation(action, Password.RequestPasswordResetPreparation)
-      else
-        :ok
-      end
+      validate_action_type(action, :action)
     end
+  end
+
+  defp validate_action_type(%{type: expected}, expected), do: :ok
+
+  defp validate_action_type(%{type: actual, name: name}, expected) do
+    {:error,
+     DslError.exception(
+       path: [:actions, name],
+       message:
+         "Action `#{name}` must be type :#{expected}, got :#{actual}. " <>
+           "Password reset request actions were changed from :read to :action in AshAuthentication 5.0. " <>
+           "See the upgrade guide for migration instructions."
+     )}
   end
 
   defp build_reset_action(_dsl_state, resettable, strategy) do

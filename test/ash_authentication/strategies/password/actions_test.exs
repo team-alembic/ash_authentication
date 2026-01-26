@@ -212,22 +212,20 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       log =
         capture_log(fn ->
           params = %{"username" => user.username}
-          options = []
           resettable = strategy.resettable
 
           result =
             strategy.resource
-            |> Ash.Query.new()
-            |> Ash.Query.set_context(%{
+            |> Ash.ActionInput.new()
+            |> Ash.ActionInput.set_context(%{
               private: %{
                 ash_authentication?: true
               }
             })
-            |> Ash.Query.for_read(resettable.request_password_reset_action_name, params)
-            |> Ash.Query.select([])
-            |> Ash.read(options)
+            |> Ash.ActionInput.for_action(resettable.request_password_reset_action_name, params)
+            |> Ash.run_action()
             |> case do
-              {:ok, _} -> :ok
+              :ok -> :ok
               {:error, reason} -> {:error, reason}
             end
 

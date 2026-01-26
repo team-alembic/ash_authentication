@@ -31,6 +31,12 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
          {:ok, dsl_state} <-
            maybe_build_action(
              dsl_state,
+             strategy.lookup_action_name,
+             &build_lookup_action(&1, strategy)
+           ),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
              strategy.sign_in_action_name,
              &build_sign_in_action(&1, strategy)
            ),
@@ -154,27 +160,44 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
     end
   end
 
-  defp build_request_action(dsl_state, strategy) do
+  defp build_lookup_action(dsl_state, strategy) do
     identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
 
     arguments = [
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
         name: strategy.identity_field,
         type: identity_attribute.type,
-        allow_nil?: false
-      )
-    ]
-
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: MagicLink.RequestPreparation
+        allow_nil?: false,
+        description: "The #{strategy.identity_field} to look up."
       )
     ]
 
     Transformer.build_entity(Resource.Dsl, [:actions], :read,
+      name: strategy.lookup_action_name,
+      arguments: arguments,
+      get_by: [strategy.identity_field],
+      get?: true,
+      description: "Look up a user by #{strategy.identity_field}."
+    )
+  end
+
+  defp build_request_action(dsl_state, strategy) do
+    identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
+
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :action], :argument,
+        name: strategy.identity_field,
+        type: identity_attribute.type,
+        allow_nil?: false,
+        description: "The identity to send a magic link to."
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :action,
       name: strategy.request_action_name,
       arguments: arguments,
-      preparations: preparations
+      run: MagicLink.Request,
+      description: "Send a magic link to a user if they exist."
     )
   end
 

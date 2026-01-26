@@ -234,26 +234,11 @@ defmodule AshAuthentication.Strategy.Password.Actions do
          ) do
       nil ->
         {:error,
-         NoSuchAction.exception(resource: strategy.resource, action: :reset_request, type: :read)}
-
-      %{type: :read, name: action_name} ->
-        options =
-          options
-          |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
-
-        strategy.resource
-        |> Query.new()
-        |> Query.set_context(%{
-          private: %{
-            ash_authentication?: true
-          }
-        })
-        |> Query.for_read(action_name, params, options)
-        |> Ash.read()
-        |> case do
-          {:ok, _} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+         NoSuchAction.exception(
+           resource: strategy.resource,
+           action: :reset_request,
+           type: :action
+         )}
 
       %{type: :action, name: action_name} ->
         options =
@@ -280,7 +265,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   def reset_request(%Password{} = strategy, _params, _options),
     do:
       {:error,
-       NoSuchAction.exception(resource: strategy.resource, action: :reset_request, type: :read)}
+       NoSuchAction.exception(resource: strategy.resource, action: :reset_request, type: :action)}
 
   @doc """
   Attempt to change a user's password using a reset token.
