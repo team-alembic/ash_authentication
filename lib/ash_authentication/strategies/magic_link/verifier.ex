@@ -49,43 +49,35 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
            validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [
              false
            ]),
-         :ok <- validate_field_in_values(action, :type, [:read, :action]) do
-      case action.type do
-        :read ->
-          validate_action_has_preparation(action, MagicLink.RequestPreparation)
-
-        _ ->
-          with {:ok, action} <- validate_action_exists(dsl_state, strategy.lookup_action_name),
-               :ok <- validate_action_has_argument(action, identity_attribute.name),
-               :ok <-
-                 validate_action_argument_option(
-                   action,
-                   strategy.identity_field,
-                   :type,
-                   [identity_attribute.type]
-                 ),
-               :ok <-
-                 validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [
-                   false
-                 ]),
-               :ok <- validate_action_option(action, :get?, [true]) do
-            :ok
-          else
-            {:error, error} ->
-              {:error, error}
-          end
-      end
-    else
-      {:error, message} when is_binary(message) ->
-        {:error,
-         DslError.exception(
-           path: [:actions, strategy.request_action_name],
-           message: message
-         )}
-
-      {:error, exception} when is_exception(exception) ->
-        {:error, exception}
+         :ok <- validate_action_type(action, :action, strategy),
+         {:ok, lookup_action} <- validate_action_exists(dsl_state, strategy.lookup_action_name),
+         :ok <- validate_action_has_argument(lookup_action, identity_attribute.name),
+         :ok <-
+           validate_action_argument_option(
+             lookup_action,
+             strategy.identity_field,
+             :type,
+             [identity_attribute.type]
+           ),
+         :ok <-
+           validate_action_argument_option(lookup_action, strategy.identity_field, :allow_nil?, [
+             false
+           ]) do
+      validate_action_option(lookup_action, :get?, [true])
     end
+  end
+
+  defp validate_action_type(%{type: expected}, expected, _strategy), do: :ok
+
+  defp validate_action_type(%{type: actual, name: name}, expected, strategy) do
+    {:error,
+     DslError.exception(
+       path: [:authentication, :strategies, strategy.name],
+       message:
+         "Action `#{name}` must be type :#{expected}, got :#{actual}. " <>
+           "Magic link request actions were changed from :read to :action in AshAuthentication 5.0. " <>
+           "See the upgrade guide for migration instructions."
+     )}
   end
 
   defp validate_sign_in_action(dsl_state, strategy) do
