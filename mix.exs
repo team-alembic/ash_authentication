@@ -225,9 +225,7 @@ defmodule AshAuthentication.MixProject do
     [
       {:argon2_elixir, "~> 4.0", optional: true},
       {:ash, ash_version("~> 3.7")},
-      # Assent is pinned to version 0.2 until the 5.0 release.
-      # See https://github.com/team-alembic/ash_authentication/issues/1097
-      {:assent, "> 0.2.0 and < 0.3.0"},
+      {:assent, "~> 0.3.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
       {:finch, "~> 0.19"},
