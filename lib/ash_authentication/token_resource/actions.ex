@@ -91,69 +91,32 @@ defmodule AshAuthentication.TokenResource.Actions do
   def token_revoked?(resource, token, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
          {:ok, domain} <- Info.token_domain(resource),
-         {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource),
-         action when not is_nil(action) <-
-           Ash.Resource.Info.action(resource, is_revoked_action_name) do
-      case action.type do
-        :action ->
-          resource
-          |> Ash.ActionInput.for_action(
-            is_revoked_action_name,
-            %{"token" => token},
-            Keyword.put(opts, :domain, domain)
-          )
-          |> Ash.ActionInput.set_context(%{
-            private: %{
-              ash_authentication?: true
-            }
-          })
-          |> Ash.run_action()
-          |> case do
-            {:ok, value} ->
-              value
+         {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource) do
+      resource
+      |> Ash.ActionInput.for_action(
+        is_revoked_action_name,
+        %{"token" => token},
+        Keyword.put(opts, :domain, domain)
+      )
+      |> Ash.ActionInput.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
+      |> Ash.run_action()
+      |> case do
+        {:ok, value} ->
+          value
 
-            {:error, error} ->
-              Logger.error("""
-              Error while checking if token is revoked.
-              We must assume that it is revoked for security purposes.
+        {:error, error} ->
+          Logger.error("""
+          Error while checking if token is revoked.
+          We must assume that it is revoked for security purposes.
 
-              #{Exception.format(:error, error)}
-              """)
+          #{Exception.format(:error, error)}
+          """)
 
-              true
-          end
-
-        :read ->
-          resource
-          |> Query.new()
-          |> Query.set_context(%{
-            private: %{
-              ash_authentication?: true
-            }
-          })
-          |> Query.for_read(
-            is_revoked_action_name,
-            %{"token" => token},
-            Keyword.put(opts, :domain, domain)
-          )
-          |> Ash.read()
-          |> case do
-            {:ok, []} ->
-              false
-
-            {:ok, _} ->
-              true
-
-            {:error, error} ->
-              Logger.error("""
-              Error while checking if token is revoked.
-              We must assume that it is revoked for security purposes.
-
-              #{Exception.format(:error, error)}
-              """)
-
-              true
-          end
+          true
       end
     end
   end
@@ -168,83 +131,39 @@ defmodule AshAuthentication.TokenResource.Actions do
   def jti_revoked?(resource, jti, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
          {:ok, domain} <- Info.token_domain(resource),
-         {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource),
-         action when not is_nil(action) <-
-           Ash.Resource.Info.action(resource, is_revoked_action_name) do
-      case action.type do
-        :action ->
-          resource
-          |> Ash.ActionInput.for_action(
-            is_revoked_action_name,
-            %{"jti" => jti},
-            Keyword.take(Keyword.put(opts, :domain, domain), [
-              :actor,
-              :authorize?,
-              :context,
-              :tenant,
-              :tracer,
-              :domain
-            ])
-          )
-          |> Ash.ActionInput.set_context(%{
-            private: %{
-              ash_authentication?: true
-            }
-          })
-          |> Ash.run_action()
-          |> case do
-            {:ok, value} ->
-              value
+         {:ok, is_revoked_action_name} <- Info.token_revocation_is_revoked_action_name(resource) do
+      resource
+      |> Ash.ActionInput.for_action(
+        is_revoked_action_name,
+        %{"jti" => jti},
+        Keyword.take(Keyword.put(opts, :domain, domain), [
+          :actor,
+          :authorize?,
+          :context,
+          :tenant,
+          :tracer,
+          :domain
+        ])
+      )
+      |> Ash.ActionInput.set_context(%{
+        private: %{
+          ash_authentication?: true
+        }
+      })
+      |> Ash.run_action()
+      |> case do
+        {:ok, value} ->
+          value
 
-            {:error, error} ->
-              Logger.error("""
-              Error while checking if token is revoked.
-              We must assume that it is revoked for security purposes.
+        {:error, error} ->
+          Logger.error("""
+          Error while checking if token is revoked.
+          We must assume that it is revoked for security purposes.
 
-              #{Exception.format(:error, error)}
-              """)
+          #{Exception.format(:error, error)}
+          """)
 
-              true
-          end
-
-        :read ->
-          resource
-          |> Query.new()
-          |> Query.set_context(%{
-            private: %{
-              ash_authentication?: true
-            }
-          })
-          |> Query.for_read(
-            is_revoked_action_name,
-            %{"jti" => jti},
-            Keyword.take(Keyword.put(opts, :domain, domain), [
-              :actor,
-              :authorize?,
-              :context,
-              :tenant,
-              :tracer,
-              :domain
-            ])
-          )
-          |> Ash.read()
-          |> case do
-            {:ok, []} ->
-              false
-
-            {:ok, _} ->
-              true
-
-            {:error, error} ->
-              Logger.error("""
-              Error while checking if token is revoked.
-              We must assume that it is revoked for security purposes.
-
-              #{Exception.format(:error, error)}
-              """)
-
-              true
-          end
+          true
       end
     end
   end
