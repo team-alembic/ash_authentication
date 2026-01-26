@@ -84,48 +84,54 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   end
 
   defp check_password_and_confirmation(strategy, password, record, query, context) do
-    if strategy.hash_provider.valid?(
-         password,
-         Map.get(record, strategy.hashed_password_field)
-       ) do
-      if user_confirmed_if_needed(record, strategy) do
-        token_type = query.context[:token_type] || :user
-        extra_claims = query.context[:extra_token_claims] || %{}
+    with :ok <- validate_password(strategy, password, record),
+         :ok <- validate_user_confirmed(strategy, record, query) do
+      token_type = query.context[:token_type] || :user
+      extra_claims = query.context[:extra_token_claims] || %{}
 
-        {:ok,
-         [
-           maybe_generate_token(
+      case maybe_generate_token(
              token_type,
              record,
              strategy,
              extra_claims,
              Ash.Context.to_opts(context)
-           )
-         ]}
-      else
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           query: query,
-           caused_by:
-             UnconfirmedUser.exception(
-               resource: query.resource,
-               field: strategy.identity_field,
-               confirmation_field: strategy.require_confirmed_with
-             )
-         )}
+           ) do
+        {:ok, record} -> {:ok, [record]}
+        {:error, error} -> {:error, error}
       end
+    end
+  end
+
+  defp validate_password(strategy, password, record) do
+    if strategy.hash_provider.valid?(password, Map.get(record, strategy.hashed_password_field)) do
+      :ok
+    else
+      {:error,
+       AuthenticationFailed.exception(
+         strategy: strategy,
+         caused_by: %{
+           module: __MODULE__,
+           action: :sign_in,
+           message: "Password is not valid"
+         }
+       )}
+    end
+  end
+
+  defp validate_user_confirmed(strategy, record, query) do
+    if user_confirmed_if_needed(record, strategy) do
+      :ok
     else
       {:error,
        AuthenticationFailed.exception(
          strategy: strategy,
          query: query,
-         caused_by: %{
-           module: __MODULE__,
-           action: query.action,
-           resource: query.resource,
-           message: "Password is not valid"
-         }
+         caused_by:
+           UnconfirmedUser.exception(
+             resource: query.resource,
+             field: strategy.identity_field,
+             confirmation_field: strategy.require_confirmed_with
+           )
        )}
     end
   end
@@ -150,7 +156,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
       generate_token(purpose, record, strategy, extra_claims, opts)
     else
-      record
+      {:ok, record}
     end
   end
 
@@ -158,24 +164,32 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
        when strategy.sign_in_tokens_enabled? do
     claims = Map.put(extra_claims, "purpose", "sign_in")
 
-    {:ok, token, _claims} =
-      Jwt.token_for_user(
-        record,
-        claims,
-        Keyword.merge(opts,
-          token_lifetime: strategy.sign_in_token_lifetime,
-          purpose: :sign_in
-        )
-      )
+    case Jwt.token_for_user(
+           record,
+           claims,
+           Keyword.merge(opts,
+             token_lifetime: strategy.sign_in_token_lifetime,
+             purpose: :sign_in
+           )
+         ) do
+      {:ok, token, _claims} ->
+        {:ok, Ash.Resource.put_metadata(record, :token, token)}
 
-    Ash.Resource.put_metadata(record, :token, token)
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   defp generate_token(purpose, record, _strategy, extra_claims, opts) do
     claims = Map.put(extra_claims, "purpose", to_string(purpose))
-    {:ok, token, _claims} = Jwt.token_for_user(record, claims, opts)
 
-    Ash.Resource.put_metadata(record, :token, token)
+    case Jwt.token_for_user(record, claims, opts) do
+      {:ok, token, _claims} ->
+        {:ok, Ash.Resource.put_metadata(record, :token, token)}
+
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   def user_confirmed_if_needed(_user, %{require_confirmed_with: nil} = _strategy), do: true

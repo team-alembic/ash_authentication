@@ -31,7 +31,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange do
   """
   use Ash.Resource.Change
   alias Ash.Resource
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, Utils}
+  alias AshAuthentication.{Info, Jwt, Utils}
 
   @impl true
   def change(changeset, options, context) do
@@ -90,18 +90,8 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenChange do
 
         {:ok, user_with_meta}
 
-      :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           query: nil,
-           caused_by: %{
-             module: __MODULE__,
-             action: changeset.action,
-             resource: changeset.resource,
-             message: "Unable to generate remember me token"
-           }
-         )}
+      {:error, error} ->
+        {:error, error}
     end
   end
 end

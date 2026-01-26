@@ -34,19 +34,9 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
                {:subject_matches, URI.parse(subject)} do
           changeset
           |> Changeset.force_change_attribute(strategy.identity_field, identity)
-          |> Changeset.after_transaction(fn
-            changeset, {:ok, record} ->
-              revoke_single_use_token!(strategy, changeset, token, context)
-              extra_claims = changeset.context[:extra_token_claims] || %{}
-
-              {:ok, token, _claims} =
-                Jwt.token_for_user(record, extra_claims, Ash.Context.to_opts(context))
-
-              {:ok, Resource.put_metadata(record, :token, token)}
-
-            _changeset, {:error, error} ->
-              {:error, error}
-          end)
+          |> Changeset.after_transaction(
+            &handle_transaction_result(&1, &2, strategy, token, context)
+          )
         else
           e ->
             reason = error_reason(e, strategy)
@@ -69,6 +59,23 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
           changeset,
           "No strategy in context, and no strategy found for action #{inspect(changeset.resource)}.#{changeset.action.name}"
         )
+    end
+  end
+
+  defp handle_transaction_result(changeset, {:ok, record}, strategy, token, context) do
+    revoke_single_use_token!(strategy, changeset, token, context)
+    extra_claims = changeset.context[:extra_token_claims] || %{}
+    generate_token_for_record(record, extra_claims, context)
+  end
+
+  defp handle_transaction_result(_changeset, {:error, error}, _strategy, _token, _context) do
+    {:error, error}
+  end
+
+  defp generate_token_for_record(record, extra_claims, context) do
+    case Jwt.token_for_user(record, extra_claims, Ash.Context.to_opts(context)) do
+      {:ok, token, _claims} -> {:ok, Resource.put_metadata(record, :token, token)}
+      {:error, error} -> {:error, error}
     end
   end
 

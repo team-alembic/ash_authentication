@@ -176,7 +176,8 @@ defmodule DataCase do
   end
 
   @doc "Generate a remember me token for a user"
-  @spec generate_remember_me_token(Example.UserWithRememberMe.t()) :: {:ok, String.t()} | :error
+  @spec generate_remember_me_token(Example.UserWithRememberMe.t()) ::
+          {:ok, String.t()} | {:error, any()}
   def generate_remember_me_token(user) do
     claims = %{"purpose" => "remember_me"}
 
@@ -187,7 +188,7 @@ defmodule DataCase do
 
     case AshAuthentication.Jwt.token_for_user(user, claims, opts) do
       {:ok, token, _claims} -> {:ok, token}
-      :error -> :error
+      {:error, error} -> {:error, error}
     end
   end
 
