@@ -11,6 +11,61 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.0](https://github.com/team-alembic/ash_authentication/compare/v4.13.7...v5.0.0-rc.0) (2026-01-27)
+### Breaking Changes:
+
+* propagate sender failures as action errors (#1126) by James Harton
+
+* propagate sender failures as action errors by James Harton
+
+* convert request actions from read to generic action (#1125) by James Harton
+
+* change token revoked action from read to generic action (#1124) by James Harton
+
+
+
+### Features:
+
+* Add TOTP authentication strategy. (#1086) by James Harton
+
+* add TOTP authentication components and routes by James Harton
+
+* totp: add `read_secret_from` option for AshCloak support by James Harton
+
+* add support for extra JWT claims (#1122) by James Harton
+
+* make auto signout possible in AshAuthentication.Phoenix  (#1070) by Abdessabour Moutik
+
+* added options to allow for the specification of the endpoints + a template function for the live socket id by Abdessabour Moutik
+
+### Bug Fixes:
+
+* add backwards compatibility for confirmation sender return values by James Harton
+
+* address PR review feedback by James Harton
+
+* address PR review feedback by James Harton
+
+* address additional PR review feedback by James Harton
+
+* add nimble_totp as required dependency by James Harton
+
+* restore code accidentally removed during rebase by James Harton
+
+* return `{:error, AuthenticationFailed.t}` from `Jwt.token_for_user/2` (#1123) by James Harton
+
+* validate ApiKey.Plug header prefix regex starts with a ^ (start of line check) by skanderm
+
+* use `inspect/1` for regex in error message by skanderm
+
+* preserve existing context when adding request context (#1121) by James Harton
+
+* add `token` to Phoenix filter_parameters during installation (#1120) by James Harton
+
+### Improvements:
+
+* consolidate audit log code and remove redundant nil checks by James Harton
+
 ## [v4.13.7](https://github.com/team-alembic/ash_authentication/compare/v4.13.6...v4.13.7) (2026-01-13)
 
 
