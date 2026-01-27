@@ -11,8 +11,14 @@ defmodule AshAuthentication.Sender do
   [ex_twilio](https://hex.pm/packages/ex_twilio) or whatever notification system
   is appropriate for your application.
 
-  Note that the return value and any failures are ignored.  If you need retry
-  logic, etc, then you should implement it in your sending system.
+  Senders should return `:ok` on success or `{:error, reason}` on failure.
+  Failures will propagate as `AshAuthentication.Errors.SenderFailed` errors
+  and cause the authentication action to fail.
+
+  If you need retry logic or want to avoid blocking the action on email delivery,
+  consider using a job queue like [Oban](https://hex.pm/packages/oban). Your sender
+  can insert a job and return `:ok` immediately, letting the job handle delivery
+  and retries asynchronously.
 
   ## Example
 
@@ -41,6 +47,10 @@ defmodule AshAuthentication.Sender do
         </a>
       """)
       |> MyApp.Mailer.deliver()
+      |> case do
+        {:ok, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
@@ -91,8 +101,11 @@ defmodule AshAuthentication.Sender do
 
   This function will be called with a value representing a user, the token and any options passed
   to the module in the DSL.
+
+  Should return `:ok` on success or `{:error, reason}` on failure.
   """
-  @callback send(user :: Resource.record() | String.t(), token :: String.t(), opts :: list) :: :ok
+  @callback send(user :: Resource.record() | String.t(), token :: String.t(), opts :: list) ::
+              :ok | {:error, term()}
 
   @doc false
   @spec __using__(any) :: Macro.t()

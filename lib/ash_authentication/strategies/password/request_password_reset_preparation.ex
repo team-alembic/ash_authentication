@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
-  alias AshAuthentication.{Info, Strategy.Password}
+  alias AshAuthentication.{Errors.SenderFailed, Info, Strategy.Password}
   require Ash.Query
 
   @doc false
@@ -46,12 +46,19 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordResetPreparation do
   end
 
   defp after_action(_query, [user], %{resettable: %{sender: {sender, send_opts}}} = strategy) do
-    case Password.reset_token_for(strategy, user) do
-      {:ok, token} -> sender.send(user, token, send_opts)
-      _ -> nil
-    end
+    with {:ok, token} <- Password.reset_token_for(strategy, user),
+         :ok <- sender.send(user, token, send_opts) do
+      {:ok, []}
+    else
+      {:error, reason} when not is_struct(reason) ->
+        {:error, SenderFailed.exception(sender: sender, reason: reason, strategy: strategy.name)}
 
-    {:ok, []}
+      {:error, _} = error ->
+        error
+
+      _ ->
+        {:ok, []}
+    end
   end
 
   defp after_action(_query, _, _), do: {:ok, []}

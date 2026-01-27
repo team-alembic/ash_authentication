@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
-  alias AshAuthentication.{Info, Strategy.MagicLink}
+  alias AshAuthentication.{Errors.SenderFailed, Info, Strategy.MagicLink}
   require Ash.Query
 
   @doc false
@@ -46,12 +46,19 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
   defp after_action(_query, [user], %{sender: {sender, send_opts}} = strategy, _identity, context) do
     context_opts = Ash.Context.to_opts(context)
 
-    case MagicLink.request_token_for(strategy, user, context_opts, context) do
-      {:ok, token} -> sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant))
-      _ -> nil
-    end
+    with {:ok, token} <- MagicLink.request_token_for(strategy, user, context_opts, context),
+         :ok <- sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant)) do
+      {:ok, []}
+    else
+      {:error, reason} when not is_struct(reason) ->
+        {:error, SenderFailed.exception(sender: sender, reason: reason, strategy: strategy.name)}
 
-    {:ok, []}
+      {:error, _} = error ->
+        error
+
+      _ ->
+        {:ok, []}
+    end
   end
 
   defp after_action(
@@ -64,15 +71,25 @@ defmodule AshAuthentication.Strategy.MagicLink.RequestPreparation do
        when not is_nil(identity) do
     context_opts = Ash.Context.to_opts(context)
 
-    case MagicLink.request_token_for_identity(strategy, identity, context_opts, context) do
-      {:ok, token} ->
-        sender.send(to_string(identity), token, Keyword.put(send_opts, :tenant, context.tenant))
+    with {:ok, token} <-
+           MagicLink.request_token_for_identity(strategy, identity, context_opts, context),
+         :ok <-
+           sender.send(
+             to_string(identity),
+             token,
+             Keyword.put(send_opts, :tenant, context.tenant)
+           ) do
+      {:ok, []}
+    else
+      {:error, reason} when not is_struct(reason) ->
+        {:error, SenderFailed.exception(sender: sender, reason: reason, strategy: strategy.name)}
+
+      {:error, _} = error ->
+        error
 
       _ ->
-        nil
+        {:ok, []}
     end
-
-    {:ok, []}
   end
 
   defp after_action(_, _, _, _, _) do
