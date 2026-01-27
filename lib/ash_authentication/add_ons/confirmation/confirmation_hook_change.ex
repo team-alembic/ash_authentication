@@ -373,6 +373,11 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
       {:error, _} = error ->
         error
+
+      # Backwards compatibility: treat other return values (e.g. {:ok, email} from mailers) as success
+      _ ->
+        metadata = Map.put(user.__metadata__, :confirmation_token, token)
+        {:ok, %{user | __metadata__: metadata}}
     end
   end
 
