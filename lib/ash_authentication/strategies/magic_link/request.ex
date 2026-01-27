@@ -8,7 +8,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
   """
   use Ash.Resource.Actions.Implementation
   alias Ash.{ActionInput, Query}
-  alias AshAuthentication.{Info, Strategy.MagicLink}
+  alias AshAuthentication.{Errors.SenderFailed, Info, Strategy.MagicLink}
   # require Ash.Query
 
   @doc false
@@ -38,17 +38,24 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
         with true <- strategy.registration_enabled?,
              {sender, send_opts} <- strategy.sender,
              {:ok, token} <-
-               MagicLink.request_token_for_identity(strategy, identity, context_opts, context) do
-          build_opts =
-            Keyword.merge(send_opts,
-              tenant: context.tenant,
-              source_context: context.source_context
-            )
-
-          sender.send(to_string(identity), token, build_opts)
-
+               MagicLink.request_token_for_identity(strategy, identity, context_opts, context),
+             build_opts =
+               Keyword.merge(send_opts,
+                 tenant: context.tenant,
+                 source_context: context.source_context
+               ),
+             :ok <- sender.send(to_string(identity), token, build_opts) do
           :ok
         else
+          {:error, reason} when not is_struct(reason) ->
+            {sender, _} = strategy.sender
+
+            {:error,
+             SenderFailed.exception(sender: sender, reason: reason, strategy: strategy.name)}
+
+          {:error, _} = error ->
+            error
+
           _ ->
             :ok
         end
@@ -56,17 +63,24 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
       {:ok, user} ->
         with {sender, send_opts} <- strategy.sender,
              {:ok, token} <-
-               MagicLink.request_token_for_identity(strategy, identity, context_opts, context) do
-          build_opts =
-            Keyword.merge(send_opts,
-              tenant: context.tenant,
-              source_context: context.source_context
-            )
-
-          sender.send(user, token, build_opts)
-
+               MagicLink.request_token_for_identity(strategy, identity, context_opts, context),
+             build_opts =
+               Keyword.merge(send_opts,
+                 tenant: context.tenant,
+                 source_context: context.source_context
+               ),
+             :ok <- sender.send(user, token, build_opts) do
           :ok
         else
+          {:error, reason} when not is_struct(reason) ->
+            {sender, _} = strategy.sender
+
+            {:error,
+             SenderFailed.exception(sender: sender, reason: reason, strategy: strategy.name)}
+
+          {:error, _} = error ->
+            error
+
           _ ->
             :ok
         end

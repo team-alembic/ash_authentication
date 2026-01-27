@@ -18,6 +18,7 @@ defmodule Example do
     resource Example.UserWithExcludedActions
     resource Example.UserWithExcludedStrategies
     resource Example.UserWithExplicitIncludes
+    resource Example.UserWithFailingSender
     resource Example.UserWithRegisterMagicLink
     resource Example.UserWithRememberMe
     resource Example.UserWithSelectiveStrategyIncludes

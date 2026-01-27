@@ -40,7 +40,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Error.Changes.InvalidChanges, Query, Resource.Change}
-  alias AshAuthentication.{AddOn.Confirmation, Info}
+  alias AshAuthentication.{AddOn.Confirmation, Errors.SenderFailed, Info}
   import Ash.Expr
   require Logger
 
@@ -329,35 +329,52 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmationHookChange do
     changeset
     |> nil_confirmed_at_field(strategy)
     |> Changeset.after_action(fn _changeset, user ->
-      strategy
-      |> Confirmation.confirmation_token(original_changeset, user, Ash.Context.to_opts(context))
-      |> case do
-        {:ok, token} ->
-          {sender, send_opts} = strategy.sender
-
-          send_opts
-          |> Keyword.put(:tenant, context.tenant)
-          |> Keyword.put(:changeset, original_changeset)
-          |> then(&sender.send(user, token, &1))
-
-          metadata =
-            user.__metadata__
-            |> Map.put(:confirmation_token, token)
-
-          {:ok, %{user | __metadata__: metadata}}
-
-        {:error, error} ->
-          Logger.error(
-            "Failed to generate confirmation token\n: #{Exception.format(:error, error)}"
-          )
-
-          {:ok, user}
-      end
+      send_confirmation_token(strategy, original_changeset, user, context)
     end)
   end
 
   defp maybe_perform_confirmation(_changeset, _strategy, original_changeset, _context),
     do: original_changeset
+
+  defp send_confirmation_token(strategy, original_changeset, user, context) do
+    case Confirmation.confirmation_token(
+           strategy,
+           original_changeset,
+           user,
+           Ash.Context.to_opts(context)
+         ) do
+      {:ok, token} ->
+        invoke_confirmation_sender(strategy, user, token, original_changeset, context)
+
+      {:error, error} ->
+        Logger.error(
+          "Failed to generate confirmation token\n: #{Exception.format(:error, error)}"
+        )
+
+        {:ok, user}
+    end
+  end
+
+  defp invoke_confirmation_sender(strategy, user, token, original_changeset, context) do
+    {sender, send_opts} = strategy.sender
+
+    send_opts =
+      send_opts
+      |> Keyword.put(:tenant, context.tenant)
+      |> Keyword.put(:changeset, original_changeset)
+
+    case sender.send(user, token, send_opts) do
+      :ok ->
+        metadata = Map.put(user.__metadata__, :confirmation_token, token)
+        {:ok, %{user | __metadata__: metadata}}
+
+      {:error, reason} when not is_struct(reason) ->
+        {:error, SenderFailed.exception(sender: sender, reason: reason, strategy: strategy.name)}
+
+      {:error, _} = error ->
+        error
+    end
+  end
 
   defp nil_confirmed_at_field(changeset, strategy) do
     # If we're updating values, and we are inhibiting values on the changes (enforced at the call site)
