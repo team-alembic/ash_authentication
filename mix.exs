@@ -125,7 +125,8 @@ defmodule AshAuthentication.MixProject do
         "documentation/tutorials/google.md",
         "documentation/tutorials/magic-links.md",
         "documentation/tutorials/password.md",
-        "documentation/tutorials/slack.md"
+        "documentation/tutorials/slack.md",
+        "documentation/tutorials/totp.md"
       ],
       groups_for_extras: [
         "Start Here": [
