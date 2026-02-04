@@ -65,12 +65,23 @@ defmodule AshAuthentication.Strategy.Totp.TotpUrlCalculation do
   @impl true
   def calculate(records, opts, context) do
     strategy_name = Keyword.fetch!(opts, :strategy_name)
-    resource = context.resource
-    strategy = AshAuthentication.Info.strategy!(resource, strategy_name)
 
-    Enum.map(records, fn record ->
-      build_totp_url(record, strategy)
-    end)
+    resource =
+      context[:resource] || context.resource ||
+        case records do
+          [record | _] -> record.__struct__
+          _ -> nil
+        end
+
+    case resource && AshAuthentication.Info.strategy(resource, strategy_name) do
+      {:ok, strategy} ->
+        Enum.map(records, fn record ->
+          build_totp_url(record, strategy)
+        end)
+
+      _ ->
+        Enum.map(records, fn _ -> nil end)
+    end
   end
 
   defp build_totp_url(record, strategy) do
