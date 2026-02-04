@@ -40,6 +40,7 @@ attributes do
 
   attribute :last_totp_at, :utc_datetime do
     allow_nil? true
+    sensitive? true
     public? false
   end
 end
