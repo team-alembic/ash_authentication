@@ -959,8 +959,17 @@ if Code.ensure_loaded?(Igniter) do
           sensitive? true
         end
 
+        argument :remember_me, :boolean do
+          description "Whether to generate a remember me token"
+          allow_nil? true
+        end
+
         # validates the provided #{options[:identity_field]} and password and generates a token
         prepare AshAuthentication.Strategy.Password.SignInPreparation
+
+        # generates a remember me token if the remember_me argument is true
+        prepare {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation,
+                strategy_name: :remember_me}
 
         metadata :token, :string do
           description "A JWT that can be used to authenticate the user."

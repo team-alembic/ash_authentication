@@ -171,8 +171,19 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       + |        sensitive?(true)
       + |      end
       + |
+      + |      argument :remember_me, :boolean do
+      + |        description("Whether to generate a remember me token")
+      + |        allow_nil?(true)
+      + |      end
+      + |
       + |      # validates the provided email and password and generates a token
       + |      prepare(AshAuthentication.Strategy.Password.SignInPreparation)
+      + |
+      + |      # generates a remember me token if the remember_me argument is true
+      + |      prepare(
+      + |        {AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation,
+      + |         strategy_name: :remember_me}
+      + |      )
       + |
       + |      metadata :token, :string do
       + |        description("A JWT that can be used to authenticate the user.")
