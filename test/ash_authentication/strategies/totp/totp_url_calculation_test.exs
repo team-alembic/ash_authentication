@@ -4,7 +4,7 @@
 
 defmodule AshAuthentication.Strategy.Totp.TotpUrlCalculationTest do
   @moduledoc false
-  use ExUnit.Case, async: true
+  use DataCase, async: true
 
   alias AshAuthentication.Strategy.Totp.TotpUrlCalculation
 
@@ -226,6 +226,94 @@ defmodule AshAuthentication.Strategy.Totp.TotpUrlCalculationTest do
       code_from_url = NimbleTOTP.verification_code(decoded_secret)
 
       assert code == code_from_url
+    end
+  end
+
+  describe "calculate/3 integration" do
+    test "works with real Ash.Resource.Calculation.Context struct" do
+      user = build_user_with_totp()
+      secret = NimbleTOTP.secret()
+
+      user =
+        user
+        |> Ash.Changeset.for_update(:update, %{})
+        |> Ash.Changeset.force_change_attribute(:totp_secret, secret)
+        |> Ash.update!()
+
+      context = %Ash.Resource.Calculation.Context{
+        actor: nil,
+        tenant: nil,
+        authorize?: false,
+        tracer: nil,
+        domain: Example,
+        resource: Example.UserWithTotp,
+        type: Ash.Type.String,
+        constraints: [],
+        arguments: %{},
+        source_context: %{}
+      }
+
+      opts = [strategy_name: :totp]
+
+      result = TotpUrlCalculation.calculate([user], opts, context)
+
+      assert [url] = result
+      assert url =~ "otpauth://totp/"
+      assert url =~ "secret="
+    end
+
+    test "returns nil when user has no secret" do
+      user = build_user_with_totp()
+
+      context = %Ash.Resource.Calculation.Context{
+        actor: nil,
+        tenant: nil,
+        authorize?: false,
+        tracer: nil,
+        domain: Example,
+        resource: Example.UserWithTotp,
+        type: Ash.Type.String,
+        constraints: [],
+        arguments: %{},
+        source_context: %{}
+      }
+
+      opts = [strategy_name: :totp]
+
+      result = TotpUrlCalculation.calculate([user], opts, context)
+
+      assert [nil] = result
+    end
+
+    test "infers resource from records when context.resource is nil" do
+      user = build_user_with_totp()
+      secret = NimbleTOTP.secret()
+
+      user =
+        user
+        |> Ash.Changeset.for_update(:update, %{})
+        |> Ash.Changeset.force_change_attribute(:totp_secret, secret)
+        |> Ash.update!()
+
+      context = %Ash.Resource.Calculation.Context{
+        actor: nil,
+        tenant: nil,
+        authorize?: false,
+        tracer: nil,
+        domain: Example,
+        resource: nil,
+        type: Ash.Type.String,
+        constraints: [],
+        arguments: %{},
+        source_context: %{}
+      }
+
+      opts = [strategy_name: :totp]
+
+      result = TotpUrlCalculation.calculate([user], opts, context)
+
+      assert [url] = result
+      assert url =~ "otpauth://totp/"
     end
   end
 end

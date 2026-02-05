@@ -67,7 +67,7 @@ defmodule AshAuthentication.Strategy.Totp.TotpUrlCalculation do
     strategy_name = Keyword.fetch!(opts, :strategy_name)
 
     resource =
-      context[:resource] || context.resource ||
+      context.resource ||
         case records do
           [record | _] -> record.__struct__
           _ -> nil
