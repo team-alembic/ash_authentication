@@ -47,4 +47,25 @@ defmodule AshAuthentication.Strategy.Totp.Helpers do
   end
 
   def validate_totp_code(_), do: {:error, :invalid_format}
+
+  @doc """
+  Validates a TOTP code against a secret, respecting the strategy's grace period.
+
+  When `grace_period` is nil, calls `NimbleTOTP.valid?/3` directly.
+  When set to `n`, also accepts codes from the previous `n` time periods.
+  """
+  @spec valid_totp?(binary, binary, AshAuthentication.Strategy.Totp.t(), keyword) :: boolean
+  def valid_totp?(secret, code, strategy, opts \\ []) do
+    base_opts = [period: strategy.period] ++ opts
+
+    if strategy.grace_period do
+      time = System.os_time(:second)
+
+      Enum.any?(0..strategy.grace_period, fn i ->
+        NimbleTOTP.valid?(secret, code, [{:time, time - i * strategy.period} | base_opts])
+      end)
+    else
+      NimbleTOTP.valid?(secret, code, base_opts)
+    end
+  end
 end

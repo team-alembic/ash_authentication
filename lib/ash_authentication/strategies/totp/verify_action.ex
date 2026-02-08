@@ -30,7 +30,7 @@ defmodule AshAuthentication.Strategy.Totp.VerifyAction do
            Ash.load(user, [strategy.read_secret_from, strategy.last_totp_at_field], load_opts) do
       secret = Map.get(user, strategy.read_secret_from)
       last_totp_at = Helpers.datetime_to_unix(Map.get(user, strategy.last_totp_at_field))
-      {:ok, NimbleTOTP.valid?(secret, totp_code, since: last_totp_at, period: strategy.period)}
+      {:ok, Helpers.valid_totp?(secret, totp_code, strategy, since: last_totp_at)}
     else
       {:error, :invalid_format} -> {:ok, false}
       other -> other
