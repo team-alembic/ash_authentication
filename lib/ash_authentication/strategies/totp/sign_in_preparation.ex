@@ -70,7 +70,7 @@ defmodule AshAuthentication.Strategy.Totp.SignInPreparation do
     secret = Map.get(record, strategy.read_secret_from)
     last_totp_at = Helpers.datetime_to_unix(Map.get(record, strategy.last_totp_at_field))
 
-    if NimbleTOTP.valid?(secret, totp_code, since: last_totp_at, period: strategy.period) do
+    if Helpers.valid_totp?(secret, totp_code, strategy, since: last_totp_at) do
       :ok
     else
       {:error, :invalid_code}

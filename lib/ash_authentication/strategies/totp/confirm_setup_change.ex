@@ -118,7 +118,7 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
   end
 
   defp verify_code(secret, code, strategy) do
-    if NimbleTOTP.valid?(secret, code, period: strategy.period) do
+    if Helpers.valid_totp?(secret, code, strategy) do
       :ok
     else
       {:error, invalid_code_error(strategy)}

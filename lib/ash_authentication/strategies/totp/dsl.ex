@@ -80,6 +80,13 @@ defmodule AshAuthentication.Strategy.Totp.Dsl do
           default: 30,
           required: false
         ],
+        grace_period: [
+          type: {:or, [:non_neg_integer, {:literal, nil}]},
+          doc:
+            "The number of additional previous time periods to accept when validating TOTP codes. For example, `1` also accepts the previous period's code. See the [NimbleTOTP grace period docs](https://hexdocs.pm/nimble_totp/NimbleTOTP.html#valid?/3-grace-period). Defaults to `nil` (no grace period).",
+          default: nil,
+          required: false
+        ],
         setup_enabled?: [
           type: :boolean,
           doc:
