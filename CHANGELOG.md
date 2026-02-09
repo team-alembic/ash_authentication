@@ -11,6 +11,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.1](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.0...v5.0.0-rc.1) (2026-02-09)
+
+
+
+
+### Bug Fixes:
+
+* use struct access for calculation context (#1133) by James Harton
+
+* use struct access for calculation context by James Harton
+
+* improve TOTP documentation and calculation robustness (#1130) by James Harton
+
+* improve TOTP documentation and calculation robustness by James Harton
+
+### Improvements:
+
+* add `grace_period` option to TOTP strategy (#1134) by James Harton
+
+* add `remember_me` to password sign-in strategy by default (#1131) by Zach Daniel
+
 ## [v5.0.0-rc.0](https://github.com/team-alembic/ash_authentication/compare/v4.13.7...v5.0.0-rc.0) (2026-01-27)
 ### Breaking Changes:
 
