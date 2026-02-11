@@ -274,6 +274,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.OAuth2",
       "AshAuthentication.Strategy.Oidc",
       "AshAuthentication.Strategy.Password",
+      "AshAuthentication.Strategy.RecoveryCode",
       "AshAuthentication.Strategy.RememberMe",
       "AshAuthentication.Strategy.Slack",
       "AshAuthentication.Strategy.Totp",
