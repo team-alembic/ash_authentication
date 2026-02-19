@@ -43,15 +43,17 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
         }
       })
       |> Changeset.for_update(strategy.confirm_action_name, params, opts)
-      |> Changeset.after_action(fn _changeset, record ->
-        case TokenResource.revoke(token_resource, token, opts) do
-          :ok -> {:ok, record}
-          {:error, reason} -> {:error, reason}
-        end
-      end)
+      |> Changeset.after_action(&revoke_token_after_confirm(&1, &2, token_resource, token, opts))
       |> Ash.update()
     else
       :error -> {:error, InvalidToken.exception(type: :confirmation)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp revoke_token_after_confirm(_changeset, record, token_resource, token, opts) do
+    case TokenResource.revoke(token_resource, token, opts) do
+      :ok -> {:ok, record}
       {:error, reason} -> {:error, reason}
     end
   end

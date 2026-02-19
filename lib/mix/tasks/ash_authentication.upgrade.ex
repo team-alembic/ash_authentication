@@ -160,19 +160,23 @@ if Code.ensure_loaded?(Igniter) do
         with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Ash.Resource),
              {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
              {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :extensions) do
-          if Igniter.Code.List.list?(zipper) do
-            match?(
-              {:ok, _},
-              Igniter.Code.List.move_to_list_item(
-                zipper,
-                &Igniter.Code.Common.nodes_equal?(&1, AshAuthentication.TokenResource)
-              )
-            )
-          else
-            Igniter.Code.Common.nodes_equal?(zipper, AshAuthentication.TokenResource)
-          end
+          extensions_contain_token_resource?(zipper)
         end
       end)
+    end
+
+    defp extensions_contain_token_resource?(zipper) do
+      if Igniter.Code.List.list?(zipper) do
+        match?(
+          {:ok, _},
+          Igniter.Code.List.move_to_list_item(
+            zipper,
+            &Igniter.Code.Common.nodes_equal?(&1, AshAuthentication.TokenResource)
+          )
+        )
+      else
+        Igniter.Code.Common.nodes_equal?(zipper, AshAuthentication.TokenResource)
+      end
     end
 
     defp maybe_fix_is_revoked_action(igniter, resource) do
@@ -221,23 +225,27 @@ if Code.ensure_loaded?(Igniter) do
                &Igniter.Code.Function.argument_equals?(&1, 0, argument_name)
              ),
            {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 2) do
-        if Igniter.Code.List.find_list_item_index(
+        remove_option_from_argument(zipper, option)
+      end
+    end
+
+    defp remove_option_from_argument(zipper, option) do
+      if Igniter.Code.List.find_list_item_index(
+           zipper,
+           &Igniter.Code.Tuple.elem_equals?(&1, 0, :do)
+         ) do
+        Igniter.Code.Common.within(zipper, fn zipper ->
+          {:ok,
+           Igniter.Code.Common.remove(
              zipper,
-             &Igniter.Code.Tuple.elem_equals?(&1, 0, :do)
-           ) do
-          Igniter.Code.Common.within(zipper, fn zipper ->
-            {:ok,
-             Igniter.Code.Common.remove(
-               zipper,
-               &Igniter.Code.Function.function_call?(&1, option, 1)
-             )}
-          end)
-        else
-          Igniter.Code.List.remove_from_list(
-            zipper,
-            &Igniter.Code.Tuple.elem_equals?(&1, 0, option)
-          )
-        end
+             &Igniter.Code.Function.function_call?(&1, option, 1)
+           )}
+        end)
+      else
+        Igniter.Code.List.remove_from_list(
+          zipper,
+          &Igniter.Code.Tuple.elem_equals?(&1, 0, option)
+        )
       end
     end
 
@@ -428,28 +436,32 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.Project.Module.find_all_matching_modules(igniter, fn _module, zipper ->
         with {:ok, zipper} <- enter_auth_strategies(zipper),
              true <- has_strategy?(zipper, :password) do
-          with {:ok, password_zipper} <-
-                 Igniter.Code.Function.move_to_function_call_in_current_scope(
-                   zipper,
-                   :password,
-                   [1, 2]
-                 ),
-               {:ok, do_block} <- Igniter.Code.Common.move_to_do_block(password_zipper) do
-            match?(
-              {:ok, _},
-              Igniter.Code.Function.move_to_function_call_in_current_scope(
-                do_block,
-                :resettable,
-                1
-              )
-            )
-          else
-            _ -> false
-          end
+          password_has_resettable?(zipper)
         else
           _ -> false
         end
       end)
+    end
+
+    defp password_has_resettable?(zipper) do
+      with {:ok, password_zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :password,
+               [1, 2]
+             ),
+           {:ok, do_block} <- Igniter.Code.Common.move_to_do_block(password_zipper) do
+        match?(
+          {:ok, _},
+          Igniter.Code.Function.move_to_function_call_in_current_scope(
+            do_block,
+            :resettable,
+            1
+          )
+        )
+      else
+        _ -> false
+      end
     end
 
     defp convert_password_reset_request_action(igniter, resource) do
@@ -615,19 +627,21 @@ if Code.ensure_loaded?(Igniter) do
           action_zipper
           |> Sourceror.Zipper.remove()
           |> Sourceror.Zipper.top()
-          |> then(fn zipper ->
-            with {:ok, actions_zipper} <- move_to_actions_block(zipper),
-                 {:ok, do_block} <- Igniter.Code.Common.move_to_do_block(actions_zipper) do
-              Igniter.Code.Common.add_code(do_block, new_action_code)
-              |> Sourceror.Zipper.top()
-            else
-              _ -> zipper
-            end
-          end)
+          |> replace_with_generic_action(new_action_code)
           |> then(&{:ok, &1})
 
         :error ->
           {:ok, zipper}
+      end
+    end
+
+    defp replace_with_generic_action(zipper, new_action_code) do
+      with {:ok, actions_zipper} <- move_to_actions_block(zipper),
+           {:ok, do_block} <- Igniter.Code.Common.move_to_do_block(actions_zipper) do
+        Igniter.Code.Common.add_code(do_block, new_action_code)
+        |> Sourceror.Zipper.top()
+      else
+        _ -> zipper
       end
     end
 

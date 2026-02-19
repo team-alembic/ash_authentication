@@ -41,17 +41,14 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
           e ->
             reason = error_reason(e, strategy)
 
-            case Info.find_strategy(changeset, context, opts) do
-              {:ok, strategy} ->
-                Ash.Changeset.add_error(
-                  changeset,
-                  InvalidToken.exception(
-                    field: strategy.token_param_name,
-                    reason: reason,
-                    type: :magic_link
-                  )
-                )
-            end
+            Ash.Changeset.add_error(
+              changeset,
+              InvalidToken.exception(
+                field: strategy.token_param_name,
+                reason: reason,
+                type: :magic_link
+              )
+            )
         end
 
       _ ->

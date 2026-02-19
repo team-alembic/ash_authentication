@@ -24,43 +24,9 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
 
       query
       |> Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Ash.Query.before_action(fn query ->
-        api_key_relationship.destination
-        |> Ash.Query.do_filter(api_key_relationship.filter)
-        |> Ash.Query.filter(id == ^api_key_id)
-        |> maybe_load_tenant(strategy.multitenancy_relationship)
-        |> Query.set_context(%{private: %{ash_authentication?: true}})
-        |> Ash.read_one()
-        |> case do
-          {:ok, nil} ->
-            Plug.Crypto.secure_compare(
-              :crypto.hash(:sha256, random_bytes <> api_key_id),
-              Ecto.UUID.bingenerate() <> :crypto.strong_rand_bytes(32)
-            )
-
-            Ash.Query.filter(query, false)
-
-          {:ok, api_key} ->
-            check_api_key(
-              query,
-              api_key,
-              api_key_id,
-              strategy,
-              api_key_relationship,
-              random_bytes
-            )
-
-          {:error, error} ->
-            Ash.Query.add_error(
-              query,
-              AuthenticationFailed.exception(
-                strategy: strategy,
-                query: query,
-                caused_by: error
-              )
-            )
-        end
-      end)
+      |> Ash.Query.before_action(
+        &find_and_verify_api_key(&1, api_key_id, random_bytes, strategy, api_key_relationship)
+      )
     else
       _ ->
         Plug.Crypto.secure_compare(
@@ -69,6 +35,37 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
         )
 
         Query.do_filter(query, false)
+    end
+  end
+
+  defp find_and_verify_api_key(query, api_key_id, random_bytes, strategy, api_key_relationship) do
+    api_key_relationship.destination
+    |> Ash.Query.do_filter(api_key_relationship.filter)
+    |> Ash.Query.filter(id == ^api_key_id)
+    |> maybe_load_tenant(strategy.multitenancy_relationship)
+    |> Query.set_context(%{private: %{ash_authentication?: true}})
+    |> Ash.read_one()
+    |> case do
+      {:ok, nil} ->
+        Plug.Crypto.secure_compare(
+          :crypto.hash(:sha256, random_bytes <> api_key_id),
+          Ecto.UUID.bingenerate() <> :crypto.strong_rand_bytes(32)
+        )
+
+        Ash.Query.filter(query, false)
+
+      {:ok, api_key} ->
+        check_api_key(query, api_key, api_key_id, strategy, api_key_relationship, random_bytes)
+
+      {:error, error} ->
+        Ash.Query.add_error(
+          query,
+          AuthenticationFailed.exception(
+            strategy: strategy,
+            query: query,
+            caused_by: error
+          )
+        )
     end
   end
 
