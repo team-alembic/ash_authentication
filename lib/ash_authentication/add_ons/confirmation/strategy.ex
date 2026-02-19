@@ -9,7 +9,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.AddOn.Confirmation do
   """
 
   alias Ash.Resource
-  alias AshAuthentication.{Info, Strategy, AddOn.Confirmation}
+  alias AshAuthentication.{AddOn.Confirmation, Info, Strategy}
   alias Plug.Conn
 
   @typedoc "The request phases supposed by this strategy"

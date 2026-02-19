@@ -240,34 +240,36 @@ defmodule AshAuthentication do
     with {:ok, action_name} <- Info.authentication_get_by_subject_action_name(resource),
          action when not is_nil(action) <- Ash.Resource.Info.action(resource, action_name) do
       if Enum.any?(action.arguments, &(&1.name == :subject)) do
-        resource
-        |> Query.new()
-        |> Query.set_context(%{
-          private: %{
-            ash_authentication?: true
-          }
-        })
-        |> Query.for_read(
-          action_name,
-          %{subject: to_string(subject)},
-          Keyword.put(options, :not_found_error?, true)
-        )
-        |> Ash.read_one(not_found_error?: true)
-        |> case do
-          # This is here for backwards compatibility with the old api
-          # when this argument was not added
-          {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Query.NotFound{} = not_found]}} ->
-            {:error, not_found}
-
-          other ->
-            other
-        end
+        get_by_subject_action(resource, action_name, subject, options)
       else
         do_subject_to_user(subject, resource, options)
       end
     else
       _ ->
         {:error, NotFound.exception([])}
+    end
+  end
+
+  defp get_by_subject_action(resource, action_name, subject, options) do
+    resource
+    |> Query.new()
+    |> Query.set_context(%{
+      private: %{
+        ash_authentication?: true
+      }
+    })
+    |> Query.for_read(
+      action_name,
+      %{subject: to_string(subject)},
+      Keyword.put(options, :not_found_error?, true)
+    )
+    |> Ash.read_one(not_found_error?: true)
+    |> case do
+      {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Query.NotFound{} = not_found]}} ->
+        {:error, not_found}
+
+      other ->
+        other
     end
   end
 

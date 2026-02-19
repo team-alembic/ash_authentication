@@ -35,14 +35,16 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogChange do
     with {:ok, strategy} <- Info.find_strategy(changeset, context, opts),
          {:ok, audit_log} <- get_audit_log(changeset.resource, strategy),
          user when not is_nil(user) <- changeset.data do
-      Changeset.before_action(changeset, fn changeset ->
-        case check_rate_limit(user, strategy, audit_log, opts) do
-          :ok -> changeset
-          {:error, error} -> Changeset.add_error(changeset, error)
-        end
-      end)
+      Changeset.before_action(changeset, &apply_rate_limit(&1, user, strategy, audit_log, opts))
     else
       _ -> changeset
+    end
+  end
+
+  defp apply_rate_limit(changeset, user, strategy, audit_log, opts) do
+    case check_rate_limit(user, strategy, audit_log, opts) do
+      :ok -> changeset
+      {:error, error} -> Changeset.add_error(changeset, error)
     end
   end
 

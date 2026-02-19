@@ -38,29 +38,31 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
         ash_authentication?: true
       }
     })
-    |> Changeset.before_action(fn changeset ->
-      with token when is_binary(token) <-
-             Changeset.get_argument(changeset, :confirm),
-           {:ok, %{"act" => action, "jti" => jti}, _} <-
-             Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context)),
-           true <-
-             to_string(strategy.confirm_action_name) == action,
-           {:ok, changes} <- Actions.get_changes(strategy, jti, Ash.Context.to_opts(context)) do
-        allowed_changes =
-          if strategy.inhibit_updates?,
-            do: Map.take(changes, Enum.map(strategy.monitor_fields, &to_string/1)),
-            else: %{}
+    |> Changeset.before_action(&apply_confirmation_token(&1, strategy, context))
+  end
 
-        changeset
-        |> Changeset.force_change_attributes(allowed_changes)
-        |> Changeset.force_change_attribute(strategy.confirmed_at_field, DateTime.utc_now())
-      else
-        _ ->
-          changeset
-          |> Changeset.add_error(
-            InvalidArgument.exception(field: :confirm, message: "is not valid")
-          )
-      end
-    end)
+  defp apply_confirmation_token(changeset, strategy, context) do
+    with token when is_binary(token) <-
+           Changeset.get_argument(changeset, :confirm),
+         {:ok, %{"act" => action, "jti" => jti}, _} <-
+           Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context)),
+         true <-
+           to_string(strategy.confirm_action_name) == action,
+         {:ok, changes} <- Actions.get_changes(strategy, jti, Ash.Context.to_opts(context)) do
+      allowed_changes =
+        if strategy.inhibit_updates?,
+          do: Map.take(changes, Enum.map(strategy.monitor_fields, &to_string/1)),
+          else: %{}
+
+      changeset
+      |> Changeset.force_change_attributes(allowed_changes)
+      |> Changeset.force_change_attribute(strategy.confirmed_at_field, DateTime.utc_now())
+    else
+      _ ->
+        Changeset.add_error(
+          changeset,
+          InvalidArgument.exception(field: :confirm, message: "is not valid")
+        )
+    end
   end
 end
