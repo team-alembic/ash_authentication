@@ -27,6 +27,8 @@ defmodule Example do
     resource Example.UserWithTotpConfirmSetup
     resource Example.UserWithWildcardAndExclusions
     resource Example.UserWithExtraClaims
+    resource Example.RecoveryCode
+    resource Example.UserWithRecoveryCodes
   end
 
   json_api do
