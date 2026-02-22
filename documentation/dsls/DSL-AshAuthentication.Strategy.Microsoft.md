@@ -42,7 +42,7 @@ Provides a pre-configured authentication strategy for [Microsoft](https://micros
 
 This strategy is built using the `:oidc` strategy, and automatically
 retrieves configuration from Microsoft's discovery endpoint
-(`https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration`).
+(`https://login.microsoftonline.com/{tenant|common}/v2.0/.well-known/openid-configuration`).
 
 By default the strategy uses the `common` tenant endpoint. To restrict
 sign-in to a specific Azure tenant, override `base_url`:
