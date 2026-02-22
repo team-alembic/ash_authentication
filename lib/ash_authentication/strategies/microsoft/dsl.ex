@@ -6,7 +6,7 @@ defmodule AshAuthentication.Strategy.Microsoft.Dsl do
   @moduledoc false
 
   alias AshAuthentication.Strategy.{Custom, Oidc}
-  alias Assent.Strategy.AzureAD
+  alias AshAuthentication.Strategy.Microsoft.AzureADMultitenant
 
   @doc false
   @spec dsl :: Custom.entity()
@@ -34,11 +34,11 @@ defmodule AshAuthentication.Strategy.Microsoft.Dsl do
 
       #### Strategy defaults:
 
-      #{strategy_override_docs(AzureAD)}
+      #{strategy_override_docs(AzureADMultitenant)}
       """,
-      auto_set_fields: [icon: :microsoft, assent_strategy: AzureAD]
+      auto_set_fields: [icon: :microsoft, assent_strategy: AzureADMultitenant]
     })
-    |> Custom.set_defaults(AzureAD.default_config([]))
+    |> Custom.set_defaults(AzureADMultitenant.default_config([]))
     |> Map.update!(
       :schema,
       fn schema ->

@@ -23,8 +23,11 @@ defmodule AshAuthentication.Strategy.Microsoft do
     - `client_secret`
 
   By default the strategy uses the `common` tenant endpoint, which allows any
-  Microsoft account. To restrict sign-in to a specific Azure tenant, override
-  `base_url`:
+  Microsoft account (personal, work, or school). Multi-tenant issuer validation
+  is handled automatically — the `{tenantid}` template in Microsoft's discovery
+  document is resolved from the ID token's `tid` claim before validation.
+
+  To restrict sign-in to a specific Azure tenant, override `base_url`:
 
       base_url "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
 
