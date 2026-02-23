@@ -266,4 +266,52 @@ defmodule AshAuthentication.VerifierTest do
                "Multiple confirmation add-ons are configured with conflicting action names"
     end
   end
+
+  describe "require_token_presence_for_authentication? without store_all_tokens?" do
+    test "raises an error when require_token_presence_for_authentication? is true but store_all_tokens? is false" do
+      log_output =
+        capture_io(:stderr, fn ->
+          defmodule TestUserTokenRequiredWithoutStore do
+            @moduledoc false
+            use Ash.Resource,
+              data_layer: Ash.DataLayer.Ets,
+              extensions: [AshAuthentication],
+              domain: TestDomain
+
+            attributes do
+              uuid_primary_key :id
+              attribute :email, :ci_string, allow_nil?: false, public?: true
+              attribute :hashed_password, :string, allow_nil?: true, sensitive?: true
+            end
+
+            actions do
+              defaults [:read]
+            end
+
+            authentication do
+              tokens do
+                enabled? true
+                store_all_tokens? false
+                require_token_presence_for_authentication? true
+                token_resource Example.Token
+                signing_secret "test_secret_at_least_64_characters_long_for_proper_security"
+              end
+
+              strategies do
+                password do
+                  identity_field :email
+                end
+              end
+            end
+
+            identities do
+              identity :unique_email, [:email], pre_check?: true
+            end
+          end
+        end)
+
+      assert log_output =~
+               "`require_token_presence_for_authentication?` is enabled but `store_all_tokens?` is not"
+    end
+  end
 end

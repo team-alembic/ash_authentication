@@ -23,6 +23,7 @@ defmodule AshAuthentication.Verifier do
   def verify(dsl_state) do
     with {:ok, _domain} <- validate_domain_presence(dsl_state),
          :ok <- validate_tokens_may_be_required(dsl_state),
+         :ok <- validate_token_presence_requires_store_all(dsl_state),
          :ok <- validate_confirmation_action_names(dsl_state) do
       if Info.authentication_tokens_enabled?(dsl_state) and
            Info.authentication_session_identifier!(dsl_state) == :error and
@@ -133,6 +134,39 @@ defmodule AshAuthentication.Verifier do
              2. enable tokens.
            """
          )}
+    end
+  end
+
+  defp validate_token_presence_requires_store_all(dsl_state) do
+    require_token_presence? =
+      Info.authentication_tokens_require_token_presence_for_authentication?(dsl_state)
+
+    store_all_tokens? = Info.authentication_tokens_store_all_tokens?(dsl_state)
+
+    if require_token_presence? and not store_all_tokens? do
+      {:error,
+       DslError.exception(
+         path: [:authentication, :tokens, :require_token_presence_for_authentication?],
+         message: """
+         `require_token_presence_for_authentication?` is enabled but `store_all_tokens?` is not.
+
+         When `require_token_presence_for_authentication?` is `true`, authentication checks that
+         each token exists in the token resource. However, tokens are only stored in the token
+         resource when `store_all_tokens?` is `true`. Without it, authentication will always fail
+         because no tokens will be found.
+
+         To fix this, enable `store_all_tokens?`:
+
+             authentication do
+               tokens do
+                 store_all_tokens? true
+                 require_token_presence_for_authentication? true
+               end
+             end
+         """
+       )}
+    else
+      :ok
     end
   end
 
