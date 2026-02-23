@@ -14,6 +14,7 @@ defmodule AshAuthentication.Strategy.Microsoft.AzureADMultitenant do
   """
 
   use Assent.Strategy.OIDC.Base
+  alias Assent.Strategy.OIDC
 
   @impl true
   defdelegate default_config(config), to: Assent.Strategy.AzureAD
@@ -22,7 +23,7 @@ defmodule AshAuthentication.Strategy.Microsoft.AzureADMultitenant do
   def fetch_user(config, token) do
     config
     |> patch_issuer(token)
-    |> Assent.Strategy.OIDC.fetch_user(token)
+    |> OIDC.fetch_user(token)
   end
 
   defp patch_issuer(config, %{"id_token" => id_token}) do
