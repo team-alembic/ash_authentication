@@ -65,6 +65,7 @@ Currently supported strategies:
      - `AshAuthentication.Strategy.Auth0`
      - `AshAuthentication.Strategy.Github`
      - `AshAuthentication.Strategy.Google`
+     - `AshAuthentication.Strategy.Microsoft`
      - `AshAuthentication.Strategy.Oidc`
      - `AshAuthentication.Strategy.Slack`
 3. `AshAuthentication.Strategy.MagicLink`
