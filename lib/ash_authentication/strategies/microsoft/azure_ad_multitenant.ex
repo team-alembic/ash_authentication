@@ -14,10 +14,18 @@ defmodule AshAuthentication.Strategy.Microsoft.AzureADMultitenant do
   """
 
   use Assent.Strategy.OIDC.Base
-  alias Assent.Strategy.OIDC
+  alias Assent.Strategy.{AzureAD, OIDC}
 
   @impl true
-  defdelegate default_config(config), to: Assent.Strategy.AzureAD
+  def default_config(config) do
+    config
+    |> AzureAD.default_config()
+    |> Keyword.update(:authorization_params, [], fn params ->
+      # Remove `form_post` inherited from Assent's AzureAD defaults
+      # to avoid CSRF issues.
+      Keyword.delete(params, :response_mode)
+    end)
+  end
 
   @impl true
   def fetch_user(config, token) do

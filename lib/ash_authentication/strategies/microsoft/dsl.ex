@@ -39,15 +39,6 @@ defmodule AshAuthentication.Strategy.Microsoft.Dsl do
       auto_set_fields: [icon: :microsoft, assent_strategy: AzureADMultitenant]
     })
     |> Custom.set_defaults(AzureADMultitenant.default_config([]))
-    |> Map.update!(
-      :schema,
-      fn schema ->
-        # Override response mode from form_post to avoid CSFR
-        Keyword.update!(schema, :authorization_params, fn config ->
-          Keyword.put(config, :default, scope: "email profile")
-        end)
-      end
-    )
   end
 
   defp strategy_override_docs(strategy) do

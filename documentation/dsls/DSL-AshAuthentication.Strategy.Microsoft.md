@@ -62,7 +62,7 @@ base_url "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
 The following defaults are applied:
 
 * `:base_url` is set to `"https://login.microsoftonline.com/common/v2.0"`.
-* `:authorization_params` is set to `[scope: "email profile", response_mode: "form_post"]`.
+* `:authorization_params` is set to `[scope: "email profile"]`.
 * `:client_authentication_method` is set to `"client_secret_post"`.
 
 
