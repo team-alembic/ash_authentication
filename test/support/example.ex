@@ -9,6 +9,7 @@ defmodule Example do
   resources do
     resource Example.ApiKey
     resource Example.AuditLog
+    resource Example.AuditLogNoExpiry
     resource Example.Token
     resource Example.TokenWithCustomCreateTimestamp
     resource Example.User

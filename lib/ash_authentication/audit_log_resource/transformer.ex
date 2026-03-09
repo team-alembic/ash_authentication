@@ -154,24 +154,35 @@ defmodule AshAuthentication.AuditLogResource.Transformer do
     with {:ok, write_action_name} <- Info.audit_log_write_action_name(dsl),
          {:ok, dsl} <-
            maybe_build_action(dsl, write_action_name, &build_write_action(&1, write_action_name)),
-         :ok <- validate_write_action(dsl, write_action_name),
-         {:ok, destroy_action_name} <- Info.audit_log_destroy_action_name(dsl),
-         {:ok, dsl} <-
-           maybe_build_action(
-             dsl,
-             destroy_action_name,
-             &build_destroy_action(&1, destroy_action_name)
-           ),
-         :ok <- validate_destroy_action(dsl, destroy_action_name),
-         {:ok, read_expired_action_name} <- Info.audit_log_read_expired_action_name(dsl),
-         {:ok, dsl} <-
-           maybe_build_action(
-             dsl,
-             read_expired_action_name,
-             &build_read_expired_action(&1, read_expired_action_name)
-           ),
-         :ok <- validate_read_expired_action(dsl, read_expired_action_name) do
-      {:ok, dsl}
+         :ok <- validate_write_action(dsl, write_action_name) do
+      maybe_build_expunge_actions(dsl)
+    end
+  end
+
+  defp maybe_build_expunge_actions(dsl) do
+    case Info.audit_log_log_lifetime(dsl) do
+      {:ok, :infinity} ->
+        {:ok, dsl}
+
+      _ ->
+        with {:ok, destroy_action_name} <- Info.audit_log_destroy_action_name(dsl),
+             {:ok, dsl} <-
+               maybe_build_action(
+                 dsl,
+                 destroy_action_name,
+                 &build_destroy_action(&1, destroy_action_name)
+               ),
+             :ok <- validate_destroy_action(dsl, destroy_action_name),
+             {:ok, read_expired_action_name} <- Info.audit_log_read_expired_action_name(dsl),
+             {:ok, dsl} <-
+               maybe_build_action(
+                 dsl,
+                 read_expired_action_name,
+                 &build_read_expired_action(&1, read_expired_action_name)
+               ),
+             :ok <- validate_read_expired_action(dsl, read_expired_action_name) do
+          {:ok, dsl}
+        end
     end
   end
 
