@@ -68,6 +68,7 @@ defmodule AshAuthentication do
        - `AshAuthentication.Strategy.Auth0`
        - `AshAuthentication.Strategy.Github`
        - `AshAuthentication.Strategy.Google`
+       - `AshAuthentication.Strategy.Microsoft`
        - `AshAuthentication.Strategy.Oidc`
        - `AshAuthentication.Strategy.Slack`
   3. `AshAuthentication.Strategy.MagicLink`
@@ -146,6 +147,7 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.Github,
     AshAuthentication.Strategy.Google,
     AshAuthentication.Strategy.MagicLink,
+    AshAuthentication.Strategy.Microsoft,
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,
     AshAuthentication.Strategy.Password,
