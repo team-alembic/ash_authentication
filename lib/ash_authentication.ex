@@ -150,6 +150,7 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.Microsoft,
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,
+    AshAuthentication.Strategy.Otp,
     AshAuthentication.Strategy.Password,
     AshAuthentication.Strategy.RecoveryCode,
     AshAuthentication.Strategy.RememberMe,
