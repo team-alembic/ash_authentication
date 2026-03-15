@@ -104,6 +104,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.OAuth2)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Oidc.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Oidc)},
+        {"documentation/dsls/DSL-AshAuthentication.Strategy.Otp.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Otp)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Password.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Password)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Slack.md",
@@ -127,6 +129,7 @@ defmodule AshAuthentication.MixProject do
         "documentation/tutorials/google.md",
         "documentation/tutorials/magic-links.md",
         "documentation/tutorials/microsoft.md",
+        "documentation/tutorials/otp.md",
         "documentation/tutorials/password.md",
         "documentation/tutorials/slack.md",
         "documentation/tutorials/totp.md"
@@ -185,6 +188,7 @@ defmodule AshAuthentication.MixProject do
           AshAuthentication.Strategy.MagicLink,
           AshAuthentication.Strategy.OAuth2,
           AshAuthentication.Strategy.Oidc,
+          AshAuthentication.Strategy.Otp,
           AshAuthentication.Strategy.Password,
           AshAuthentication.Strategy.Slack
         ],
@@ -278,6 +282,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.Microsoft",
       "AshAuthentication.Strategy.OAuth2",
       "AshAuthentication.Strategy.Oidc",
+      "AshAuthentication.Strategy.Otp",
       "AshAuthentication.Strategy.Password",
       "AshAuthentication.Strategy.RememberMe",
       "AshAuthentication.Strategy.Slack",
