@@ -1,0 +1,33 @@
+{
+  "name": "AshAuthentication",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/ash_authentication",
+  "forwardPorts": [4000, "db:5432"],
+  "portsAttributes": {
+    "4000": {
+      "label": "Phoenix Dev Server"
+    },
+    "5432": {
+      "label": "Postgres"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli": {},
+    "ghcr.io/devcontainers-extra/features/apt-packages:1": {
+      "packages": "autoconf,m4,libwxgtk3.2-dev,libwxgtk-webview3.2-dev,libgl1-mesa-dev,libglu1-mesa-dev,libpng-dev,libssh-dev,unixodbc-dev,xsltproc,fop,libxml2-utils,libncurses-dev"
+    },
+    "ghcr.io/devcontainer-community/devcontainer-features/asdf-vm.com:1": {}
+  },
+  "onCreateCommand": "bash .devcontainer/setup.sh",
+  "remoteEnv": {
+    "DATABASE_HOST": "db",
+    "OAUTH2_CLIENT_ID": "${localEnv:OAUTH2_CLIENT_ID}",
+    "OAUTH2_CLIENT_SECRET": "${localEnv:OAUTH2_CLIENT_SECRET}",
+    "OAUTH2_SITE": "${localEnv:OAUTH2_SITE}",
+    "HEX_API_KEY": "${localEnv:HEX_API_KEY}",
+    "GITHUB_CLIENT_ID": "${localEnv:GITHUB_CLIENT_ID}",
+    "GITHUB_CLIENT_SECRET": "${localEnv:GITHUB_CLIENT_SECRET}",
+    "OAUTH2_TEST_CREDS": "${localEnv:OAUTH2_TEST_CREDS}"
+  }
+}

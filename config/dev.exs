@@ -22,7 +22,7 @@ config :ash_authentication, ecto_repos: [Example.Repo], ash_domains: [Example, E
 config :ash_authentication, Example.Repo,
   username: "postgres",
   password: "postgres",
-  hostname: "localhost",
+  hostname: System.get_env("DATABASE_HOST", "localhost"),
   database: "ash_authentication_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
