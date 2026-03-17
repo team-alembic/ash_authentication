@@ -414,4 +414,29 @@ defmodule DataCase do
       Ash.Resource.put_metadata(user, field, value)
     end)
   end
+
+  @doc "User with recovery codes factory"
+  @spec build_user_with_recovery_codes(keyword) ::
+          Example.UserWithRecoveryCodes.t() | no_return
+  def build_user_with_recovery_codes(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithRecoveryCodes
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
 end
