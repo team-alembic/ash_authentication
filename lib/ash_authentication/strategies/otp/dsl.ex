@@ -47,10 +47,23 @@ defmodule AshAuthentication.Strategy.Otp.Dsl do
           default: 6
         ],
         otp_characters: [
-          type: {:in, [:uppercase_letters, :digits, :uppercase_alphanumeric]},
-          doc:
-            "The character set used to generate OTP codes. One of `:uppercase_letters`, `:digits`, or `:uppercase_alphanumeric`.",
-          default: :uppercase_letters
+          type:
+            {:in,
+             [
+               :unambiguous_uppercase,
+               :unambiguous_alphanumeric,
+               :digits_only,
+               :uppercase_letters_only
+             ]},
+          doc: """
+          The character set used to generate OTP codes:
+
+          - `:unambiguous_uppercase` (default) — A–Z minus easily misread characters (I, L, O, S, Z)
+          - `:unambiguous_alphanumeric` — unambiguous letters and digits combined
+          - `:digits_only` — full 0–9
+          - `:uppercase_letters_only` — full A–Z
+          """,
+          default: :unambiguous_uppercase
         ],
         otp_generator: [
           type: :atom,

@@ -50,7 +50,7 @@ defmodule Example.UserWithOtp do
         identity_field :email
         otp_lifetime {10, :minutes}
         otp_length 6
-        otp_characters :uppercase_letters
+        otp_characters :unambiguous_uppercase
 
         sender fn user, otp_code, _opts ->
           Logger.info("OTP request for #{user.email}, code #{inspect(otp_code)}")

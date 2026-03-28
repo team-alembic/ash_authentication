@@ -46,7 +46,7 @@ defmodule Example.UserWithRegisterOtp do
         registration_enabled? true
         otp_lifetime {10, :minutes}
         otp_length 6
-        otp_characters :uppercase_letters
+        otp_characters :unambiguous_uppercase
 
         sender fn user_or_email, otp_code, _opts ->
           email =

@@ -43,7 +43,7 @@ defmodule AshAuthentication.Strategy.Otp do
           identity_field :email
           otp_lifetime {10, :minutes}
           otp_length 6
-          otp_characters :uppercase_letters
+          otp_characters :unambiguous_uppercase
           sender MyApp.OtpSender
         end
       end
@@ -90,7 +90,7 @@ defmodule AshAuthentication.Strategy.Otp do
             identity_field: :email,
             lookup_action_name: nil,
             name: nil,
-            otp_characters: :uppercase_letters,
+            otp_characters: :unambiguous_uppercase,
             otp_generator: nil,
             otp_length: 6,
             otp_lifetime: {10, :minutes},
@@ -112,7 +112,11 @@ defmodule AshAuthentication.Strategy.Otp do
           identity_field: atom,
           lookup_action_name: atom | nil,
           name: atom,
-          otp_characters: :uppercase_letters | :digits | :uppercase_alphanumeric,
+          otp_characters:
+            :unambiguous_uppercase
+            | :unambiguous_alphanumeric
+            | :digits_only
+            | :uppercase_letters_only,
           otp_generator: module | nil,
           otp_length: pos_integer,
           otp_lifetime: pos_integer | {pos_integer, atom},

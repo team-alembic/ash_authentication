@@ -18,8 +18,9 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
   def verify(strategy, dsl_state) do
     with {:ok, identity_attribute} <- validate_identity_attribute(dsl_state, strategy),
          :ok <- validate_request_action(dsl_state, strategy, identity_attribute),
-         :ok <- validate_sign_in_action(dsl_state, strategy, identity_attribute) do
-      validate_generator(strategy)
+         :ok <- validate_sign_in_action(dsl_state, strategy, identity_attribute),
+         :ok <- validate_generator(strategy) do
+      validate_otp_entropy(strategy)
     end
   end
 
@@ -113,6 +114,50 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
        message:
          "Expected sign-in action to be a :#{expected} action when registration_enabled? is #{strategy.registration_enabled?}, got :#{type}."
      )}
+  end
+
+  # Minimum number of distinct OTP codes required. Derived from
+  # NIST SP 800-63B §5.1.3.2, which requires at least 20 bits of entropy for
+  # out-of-band authentication secrets (2^20 = 1,048,576), and the common
+  # practice of 6-digit decimal OTPs (RFC 4226).
+  @min_otp_combinations 1_000_000
+
+  # Alphabet sizes for the built-in character sets in DefaultGenerator.
+  @alphabet_sizes %{
+    unambiguous_uppercase: 21,
+    unambiguous_alphanumeric: 27,
+    digits_only: 10,
+    uppercase_letters_only: 26
+  }
+
+  # Only validate entropy for the built-in generator. Custom generators receive
+  # `otp_length` and `otp_characters` as hints but we cannot force the generators
+  # to respect them, so we cannot reason about the actual code space they produce.
+  defp validate_otp_entropy(%{otp_generator: generator})
+       when not is_nil(generator) and generator != Otp.DefaultGenerator,
+       do: :ok
+
+  defp validate_otp_entropy(strategy) do
+    alphabet_size = @alphabet_sizes[strategy.otp_characters]
+    combinations = round(:math.pow(alphabet_size, strategy.otp_length))
+
+    if combinations >= @min_otp_combinations do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies, strategy.name],
+         message: """
+         OTP configuration has insufficient entropy: #{combinations} possible codes \
+         (#{strategy.otp_length} characters from #{strategy.otp_characters} with \
+         #{alphabet_size} symbols).
+
+         At least #{@min_otp_combinations} combinations are required. \
+         Increase `otp_length` or switch to a larger character set \
+         (`:unambiguous_uppercase` or `:unambiguous_alphanumeric`).
+         """
+       )}
+    end
   end
 
   defp validate_generator(%{otp_generator: nil}), do: :ok
