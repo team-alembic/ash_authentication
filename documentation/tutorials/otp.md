@@ -8,6 +8,23 @@ SPDX-License-Identifier: MIT
 
 The OTP strategy provides passwordless authentication where users receive a short code (e.g. `"XKPTMH"`) via email or SMS, then submit it to sign in. This is similar to the magic link strategy but uses a short code instead of a URL.
 
+## Security requirements
+
+> #### Brute force protection {: .warning}
+>
+> OTP codes have limited entropy by design — short codes that users can type without error.
+> Without rate limiting, an attacker can enumerate all possible codes within the lifetime
+> of a single OTP.
+>
+> **You must protect the sign-in endpoint with brute force detection or rate limiting**
+> before deploying this strategy to production. Options include:
+>
+> - A Plug-based rate limiter (e.g. [`PlugAttack`](https://github.com/michalmuskala/plug_attack))
+> - A reverse-proxy rate limit rule (nginx, Cloudflare, etc.)
+>
+> A 10-minute OTP lifetime with 6 uppercase letters gives ~85 million possible codes.
+> Even so, rate limiting to a handful of attempts per identity per OTP lifetime is essential.
+
 ## Prerequisites
 
 Your user resource needs:
@@ -60,7 +77,7 @@ otp do
   identity_field :email
   otp_lifetime {10, :minutes}          # how long the code is valid
   otp_length 6                         # length of the generated code
-  otp_characters :uppercase_letters    # :uppercase_letters, :digits, or :uppercase_alphanumeric
+  otp_characters :unambiguous_uppercase # :unambiguous_uppercase, :unambiguous_digits, :unambiguous_alphanumeric, :digits_only, :uppercase_letters_only
   case_sensitive? false                 # when false, "xkptmh" matches "XKPTMH"
   single_use_token? true               # revoke code after successful sign-in
   sender MyApp.Accounts.User.Senders.SendOtp
@@ -191,9 +208,22 @@ POST /user/otp/request    {"user": {"email": "user@example.com"}}
 POST /user/otp/sign_in    {"user": {"email": "user@example.com", "otp": "XKPTMH"}}
 ```
 
+## Character sets and entropy
+
+The built-in character sets and the number of possible codes they produce at the default length of 6:
+
+| Option | Symbols | Codes at length 6 | Notes |
+|---|---|---|---|
+| `:unambiguous_uppercase` (default) | 21 | ~85.8 million | A–Z minus I, L, O, S, Z |
+| `:unambiguous_alphanumeric` | 27 | ~387 million | above plus 3,4,6,7,8,9 |
+| `:uppercase_letters_only` | 26 | ~309 million | full A–Z |
+| `:digits_only` | 10 | 1 million | full 0–9; only just meets the minimum at length 6 |
+
+The strategy enforces a minimum of 1,000,000 possible codes at compile time (derived from NIST SP 800-63B §5.1.3.2). Configurations that fall below this threshold — such as `:digits_only` with `otp_length` less than 6 — will raise a `Spark.Error.DslError` at compile time.
+
 ## Custom OTP generator
 
-By default, the strategy uses `AshAuthentication.Strategy.Otp.DefaultGenerator` which generates random codes from an ambiguity-reduced character set (excluding characters like `I`/`1`, `O`/`0`, `S`/`5`, `Z`/`2`).
+By default, the strategy uses `AshAuthentication.Strategy.Otp.DefaultGenerator` which generates cryptographically random codes from an ambiguity-reduced character set (excluding easily misread characters like `I`/`1`, `O`/`0`, `S`/`5`, `Z`/`2`).
 
 You can supply your own generator module:
 
@@ -211,10 +241,7 @@ The module must export `generate/1` and `normalize/1`:
 defmodule MyApp.Accounts.OtpGenerator do
   def generate(opts) do
     length = Keyword.get(opts, :length, 6)
-
-    1..length
-    |> Enum.map(fn _ -> Enum.random(?0..?9) end)
-    |> List.to_string()
+    # your implementation here
   end
 
   def normalize(code) do
@@ -224,6 +251,14 @@ end
 ```
 
 The `generate/1` function receives `[length: ..., characters: ...]` from the strategy configuration. The `normalize/1` function is called on both the generated code (during request) and the submitted code (during sign-in) to ensure consistent matching.
+
+> #### Security responsibility {: .warning}
+>
+> When using a custom generator, the compile-time entropy check is skipped — the
+> strategy cannot reason about the code space your implementation produces. It is
+> your responsibility to ensure the generator meets your system's security
+> requirements, including sufficient entropy, cryptographically secure randomness,
+> and correct handling of the `length` and `characters` opts.
 
 ## Differences from Magic Links
 
