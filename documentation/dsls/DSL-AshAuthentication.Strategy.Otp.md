@@ -40,7 +40,7 @@ defmodule MyApp.Accounts.User do
         identity_field :email
         otp_lifetime {10, :minutes}
         otp_length 6
-        otp_characters :uppercase_letters
+        otp_characters :unambiguous_uppercase
         sender MyApp.OtpSender
       end
     end
@@ -105,7 +105,7 @@ Strategy for authenticating using a one-time password sent to the user
 | [`identity_field`](#authentication-strategies-otp-identity_field){: #authentication-strategies-otp-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user, usually something like `username` or `email_address`. |
 | [`otp_lifetime`](#authentication-strategies-otp-otp_lifetime){: #authentication-strategies-otp-otp_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{10, :minutes}` | How long the OTP code is valid. If no unit is provided, then `minutes` is assumed. |
 | [`otp_length`](#authentication-strategies-otp-otp_length){: #authentication-strategies-otp-otp_length } | `pos_integer` | `6` | The length of the generated OTP code. |
-| [`otp_characters`](#authentication-strategies-otp-otp_characters){: #authentication-strategies-otp-otp_characters } | `:uppercase_letters \| :digits \| :uppercase_alphanumeric` | `:uppercase_letters` | The character set used to generate OTP codes. One of `:uppercase_letters`, `:digits`, or `:uppercase_alphanumeric`. |
+| [`otp_characters`](#authentication-strategies-otp-otp_characters){: #authentication-strategies-otp-otp_characters } | `:unambiguous_uppercase \| :unambiguous_alphanumeric \| :digits_only \| :uppercase_letters_only` | `:unambiguous_uppercase` | The character set used to generate OTP codes: - `:unambiguous_uppercase` (default) — A–Z minus easily misread characters (I, L, O, S, Z) - `:unambiguous_alphanumeric` — unambiguous letters and digits combined - `:digits_only` — full 0–9 - `:uppercase_letters_only` — full A–Z |
 | [`otp_generator`](#authentication-strategies-otp-otp_generator){: #authentication-strategies-otp-otp_generator } | `atom` |  | A module that implements `generate/1` and `normalize/1`. Defaults to `AshAuthentication.Strategy.Otp.DefaultGenerator`. |
 | [`registration_enabled?`](#authentication-strategies-otp-registration_enabled?){: #authentication-strategies-otp-registration_enabled? } | `boolean` | `false` | Allows registering via OTP. Sign-in becomes an upsert action instead of a read action, so users who don't exist are created on first sign-in. |
 | [`case_sensitive?`](#authentication-strategies-otp-case_sensitive?){: #authentication-strategies-otp-case_sensitive? } | `boolean` | `false` | Whether OTP codes are matched case-sensitively. When `false` (the default), codes are uppercased before comparison so `"xkptmh"` matches `"XKPTMH"`. |
