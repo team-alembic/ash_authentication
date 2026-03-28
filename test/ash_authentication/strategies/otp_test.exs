@@ -10,6 +10,50 @@ defmodule AshAuthentication.Strategy.OtpTest do
   import Plug.Test
 
   alias AshAuthentication.{Info, Plug.Helpers, Strategy, Strategy.Otp}
+  alias AshAuthentication.Strategy.Otp.DefaultGenerator
+
+  describe "DefaultGenerator.generate/1" do
+    test "generates codes of the correct length" do
+      assert String.length(DefaultGenerator.generate(length: 6)) == 6
+      assert String.length(DefaultGenerator.generate(length: 8)) == 8
+      assert String.length(DefaultGenerator.generate(length: 12)) == 12
+    end
+
+    test "uses unambiguous_uppercase by default" do
+      valid = MapSet.new(String.codepoints("ABCDEFGHJKMNPQRTUVWXY"))
+      code = DefaultGenerator.generate(length: 100)
+      assert Enum.all?(String.codepoints(code), &MapSet.member?(valid, &1))
+    end
+
+    test "generates codes from unambiguous_alphanumeric alphabet" do
+      valid = MapSet.new(String.codepoints("ABCDEFGHJKMNPQRTUVWXY346789"))
+      code = DefaultGenerator.generate(length: 100, characters: :unambiguous_alphanumeric)
+      assert Enum.all?(String.codepoints(code), &MapSet.member?(valid, &1))
+    end
+
+    test "generates codes from digits_only alphabet" do
+      valid = MapSet.new(String.codepoints("0123456789"))
+      code = DefaultGenerator.generate(length: 100, characters: :digits_only)
+      assert Enum.all?(String.codepoints(code), &MapSet.member?(valid, &1))
+    end
+
+    test "generates codes from uppercase_letters_only alphabet" do
+      valid = MapSet.new(String.codepoints("ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+      code = DefaultGenerator.generate(length: 100, characters: :uppercase_letters_only)
+      assert Enum.all?(String.codepoints(code), &MapSet.member?(valid, &1))
+    end
+
+    test "excludes ambiguous characters from unambiguous_uppercase" do
+      # Generate many codes to make it statistically certain ambiguous chars are absent
+      codes = for _ <- 1..50, do: DefaultGenerator.generate(length: 20)
+      all_chars = codes |> Enum.join() |> String.codepoints() |> MapSet.new()
+
+      for char <- ~w(I L O S Z) do
+        refute MapSet.member?(all_chars, char),
+               "Expected ambiguous character #{char} to be excluded"
+      end
+    end
+  end
 
   describe "compute_deterministic_jti/3" do
     test "is deterministic" do
@@ -292,6 +336,25 @@ defmodule AshAuthentication.Strategy.OtpTest do
                Strategy.action(strategy, :sign_in, %{
                  "email" => email,
                  "otp" => "ZZZZZZ"
+               })
+    end
+
+    test "single use: second attempt with same OTP fails for registered user" do
+      strategy = Info.strategy!(Example.UserWithRegisterOtp, :otp)
+      email = "test_#{System.unique_integer([:positive])}@example.com"
+
+      otp_code = extract_otp_code_for_email(strategy, email)
+
+      assert {:ok, _user} =
+               Strategy.action(strategy, :sign_in, %{
+                 "email" => email,
+                 "otp" => otp_code
+               })
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               Strategy.action(strategy, :sign_in, %{
+                 "email" => email,
+                 "otp" => otp_code
                })
     end
 
