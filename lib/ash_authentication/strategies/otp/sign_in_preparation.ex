@@ -9,7 +9,8 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
   This preparation:
   1. Filters the query by the identity field.
   2. After the query, computes the deterministic JTI from the submitted OTP code.
-  3. Looks up the stored OTP token by JTI.
+  3. Looks up the stored OTP token by JTI with a SELECT FOR UPDATE lock to prevent
+     concurrent requests consuming the same code.
   4. If found and valid, optionally revokes it (single-use), generates an auth JWT,
      and returns the user with the token in metadata.
   """
@@ -17,6 +18,7 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource, Resource.Preparation}
   alias AshAuthentication.{Info, Jwt, Strategy.Otp, TokenResource}
+  alias AshAuthentication.TokenResource.Info, as: TokenInfo
   require Ash.Query
 
   @doc false
@@ -46,25 +48,14 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
 
     token_resource = Info.authentication_tokens_token_resource!(strategy.resource)
 
-    case TokenResource.Actions.get_token(
-           token_resource,
-           %{"jti" => jti, "purpose" => "otp"},
-           context_opts
-         ) do
-      {:ok, [_ | _]} ->
-        # OTP token found - valid
-        if strategy.single_use_token? do
-          TokenResource.Actions.revoke_jti(token_resource, jti, subject, context_opts)
-        end
-
-        {:ok, auth_token, _claims} =
-          Jwt.token_for_user(user, %{}, context_opts)
-
-        {:ok, [Resource.put_metadata(user, :token, auth_token)]}
-
-      _ ->
-        # No matching token found - invalid OTP
-        {:ok, []}
+    # Read actions are not transactional by default, so wrap the lock + revocation
+    # in an explicit transaction to prevent TOCTOU races.
+    Ash.transaction(token_resource, fn ->
+      verify_and_sign_in(strategy, token_resource, jti, subject, user, context_opts)
+    end)
+    |> case do
+      {:ok, result} -> result
+      {:error, _} -> {:ok, []}
     end
   end
 
@@ -74,5 +65,52 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
 
   defp after_action(_query, _users, _strategy, _otp_code, _context) do
     {:ok, []}
+  end
+
+  defp verify_and_sign_in(strategy, token_resource, jti, subject, user, context_opts) do
+    case get_otp_token_locked(token_resource, jti, context_opts) do
+      {:ok, [_ | _]} ->
+        case maybe_consume_token(strategy, token_resource, jti, subject, context_opts) do
+          :ok ->
+            {:ok, auth_token, _claims} = Jwt.token_for_user(user, %{}, context_opts)
+            {:ok, [Resource.put_metadata(user, :token, auth_token)]}
+
+          {:error, _} ->
+            {:ok, []}
+        end
+
+      _ ->
+        {:ok, []}
+    end
+  end
+
+  defp maybe_consume_token(%{single_use_token?: false}, _, _, _, _), do: :ok
+
+  defp maybe_consume_token(_strategy, token_resource, jti, subject, context_opts) do
+    if TokenResource.Actions.jti_revoked?(token_resource, jti, context_opts) do
+      {:error, :already_consumed}
+    else
+      TokenResource.Actions.revoke_jti(token_resource, jti, subject, context_opts)
+      :ok
+    end
+  end
+
+  defp get_otp_token_locked(token_resource, jti, context_opts) do
+    with {:ok, domain} <- TokenInfo.token_domain(token_resource),
+         {:ok, get_token_action_name} <- TokenInfo.token_get_token_action_name(token_resource) do
+      token_resource
+      |> Ash.Query.new()
+      |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
+      |> Ash.Query.lock(:for_update)
+      |> Ash.Query.for_read(
+        get_token_action_name,
+        %{"jti" => jti, "purpose" => "otp"},
+        Keyword.take(
+          Keyword.put(context_opts, :domain, domain),
+          [:actor, :authorize?, :tenant, :tracer, :domain]
+        )
+      )
+      |> Ash.read()
+    end
   end
 end
