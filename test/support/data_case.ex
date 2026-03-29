@@ -390,6 +390,37 @@ defmodule DataCase do
     end)
   end
 
+  @doc "User with WebAuthn factory"
+  @spec build_user_with_webauthn(map) :: Example.UserWithWebAuthn.t() | no_return
+  def build_user_with_webauthn(attrs \\ %{}) do
+    attrs = Map.merge(%{email: username()}, attrs)
+
+    Example.UserWithWebAuthn
+    |> Ash.Changeset.for_create(:create, attrs)
+    |> Ash.create!()
+  end
+
+  @doc "WebAuthn credential factory"
+  def build_webauthn_credential(user, attrs \\ %{}) do
+    fixture = AshAuthentication.Test.WebAuthnFixtures.generate_registration()
+
+    attrs =
+      Map.merge(
+        %{
+          credential_id: fixture.credential_id,
+          public_key: fixture.cose_key,
+          sign_count: 0,
+          label: "Test Key",
+          user_id: user.id
+        },
+        attrs
+      )
+
+    Example.WebAuthnCredential
+    |> Ash.Changeset.for_create(:create, attrs)
+    |> Ash.create!()
+  end
+
   @doc "User with empty includes factory"
   @spec build_user_with_empty_includes(keyword) ::
           Example.UserWithEmptyIncludes.t() | no_return
