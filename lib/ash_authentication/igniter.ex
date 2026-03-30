@@ -270,6 +270,101 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    Ensures a unique identity exists for the given field on a resource.
+
+    Adds an identity named `:unique_<field>` on `[:<field>]` if one doesn't already exist.
+    """
+    @spec ensure_identity(Igniter.t(), Ash.Resource.t(), atom()) :: Igniter.t()
+    # sobelow_skip ["DOS.BinToAtom"]
+    def ensure_identity(igniter, resource, identity_field) do
+      Ash.Resource.Igniter.add_new_identity(
+        igniter,
+        resource,
+        :"unique_#{identity_field}",
+        """
+        identity :unique_#{identity_field}, [:#{identity_field}]
+        """
+      )
+    end
+
+    @doc """
+    Ensures a `get_by_<field>` read action exists on the resource.
+    """
+    @spec ensure_get_by_action(Igniter.t(), Ash.Resource.t(), atom()) :: Igniter.t()
+    # sobelow_skip ["DOS.BinToAtom"]
+    def ensure_get_by_action(igniter, resource, identity_field) do
+      Ash.Resource.Igniter.add_new_action(
+        igniter,
+        resource,
+        :"get_by_#{identity_field}",
+        """
+        read :get_by_#{identity_field} do
+          description "Looks up a user by their #{identity_field}"
+          get_by :#{identity_field}
+        end
+        """
+      )
+    end
+
+    @doc """
+    Adds the `remember_me` strategy to a resource if it doesn't already exist.
+    """
+    @spec add_remember_me_strategy(Igniter.t(), Ash.Resource.t()) :: Igniter.t()
+    def add_remember_me_strategy(igniter, resource) do
+      add_new_strategy(
+        igniter,
+        resource,
+        :remember_me,
+        :remember_me,
+        """
+        remember_me :remember_me
+        """
+      )
+    end
+
+    @doc """
+    Checks for a Phoenix web module and returns a `use` line for verified routes.
+
+    Returns `{web_module_exists?, use_line_or_nil, igniter}`.
+    """
+    @spec web_module_use_line(Igniter.t()) :: {boolean(), String.t() | nil, Igniter.t()}
+    def web_module_use_line(igniter) do
+      web_module = Igniter.Libs.Phoenix.web_module(igniter)
+      {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
+
+      use_web_module =
+        if web_module_exists? do
+          "use #{inspect(web_module)}, :verified_routes"
+        end
+
+      {web_module_exists?, use_web_module, igniter}
+    end
+
+    @doc """
+    Returns the parent module of a given module.
+
+    Useful for deriving a domain module from a resource module.
+
+    ## Example
+
+        iex> AshAuthentication.Igniter.parent_module(MyApp.Accounts.User)
+        MyApp.Accounts
+    """
+    @spec parent_module(module()) :: module()
+    def parent_module(module) do
+      module |> Module.split() |> :lists.droplast() |> Module.concat()
+    end
+
+    @doc """
+    Parses a module from a string, or returns an atom as-is.
+    """
+    @spec maybe_parse_module(atom() | String.t()) :: module()
+    def maybe_parse_module(atom) when is_atom(atom), do: atom
+
+    def maybe_parse_module(string) when is_binary(string),
+      do: Igniter.Project.Module.parse(string)
+
     defp enter_section(zipper, name) do
       with {:ok, zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(
