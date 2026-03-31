@@ -128,7 +128,7 @@ if Code.ensure_loaded?(Igniter) do
       end
       """)
       |> Ash.Resource.Igniter.add_new_attribute(options[:user], :last_totp_at, """
-      attribute :last_totp_at, :utc_datetime do
+      attribute :last_totp_at, :datetime do
         allow_nil? true
         sensitive? true
         public? false
@@ -142,7 +142,6 @@ if Code.ensure_loaded?(Igniter) do
         options[:name],
         build_strategy_config(options)
       )
-      |> maybe_add_phoenix_integration(options)
     end
 
     defp build_strategy_config(options) do
@@ -175,130 +174,6 @@ if Code.ensure_loaded?(Igniter) do
           ["--user", inspect(options[:user])]
         )
       end
-    end
-
-    defp maybe_add_phoenix_integration(igniter, options) do
-      if Code.ensure_loaded?(AshAuthentication.Phoenix) do
-        igniter
-        |> add_route_instructions(options)
-        |> maybe_modify_controller(options)
-      else
-        igniter
-      end
-    end
-
-    defp add_route_instructions(igniter, options) do
-      user = inspect(options[:user])
-      strategy_name = inspect(options[:name])
-
-      routes =
-        if options[:mode] == :"2fa" do
-          """
-          Add the following TOTP routes to your router:
-
-            # In a scope that does NOT require authentication (e.g. alongside your sign_in_route):
-            totp_2fa_route #{user}, #{strategy_name}
-
-            # In a scope that requires authentication (e.g. alongside your protected LiveView routes):
-            totp_setup_route #{user}, #{strategy_name}
-          """
-        else
-          """
-          Add the following TOTP route to your router:
-
-            # In a scope that requires authentication:
-            totp_setup_route #{user}, #{strategy_name}
-          """
-        end
-
-      Igniter.add_warning(igniter, routes)
-    end
-
-    defp maybe_modify_controller(igniter, options) do
-      if options[:mode] == :"2fa" do
-        modify_controller_for_2fa(igniter)
-      else
-        igniter
-      end
-    end
-
-    defp modify_controller_for_2fa(igniter) do
-      web_module = Igniter.Libs.Phoenix.web_module(igniter)
-      controller = Module.concat(web_module, AuthController)
-
-      {exists?, igniter} = Igniter.Project.Module.module_exists(igniter, controller)
-
-      if exists? do
-        replace_controller_success(igniter, controller)
-      else
-        Igniter.add_warning(igniter, """
-        Could not find AuthController at #{inspect(controller)}.
-
-        You will need to manually update your auth controller's success/4 function
-        to handle TOTP 2FA redirects. See the TOTP tutorial for details.
-        """)
-      end
-    end
-
-    defp replace_controller_success(igniter, controller) do
-      Igniter.Project.Module.find_and_update_module!(igniter, controller, fn zipper ->
-        case Igniter.Code.Function.move_to_def(zipper, :success, 4) do
-          {:ok, zipper} ->
-            zipper =
-              zipper
-              |> Igniter.Code.Common.add_code(totp_registration_clause(), placement: :before)
-              |> Igniter.Code.Common.add_code(totp_sign_in_clause(), placement: :before)
-
-            {:ok, zipper}
-
-          _ ->
-            {:ok, zipper}
-        end
-      end)
-    end
-
-    defp totp_sign_in_clause do
-      ~S"""
-      def success(conn, {_, phase} = _activity, user, token)
-          when phase in [:sign_in, :sign_in_with_token] do
-        return_to = get_session(conn, :return_to) || ~p"/"
-
-        if AshAuthentication.Phoenix.TotpHelpers.totp_configured?(user) do
-          conn
-          |> put_session(:return_to, return_to)
-          |> redirect(to: ~p"/totp-verify/#{token}")
-        else
-          conn
-          |> delete_session(:return_to)
-          |> store_in_session(user)
-          |> set_live_socket_id(token)
-          |> assign(:current_user, user)
-          |> put_flash(:info, "You are now signed in")
-          |> redirect(to: return_to)
-        end
-      end
-      """
-    end
-
-    defp totp_registration_clause do
-      ~S"""
-      # After registration, redirect to TOTP setup so the user can configure
-      # their authenticator app.
-      # To make TOTP setup optional for some users, add a condition here, e.g.:
-      #   if user.totp_required, do: redirect to setup, else: call default success
-      # If a user navigates away without completing setup, use the RequireTotp
-      # plug or on_mount hook to enforce TOTP on protected routes.
-      def success(conn, {_, :register}, user, token) do
-        return_to = get_session(conn, :return_to) || ~p"/"
-
-        conn
-        |> store_in_session(user)
-        |> set_live_socket_id(token)
-        |> assign(:current_user, user)
-        |> put_session(:return_to, return_to)
-        |> redirect(to: ~p"/totp-setup")
-      end
-      """
     end
   end
 else

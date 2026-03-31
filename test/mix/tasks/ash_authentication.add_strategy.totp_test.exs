@@ -40,7 +40,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.TotpTest do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.totp", [])
       |> assert_has_patch("lib/test/accounts/user.ex", """
-      + |    attribute :last_totp_at, :utc_datetime do
+      + |    attribute :last_totp_at, :datetime do
       + |      allow_nil?(true)
       + |      sensitive?(true)
       + |      public?(false)
@@ -147,7 +147,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.TotpTest do
       + |    end
       """)
       |> assert_has_patch("lib/test/accounts/user.ex", """
-      + |    attribute :last_totp_at, :utc_datetime do
+      + |    attribute :last_totp_at, :datetime do
       + |      allow_nil?(true)
       + |      sensitive?(true)
       + |      public?(false)
@@ -231,102 +231,6 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.TotpTest do
       + |      brute_force_strategy({:audit_log, :audit_log})
       + |    end
       """)
-    end
-  end
-
-  describe "phoenix integration" do
-    setup do
-      igniter =
-        test_project()
-        |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
-        |> Igniter.compose_task("ash_authentication.install", ["--yes"])
-        |> Igniter.Project.Formatter.remove_imported_dep(:ash_authentication)
-        |> Igniter.Project.Formatter.remove_formatter_plugin(Spark.Formatter)
-        |> Igniter.Project.Module.create_module(TestWeb.AuthController, """
-        def success(conn, activity, user, token) do
-          return_to = get_session(conn, :return_to) || ~p"/"
-
-          message =
-            case activity do
-              {:confirm_new_user, :confirm} -> "Your email address has now been confirmed"
-              {:password, :reset} -> "Your password has successfully been reset"
-              _ -> "You are now signed in"
-            end
-
-          conn
-          |> delete_session(:return_to)
-          |> store_in_session(user)
-          |> set_live_socket_id(token)
-          |> assign(:current_user, user)
-          |> put_flash(:info, message)
-          |> redirect(to: return_to)
-        end
-
-        def failure(conn, _activity, _reason) do
-          conn
-          |> put_flash(:error, "Incorrect email or password")
-          |> redirect(to: ~p"/sign-in")
-        end
-
-        def sign_out(conn, _params) do
-          conn
-          |> redirect(to: ~p"/")
-        end
-        """)
-        |> apply_igniter!()
-
-      [igniter: igniter]
-    end
-
-    test "inserts sign-in interception clause before existing success/4 in 2fa mode", %{
-      igniter: igniter
-    } do
-      igniter
-      |> Igniter.compose_task("ash_authentication.add_strategy.totp", ["--mode", "2fa"])
-      |> assert_has_patch("lib/test_web/auth_controller.ex", """
-      + |  def success(conn, {_, phase} = _activity, user, token)
-      + |      when phase in [:sign_in, :sign_in_with_token] do
-      """)
-    end
-
-    test "inserts registration redirect clause before existing success/4 in 2fa mode", %{
-      igniter: igniter
-    } do
-      igniter
-      |> Igniter.compose_task("ash_authentication.add_strategy.totp", ["--mode", "2fa"])
-      |> assert_has_patch("lib/test_web/auth_controller.ex", """
-      + |  def success(conn, {_, :register}, user, token) do
-      """)
-    end
-
-    test "does not modify the existing catch-all success clause", %{igniter: igniter} do
-      result =
-        igniter
-        |> Igniter.compose_task("ash_authentication.add_strategy.totp", ["--mode", "2fa"])
-
-      # The existing function should not show as removed
-      refute diff(result, path: "lib/test_web/auth_controller.ex") =~ "- |  def success"
-    end
-
-    test "does not modify controller in primary mode", %{igniter: igniter} do
-      igniter
-      |> Igniter.compose_task("ash_authentication.add_strategy.totp", ["--mode", "primary"])
-      |> assert_unchanged("lib/test_web/auth_controller.ex")
-    end
-
-    test "emits route instructions as warnings in 2fa mode", %{igniter: igniter} do
-      igniter
-      |> Igniter.compose_task("ash_authentication.add_strategy.totp", ["--mode", "2fa"])
-      |> assert_has_warning(&String.contains?(&1, "totp_2fa_route"))
-    end
-
-    test "emits only setup route instruction in primary mode", %{igniter: igniter} do
-      result =
-        igniter
-        |> Igniter.compose_task("ash_authentication.add_strategy.totp", ["--mode", "primary"])
-
-      assert_has_warning(result, &String.contains?(&1, "totp_setup_route"))
-      refute Enum.any?(result.warnings, &String.contains?(&1, "totp_2fa_route"))
     end
   end
 end

@@ -344,38 +344,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       """)
     end
 
-    test "creates a phoenix-idiomatic password reset sender", %{igniter: igniter} do
-      igniter
-      |> Igniter.Project.Module.create_module(TestWeb, "")
-      |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
-      |> assert_creates("lib/test/accounts/user/senders/send_password_reset_email.ex", """
-      defmodule Test.Accounts.User.Senders.SendPasswordResetEmail do
-        @moduledoc \"\"\"
-        Sends a password reset email
-        \"\"\"
-
-        use AshAuthentication.Sender
-        use TestWeb, :verified_routes
-
-        @impl true
-        def send(_user, token, _) do
-          # Example of how you might send this email
-          # Test.Accounts.Emails.send_password_reset_email(
-          #   user,
-          #   token
-          # )
-
-          IO.puts(\"\"\"
-          Click this link to reset your password:
-
-          \#{url(~p"/password-reset/\#{token}")}
-          \"\"\")
-        end
-      end
-      """)
-    end
-
-    test "creates a plain password reset sender if you are not using phoenix", %{igniter: igniter} do
+    test "creates a basic password reset sender", %{igniter: igniter} do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
       |> assert_creates("lib/test/accounts/user/senders/send_password_reset_email.ex", """
