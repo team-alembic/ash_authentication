@@ -12,9 +12,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   @spec verify(WebAuthn.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
     with :ok <- validate_rp_id(strategy),
-         :ok <- validate_credential_resource(strategy),
-         :ok <- validate_tokens_enabled(dsl_state) do
-      :ok
+         :ok <- validate_credential_resource(strategy) do
+      validate_tokens_enabled(dsl_state)
     end
   end
 

@@ -3,7 +3,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   Implementation of `AshAuthentication.Strategy` for `AshAuthentication.Strategy.WebAuthn`.
   """
 
-  alias AshAuthentication.{Info, Strategy.WebAuthn}
+  alias AshAuthentication.{Info, Strategy, Strategy.WebAuthn}
   alias Plug.Conn
 
   @type phase ::

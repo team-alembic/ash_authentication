@@ -16,6 +16,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
 
   @doc false
   @spec transform(WebAuthn.t(), map) :: {:ok, WebAuthn.t() | map} | {:error, Exception.t()}
+  # sobelow_skip ["DOS.BinToAtom"]
   def transform(strategy, dsl_state) do
     with :ok <- validate_identity_field(strategy.identity_field, dsl_state),
          strategy <-
@@ -78,27 +79,30 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
       strategy = %{strategy | resource: resource}
 
       dsl_state =
-        dsl_state
-        |> Transformer.replace_entity(
+        Transformer.replace_entity(
+          dsl_state,
           ~w[authentication strategies]a,
           strategy,
           &(Strategy.name(&1) == strategy.name)
         )
-        |> then(fn dsl_state ->
-          actions = [strategy.sign_in_action_name]
 
-          actions =
-            if strategy.registration_enabled?,
-              do: [strategy.register_action_name | actions],
-              else: actions
-
-          actions
-          |> Enum.reject(&is_nil/1)
-          |> register_strategy_actions(dsl_state, strategy)
-        end)
+      dsl_state = register_webauthn_actions(dsl_state, strategy)
 
       {:ok, dsl_state}
     end
+  end
+
+  defp register_webauthn_actions(dsl_state, strategy) do
+    actions = [strategy.sign_in_action_name]
+
+    actions =
+      if strategy.registration_enabled?,
+        do: [strategy.register_action_name | actions],
+        else: actions
+
+    actions
+    |> Enum.reject(&is_nil/1)
+    |> register_strategy_actions(dsl_state, strategy)
   end
 
   defp validate_identity_field(identity_field, dsl_state) do

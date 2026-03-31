@@ -128,46 +128,46 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
   # We store challenges as plain maps because cookie session stores
   # cannot serialize arbitrary Elixir structs.
   defp reconstruct_challenge(conn, type, strategy) do
-    case Conn.get_session(conn, @session_key) do
-      %{} = data ->
-        case Base.decode64(data["bytes"] || data[:bytes]) do
-          {:ok, bytes} ->
-            base_fields = %Wax.Challenge{
-              type: type,
-              bytes: bytes,
-              origin: data["origin"] || data[:origin],
-              rp_id: data["rp_id"] || data[:rp_id],
-              issued_at: data["issued_at"] || data[:issued_at],
-              origin_verify_fun: {Wax, :origins_match?, []}
-            }
-
-            if type == :attestation do
-              %{
-                base_fields
-                | attestation: strategy.attestation,
-                  trusted_attestation_types: [:none, :basic, :self, :uncertain],
-                  verify_trust_root: false
-              }
-            else
-              allow_creds =
-                (data["allow_credentials"] || data[:allow_credentials] || [])
-                |> Enum.flat_map(fn {encoded_id, cose_key} ->
-                  case Base.decode64(encoded_id) do
-                    {:ok, decoded_id} -> [{decoded_id, cose_key}]
-                    :error -> []
-                  end
-                end)
-
-              %{base_fields | allow_credentials: allow_creds}
-            end
-
-          :error ->
-            nil
-        end
-
-      nil ->
-        nil
+    with %{} = data <- Conn.get_session(conn, @session_key),
+         {:ok, bytes} <- Base.decode64(data["bytes"] || data[:bytes]) do
+      build_challenge(data, bytes, type, strategy)
+    else
+      _ -> nil
     end
+  end
+
+  defp build_challenge(data, bytes, type, strategy) do
+    base = %Wax.Challenge{
+      type: type,
+      bytes: bytes,
+      origin: data["origin"] || data[:origin],
+      rp_id: data["rp_id"] || data[:rp_id],
+      issued_at: data["issued_at"] || data[:issued_at],
+      origin_verify_fun: {Wax, :origins_match?, []}
+    }
+
+    case type do
+      :attestation ->
+        %{
+          base
+          | attestation: strategy.attestation,
+            trusted_attestation_types: [:none, :basic, :self, :uncertain],
+            verify_trust_root: false
+        }
+
+      _ ->
+        %{base | allow_credentials: decode_allow_credentials(data)}
+    end
+  end
+
+  defp decode_allow_credentials(data) do
+    (data["allow_credentials"] || data[:allow_credentials] || [])
+    |> Enum.flat_map(fn {encoded_id, cose_key} ->
+      case Base.decode64(encoded_id) do
+        {:ok, decoded_id} -> [{decoded_id, cose_key}]
+        :error -> []
+      end
+    end)
   end
 
   defp subject_params(conn, strategy) do
@@ -214,7 +214,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
     end
   rescue
     error ->
-      require Logger
       Logger.warning("WebAuthn credential lookup failed: #{inspect(error)}")
       []
   end

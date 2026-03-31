@@ -35,84 +35,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   @spec register(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.record()} | {:error, any}
   def register(strategy, params, opts \\ []) do
     challenge = Keyword.fetch!(opts, :challenge)
-    tenant = Keyword.get(opts, :tenant)
 
     with {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
-         {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]) do
-      case Wax.register(attestation_object, client_data_json, challenge) do
-        {:ok, {auth_data, _attestation_result}} ->
-          cred_data = auth_data.attested_credential_data
-
-          # Only pass known action arguments - filter out raw WebAuthn ceremony data
-          # (attestation_object, client_data_json, raw_id) that Ash doesn't accept
-          identity_key = to_string(strategy.identity_field)
-
-          action_params = %{
-            identity_key => params[identity_key],
-            "credential_id" => cred_data.credential_id,
-            "public_key" => cred_data.credential_public_key,
-            "sign_count" => auth_data.sign_count,
-            "label" => params["label"] || "Security Key"
-          }
-
-          # CRITICAL: Set ash_authentication? context for policy bypass
-          context = %{private: %{ash_authentication?: true}}
-
-          ash_opts =
-            opts
-            |> Keyword.take([:actor])
-            |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
-
-          ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
-
-          strategy.resource
-          |> Changeset.new()
-          |> Changeset.set_context(context)
-          |> Changeset.for_create(strategy.register_action_name, action_params, ash_opts)
-          |> Ash.create()
-          |> case do
-            {:ok, user} ->
-              # Store the credential - errors here should propagate
-              case store_credential(
-                     strategy,
-                     user,
-                     cred_data,
-                     auth_data.sign_count,
-                     params["label"],
-                     tenant
-                   ) do
-                {:ok, _credential} -> {:ok, user}
-                {:error, error} -> {:error, error}
-              end
-
-            {:error, error} ->
-              {:error, error}
-          end
-
-        {:error, error} ->
-          {:error,
-           AuthenticationFailed.exception(
-             strategy: strategy,
-             caused_by: %{
-               module: __MODULE__,
-               strategy: strategy,
-               action: :register,
-               message: inspect(error)
-             }
-           )}
-      end
+         {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
+         {:ok, {auth_data, _}} <-
+           wax_register(strategy, attestation_object, client_data_json, challenge),
+         {:ok, user} <- create_user_from_registration(strategy, auth_data, params, opts),
+         {:ok, _credential} <- store_credential_from_auth(strategy, user, auth_data, params, opts) do
+      {:ok, user}
     else
-      :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           caused_by: %{
-             module: __MODULE__,
-             strategy: strategy,
-             action: :register,
-             message: "Invalid base64 encoding in request parameters"
-           }
-         )}
+      :error -> base64_error(strategy, :register)
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -125,121 +58,22 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     with {:ok, raw_id} <- safe_url_decode64(params["raw_id"]),
          {:ok, authenticator_data} <- safe_url_decode64(params["authenticator_data"]),
          {:ok, signature} <- safe_url_decode64(params["signature"]),
-         {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]) do
-      case Wax.authenticate(raw_id, authenticator_data, signature, client_data_json, challenge) do
-        {:ok, auth_data} ->
-          # Look up user via the sign_in action (SignInPreparation filters by identity)
-          identity_value = params[to_string(strategy.identity_field)]
-
-          # CRITICAL: Set ash_authentication? context (matches Password pattern)
-          context = %{private: %{ash_authentication?: true}}
-
-          ash_opts =
-            opts
-            |> Keyword.take([:actor])
-            |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
-
-          ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
-
-          # Follow Password.Actions.sign_in pattern exactly:
-          # Query.new -> set_context -> for_read -> Ash.read
-          query =
-            strategy.resource
-            |> Query.new()
-            |> Query.set_context(context)
-            |> Query.for_read(
-              strategy.sign_in_action_name,
-              %{
-                strategy.identity_field => identity_value
-              },
-              ash_opts
-            )
-
-          query
-          |> Ash.read()
-          |> case do
-            {:ok, [user]} ->
-              # Update sign count asynchronously (best-effort)
-              update_sign_count(strategy, raw_id, auth_data.sign_count, tenant)
-
-              # Generate token (WebAuthn does this here, not in preparation,
-              # because Wax verification happens outside the Ash pipeline)
-              case maybe_generate_token(user, strategy, opts) do
-                {:ok, user} -> {:ok, user}
-                {:error, error} -> {:error, error}
-              end
-
-            {:ok, []} ->
-              {:error,
-               AuthenticationFailed.exception(
-                 strategy: strategy,
-                 caused_by: %{
-                   module: __MODULE__,
-                   strategy: strategy,
-                   action: :sign_in,
-                   message: "Query returned no users"
-                 }
-               )}
-
-            {:ok, _users} ->
-              {:error,
-               AuthenticationFailed.exception(
-                 strategy: strategy,
-                 caused_by: %{
-                   module: __MODULE__,
-                   strategy: strategy,
-                   action: :sign_in,
-                   message: "Query returned too many users"
-                 }
-               )}
-
-            {:error, error} when is_struct(error, AuthenticationFailed) ->
-              {:error, error}
-
-            {:error, error} when is_exception(error) ->
-              {:error,
-               AuthenticationFailed.exception(
-                 strategy: strategy,
-                 caused_by: error
-               )}
-
-            {:error, _error} ->
-              {:error,
-               AuthenticationFailed.exception(
-                 strategy: strategy,
-                 caused_by: %{
-                   module: __MODULE__,
-                   strategy: strategy,
-                   action: :sign_in,
-                   message: "Authentication failed"
-                 }
-               )}
-          end
-
-        {:error, error} ->
-          {:error,
-           AuthenticationFailed.exception(
-             strategy: strategy,
-             caused_by: %{
-               module: __MODULE__,
-               strategy: strategy,
-               action: :sign_in,
-               message: inspect(error)
-             }
-           )}
-      end
+         {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
+         {:ok, auth_data} <-
+           wax_authenticate(
+             strategy,
+             raw_id,
+             authenticator_data,
+             signature,
+             client_data_json,
+             challenge
+           ),
+         {:ok, user} <- find_user_for_sign_in(strategy, params, opts),
+         :ok <- best_effort_update_sign_count(strategy, raw_id, auth_data.sign_count, tenant) do
+      maybe_generate_token(user, strategy, opts)
     else
-      :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           caused_by: %{
-             module: __MODULE__,
-             strategy: strategy,
-             action: :sign_in,
-             message: "Invalid base64 encoding in request parameters"
-           }
-         )}
+      :error -> base64_error(strategy, :sign_in)
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -247,14 +81,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   @spec list_credentials(WebAuthn.t(), Ash.Resource.record(), keyword) ::
           {:ok, [Ash.Resource.record()]} | {:error, any}
   def list_credentials(strategy, user, opts) do
-    tenant = Keyword.get(opts, :tenant)
-    context = %{private: %{ash_authentication?: true}}
-    ash_opts = [authorize?: false]
-    ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+    ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
 
     strategy.credential_resource
     |> Query.new()
-    |> Query.set_context(context)
+    |> Query.set_context(auth_context())
     |> Query.for_read(:read, %{}, ash_opts)
     |> Query.filter(user_id == ^user.id)
     |> Query.sort(inserted_at: :asc)
@@ -265,48 +96,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   @spec delete_credential(WebAuthn.t(), Ash.Resource.record(), any, keyword) ::
           :ok | {:error, any}
   def delete_credential(strategy, user, credential_id, opts) do
-    tenant = Keyword.get(opts, :tenant)
-    context = %{private: %{ash_authentication?: true}}
-    ash_opts = [authorize?: false]
-    ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
-
-    with {:ok, credentials} <- list_credentials(strategy, user, opts) do
-      if length(credentials) <= 1 do
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           caused_by: %{
-             module: __MODULE__,
-             strategy: strategy,
-             action: :delete_credential,
-             message: "Cannot delete the last credential"
-           }
-         )}
-      else
-        credential = Enum.find(credentials, &(&1.id == credential_id))
-
-        if credential do
-          credential
-          |> Changeset.new()
-          |> Changeset.set_context(context)
-          |> Ash.destroy(ash_opts)
-          |> case do
-            :ok -> :ok
-            {:error, error} -> {:error, error}
-          end
-        else
-          {:error,
-           AuthenticationFailed.exception(
-             strategy: strategy,
-             caused_by: %{
-               module: __MODULE__,
-               strategy: strategy,
-               action: :delete_credential,
-               message: "Credential not found"
-             }
-           )}
-        end
-      end
+    with {:ok, credentials} <- list_credentials(strategy, user, opts),
+         :ok <- ensure_not_last_credential(strategy, credentials),
+         {:ok, credential} <- find_credential(strategy, credentials, credential_id) do
+      destroy_credential(credential, opts)
     end
   end
 
@@ -314,17 +107,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   @spec update_credential_label(WebAuthn.t(), any, String.t(), keyword) ::
           {:ok, Ash.Resource.record()} | {:error, any}
   def update_credential_label(strategy, credential_id, new_label, opts) do
-    tenant = Keyword.get(opts, :tenant)
-    context = %{private: %{ash_authentication?: true}}
-    ash_opts = [authorize?: false]
-    ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+    ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
 
-    with {:ok, credential} <-
-           strategy.credential_resource
-           |> Ash.get(credential_id, ash_opts) do
+    with {:ok, credential} <- Ash.get(strategy.credential_resource, credential_id, ash_opts) do
       credential
       |> Changeset.new()
-      |> Changeset.set_context(context)
+      |> Changeset.set_context(auth_context())
       |> Changeset.for_update(:update, %{label: new_label}, ash_opts)
       |> Ash.update()
     end
@@ -354,45 +142,178 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     tenant = Keyword.get(opts, :tenant)
 
     with {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
-         {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]) do
-      case Wax.register(attestation_object, client_data_json, challenge) do
-        {:ok, {auth_data, _result}} ->
-          cred_data = auth_data.attested_credential_data
-
-          store_credential(
-            strategy,
-            user,
-            cred_data,
-            auth_data.sign_count,
-            params["label"],
-            tenant
-          )
-
-        {:error, error} ->
-          {:error,
-           AuthenticationFailed.exception(
-             strategy: strategy,
-             caused_by: %{
-               module: __MODULE__,
-               strategy: strategy,
-               action: :add_credential,
-               message: inspect(error)
-             }
-           )}
-      end
+         {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
+         {:ok, {auth_data, _}} <-
+           wax_register_credential(strategy, attestation_object, client_data_json, challenge) do
+      store_credential(
+        strategy,
+        user,
+        auth_data.attested_credential_data,
+        auth_data.sign_count,
+        params["label"],
+        tenant
+      )
     else
-      :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           caused_by: %{
-             module: __MODULE__,
-             strategy: strategy,
-             action: :add_credential,
-             message: "Invalid base64 encoding in request parameters"
-           }
-         )}
+      :error -> base64_error(strategy, :add_credential)
+      {:error, error} -> {:error, error}
     end
+  end
+
+  defp wax_register_credential(strategy, attestation_object, client_data_json, challenge) do
+    case Wax.register(attestation_object, client_data_json, challenge) do
+      {:ok, _} = success ->
+        success
+
+      {:error, error} ->
+        {:error, auth_failed(strategy, :add_credential, inspect(error))}
+    end
+  end
+
+  defp wax_register(strategy, attestation_object, client_data_json, challenge) do
+    case Wax.register(attestation_object, client_data_json, challenge) do
+      {:ok, _} = success ->
+        success
+
+      {:error, error} ->
+        {:error, auth_failed(strategy, :register, inspect(error))}
+    end
+  end
+
+  defp wax_authenticate(
+         strategy,
+         raw_id,
+         authenticator_data,
+         signature,
+         client_data_json,
+         challenge
+       ) do
+    case Wax.authenticate(raw_id, authenticator_data, signature, client_data_json, challenge) do
+      {:ok, _} = success ->
+        success
+
+      {:error, error} ->
+        {:error, auth_failed(strategy, :sign_in, inspect(error))}
+    end
+  end
+
+  defp create_user_from_registration(strategy, auth_data, params, opts) do
+    tenant = Keyword.get(opts, :tenant)
+    cred_data = auth_data.attested_credential_data
+    identity_key = to_string(strategy.identity_field)
+
+    action_params = %{
+      identity_key => params[identity_key],
+      "credential_id" => cred_data.credential_id,
+      "public_key" => cred_data.credential_public_key,
+      "sign_count" => auth_data.sign_count,
+      "label" => params["label"] || "Security Key"
+    }
+
+    ash_opts = build_ash_opts(strategy, opts, tenant)
+
+    strategy.resource
+    |> Changeset.new()
+    |> Changeset.set_context(auth_context())
+    |> Changeset.for_create(strategy.register_action_name, action_params, ash_opts)
+    |> Ash.create()
+  end
+
+  defp store_credential_from_auth(strategy, user, auth_data, params, opts) do
+    tenant = Keyword.get(opts, :tenant)
+    cred_data = auth_data.attested_credential_data
+    store_credential(strategy, user, cred_data, auth_data.sign_count, params["label"], tenant)
+  end
+
+  defp find_user_for_sign_in(strategy, params, opts) do
+    tenant = Keyword.get(opts, :tenant)
+    identity_value = params[to_string(strategy.identity_field)]
+    ash_opts = build_ash_opts(strategy, opts, tenant)
+
+    strategy.resource
+    |> Query.new()
+    |> Query.set_context(auth_context())
+    |> Query.for_read(
+      strategy.sign_in_action_name,
+      %{strategy.identity_field => identity_value},
+      ash_opts
+    )
+    |> Ash.read()
+    |> handle_user_query_result(strategy)
+  end
+
+  defp handle_user_query_result({:ok, [user]}, _strategy), do: {:ok, user}
+
+  defp handle_user_query_result({:ok, []}, strategy),
+    do: {:error, auth_failed(strategy, :sign_in, "Query returned no users")}
+
+  defp handle_user_query_result({:ok, _}, strategy),
+    do: {:error, auth_failed(strategy, :sign_in, "Query returned too many users")}
+
+  defp handle_user_query_result({:error, %AuthenticationFailed{} = error}, _strategy),
+    do: {:error, error}
+
+  defp handle_user_query_result({:error, error}, strategy) when is_exception(error),
+    do: {:error, AuthenticationFailed.exception(strategy: strategy, caused_by: error)}
+
+  defp handle_user_query_result({:error, _}, strategy),
+    do: {:error, auth_failed(strategy, :sign_in, "Authentication failed")}
+
+  defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do
+    update_sign_count(strategy, credential_id, new_count, tenant)
+    :ok
+  end
+
+  defp ensure_not_last_credential(strategy, credentials) do
+    if length(credentials) <= 1 do
+      {:error, auth_failed(strategy, :delete_credential, "Cannot delete the last credential")}
+    else
+      :ok
+    end
+  end
+
+  defp find_credential(strategy, credentials, credential_id) do
+    case Enum.find(credentials, &(&1.id == credential_id)) do
+      nil -> {:error, auth_failed(strategy, :delete_credential, "Credential not found")}
+      credential -> {:ok, credential}
+    end
+  end
+
+  defp destroy_credential(credential, opts) do
+    tenant = Keyword.get(opts, :tenant)
+    ash_opts = [authorize?: false]
+    ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+
+    credential
+    |> Changeset.new()
+    |> Changeset.set_context(auth_context())
+    |> Ash.destroy(ash_opts)
+  end
+
+  defp build_ash_opts(strategy, opts, tenant) do
+    ash_opts =
+      opts
+      |> Keyword.take([:actor])
+      |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
+
+    if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+  end
+
+  defp auth_context, do: %{private: %{ash_authentication?: true}}
+
+  defp auth_failed(strategy, action, message) do
+    AuthenticationFailed.exception(
+      strategy: strategy,
+      caused_by: %{
+        module: __MODULE__,
+        strategy: strategy,
+        action: action,
+        message: message
+      }
+    )
+  end
+
+  defp base64_error(strategy, action) do
+    {:error, auth_failed(strategy, action, "Invalid base64 encoding in request parameters")}
   end
 
   defp store_credential(strategy, user, cred_data, sign_count, label, tenant) do
@@ -404,26 +325,21 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       user_id: user.id
     }
 
-    # CRITICAL: authorize?: false + ash_authentication? context for internal operations
-    context = %{private: %{ash_authentication?: true}}
-    ash_opts = [authorize?: false]
-    ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+    ash_opts = internal_ash_opts(tenant)
 
     strategy.credential_resource
     |> Changeset.new()
-    |> Changeset.set_context(context)
+    |> Changeset.set_context(auth_context())
     |> Changeset.for_create(:create, attrs, ash_opts)
     |> Ash.create()
   end
 
   defp update_sign_count(strategy, credential_id, new_count, tenant) do
-    context = %{private: %{ash_authentication?: true}}
-    ash_opts = [authorize?: false]
-    ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+    ash_opts = internal_ash_opts(tenant)
 
     strategy.credential_resource
     |> Query.new()
-    |> Query.set_context(context)
+    |> Query.set_context(auth_context())
     |> Query.for_read(:read, %{}, ash_opts)
     |> Query.filter(credential_id == ^credential_id)
     |> Ash.read_one()
@@ -434,13 +350,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       {:ok, credential} ->
         credential
         |> Changeset.new()
-        |> Changeset.set_context(context)
+        |> Changeset.set_context(auth_context())
         |> Changeset.for_update(
           :update,
-          %{
-            sign_count: new_count,
-            last_used_at: DateTime.utc_now()
-          },
+          %{sign_count: new_count, last_used_at: DateTime.utc_now()},
           ash_opts
         )
         |> Ash.update!()
@@ -449,6 +362,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         Logger.warning("Failed to update WebAuthn sign count: #{inspect(error)}")
         :ok
     end
+  end
+
+  defp internal_ash_opts(tenant) do
+    ash_opts = [authorize?: false]
+    if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
   end
 
   defp maybe_generate_token(user, strategy, opts) do

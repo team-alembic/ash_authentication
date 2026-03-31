@@ -402,7 +402,8 @@ defmodule DataCase do
 
   @doc "WebAuthn credential factory"
   def build_webauthn_credential(user, attrs \\ %{}) do
-    fixture = AshAuthentication.Test.WebAuthnFixtures.generate_registration()
+    alias AshAuthentication.Test.WebAuthnFixtures
+    fixture = WebAuthnFixtures.generate_registration()
 
     attrs =
       Map.merge(
