@@ -103,7 +103,7 @@ The igniter tasks for password, magic_link, TOTP, and confirmation strategies no
 
 If you use `ash_authentication_phoenix`, its new convention-named strategy tasks (`ash_authentication_phoenix.add_strategy.password`, etc.) handle the Phoenix integration automatically — upgrading senders to use Swoosh and verified routes, modifying the AuthController for TOTP 2FA, and inserting TOTP routes.
 
-**Action required:** If you re-run the igniter installer, the Phoenix-specific sender code will now come from AAP's tasks. Existing senders in your project are not affected — the igniter only modifies files it creates, and uses `on_exists: :overwrite` for sender modules.
+**Action required:** If you re-run the igniter installer, the Phoenix-specific sender code will now come from AAP's tasks. Existing senders in your project are not affected — the igniter uses `on_exists: :warning` for sender modules, so existing customisations are preserved.
 
 ### New Features
 

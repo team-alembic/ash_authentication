@@ -95,7 +95,7 @@ if Code.ensure_loaded?(Igniter) do
         :password,
         """
         confirmation :confirm_new_user do
-          monitor_fields [:#{options[:identity_field]}]
+          monitor_fields [#{inspect(options[:identity_field])}]
           confirm_on_create? true
           confirm_on_update? false
           require_interaction? true
@@ -130,7 +130,8 @@ if Code.ensure_loaded?(Igniter) do
           /confirm_new_user/\#{token}
           """)
         end
-        '''
+        ''',
+        on_exists: :warning
       )
     end
   end

@@ -100,7 +100,7 @@ if Code.ensure_loaded?(Igniter) do
 
       igniter
       |> Ash.Resource.Igniter.add_new_attribute(options[:user], options[:identity_field], """
-      attribute :#{options[:identity_field]}, :ci_string do
+      attribute #{inspect(options[:identity_field])}, :ci_string do
         allow_nil? false
         public? true
       end
@@ -123,8 +123,8 @@ if Code.ensure_loaded?(Igniter) do
         end
 
         upsert? true
-        upsert_identity :unique_#{options[:identity_field]}
-        upsert_fields [:#{options[:identity_field]}]
+        upsert_identity #{inspect(:"unique_#{options[:identity_field]}")}
+        upsert_fields [#{inspect(options[:identity_field])}]
 
         # Uses the information from the token to create or sign in the user
         change AshAuthentication.Strategy.MagicLink.SignInChange
@@ -139,7 +139,7 @@ if Code.ensure_loaded?(Igniter) do
       """)
       |> Ash.Resource.Igniter.add_new_action(options[:user], :request_magic_link, """
       action :request_magic_link do
-        argument :#{options[:identity_field]}, :ci_string do
+        argument #{inspect(options[:identity_field])}, :ci_string do
           allow_nil? false
         end
 
@@ -148,7 +148,7 @@ if Code.ensure_loaded?(Igniter) do
       """)
       |> AshAuthentication.Igniter.add_new_strategy(options[:user], :magic_link, :magic_link, """
       magic_link do
-        identity_field :#{options[:identity_field]}
+        identity_field #{inspect(options[:identity_field])}
         registration_enabled? true
         require_interaction? true
 
@@ -231,7 +231,8 @@ if Code.ensure_loaded?(Igniter) do
           /auth/user/magic_link/?token=\#{token}
           """)
         end
-        '''
+        ''',
+        on_exists: :warning
       )
     end
   end

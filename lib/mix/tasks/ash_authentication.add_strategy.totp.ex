@@ -153,8 +153,8 @@ if Code.ensure_loaded?(Igniter) do
         end
 
       """
-      totp :#{options[:name]} do
-        identity_field :#{options[:identity_field]}#{sign_in_line}
+      totp #{inspect(options[:name])} do
+        identity_field #{inspect(options[:identity_field])}#{sign_in_line}
         confirm_setup_enabled? true
         brute_force_strategy {:audit_log, :audit_log}
       end
