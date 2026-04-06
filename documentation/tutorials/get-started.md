@@ -287,7 +287,7 @@ defmodule MyApp.AuthPlug do
     end
   end
 
-  def handle_failure(conn, _activity, _reason) do
+  def handle_failure(conn, activity, _reason) do
     if is_api_request?(conn) do
       conn
       |> send_resp(401, Jason.encode!(%{
@@ -296,8 +296,14 @@ defmodule MyApp.AuthPlug do
         }
       }))
     else
+      message =
+        case activity do
+          {:password, _} -> "Incorrect email or password"
+          _ -> "Authentication failed"
+        end
+
       conn
-      |> send_resp(401, "<h2>Incorrect email or password</h2>")
+      |> send_resp(401, "<h2>#{message}</h2>")
     end
   end
 
