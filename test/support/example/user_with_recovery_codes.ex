@@ -45,7 +45,6 @@ defmodule Example.UserWithRecoveryCodes do
 
       recovery_code do
         recovery_code_resource Example.RecoveryCode
-        hash_provider AshAuthentication.BcryptProvider
         brute_force_strategy {:preparation, Example.TotpNoopPreparation}
       end
     end

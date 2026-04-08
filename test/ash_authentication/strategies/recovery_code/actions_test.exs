@@ -33,13 +33,9 @@ defmodule AshAuthentication.Strategy.RecoveryCode.ActionsTest do
       {user, first_codes} = generate_codes(strategy, user)
       {_user, second_codes} = generate_codes(strategy, user)
 
-      # New codes should be different from old ones
       refute MapSet.equal?(MapSet.new(first_codes), MapSet.new(second_codes))
-
-      # Should still have the same count
       assert length(second_codes) == strategy.recovery_code_count
 
-      # Verify that old codes no longer work
       first_code = List.first(first_codes)
 
       assert {:error, %AuthenticationFailed{}} =
@@ -76,10 +72,8 @@ defmodule AshAuthentication.Strategy.RecoveryCode.ActionsTest do
       {_user, codes} = generate_codes(strategy, user)
       code = List.first(codes)
 
-      # First use should succeed
       assert {:ok, _user} = Actions.verify(strategy, %{user: user, code: code}, [])
 
-      # Second use of same code should fail
       assert {:error, %AuthenticationFailed{}} =
                Actions.verify(strategy, %{user: user, code: code}, [])
     end
@@ -91,34 +85,32 @@ defmodule AshAuthentication.Strategy.RecoveryCode.ActionsTest do
       {_user, codes} = generate_codes(strategy, user)
       [first_code, second_code | _rest] = codes
 
-      # Use first code
       assert {:ok, _user} = Actions.verify(strategy, %{user: user, code: first_code}, [])
-
-      # Second code should still work
       assert {:ok, _user} = Actions.verify(strategy, %{user: user, code: second_code}, [])
     end
   end
 
-  describe "generate_code/1" do
+  describe "generate_code/2" do
     test "generates a code of the specified length" do
-      code = Actions.generate_code(8)
-      assert String.length(code) == 8
+      code = Actions.generate_code(12, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+      assert String.length(code) == 12
     end
 
     test "generates unique codes" do
-      codes = Enum.map(1..100, fn _ -> Actions.generate_code(8) end)
-      # All should be unique (statistically extremely unlikely to have duplicates)
+      alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+      codes = Enum.map(1..100, fn _ -> Actions.generate_code(12, alphabet) end)
       assert length(Enum.uniq(codes)) == 100
     end
 
-    test "only uses unambiguous characters" do
-      ambiguous = ~c"1IOo0l"
+    test "only uses characters from the provided alphabet" do
+      alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+      allowed = String.graphemes(alphabet) |> MapSet.new()
 
-      codes = Enum.map(1..100, fn _ -> Actions.generate_code(8) end)
+      codes = Enum.map(1..100, fn _ -> Actions.generate_code(12, alphabet) end)
 
-      for code <- codes, char <- String.to_charlist(code) do
-        refute char in ambiguous,
-               "Code #{code} contains ambiguous character: #{<<char::utf8>>}"
+      for code <- codes, char <- String.graphemes(code) do
+        assert char in allowed,
+               "Code #{code} contains character not in alphabet: #{char}"
       end
     end
   end

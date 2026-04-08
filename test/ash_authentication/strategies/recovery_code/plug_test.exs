@@ -55,6 +55,22 @@ defmodule AshAuthentication.Strategy.RecoveryCode.PlugTest do
                |> Plug.verify(strategy)
                |> Helpers.get_authentication_result()
     end
+
+    test "it returns an error when no actor is set" do
+      {:ok, strategy} = Info.strategy(Example.UserWithRecoveryCodes, :recovery_code)
+
+      params = %{
+        "user_with_recovery_codes" => %{
+          "code" => "somecode"
+        }
+      }
+
+      assert {_conn, {:error, %AuthenticationFailed{}}} =
+               :post
+               |> conn("/", params)
+               |> Plug.verify(strategy)
+               |> Helpers.get_authentication_result()
+    end
   end
 
   describe "generate/2" do
@@ -72,6 +88,16 @@ defmodule AshAuthentication.Strategy.RecoveryCode.PlugTest do
       codes = updated_user.__metadata__.recovery_codes
       assert length(codes) == strategy.recovery_code_count
       assert Enum.all?(codes, &is_binary/1)
+    end
+
+    test "it returns an error when no actor is set" do
+      {:ok, strategy} = Info.strategy(Example.UserWithRecoveryCodes, :recovery_code)
+
+      assert {_conn, {:error, %AuthenticationFailed{}}} =
+               :post
+               |> conn("/")
+               |> Plug.generate(strategy)
+               |> Helpers.get_authentication_result()
     end
   end
 end
