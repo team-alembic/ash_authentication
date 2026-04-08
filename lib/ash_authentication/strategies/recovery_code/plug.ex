@@ -22,8 +22,16 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Plug do
 
         case Strategy.action(strategy, :verify, params, opts) do
           {:ok, user} ->
+            existing_strategies =
+              Ash.Resource.get_metadata(user, :authentication_strategies) || []
+
             user_with_metadata =
-              Ash.Resource.put_metadata(user, :recovery_code_used_at, DateTime.utc_now())
+              user
+              |> Ash.Resource.put_metadata(
+                :authentication_strategies,
+                Enum.uniq(existing_strategies ++ [:recovery_code])
+              )
+              |> Ash.Resource.put_metadata(:recovery_code_used_at, DateTime.utc_now())
 
             store_authentication_result(conn, {:ok, user_with_metadata})
 

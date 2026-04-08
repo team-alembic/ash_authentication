@@ -46,7 +46,12 @@ defmodule AshAuthentication.Plug.Helpers do
   def store_in_session(conn, _), do: conn
 
   # Keys that should be persisted in the session metadata
-  @session_metadata_keys [:token, :authentication_strategies, :totp_verified_at]
+  @session_metadata_keys [
+    :token,
+    :authentication_strategies,
+    :totp_verified_at,
+    :recovery_code_used_at
+  ]
 
   defp store_metadata_in_session(conn, user, subject_name) do
     metadata = user.__metadata__ || %{}
