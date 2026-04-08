@@ -10,7 +10,8 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
   @spec verify(RecoveryCode.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl) do
     with :ok <- validate_brute_force_strategy(dsl, strategy),
-         :ok <- validate_shared_salt_callbacks(dsl, strategy) do
+         :ok <- validate_entropy(dsl, strategy),
+         :ok <- validate_code_alphabet(dsl, strategy) do
       validate_recovery_code_resource(dsl, strategy)
     end
   end
@@ -38,39 +39,59 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
     validate_preparation_supports_action_input(dsl, strategy, module)
   end
 
-  defp validate_shared_salt_callbacks(_dsl, %{use_shared_salt?: false}), do: :ok
+  defp validate_entropy(dsl, strategy) do
+    alphabet_size = String.length(strategy.code_alphabet)
+    entropy_bits = strategy.code_length * :math.log2(alphabet_size)
+    minimum = strategy.hash_provider.minimum_entropy()
 
-  defp validate_shared_salt_callbacks(_dsl, strategy) do
-    hash_provider = strategy.hash_provider
-
-    case Code.ensure_loaded(hash_provider) do
-      # Module not yet compiled; skip check — will fail at runtime if missing
-      {:error, _} -> :ok
-      {:module, _} -> check_shared_salt_exports(hash_provider, strategy)
-    end
-  end
-
-  defp check_shared_salt_exports(hash_provider, strategy) do
-    required_callbacks = [gen_salt: 0, hash: 3, extract_salt: 1]
-
-    missing =
-      Enum.reject(required_callbacks, fn {fun, arity} ->
-        function_exported?(hash_provider, fun, arity)
-      end)
-
-    if missing == [] do
+    if entropy_bits >= minimum do
       :ok
     else
-      missing_str = Enum.map_join(missing, ", ", fn {f, a} -> "#{f}/#{a}" end)
+      module = Verifier.get_persisted(dsl, :module)
 
       {:error,
        DslError.exception(
-         path: [:authentication, :strategies, strategy.name, :use_shared_salt?],
+         module: module,
+         path: [:authentication, :strategies, strategy.name],
          message: """
-         `use_shared_salt?` is enabled but the hash provider `#{inspect(hash_provider)}` \
-         does not implement the required callbacks: #{missing_str}.
+         The recovery code configuration provides ~#{Float.round(entropy_bits, 1)} bits of entropy \
+         (code_length=#{strategy.code_length}, alphabet_size=#{alphabet_size}), but the hash provider \
+         `#{inspect(strategy.hash_provider)}` requires a minimum of #{minimum} bits.
+
+         Either increase `code_length`, use a richer `code_alphabet`, or use a slower hash provider \
+         like `AshAuthentication.BcryptProvider`.
          """
        )}
+    end
+  end
+
+  defp validate_code_alphabet(dsl, strategy) do
+    graphemes = String.graphemes(strategy.code_alphabet)
+    unique_graphemes = Enum.uniq(graphemes)
+
+    cond do
+      length(graphemes) < 2 ->
+        module = Verifier.get_persisted(dsl, :module)
+
+        {:error,
+         DslError.exception(
+           module: module,
+           path: [:authentication, :strategies, strategy.name, :code_alphabet],
+           message: "The `code_alphabet` must contain at least 2 characters."
+         )}
+
+      length(graphemes) != length(unique_graphemes) ->
+        module = Verifier.get_persisted(dsl, :module)
+
+        {:error,
+         DslError.exception(
+           module: module,
+           path: [:authentication, :strategies, strategy.name, :code_alphabet],
+           message: "The `code_alphabet` must contain only unique characters."
+         )}
+
+      true ->
+        :ok
     end
   end
 

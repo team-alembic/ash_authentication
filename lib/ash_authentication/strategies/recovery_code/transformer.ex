@@ -250,7 +250,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Transformer do
         sensitive?: true,
         default:
           {AshAuthentication.Strategy.RecoveryCode.Actions, :generate_codes_list,
-           [strategy.code_length, strategy.recovery_code_count]}
+           [strategy.code_length, strategy.recovery_code_count, strategy.code_alphabet]}
       )
     ]
 
@@ -263,7 +263,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Transformer do
       Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :update], :change,
         change:
           {AshAuthentication.Strategy.RecoveryCode.HashRecoveryCodesChange,
-           hash_provider: strategy.hash_provider, use_shared_salt?: strategy.use_shared_salt?}
+           hash_provider: strategy.hash_provider}
       ),
       Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :update], :change,
         change:

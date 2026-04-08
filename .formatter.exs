@@ -34,6 +34,7 @@ spark_locals_without_parens = [
   client_authentication_method: 1,
   client_id: 1,
   client_secret: 1,
+  code_alphabet: 1,
   code_field: 1,
   code_length: 1,
   code_verifier: 1,
@@ -199,7 +200,7 @@ spark_locals_without_parens = [
   trusted_audiences: 1,
   uid_attribute_name: 1,
   upsert_action_name: 1,
-  use_shared_salt?: 1,
+
   user_id_attribute_name: 1,
   user_relationship_name: 1,
   user_resource: 1,

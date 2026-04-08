@@ -50,14 +50,17 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Dsl do
         ],
         hash_provider: [
           type: {:behaviour, AshAuthentication.HashProvider},
-          doc: "The hash provider to use for hashing and verifying recovery codes.",
-          required: true
-        ],
-        use_shared_salt?: [
-          type: :boolean,
           doc:
-            "When true, all recovery codes for a user share a single salt. This allows verification with a single hash operation and direct comparison instead of checking each code individually. Requires the hash provider to implement `gen_salt/0`, `hash/2`, and `extract_salt/1`.",
-          default: false
+            "The hash provider to use for hashing and verifying recovery codes. Defaults to `AshAuthentication.SHA256Provider` which requires codes with at least 60 bits of entropy. For shorter codes, use `AshAuthentication.BcryptProvider` or `AshAuthentication.Argon2Provider`.",
+          default: AshAuthentication.SHA256Provider,
+          required: false
+        ],
+        code_alphabet: [
+          type: :string,
+          doc:
+            "The set of characters used when generating recovery codes. Each character in the string must be unique.",
+          default: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+          required: false
         ],
         brute_force_strategy: [
           type:
@@ -79,7 +82,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Dsl do
         code_length: [
           type: :pos_integer,
           doc: "The length of each generated recovery code.",
-          default: 8,
+          default: 12,
           required: false
         ],
         verify_action_name: [

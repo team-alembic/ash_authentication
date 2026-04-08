@@ -16,16 +16,14 @@ defmodule AshAuthentication.Strategy.RecoveryCode.HashRecoveryCodesChange do
   @impl true
   def change(changeset, opts, _context) do
     hash_provider = opts[:hash_provider]
-    use_shared_salt? = opts[:use_shared_salt?]
-
-    salt =
-      if use_shared_salt? do
-        hash_provider.gen_salt()
-      end
 
     case Ash.Changeset.fetch_argument(changeset, :recovery_codes) do
       {:ok, plaintext_codes} when is_list(plaintext_codes) ->
-        hashed_codes = Enum.map(plaintext_codes, &hash_code(&1, hash_provider, salt))
+        hashed_codes =
+          Enum.map(plaintext_codes, fn code ->
+            {:ok, hashed} = hash_provider.hash(code)
+            hashed
+          end)
 
         changeset
         |> Ash.Changeset.set_argument(:recovery_codes, hashed_codes)
@@ -37,8 +35,4 @@ defmodule AshAuthentication.Strategy.RecoveryCode.HashRecoveryCodesChange do
         changeset
     end
   end
-
-  defp hash_code(code, hash_provider, nil), do: elem(hash_provider.hash(code), 1)
-
-  defp hash_code(code, hash_provider, salt), do: elem(hash_provider.hash(code, salt), 1)
 end

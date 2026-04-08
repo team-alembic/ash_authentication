@@ -8,9 +8,6 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Actions do
   alias Ash.{ActionInput, Changeset}
   alias AshAuthentication.{Errors, Info, Strategy.RecoveryCode}
 
-  # Character set excluding ambiguous characters (1, I, O, o, 0)
-  @allowed_chars ~c"abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
   @doc """
   Verify a recovery code for a user.
 
@@ -88,23 +85,25 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Actions do
   end
 
   @doc """
-  Generate a list of random recovery codes.
+  Generate a list of random recovery codes using a CSPRNG.
   """
-  @spec generate_codes_list(pos_integer, pos_integer) :: [String.t()]
-  def generate_codes_list(length, count) do
-    Enum.map(1..count, fn _ -> generate_code(length) end)
+  @spec generate_codes_list(pos_integer, pos_integer, String.t()) :: [String.t()]
+  def generate_codes_list(length, count, alphabet) do
+    Enum.map(1..count, fn _ -> generate_code(length, alphabet) end)
   end
 
   @doc """
-  Generate a single random recovery code.
-
-  Returns a random string of the configured length using an unambiguous
-  character set (excluding 1, I, O, o, 0).
+  Generate a single random recovery code using `:crypto.strong_rand_bytes/1`.
   """
-  @spec generate_code(pos_integer) :: String.t()
-  def generate_code(length) do
-    Enum.map_join(1..length, fn _ ->
-      <<Enum.random(@allowed_chars)::utf8>>
-    end)
+  @spec generate_code(pos_integer, String.t()) :: String.t()
+  def generate_code(length, alphabet) do
+    alphabet_list = String.graphemes(alphabet)
+    alphabet_size = length(alphabet_list)
+
+    length
+    |> :crypto.strong_rand_bytes()
+    |> :binary.bin_to_list()
+    |> Enum.map(fn byte -> Enum.at(alphabet_list, rem(byte, alphabet_size)) end)
+    |> Enum.join()
   end
 end

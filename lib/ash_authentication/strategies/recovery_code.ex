@@ -78,17 +78,17 @@ defmodule AshAuthentication.Strategy.RecoveryCode do
             audit_log_max_failures: 5,
             audit_log_window: {5, :minutes},
             brute_force_strategy: nil,
+            code_alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
             code_field: :code,
-            code_length: 8,
+            code_length: 12,
             generate_action_name: nil,
             generate_enabled?: true,
-            hash_provider: nil,
+            hash_provider: AshAuthentication.SHA256Provider,
             name: :recovery_code,
             recovery_code_count: 10,
             recovery_code_resource: nil,
             recovery_codes_relationship_name: :recovery_codes,
             resource: nil,
-            use_shared_salt?: false,
             user_relationship_name: :user,
             verify_action_name: nil
 
@@ -100,6 +100,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode do
           audit_log_max_failures: pos_integer,
           audit_log_window: pos_integer | {pos_integer, :days | :hours | :minutes | :seconds},
           brute_force_strategy: :rate_limit | {:audit_log, atom} | {:preparation, module},
+          code_alphabet: String.t(),
           code_field: atom,
           code_length: pos_integer,
           generate_action_name: atom | nil,
@@ -110,7 +111,6 @@ defmodule AshAuthentication.Strategy.RecoveryCode do
           recovery_code_resource: module | nil,
           recovery_codes_relationship_name: atom,
           resource: Ash.Resource.t() | nil,
-          use_shared_salt?: boolean,
           user_relationship_name: atom,
           verify_action_name: atom | nil
         }
