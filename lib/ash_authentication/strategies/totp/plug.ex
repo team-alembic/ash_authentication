@@ -54,7 +54,7 @@ defmodule AshAuthentication.Strategy.Totp.Plug do
   @spec verify(Conn.t(), Totp.t()) :: Conn.t()
   def verify(conn, strategy) do
     user = get_actor(conn)
-    params = subject_params(conn, strategy) |> Map.put("user", user)
+    params = subject_params(conn, strategy) |> Map.take(["code"]) |> Map.put("user", user)
     opts = opts(conn)
     result = Strategy.action(strategy, :verify, params, opts)
 

@@ -95,11 +95,29 @@ user_info["email_verified"] == "true"
 user_info["email_verified"] == true
 ```
 
+### Igniter Task Changes
+
+#### Phoenix-specific code moved to ash_authentication_phoenix
+
+The igniter tasks for password, magic_link, TOTP, and confirmation strategies no longer generate Phoenix-specific code (Swoosh senders with verified routes, controller modifications). AA's tasks now generate only resource-level code with basic `IO.puts` senders.
+
+If you use `ash_authentication_phoenix`, its new convention-named strategy tasks (`ash_authentication_phoenix.add_strategy.password`, etc.) handle the Phoenix integration automatically — upgrading senders to use Swoosh and verified routes, modifying the AuthController for TOTP 2FA, and inserting TOTP routes.
+
+**Action required:** If you re-run the igniter installer, the Phoenix-specific sender code will now come from AAP's tasks. Existing senders in your project are not affected — the igniter uses `on_exists: :warning` for sender modules, so existing customisations are preserved.
+
 ### New Features
 
 #### TOTP Two-Factor Authentication
 
 Version 5.0.0 adds a complete TOTP (Time-based One-Time Password) strategy for two-factor authentication. See the [TOTP tutorial](/documentation/tutorials/totp.md) for setup instructions.
+
+To add TOTP to an existing project with `ash_authentication_phoenix`:
+
+```bash
+mix ash_authentication_phoenix.add_strategy totp
+```
+
+This composes both the AA resource-level task and the AAP Phoenix integration task.
 
 #### Extra JWT Claims
 

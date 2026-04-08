@@ -324,24 +324,6 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
-    Checks for a Phoenix web module and returns a `use` line for verified routes.
-
-    Returns `{web_module_exists?, use_line_or_nil, igniter}`.
-    """
-    @spec web_module_use_line(Igniter.t()) :: {boolean(), String.t() | nil, Igniter.t()}
-    def web_module_use_line(igniter) do
-      web_module = Igniter.Libs.Phoenix.web_module(igniter)
-      {web_module_exists?, igniter} = Igniter.Project.Module.module_exists(igniter, web_module)
-
-      use_web_module =
-        if web_module_exists? do
-          "use #{inspect(web_module)}, :verified_routes"
-        end
-
-      {web_module_exists?, use_web_module, igniter}
-    end
-
-    @doc """
     Returns the parent module of a given module.
 
     Useful for deriving a domain module from a resource module.

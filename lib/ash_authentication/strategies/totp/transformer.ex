@@ -532,6 +532,7 @@ defmodule AshAuthentication.Strategy.Totp.Transformer do
         name: :user,
         type: Ash.Type.Struct,
         allow_nil?: false,
+        sensitive?: true,
         description: "The user whose code to check.",
         constraints: [instance_of: module]
       ),

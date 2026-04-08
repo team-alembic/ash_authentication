@@ -136,7 +136,7 @@ if Code.ensure_loaded?(Igniter) do
 
       igniter
       |> Ash.Resource.Igniter.add_new_attribute(options[:user], options[:identity_field], """
-      attribute :#{options[:identity_field]}, :ci_string do
+      attribute #{inspect(options[:identity_field])}, :ci_string do
         allow_nil? false
         public? true
       end
@@ -150,7 +150,7 @@ if Code.ensure_loaded?(Igniter) do
       |> AshAuthentication.Igniter.ensure_identity(options[:user], options[:identity_field])
       |> AshAuthentication.Igniter.add_new_strategy(options[:user], :password, :password, """
       password :password do
-        identity_field :#{options[:identity_field]}
+        identity_field #{inspect(options[:identity_field])}
         hash_provider #{hash_provider}
 
         resettable do
@@ -211,12 +211,12 @@ if Code.ensure_loaded?(Igniter) do
         action :request_password_reset_token do
           description "Send password reset instructions to a user if they exist."
 
-          argument :#{options[:identity_field]}, :ci_string do
+          argument #{inspect(options[:identity_field])}, :ci_string do
             allow_nil? false
           end
 
           # creates a reset token and invokes the relevant senders
-          run {AshAuthentication.Strategy.Password.RequestPasswordReset, action: :get_by_#{options[:identity_field]}}
+          run {AshAuthentication.Strategy.Password.RequestPasswordReset, action: #{inspect(:"get_by_#{options[:identity_field]}")}}
         end
         """
       )
@@ -256,74 +256,7 @@ if Code.ensure_loaded?(Igniter) do
       """)
     end
 
-    defp create_reset_sender(igniter, sender, options) do
-      case Igniter.Libs.Swoosh.list_mailers(igniter) do
-        {igniter, [mailer]} ->
-          {_web_module_exists?, use_web_module, igniter} =
-            AshAuthentication.Igniter.web_module_use_line(igniter)
-
-          Igniter.Project.Module.create_module(igniter, sender, ~s'''
-          @moduledoc """
-          Sends a password reset email
-          """
-
-          use AshAuthentication.Sender
-          #{use_web_module}
-
-          import Swoosh.Email
-
-          alias #{inspect(mailer)}
-
-          @impl true
-          def send(user, token, _) do
-            new()
-            # TODO: Replace with your email
-            |> from({"noreply", "noreply@example.com"})
-            |> to(to_string(user.email))
-            |> subject("Reset your password")
-            |> html_body(body([token: token]))
-            |> #{List.last(Module.split(mailer))}.deliver!()
-          end
-
-          defp body(params) do
-            url = url(~p"/password-reset/\#{params[:token]}")
-
-            """
-            <p>Click this link to reset your password:</p>
-            <p><a href="\#{url}">\#{url}</a></p>
-            """
-          end
-          ''')
-
-        _ ->
-          create_example_reset_sender(igniter, sender, options)
-      end
-    end
-
-    defp create_example_reset_sender(igniter, sender, options) do
-      {web_module_exists?, use_web_module, igniter} =
-        AshAuthentication.Igniter.web_module_use_line(igniter)
-
-      example_domain = AshAuthentication.Igniter.parent_module(options[:user])
-
-      real_example =
-        if web_module_exists? do
-          """
-          # Example of how you might send this email
-          # #{inspect(example_domain)}.Emails.send_password_reset_email(
-          #   user,
-          #   token
-          # )
-          """
-        end
-
-      url =
-        if use_web_module do
-          "\#{url(~p\"/password-reset/\#{token}\")}"
-        else
-          "/password-reset/\#{token}"
-        end
-
+    defp create_reset_sender(igniter, sender, _options) do
       Igniter.Project.Module.create_module(
         igniter,
         sender,
@@ -333,18 +266,17 @@ if Code.ensure_loaded?(Igniter) do
         """
 
         use AshAuthentication.Sender
-        #{use_web_module}
 
         @impl true
         def send(_user, token, _) do
-          #{real_example}
           IO.puts("""
           Click this link to reset your password:
 
-          #{url}
+          /password-reset/\#{token}
           """)
         end
-        '''
+        ''',
+        on_exists: :warning
       )
     end
 
@@ -355,7 +287,7 @@ if Code.ensure_loaded?(Igniter) do
         description "Attempt to sign in using a #{options[:identity_field]} and password."
         get? true
 
-        argument :#{options[:identity_field]}, :ci_string do
+        argument #{inspect(options[:identity_field])}, :ci_string do
           description "The #{options[:identity_field]} to use for retrieving the user."
           allow_nil? false
         end
@@ -415,7 +347,7 @@ if Code.ensure_loaded?(Igniter) do
       |> Ash.Resource.Igniter.add_new_action(options[:user], :register_with_password, """
       create :register_with_password do
         description "Register a new user with a #{options[:identity_field]} and password."
-        argument :#{options[:identity_field]}, :ci_string do
+        argument #{inspect(options[:identity_field])}, :ci_string do
           allow_nil? false
         end
 
@@ -433,7 +365,7 @@ if Code.ensure_loaded?(Igniter) do
         end
 
         # Sets the #{options[:identity_field]} from the argument
-        change set_attribute(:#{options[:identity_field]}, arg(:#{options[:identity_field]}))
+        change set_attribute(#{inspect(options[:identity_field])}, arg(#{inspect(options[:identity_field])}))
 
         # Hashes the provided password
         change AshAuthentication.Strategy.Password.HashPasswordChange

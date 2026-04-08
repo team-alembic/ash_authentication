@@ -14,7 +14,8 @@ if Code.ensure_loaded?(Igniter) do
     @strategies [
       password: "Register and sign in with a username/email and a password.",
       magic_link: "Register and sign in with a magic link, sent via email to the user.",
-      api_key: "Sign in with an API key."
+      api_key: "Sign in with an API key.",
+      totp: "Authenticate with a time-based one-time password (TOTP)."
     ]
 
     @strategy_explanation Enum.map_join(@strategies, "\n", fn {name, description} ->
@@ -26,7 +27,8 @@ if Code.ensure_loaded?(Igniter) do
     @strategy_tasks %{
       "password" => "ash_authentication.add_strategy.password",
       "magic_link" => "ash_authentication.add_strategy.magic_link",
-      "api_key" => "ash_authentication.add_strategy.api_key"
+      "api_key" => "ash_authentication.add_strategy.api_key",
+      "totp" => "ash_authentication.add_strategy.totp"
     }
 
     @moduledoc """
@@ -43,6 +45,7 @@ if Code.ensure_loaded?(Igniter) do
       * `mix ash_authentication.add_strategy.password`
       * `mix ash_authentication.add_strategy.magic_link`
       * `mix ash_authentication.add_strategy.api_key`
+      * `mix ash_authentication.add_strategy.totp`
 
     ## Example
 
@@ -59,6 +62,11 @@ if Code.ensure_loaded?(Igniter) do
     ## Password options
 
       - `hash-provider` - The hash provider to use, either `bcrypt` or `argon2`.  Defaults to `bcrypt`.
+
+    ## TOTP options
+
+      - `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `2fa`.
+      - `--name`, `-n` - The name of the TOTP strategy. Defaults to `totp`.
     """
 
     def info(_argv, _composing_task) do
@@ -76,12 +84,16 @@ if Code.ensure_loaded?(Igniter) do
           user: :string,
           identity_field: :string,
           api_key: :string,
-          hash_provider: :string
+          hash_provider: :string,
+          mode: :string,
+          name: :string
         ],
         aliases: [
           a: :accounts,
           u: :user,
-          i: :identity_field
+          i: :identity_field,
+          m: :mode,
+          n: :name
         ],
         defaults: [
           identity_field: "email"
