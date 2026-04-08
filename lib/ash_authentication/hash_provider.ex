@@ -12,9 +12,6 @@ defmodule AshAuthentication.HashProvider do
   """
   @callback hash(input :: String.t()) :: {:ok, hash :: String.t()} | :error
 
-  @callback hash(input :: String.t(), salt :: String.t(), opts :: keyword()) ::
-              {:ok, hash :: String.t()} | :error
-
   @doc """
   Check if the user input matches the hash.
   """
@@ -28,19 +25,23 @@ defmodule AshAuthentication.HashProvider do
   @callback simulate :: false
 
   @doc """
-  Generate a salt for use with `hash/2`.
+  The minimum bits of input entropy required for this hash provider to be safe.
+
+  Slow hash providers like bcrypt and argon2 return `0` because their
+  computational cost makes brute-force attacks impractical regardless of input
+  entropy. Fast deterministic hash providers like SHA-256 require high-entropy
+  inputs (e.g. 60+ bits) because their speed makes low-entropy inputs
+  vulnerable to offline brute-force attacks.
   """
-  @callback gen_salt() :: String.t()
+  @callback minimum_entropy() :: non_neg_integer()
 
   @doc """
-  Extract the salt from a previously generated hash.
+  Whether the same input always produces the same hash output.
 
-  Used with shared-salt recovery codes to recover the salt from a stored hash
-  for re-hashing during verification.
+  Deterministic providers (e.g. SHA-256) allow atomic database-level
+  verification by hashing the input and matching directly against stored
+  values. Non-deterministic providers (e.g. bcrypt, argon2) use random salts,
+  so verification requires loading stored hashes and comparing individually.
   """
-  @callback extract_salt(hash :: String.t()) :: String.t() | :error
-
-  @callback extract_iterations(hash :: String.t()) :: integer() | :error
-
-  @optional_callbacks gen_salt: 0, hash: 3, extract_salt: 1, extract_iterations: 1
+  @callback deterministic?() :: boolean()
 end

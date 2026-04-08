@@ -60,4 +60,12 @@ defmodule AshAuthentication.Argon2Provider do
   else
     def simulate, do: raise("Argon2 is not available")
   end
+
+  @impl true
+  @spec minimum_entropy() :: non_neg_integer()
+  def minimum_entropy, do: 0
+
+  @impl true
+  @spec deterministic?() :: boolean()
+  def deterministic?, do: false
 end
