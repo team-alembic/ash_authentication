@@ -103,10 +103,15 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Actions do
   def generate_code(length, alphabet) do
     alphabet_list = String.graphemes(alphabet)
     alphabet_size = length(alphabet_list)
+    bytes_needed = max(1, ceil(:math.log2(alphabet_size) / 8))
 
-    length
-    |> :crypto.strong_rand_bytes()
-    |> :binary.bin_to_list()
-    |> Enum.map_join(fn byte -> Enum.at(alphabet_list, rem(byte, alphabet_size)) end)
+    Enum.map_join(1..length, fn _ ->
+      random_int =
+        bytes_needed
+        |> :crypto.strong_rand_bytes()
+        |> :binary.decode_unsigned()
+
+      Enum.at(alphabet_list, rem(random_int, alphabet_size))
+    end)
   end
 end

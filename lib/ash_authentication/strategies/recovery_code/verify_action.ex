@@ -64,8 +64,14 @@ defmodule AshAuthentication.Strategy.RecoveryCode.VerifyAction do
           )
 
         case result do
-          %{records: [_ | _]} -> {:ok, user}
-          _ -> {:ok, nil}
+          %{status: :success, records: [_]} ->
+            {:ok, user}
+
+          %{status: :success, records: []} ->
+            {:ok, nil}
+
+          %{errors: errors} ->
+            {:error, Ash.Error.to_ash_error(errors)}
         end
 
       :error ->
@@ -92,21 +98,32 @@ defmodule AshAuthentication.Strategy.RecoveryCode.VerifyAction do
     pad_count = max(0, strategy.recovery_code_count - length(codes))
     Enum.each(1..max(pad_count, 1)//1, fn _ -> strategy.hash_provider.simulate() end)
 
-    case matched do
-      nil ->
-        {:ok, nil}
+    if is_nil(matched) do
+      {:ok, nil}
+    else
+      [pk_field] = Ash.Resource.Info.primary_key(strategy.recovery_code_resource)
 
-      matched_code ->
+      result =
         strategy.recovery_code_resource
-        |> Ash.Query.filter(id == ^matched_code.id)
+        |> Ash.Query.filter(^ref(pk_field) == ^Map.get(matched, pk_field))
         |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
         |> Ash.bulk_destroy(:destroy, %{},
           strategy: [:atomic, :atomic_batches, :stream],
+          return_records?: true,
           context: %{private: %{ash_authentication?: true}},
           domain: domain
         )
 
-        {:ok, user}
+      case result do
+        %{status: :success, records: [_]} ->
+          {:ok, user}
+
+        %{status: :success, records: []} ->
+          {:ok, nil}
+
+        %{errors: errors} ->
+          {:error, Ash.Error.to_ash_error(errors)}
+      end
     end
   end
 
