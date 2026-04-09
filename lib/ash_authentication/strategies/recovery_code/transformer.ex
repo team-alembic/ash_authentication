@@ -156,7 +156,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Transformer do
           [
             Transformer.build_entity!(Ash.Resource.Dsl, [:actions, :action], :prepare,
               preparation:
-                {AshAuthentication.Strategy.Totp.AuditLogPreparation,
+                {AshAuthentication.AddOn.AuditLog.BruteForcePreparation,
                  action_name: strategy.verify_action_name}
             )
           ]
@@ -306,7 +306,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Transformer do
 
   defp validate_strategy_preparation(action, {:audit_log, _audit_log_name}),
     do:
-      validate_action_has_preparation(action, AshAuthentication.Strategy.Totp.AuditLogPreparation)
+      validate_action_has_preparation(action, AshAuthentication.AddOn.AuditLog.BruteForcePreparation)
 
   defp validate_strategy_preparation(_, _), do: :ok
 end

@@ -1,28 +1,23 @@
-# SPDX-FileCopyrightText: 2025 Alembic Pty Ltd
-#
-# SPDX-License-Identifier: MIT
-
-defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
+defmodule AshAuthentication.AddOn.AuditLog.BruteForcePreparation do
   @moduledoc """
-  Preparation that checks the audit log for failed TOTP attempts.
+  Preparation that checks the audit log for failed authentication attempts.
 
-  When `brute_force_strategy: {:audit_log, :my_audit_log}` is configured,
-  this preparation queries the audit log for failed TOTP attempts within
+  When `brute_force_strategy: {:audit_log, :my_audit_log}` is configured on a
+  strategy, this preparation queries the audit log for failed attempts within
   a time window. If the number of failures exceeds the configured maximum,
   the request is denied with an `AuthenticationFailed` error.
 
-  The window and max failures are configured via DSL options:
+  The window and max failures are configured via DSL options on the strategy:
   - `audit_log_window` - time window for counting failures (default: 5 minutes)
   - `audit_log_max_failures` - maximum allowed failures before blocking (default: 5)
 
-  Failures are counted across ALL TOTP actions (sign_in, verify, confirm_setup)
-  for the same user, not per-action.
+  Used by both the TOTP and recovery code strategies.
   """
   use Ash.Resource.Preparation
 
   alias Ash.ActionInput
   alias AshAuthentication.{Errors.AuthenticationFailed, Info}
-  alias AshAuthentication.Strategy.Totp.{AuditLogHelpers, Helpers}
+  alias AshAuthentication.AddOn.AuditLog.BruteForceHelpers
 
   @impl true
   def init(opts), do: {:ok, opts}
@@ -95,11 +90,11 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
 
   defp check_rate_limit(user, strategy, audit_log, opts) do
     subject = AshAuthentication.user_to_subject(user)
-    window = Helpers.time_to_seconds(strategy.audit_log_window)
+    window = strategy.audit_log_window
     max_failures = strategy.audit_log_max_failures
     cutoff = DateTime.add(DateTime.utc_now(), -window, :second)
 
-    case AuditLogHelpers.count_failures(audit_log, subject, strategy.name, cutoff) do
+    case BruteForceHelpers.count_failures(audit_log, subject, strategy.name, cutoff) do
       {:ok, failure_count} when failure_count >= max_failures ->
         action_name = Keyword.get(opts, :action_name, :unknown)
 
@@ -110,7 +105,7 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogPreparation do
              module: __MODULE__,
              strategy: strategy,
              action: action_name,
-             message: "Too many failed TOTP attempts"
+             message: "Too many failed attempts"
            }
          )}
 
