@@ -220,7 +220,7 @@ recovery_code do
   recovery_code_resource MyApp.Accounts.RecoveryCode
   hash_provider AshAuthentication.BcryptProvider
   code_length 8
-  brute_force_strategy {:preparation, MyApp.NoopBruteForcePreparation}
+  brute_force_strategy {:audit_log, :audit_log}
 end
 ```
 
