@@ -136,12 +136,79 @@ if Code.ensure_loaded?(Igniter) do
       """)
       |> AshAuthentication.Igniter.ensure_identity(options[:user], options[:identity_field])
       |> compose_audit_log(options)
+      |> add_totp_actions(options)
       |> AshAuthentication.Igniter.add_new_strategy(
         options[:user],
         :totp,
         options[:name],
         build_strategy_config(options)
       )
+    end
+
+    defp add_totp_actions(igniter, options) do
+      name = options[:name]
+      setup_name = :"setup_with_#{name}"
+      confirm_name = :"confirm_setup_with_#{name}"
+      verify_name = :"verify_with_#{name}"
+
+      igniter
+      |> Ash.Resource.Igniter.add_new_action(options[:user], setup_name, """
+      update #{inspect(setup_name)} do
+        require_atomic? false
+        accept []
+
+        change AshAuthentication.Strategy.Totp.GeneratePendingSetupChange
+
+        metadata :setup_token, :string, allow_nil?: false
+        metadata :totp_url, :string, allow_nil?: false
+        description "Generate a pending TOTP secret and return a setup token. Use the confirm_setup action to activate."
+      end
+      """)
+      |> Ash.Resource.Igniter.add_new_action(options[:user], confirm_name, """
+      update #{inspect(confirm_name)} do
+        require_atomic? false
+        accept []
+
+        argument :setup_token, :string do
+          allow_nil? false
+          sensitive? true
+          description "The setup token from the setup action."
+        end
+
+        argument :code, :string do
+          allow_nil? false
+          description "The TOTP code to verify."
+        end
+
+        change {AshAuthentication.Strategy.Totp.AuditLogChange,
+                action_name: #{inspect(confirm_name)}}
+        change AshAuthentication.Strategy.Totp.ConfirmSetupChange
+
+        description "Confirm TOTP setup by verifying a code and activating the secret."
+      end
+      """)
+      |> Ash.Resource.Igniter.add_new_action(options[:user], verify_name, """
+      action #{inspect(verify_name)} do
+        argument :user, :struct do
+          allow_nil? false
+          sensitive? true
+          constraints instance_of: __MODULE__
+        end
+
+        argument :code, :string do
+          allow_nil? false
+          description "The TOTP code to verify."
+        end
+
+        prepare {AshAuthentication.Strategy.Totp.AuditLogPreparation,
+                 action_name: #{inspect(verify_name)}}
+
+        returns :boolean
+        transaction? true
+        run AshAuthentication.Strategy.Totp.VerifyAction
+        description "Is the provided TOTP code valid for the user?"
+      end
+      """)
     end
 
     defp build_strategy_config(options) do

@@ -139,6 +139,53 @@ if Code.ensure_loaded?(Igniter) do
           """
         )
         |> compose_audit_log(options)
+        |> Ash.Resource.Igniter.add_new_action(options[:user], :verify_with_recovery_code, """
+        action :verify_with_recovery_code do
+          argument :user, :struct do
+            allow_nil? false
+            sensitive? true
+            constraints instance_of: __MODULE__
+          end
+
+          argument :code, :string do
+            allow_nil? false
+            sensitive? true
+          end
+
+          prepare {AshAuthentication.AddOn.AuditLog.BruteForcePreparation,
+                   action_name: :verify_with_recovery_code}
+
+          returns :term
+          transaction? true
+          run AshAuthentication.Strategy.RecoveryCode.VerifyAction
+          touches_resources [#{inspect(recovery_code_resource)}]
+          description "Verify a recovery code and return the user if valid, nil otherwise."
+        end
+        """)
+        |> Ash.Resource.Igniter.add_new_action(options[:user], :generate_recovery_code_codes, """
+        update :generate_recovery_code_codes do
+          require_atomic? false
+          accept []
+
+          argument :recovery_codes, {:array, :string} do
+            allow_nil? false
+            sensitive? true
+            default {AshAuthentication.Strategy.RecoveryCode.Actions, :generate_codes_list,
+                     [12, 10, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"]}
+          end
+
+          change {Ash.Resource.Change.CascadeDestroy, relationship: :recovery_codes, after_action?: false}
+          change {AshAuthentication.Strategy.RecoveryCode.HashRecoveryCodesChange, hash_provider: AshAuthentication.SHA256Provider}
+          change {Ash.Resource.Change.ManageRelationship,
+                  argument: :recovery_codes,
+                  relationship: :recovery_codes,
+                  opts: [type: :create, value_is_key: :code]}
+
+          metadata :recovery_codes, {:array, :string}, allow_nil?: false
+          touches_resources [#{inspect(recovery_code_resource)}]
+          description "Generate new recovery codes for the user, replacing any existing codes."
+        end
+        """)
         |> AshAuthentication.Igniter.add_new_strategy(
           options[:user],
           :recovery_code,
