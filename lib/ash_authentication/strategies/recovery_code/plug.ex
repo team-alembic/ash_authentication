@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Plug do
         store_authentication_result(conn, {:error, not_authenticated_error(strategy, :verify)})
 
       user ->
-        params = subject_params(conn, strategy) |> Map.put("user", user)
+        params = subject_params(conn, strategy) |> Map.take(["code"]) |> Map.put("user", user)
         opts = opts(conn)
 
         case Strategy.action(strategy, :verify, params, opts) do
