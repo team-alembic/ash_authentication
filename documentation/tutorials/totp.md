@@ -237,4 +237,4 @@ svg = EQRCode.svg(qr_code)
 2. **Use confirm_setup_enabled?** - Ensures users correctly saved their secret
 3. **Store secrets securely** - Mark the secret field as `sensitive?: true`
 4. **Track last_totp_at** - Prevents replay attacks within the same time window
-5. **Provide backup codes** - Consider implementing backup codes for account recovery
+5. **Provide recovery codes** - Use the [recovery code strategy](/documentation/tutorials/recovery-codes.md) to give users backup codes for when they lose access to their authenticator app
