@@ -130,6 +130,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Transformer do
         name: :user,
         type: Ash.Type.Struct,
         allow_nil?: false,
+        sensitive?: true,
         description: "The user to verify the recovery code for.",
         constraints: [instance_of: module]
       ),
