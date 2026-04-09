@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.RecoveryCode.HashRecoveryCodesChange do
   @moduledoc """
   Change that hashes recovery codes before storage.

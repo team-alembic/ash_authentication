@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule Example.Repo.Migrations.AddRecoveryCodeResources do
   @moduledoc """
   Add recovery code test resources.

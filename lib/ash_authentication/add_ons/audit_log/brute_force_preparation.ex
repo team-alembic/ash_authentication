@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.AddOn.AuditLog.BruteForcePreparation do
   @moduledoc """
   Preparation that checks the audit log for failed authentication attempts.
@@ -16,8 +20,9 @@ defmodule AshAuthentication.AddOn.AuditLog.BruteForcePreparation do
   use Ash.Resource.Preparation
 
   alias Ash.ActionInput
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info}
   alias AshAuthentication.AddOn.AuditLog.BruteForceHelpers
+  alias AshAuthentication.Errors.AuthenticationFailed
+  alias AshAuthentication.Info
 
   @impl true
   def init(opts), do: {:ok, opts}
