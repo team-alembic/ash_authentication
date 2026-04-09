@@ -200,7 +200,6 @@ spark_locals_without_parens = [
   trusted_audiences: 1,
   uid_attribute_name: 1,
   upsert_action_name: 1,
-
   user_id_attribute_name: 1,
   user_relationship_name: 1,
   user_resource: 1,

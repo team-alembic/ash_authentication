@@ -103,7 +103,6 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Actions do
     length
     |> :crypto.strong_rand_bytes()
     |> :binary.bin_to_list()
-    |> Enum.map(fn byte -> Enum.at(alphabet_list, rem(byte, alphabet_size)) end)
-    |> Enum.join()
+    |> Enum.map_join(fn byte -> Enum.at(alphabet_list, rem(byte, alphabet_size)) end)
   end
 end
