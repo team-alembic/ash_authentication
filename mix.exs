@@ -110,6 +110,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.RecoveryCode)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Slack.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Slack)},
+        {"documentation/dsls/DSL-AshAuthentication.Strategy.Totp.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Totp)},
         {"documentation/dsls/DSL-AshAuthentication.TokenResource.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.TokenResource)},
         {"documentation/dsls/DSL-AshAuthentication.UserIdentity.md",
