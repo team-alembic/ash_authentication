@@ -99,7 +99,7 @@ defmodule MyApp.Accounts.User do
     strategies do
       recovery_code do
         recovery_code_resource MyApp.Accounts.RecoveryCode
-        brute_force_strategy {:preparation, MyApp.Accounts.User.NoopBruteForcePreparation}
+        brute_force_strategy {:audit_log, :audit_log}
       end
     end
   end
@@ -114,33 +114,27 @@ uppercase alphanumeric alphabet (A-Z, 0-9), hashed with SHA-256.
 Recovery codes require a brute force protection strategy. The options are the
 same as for TOTP:
 
-**1. Custom Preparation (simplest)**
+**1. Audit Log (recommended)**
 
 ```elixir
-brute_force_strategy {:preparation, MyApp.NoopBruteForcePreparation}
+brute_force_strategy {:audit_log, :audit_log}
 ```
 
-Create a preparation that implements your protection logic:
+Tracks failed verification attempts in the audit log and blocks requests that
+exceed the configured failure threshold within a time window. This is the
+default when using the Igniter installer, and requires an audit log add-on
+(see the [Audit Log tutorial](/documentation/tutorials/audit-log.md)).
+
+The window and threshold are configurable:
 
 ```elixir
-# lib/my_app/accounts/user/noop_brute_force_preparation.ex
-defmodule MyApp.Accounts.User.NoopBruteForcePreparation do
-  use Ash.Resource.Preparation
-
-  @impl true
-  def prepare(query_or_input, _opts, _context) do
-    query_or_input
-  end
-
-  @impl true
-  def supports(_opts), do: [Ash.Query, Ash.Changeset, Ash.ActionInput]
+recovery_code do
+  recovery_code_resource MyApp.Accounts.RecoveryCode
+  brute_force_strategy {:audit_log, :audit_log}
+  audit_log_window {5, :minutes}
+  audit_log_max_failures 5
 end
 ```
-
-> ### Replace the no-op preparation in production {: .warning}
->
-> The no-op preparation is a placeholder. In production, implement rate limiting,
-> account lockout, or audit logging to protect against brute force attacks.
 
 **2. Rate Limiting (with AshRateLimiter)**
 
@@ -151,13 +145,14 @@ brute_force_strategy :rate_limit
 Requires the `AshRateLimiter` extension and rate limit configuration for the
 verify action.
 
-**3. Audit Log**
+**3. Custom Preparation**
 
 ```elixir
-brute_force_strategy {:audit_log, :my_audit_log}
+brute_force_strategy {:preparation, MyApp.CustomBruteForcePreparation}
 ```
 
-Requires an audit log add-on that logs recovery code actions.
+Create a preparation that implements your own protection logic. The preparation
+must implement `supports/1` returning a list that includes `Ash.ActionInput`.
 
 ## Generated Actions
 

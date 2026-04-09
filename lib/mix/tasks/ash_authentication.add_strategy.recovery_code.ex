@@ -111,8 +111,6 @@ if Code.ensure_loaded?(Igniter) do
             true -> ""
           end
 
-        noop_preparation = Module.concat(options[:user], NoopBruteForcePreparation)
-
         igniter
         |> Igniter.compose_task("ash.gen.resource", [
           inspect(recovery_code_resource),
@@ -140,7 +138,7 @@ if Code.ensure_loaded?(Igniter) do
           has_many :recovery_codes, #{inspect(recovery_code_resource)}
           """
         )
-        |> create_noop_preparation(noop_preparation)
+        |> compose_audit_log(options)
         |> AshAuthentication.Igniter.add_new_strategy(
           options[:user],
           :recovery_code,
@@ -148,41 +146,24 @@ if Code.ensure_loaded?(Igniter) do
           """
           recovery_code do
             recovery_code_resource #{inspect(recovery_code_resource)}
-            brute_force_strategy {:preparation, #{inspect(noop_preparation)}}
+            brute_force_strategy {:audit_log, :audit_log}
           end
           """
         )
       end
     end
 
-    defp create_noop_preparation(igniter, module) do
-      {exists?, igniter} = Igniter.Project.Module.module_exists(igniter, module)
+    defp compose_audit_log(igniter, options) do
+      {igniter, has_audit_log?} =
+        AshAuthentication.Igniter.defines_add_on(igniter, options[:user], :audit_log, nil)
 
-      if exists? do
+      if has_audit_log? do
         igniter
       else
-        Igniter.Project.Module.create_module(
+        Igniter.compose_task(
           igniter,
-          module,
-          """
-          @moduledoc \"\"\"
-          A no-op brute force preparation for recovery code verification.
-
-          Replace this with a real rate-limiting or audit-log preparation
-          in production. See the recovery code strategy documentation for
-          options.
-          \"\"\"
-
-          use Ash.Resource.Preparation
-
-          @impl true
-          def prepare(query_or_input, _opts, _context) do
-            query_or_input
-          end
-
-          @impl true
-          def supports(_opts), do: [Ash.Query, Ash.Changeset, Ash.ActionInput]
-          """
+          "ash_authentication.add_add_on.audit_log",
+          ["--user", inspect(options[:user])]
         )
       end
     end
