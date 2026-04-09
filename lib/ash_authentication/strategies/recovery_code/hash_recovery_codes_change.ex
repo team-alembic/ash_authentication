@@ -20,12 +20,15 @@ defmodule AshAuthentication.Strategy.RecoveryCode.HashRecoveryCodesChange do
   @impl true
   def change(changeset, opts, _context) do
     hash_provider = opts[:hash_provider]
+    ash_context = changeset.context
 
     case Ash.Changeset.fetch_argument(changeset, :recovery_codes) do
       {:ok, plaintext_codes} when is_list(plaintext_codes) ->
         hashed_codes =
           Enum.map(plaintext_codes, fn code ->
-            {:ok, hashed} = hash_provider.hash(code)
+            {:ok, hashed} =
+              AshAuthentication.HashProvider.call_hash(hash_provider, code, ash_context)
+
             hashed
           end)
 

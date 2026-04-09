@@ -94,6 +94,47 @@ defmodule AshAuthentication.Strategy.RecoveryCode.ActionsTest do
     end
   end
 
+  describe "hash provider context passing" do
+    defmodule ContextTrackingProvider do
+      @moduledoc false
+      @behaviour AshAuthentication.HashProvider
+
+      @impl true
+      def hash(input), do: {:ok, "no_context:#{input}"}
+
+      @impl true
+      def hash(input, context) do
+        marker = Map.get(context, :test_marker, "none")
+        {:ok, "ctx_#{marker}:#{input}"}
+      end
+
+      @impl true
+      def valid?(input, hash), do: hash == elem(hash(input), 1)
+      @impl true
+      def simulate, do: false
+      @impl true
+      def minimum_entropy, do: 0
+      @impl true
+      def deterministic?, do: true
+    end
+
+    test "call_hash/3 prefers hash/2 when implemented" do
+      context = %{test_marker: "hello"}
+
+      assert {:ok, "ctx_hello:test"} =
+               AshAuthentication.HashProvider.call_hash(ContextTrackingProvider, "test", context)
+    end
+
+    test "call_hash/3 falls back to hash/1 for providers without hash/2" do
+      assert {:ok, _} =
+               AshAuthentication.HashProvider.call_hash(
+                 AshAuthentication.SHA256Provider,
+                 "test",
+                 %{some: "context"}
+               )
+    end
+  end
+
   describe "generate_code/2" do
     test "generates a code of the specified length" do
       code = Actions.generate_code(12, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")

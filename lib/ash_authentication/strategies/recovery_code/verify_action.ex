@@ -29,22 +29,23 @@ defmodule AshAuthentication.Strategy.RecoveryCode.VerifyAction do
     code = ActionInput.get_argument(input, :code)
 
     opts = context |> Ash.Context.to_opts()
+    ash_context = input.context
 
     {:ok, strategy} = Info.strategy_for_action(input.resource, input.action.name)
 
     if strategy.hash_provider.deterministic?() do
-      verify_deterministic(user, code, strategy, opts)
+      verify_deterministic(user, code, strategy, ash_context, opts)
     else
       verify_non_deterministic(user, code, strategy, opts)
     end
   end
 
   # sobelow_skip ["DOS.BinToAtom"]
-  defp verify_deterministic(user, code, strategy, opts) do
+  defp verify_deterministic(user, code, strategy, ash_context, opts) do
     code_field = strategy.code_field
     user_id_field = :"#{strategy.user_relationship_name}_id"
 
-    case strategy.hash_provider.hash(code) do
+    case AshAuthentication.HashProvider.call_hash(strategy.hash_provider, code, ash_context) do
       {:ok, hashed_input} ->
         domain = Keyword.get_lazy(opts, :domain, fn -> Info.domain!(strategy.resource) end)
 
