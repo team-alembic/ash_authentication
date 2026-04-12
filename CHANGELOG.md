@@ -11,6 +11,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.2](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.1...v5.0.0-rc.2) (2026-04-12)
+
+
+
+
+### Features:
+
+* add recovery code authentication strategy (#1135) by adamtharani
+
+* add microsoft strategy (#1136) by MikaelFangel
+
+### Bug Fixes:
+
+* skip destroy/read_expired actions when `log_lifetime` is `:infinity` by James Harton
+
+* error when `require_token_presence_for_authentication?` is set without `store_all_tokens?` by James Harton
+
+### Improvements:
+
+* move Phoenix concerns out of AA igniters (#1145) by James Harton
+
+* split igniter generators into per-strategy and per-add-on tasks (#1143) by James Harton
+
 ## [v5.0.0-rc.1](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.0...v5.0.0-rc.1) (2026-02-09)
 
 
