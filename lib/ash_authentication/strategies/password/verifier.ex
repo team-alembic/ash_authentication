@@ -16,6 +16,7 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
   def verify(strategy, dsl_state) do
     with :ok <- validate_behaviour(strategy.hash_provider, HashProvider),
          :ok <- validate_hash_provider_dep(strategy),
+         :ok <- validate_hash_provider_entropy(strategy),
          :ok <- validate_tokens_enabled_for_sign_in_tokens(dsl_state, strategy),
          :ok <- validate_tokens_enabled_for_resettable(dsl_state, strategy) do
       maybe_validate_resettable_sender(dsl_state, strategy)
@@ -65,6 +66,27 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
   end
 
   defp validate_hash_provider_dep(_), do: :ok
+
+  defp validate_hash_provider_entropy(strategy) do
+    if function_exported?(strategy.hash_provider, :minimum_entropy, 0) and
+         strategy.hash_provider.minimum_entropy() > 0 do
+      {:error,
+       DslError.exception(
+         module: strategy.resource,
+         path: [:authentication, :strategies, :password, strategy.name, :hash_provider],
+         message: """
+         The hash provider `#{inspect(strategy.hash_provider)}` requires a minimum entropy \
+         of #{strategy.hash_provider.minimum_entropy()} bits, but user-chosen passwords cannot \
+         guarantee a minimum entropy level.
+
+         Use a hash provider with `minimum_entropy() == 0` such as \
+         `AshAuthentication.BcryptProvider` or `AshAuthentication.Argon2Provider`.
+         """
+       )}
+    else
+      :ok
+    end
+  end
 
   defp validate_tokens_enabled_for_sign_in_tokens(dsl_state, strategy)
        when strategy.sign_in_tokens_enabled? do

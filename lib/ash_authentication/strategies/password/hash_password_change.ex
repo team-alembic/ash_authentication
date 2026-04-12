@@ -74,7 +74,7 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
 
   @doc false
   def hash_or_raise(hash_provider, value) do
-    case hash_provider.hash(value) do
+    case AshAuthentication.HashProvider.call_hash(hash_provider, value, %{}) do
       {:ok, hash} ->
         hash
 
@@ -101,7 +101,9 @@ defmodule AshAuthentication.Strategy.Password.HashPasswordChange do
   end
 
   defp hash_and_update_changeset(changeset, strategy, value) do
-    case strategy.hash_provider.hash(value) do
+    ash_context = changeset.context
+
+    case AshAuthentication.HashProvider.call_hash(strategy.hash_provider, value, ash_context) do
       {:ok, hash} ->
         Changeset.force_change_attribute(changeset, strategy.hashed_password_field, hash)
 

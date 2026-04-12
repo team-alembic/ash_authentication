@@ -15,7 +15,8 @@ if Code.ensure_loaded?(Igniter) do
       password: "Register and sign in with a username/email and a password.",
       magic_link: "Register and sign in with a magic link, sent via email to the user.",
       api_key: "Sign in with an API key.",
-      totp: "Authenticate with a time-based one-time password (TOTP)."
+      totp: "Authenticate with a time-based one-time password (TOTP).",
+      recovery_code: "Authenticate with one-time recovery codes as a 2FA fallback."
     ]
 
     @strategy_explanation Enum.map_join(@strategies, "\n", fn {name, description} ->
@@ -28,7 +29,8 @@ if Code.ensure_loaded?(Igniter) do
       "password" => "ash_authentication.add_strategy.password",
       "magic_link" => "ash_authentication.add_strategy.magic_link",
       "api_key" => "ash_authentication.add_strategy.api_key",
-      "totp" => "ash_authentication.add_strategy.totp"
+      "totp" => "ash_authentication.add_strategy.totp",
+      "recovery_code" => "ash_authentication.add_strategy.recovery_code"
     }
 
     @moduledoc """

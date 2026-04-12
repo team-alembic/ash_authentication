@@ -242,6 +242,9 @@ mix ash_authentication.add_strategy password
 - [Google](/documentation/tutorials/google.md)
 - [Magic Links](/documentation/tutorials/magic-links.md)
 - [Auth0](/documentation/tutorials/auth0.md)
+- [TOTP](/documentation/tutorials/totp.md)
+- [Recovery Codes](/documentation/tutorials/recovery-codes.md)
+- [API Keys](/documentation/tutorials/api-keys.md)
 - Open ID: `AshAuthentication.Strategy.Oidc`
 - OAuth2: `AshAuthentication.Strategy.OAuth2`
 
