@@ -11,12 +11,18 @@ defmodule AshAuthentication.Strategy.OAuth2.UserInfoToAttributes do
 
   ## Options
 
-  * `:fields` - a list of attribute atoms to copy from `user_info`. The string key is derived
-    from the atom name. Defaults to `[:email]`.
+  * `:fields` - a list of fields to copy from `user_info`. Each entry can be:
+    * An atom (e.g. `:email`) — maps `"email"` from user_info to the `:email` attribute
+    * A `{source, attribute}` tuple (e.g. `{:email, :user_email}`) — maps `"email"` from
+      user_info to the `:user_email` attribute
 
-  ## Example
+    Defaults to `[:email]`.
+
+  ## Examples
 
       change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [:email, :name]}
+
+      change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [email: :user_email]}
   """
 
   use Ash.Resource.Change
@@ -26,11 +32,19 @@ defmodule AshAuthentication.Strategy.OAuth2.UserInfoToAttributes do
     fields = opts[:fields] || [:email]
     user_info = Ash.Changeset.get_argument(changeset, :user_info) || %{}
 
-    Enum.reduce(fields, changeset, fn field, changeset ->
-      case Map.get(user_info, to_string(field)) do
+    Enum.reduce(fields, changeset, fn field_spec, changeset ->
+      {source, attribute} = normalize_field(field_spec)
+
+      case Map.get(user_info, to_string(source)) do
         nil -> changeset
-        value -> Ash.Changeset.change_attribute(changeset, field, value)
+        value -> Ash.Changeset.change_attribute(changeset, attribute, value)
       end
     end)
   end
+
+  defp normalize_field({source, attribute}) when is_atom(source) and is_atom(attribute),
+    do: {source, attribute}
+
+  defp normalize_field(field) when is_atom(field),
+    do: {field, field}
 end
