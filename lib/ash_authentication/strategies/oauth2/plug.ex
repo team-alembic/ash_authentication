@@ -252,14 +252,14 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   defp build_redirect_uri(strategy, context) do
     with {:ok, subject_name} <- Info.authentication_subject_name(strategy.resource),
          {:ok, redirect_uri} <- fetch_secret(strategy, :redirect_uri, context),
-         {:ok, %URI{} = uri} <- URI.new(redirect_uri) do
+         {:ok, %URI{} = uri} <- string_to_uri(redirect_uri) do
       suffix = Path.join([to_string(subject_name), to_string(strategy.name), "callback"])
       # Don't append the path if the secret ends with the path already
       path =
         if String.ends_with?(uri.path, suffix) do
           uri.path
         else
-          Path.join([uri.path || "/", suffix])
+          Path.join([uri.path, suffix])
         end
 
       {:ok, to_string(%URI{uri | path: path})}
@@ -272,6 +272,14 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  defp string_to_uri(input) when is_binary(input) do
+    case URI.new(input) do
+      {:ok, %URI{path: nil} = uri} -> {:ok, %URI{uri | path: "/"}}
+      {:ok, %URI{} = uri} -> {:ok, uri}
+      {:error, reason} -> {:error, reason}
     end
   end
 

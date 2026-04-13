@@ -349,10 +349,7 @@ create :register_with_github do
   change AshAuthentication.Strategy.OAuth2.IdentityChange
   
   # Extract user data from OAuth response:
-  change fn changeset, _ctx ->
-    user_info = Ash.Changeset.get_argument(changeset, :user_info)
-    Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email", "name"]))
-  end
+  change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [:email, :name]}
 end
 ```
 

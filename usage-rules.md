@@ -202,10 +202,7 @@ actions do
     # If UserIdentity resource is being used
     change AshAuthentication.Strategy.OAuth2.IdentityChange
 
-    change fn changeset, _ctx ->
-      user_info = Ash.Changeset.get_argument(changeset, :user_info)
-      Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
-    end
+    change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [:email]}
   end
 end
 ```
@@ -320,13 +317,7 @@ actions do
     upsert_identity :email
 
     change AshAuthentication.GenerateTokenChange
-    change fn changeset, _ctx ->
-      user_info = Ash.Changeset.get_argument(changeset, :user_info)
-
-      changeset
-      |> Ash.Changeset.change_attribute(:email, user_info["email"])
-      |> Ash.Changeset.change_attribute(:name, user_info["name"])
-    end
+    change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [:email, :name]}
   end
 end
 ```

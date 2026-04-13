@@ -360,6 +360,147 @@ if Code.ensure_loaded?(Igniter) do
       Ash.Igniter.codegen(igniter, "add_#{strategy_name}_auth_strategy")
     end
 
+    @doc """
+    Ensures a UserIdentity resource exists for the given user resource.
+
+    If the identity resource module already exists, this is a no-op.
+    Otherwise, generates a new resource with the `AshAuthentication.UserIdentity`
+    extension. The extension auto-generates all attributes, relationships, actions,
+    and identities — this function only creates the resource shell.
+    """
+    @spec ensure_user_identity_resource(Igniter.t(), module(), module()) :: Igniter.t()
+    def ensure_user_identity_resource(igniter, user_resource, identity_resource) do
+      {exists?, igniter} = Igniter.Project.Module.module_exists(igniter, identity_resource)
+
+      if exists? do
+        igniter
+      else
+        igniter
+        |> Igniter.compose_task(
+          "ash.gen.resource",
+          [inspect(identity_resource), "--default-actions", "read"] ++
+            data_layer_extension_args()
+        )
+        |> Igniter.compose_task(
+          "ash.extend",
+          [inspect(identity_resource), "AshAuthentication.UserIdentity,Ash.Policy.Authorizer"]
+        )
+        |> Spark.Igniter.set_option(
+          identity_resource,
+          [:user_identity, :user_resource],
+          user_resource
+        )
+        |> maybe_set_postgres_table(identity_resource)
+        |> Ash.Resource.Igniter.add_bypass(
+          identity_resource,
+          quote do
+            AshAuthentication.Checks.AshAuthenticationInteraction
+          end,
+          quote do
+            authorize_if always()
+          end
+        )
+      end
+    end
+
+    @doc """
+    Adds an OAuth2 register action to a user resource.
+
+    The action handles both registration and sign-in via `upsert? true`.
+    It satisfies the OAuth2 transformer's validation requirements.
+    """
+    @spec add_oauth_register_action(Igniter.t(), module(), atom(), keyword()) :: Igniter.t()
+    # sobelow_skip ["DOS.BinToAtom"]
+    def add_oauth_register_action(igniter, user_resource, strategy_name, opts \\ []) do
+      identity_field = Keyword.get(opts, :identity_field, :email)
+      identity_resource = Keyword.get(opts, :identity_resource)
+
+      identity_change_line =
+        if identity_resource do
+          "change AshAuthentication.Strategy.OAuth2.IdentityChange"
+        else
+          ""
+        end
+
+      Ash.Resource.Igniter.add_new_action(
+        igniter,
+        user_resource,
+        :"register_with_#{strategy_name}",
+        """
+        create :register_with_#{strategy_name} do
+          argument :user_info, :map, allow_nil?: false
+          argument :oauth_tokens, :map, allow_nil?: false
+          upsert? true
+          upsert_identity :unique_#{identity_field}
+
+          change AshAuthentication.GenerateTokenChange
+          #{identity_change_line}
+
+          change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [#{inspect(identity_field)}]}
+        end
+        """
+      )
+    end
+
+    @doc """
+    Wires OAuth secrets into the secrets module and runtime.exs.
+
+    For each `{secret_key, env_var_name}` pair:
+    - Adds a `secret_for/4` clause to the secrets module
+    - Adds a `System.get_env` entry to runtime.exs
+    """
+    @spec add_oauth_secrets(
+            Igniter.t(),
+            module(),
+            module(),
+            atom(),
+            list({atom(), String.t()})
+          ) :: Igniter.t()
+    # sobelow_skip ["DOS.StringToAtom"]
+    def add_oauth_secrets(igniter, secrets_module, user_resource, strategy_name, secret_pairs) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+
+      Enum.reduce(secret_pairs, igniter, fn {secret_key, env_var_name}, igniter ->
+        env_key_atom = String.to_atom(String.downcase(env_var_name))
+
+        runtime_value =
+          {:code,
+           Sourceror.parse_string!("""
+           System.get_env("#{env_var_name}")
+           """)}
+
+        igniter
+        |> add_new_secret_from_env(
+          secrets_module,
+          user_resource,
+          [:authentication, :strategies, strategy_name, secret_key],
+          env_key_atom
+        )
+        |> Igniter.Project.Config.configure(
+          "runtime.exs",
+          otp_app,
+          [env_key_atom],
+          runtime_value
+        )
+      end)
+    end
+
+    defp maybe_set_postgres_table(igniter, resource) do
+      if Code.ensure_loaded?(AshPostgres.DataLayer) do
+        Spark.Igniter.set_option(igniter, resource, [:postgres, :table], "user_identities")
+      else
+        igniter
+      end
+    end
+
+    defp data_layer_extension_args do
+      cond do
+        Code.ensure_loaded?(AshPostgres.DataLayer) -> ["--extend", "postgres"]
+        Code.ensure_loaded?(AshSqlite.DataLayer) -> ["--extend", "sqlite"]
+        true -> []
+      end
+    end
+
     defp enter_section(zipper, name) do
       with {:ok, zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(
