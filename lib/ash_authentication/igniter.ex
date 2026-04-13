@@ -436,10 +436,7 @@ if Code.ensure_loaded?(Igniter) do
           change AshAuthentication.GenerateTokenChange
           #{identity_change_line}
 
-          change fn changeset, _ctx ->
-            user_info = Ash.Changeset.get_argument(changeset, :user_info)
-            Ash.Changeset.change_attribute(changeset, :#{identity_field}, user_info["#{identity_field}"])
-          end
+          change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [#{inspect(identity_field)}]}
         end
         """
       )
