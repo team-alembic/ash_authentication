@@ -11,6 +11,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.3](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.2...v5.0.0-rc.3) (2026-04-13)
+
+
+
+
+### Features:
+
+* add Igniter generators for OAuth2/OIDC strategies (#1149) by James Harton
+
+### Bug Fixes:
+
+* remove duplicate codegen in password strategy and standardize migration names (#1150) by Josh Price
+
 ## [v5.0.0-rc.2](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.1...v5.0.0-rc.2) (2026-04-12)
 
 
