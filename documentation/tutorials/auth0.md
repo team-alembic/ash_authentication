@@ -8,6 +8,18 @@ SPDX-License-Identifier: MIT
 
 This is a quick tutorial on how to configure your application to use Auth0 for authentication.
 
+## Quick setup with Igniter
+
+The fastest way to add Auth0 authentication is with the Igniter generator:
+
+```bash
+mix ash_authentication.add_strategy auth0
+```
+
+This creates the UserIdentity resource, register action, secrets wiring, and strategy DSL for you. Follow the printed instructions to create your Auth0 application and set the required environment variables (including your tenant's base URL). The rest of this tutorial covers manual setup.
+
+## Manual setup
+
 First, you need to configure an application in [the Auth0 dashboard](https://manage.auth0.com/) using the following steps:
 
 1. Click "Create Application".
@@ -121,11 +133,7 @@ defmodule MyApp.Accounts.User do
       # Required if you have the `identity_resource` configuration enabled.
       change AshAuthentication.Strategy.OAuth2.IdentityChange
 
-      change fn changeset, _ ->
-        user_info = Ash.Changeset.get_argument(changeset, :user_info)
-
-        Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
-      end
+      change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [:email]}
     end
   end
 

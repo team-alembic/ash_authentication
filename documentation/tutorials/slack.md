@@ -8,6 +8,18 @@ SPDX-License-Identifier: MIT
 
 This is a quick tutorial on how to configure your application to use Slack for authentication.
 
+## Quick setup with Igniter
+
+The fastest way to add Slack authentication is with the Igniter generator:
+
+```bash
+mix ash_authentication.add_strategy slack
+```
+
+This creates the UserIdentity resource, register action, secrets wiring, and strategy DSL for you. Follow the printed instructions to create your Slack app and set the required environment variables. The rest of this tutorial covers manual setup.
+
+## Manual setup
+
 First you need to configure an application in your [Slack app settings](https://api.slack.com/apps):
 
 1. Click the "Create New App" button.
@@ -141,11 +153,7 @@ defmodule MyApp.Accounts.User do
       # Required if you have the `identity_resource` configuration enabled.
       change AshAuthentication.Strategy.OAuth2.IdentityChange
 
-      change fn changeset, _ ->
-        user_info = Ash.Changeset.get_argument(changeset, :user_info)
-
-        Ash.Changeset.change_attributes(changeset, Map.take(user_info, ["email"]))
-      end
+      change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [:email]}
 
       # Required if you're using the password & confirmation strategies
       upsert_fields []
