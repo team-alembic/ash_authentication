@@ -63,7 +63,7 @@ if Code.ensure_loaded?(Igniter) do
           igniter
           |> password(options)
           |> AshAuthentication.Igniter.add_remember_me_strategy(options[:user])
-          |> Ash.Igniter.codegen("add_password_auth")
+          |> AshAuthentication.Igniter.codegen_for_strategy(:password)
 
         {false, igniter} ->
           Igniter.add_issue(igniter, """
@@ -181,7 +181,6 @@ if Code.ensure_loaded?(Igniter) do
       |> generate_sign_in_and_registration(options)
       |> generate_reset(sender, options)
       |> add_confirmation(options)
-      |> Ash.Igniter.codegen("add_password_authentication")
     end
 
     defp add_confirmation(igniter, options) do

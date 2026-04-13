@@ -347,6 +347,19 @@ if Code.ensure_loaded?(Igniter) do
     def maybe_parse_module(string) when is_binary(string),
       do: Igniter.Project.Module.parse(string)
 
+    @doc """
+    Runs `Ash.Igniter.codegen/2` with a consistent migration name for a strategy.
+
+    ## Example
+
+        codegen_for_strategy(igniter, :password)
+        # => codegen named "add_password_auth_strategy"
+    """
+    @spec codegen_for_strategy(Igniter.t(), atom()) :: Igniter.t()
+    def codegen_for_strategy(igniter, strategy_name) do
+      Ash.Igniter.codegen(igniter, "add_#{strategy_name}_auth_strategy")
+    end
+
     defp enter_section(zipper, name) do
       with {:ok, zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(

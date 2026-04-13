@@ -53,7 +53,7 @@ if Code.ensure_loaded?(Igniter) do
         {true, igniter} ->
           igniter
           |> api_key(options)
-          |> Ash.Igniter.codegen("add_api_key_auth")
+          |> AshAuthentication.Igniter.codegen_for_strategy(:api_key)
 
         {false, igniter} ->
           Igniter.add_issue(igniter, """
