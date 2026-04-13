@@ -41,12 +41,13 @@ if Code.ensure_loaded?(Igniter) do
         example: @example,
         extra_args?: false,
         only: nil,
-        positional: [:name],
+        positional: [{:name, optional: true}],
         composes: [],
         schema: [
           accounts: :string,
           user: :string,
           identity_field: :string,
+          name: :string,
           base_url: :string,
           authorize_url: :string,
           token_url: :string,
@@ -60,7 +61,22 @@ if Code.ensure_loaded?(Igniter) do
     # sobelow_skip ["DOS.BinToAtom"]
     def igniter(igniter) do
       options = parse_options(igniter)
-      name = String.to_atom(igniter.args.positional[:name])
+
+      name_string = igniter.args.positional[:name] || options[:name]
+
+      unless name_string do
+        raise ArgumentError, """
+        A provider name is required for the generic OAuth2 strategy.
+
+        Via positional argument:
+          mix ash_authentication.add_strategy.oauth2 my_provider
+
+        Via flag:
+          mix ash_authentication.add_strategy oauth2 --name my_provider
+        """
+      end
+
+      name = String.to_atom(name_string)
       env_prefix = name |> to_string() |> String.upcase()
 
       case Igniter.Project.Module.module_exists(igniter, options[:user]) do
