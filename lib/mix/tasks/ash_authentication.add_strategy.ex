@@ -16,7 +16,15 @@ if Code.ensure_loaded?(Igniter) do
       magic_link: "Register and sign in with a magic link, sent via email to the user.",
       api_key: "Sign in with an API key.",
       totp: "Authenticate with a time-based one-time password (TOTP).",
-      recovery_code: "Authenticate with one-time recovery codes as a 2FA fallback."
+      recovery_code: "Authenticate with one-time recovery codes as a 2FA fallback.",
+      github: "Sign in with GitHub.",
+      google: "Sign in with Google.",
+      apple: "Sign in with Apple.",
+      auth0: "Sign in with Auth0.",
+      microsoft: "Sign in with Microsoft.",
+      slack: "Sign in with Slack.",
+      oidc: "Sign in with a generic OpenID Connect provider.",
+      oauth2: "Sign in with a generic OAuth2 provider."
     ]
 
     @strategy_explanation Enum.map_join(@strategies, "\n", fn {name, description} ->
@@ -30,7 +38,15 @@ if Code.ensure_loaded?(Igniter) do
       "magic_link" => "ash_authentication.add_strategy.magic_link",
       "api_key" => "ash_authentication.add_strategy.api_key",
       "totp" => "ash_authentication.add_strategy.totp",
-      "recovery_code" => "ash_authentication.add_strategy.recovery_code"
+      "recovery_code" => "ash_authentication.add_strategy.recovery_code",
+      "github" => "ash_authentication.add_strategy.github",
+      "google" => "ash_authentication.add_strategy.google",
+      "apple" => "ash_authentication.add_strategy.apple",
+      "auth0" => "ash_authentication.add_strategy.auth0",
+      "microsoft" => "ash_authentication.add_strategy.microsoft",
+      "slack" => "ash_authentication.add_strategy.slack",
+      "oidc" => "ash_authentication.add_strategy.oidc",
+      "oauth2" => "ash_authentication.add_strategy.oauth2"
     }
 
     @moduledoc """
@@ -88,7 +104,12 @@ if Code.ensure_loaded?(Igniter) do
           api_key: :string,
           hash_provider: :string,
           mode: :string,
-          name: :string
+          name: :string,
+          base_url: :string,
+          authorize_url: :string,
+          token_url: :string,
+          user_url: :string,
+          team_id: :string
         ],
         aliases: [
           a: :accounts,
