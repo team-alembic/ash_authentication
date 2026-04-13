@@ -344,6 +344,12 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       """)
     end
 
+    test "generates a migration named add_password_auth_strategy", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
+      |> assert_has_task("ash.codegen", ["add_password_auth_strategy"])
+    end
+
     test "creates a basic password reset sender", %{igniter: igniter} do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
@@ -369,6 +375,12 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
   end
 
   describe "api_key" do
+    test "generates a migration named add_api_key_auth_strategy", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["api_key"])
+      |> assert_has_task("ash.codegen", ["add_api_key_auth_strategy"])
+    end
+
     test "adds the api_key strategy to the user", %{igniter: igniter} do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["api_key"])
@@ -450,6 +462,14 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
   end
 
   describe "magic_link" do
+    test "generates a migration named add_magic_link_auth_strategy", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
+      |> apply_igniter!()
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["magic_link"])
+      |> assert_has_task("ash.codegen", ["add_magic_link_auth_strategy"])
+    end
+
     test "makes hashed_password optional", %{igniter: igniter} do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])

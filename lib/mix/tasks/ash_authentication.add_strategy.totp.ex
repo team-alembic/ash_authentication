@@ -89,7 +89,7 @@ if Code.ensure_loaded?(Igniter) do
         {true, igniter} ->
           igniter
           |> totp(options)
-          |> Ash.Igniter.codegen("add_totp_auth")
+          |> AshAuthentication.Igniter.codegen_for_strategy(:totp)
 
         {false, igniter} ->
           Igniter.add_issue(igniter, """

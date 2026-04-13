@@ -60,7 +60,7 @@ if Code.ensure_loaded?(Igniter) do
         {true, igniter} ->
           igniter
           |> add_recovery_code_resource(options)
-          |> Ash.Igniter.codegen("add_recovery_code_auth")
+          |> AshAuthentication.Igniter.codegen_for_strategy(:recovery_code)
 
         {false, igniter} ->
           Igniter.add_issue(igniter, """

@@ -24,6 +24,13 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.TotpTest do
   end
 
   describe "2fa mode (default)" do
+    test "generates a migration named with add_totp_auth_strategy suffix", %{igniter: igniter} do
+      # TOTP composes the audit_log add-on, so the combined codegen name includes both
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.totp", [])
+      |> assert_has_task("ash.codegen", ["add_audit_log_and_add_totp_auth_strategy"])
+    end
+
     test "adds totp_secret attribute to the user", %{igniter: igniter} do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.totp", [])

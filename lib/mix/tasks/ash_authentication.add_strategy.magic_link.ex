@@ -68,7 +68,7 @@ if Code.ensure_loaded?(Igniter) do
           igniter
           |> magic_link(options)
           |> AshAuthentication.Igniter.add_remember_me_strategy(options[:user])
-          |> Ash.Igniter.codegen("add_magic_link_auth")
+          |> AshAuthentication.Igniter.codegen_for_strategy(:magic_link)
 
         {false, igniter} ->
           Igniter.add_issue(igniter, """
