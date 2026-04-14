@@ -6,7 +6,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
   and authentication via HTTP requests. Challenges are stored in the Plug session.
   """
 
-  alias AshAuthentication.{Info, Strategy, Strategy.WebAuthn}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Strategy, Strategy.WebAuthn}
   alias Plug.Conn
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
@@ -55,13 +55,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
   @doc "Handle a registration request."
   @spec register(Conn.t(), WebAuthn.t()) :: Conn.t()
   def register(conn, strategy) do
-    challenge = reconstruct_challenge(conn, :attestation, strategy)
-    conn = Conn.delete_session(conn, @session_key)
-    params = subject_params(conn, strategy)
-    # Route through Strategy protocol (matches Password Plug pattern)
-    opts = opts(conn) ++ [challenge: challenge]
-    result = Strategy.action(strategy, :register, params, opts)
-    store_authentication_result(conn, result)
+    case reconstruct_challenge(conn, :attestation, strategy) do
+      nil ->
+        conn
+        |> Conn.delete_session(@session_key)
+        |> store_authentication_result(missing_challenge_error(strategy, :register))
+
+      challenge ->
+        conn = Conn.delete_session(conn, @session_key)
+        params = subject_params(conn, strategy)
+        opts = opts(conn) ++ [challenge: challenge]
+        result = Strategy.action(strategy, :register, params, opts)
+        store_authentication_result(conn, result)
+    end
   end
 
   @doc "Generate and return an authentication challenge."
@@ -116,12 +122,32 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
   @doc "Handle an authentication request."
   @spec sign_in(Conn.t(), WebAuthn.t()) :: Conn.t()
   def sign_in(conn, strategy) do
-    challenge = reconstruct_challenge(conn, :authentication, strategy)
-    conn = Conn.delete_session(conn, @session_key)
-    params = subject_params(conn, strategy)
-    opts = opts(conn) ++ [challenge: challenge]
-    result = Strategy.action(strategy, :sign_in, params, opts)
-    store_authentication_result(conn, result)
+    case reconstruct_challenge(conn, :authentication, strategy) do
+      nil ->
+        conn
+        |> Conn.delete_session(@session_key)
+        |> store_authentication_result(missing_challenge_error(strategy, :sign_in))
+
+      challenge ->
+        conn = Conn.delete_session(conn, @session_key)
+        params = subject_params(conn, strategy)
+        opts = opts(conn) ++ [challenge: challenge]
+        result = Strategy.action(strategy, :sign_in, params, opts)
+        store_authentication_result(conn, result)
+    end
+  end
+
+  defp missing_challenge_error(strategy, action) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       caused_by: %{
+         module: __MODULE__,
+         strategy: strategy,
+         action: action,
+         message: "Missing or invalid WebAuthn challenge in session"
+       }
+     )}
   end
 
   # Reconstruct a Wax.Challenge from the serialized session data.
@@ -213,8 +239,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
       _ -> []
     end
   rescue
-    error ->
-      Logger.warning("WebAuthn credential lookup failed: #{inspect(error)}")
+    error in [
+      Ash.Error.Invalid,
+      Ash.Error.Forbidden,
+      Ash.Error.Framework,
+      Ash.Error.Unknown
+    ] ->
+      Logger.warning("WebAuthn credential lookup failed: #{Exception.message(error)}")
       []
   end
 end

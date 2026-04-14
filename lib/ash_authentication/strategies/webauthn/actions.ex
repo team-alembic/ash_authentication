@@ -40,12 +40,45 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
          {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
          {:ok, {auth_data, _}} <-
            wax_register(strategy, attestation_object, client_data_json, challenge),
-         {:ok, user} <- create_user_from_registration(strategy, auth_data, params, opts),
-         {:ok, _credential} <- store_credential_from_auth(strategy, user, auth_data, params, opts) do
-      {:ok, user}
+         {:ok, user} <- create_user_from_registration(strategy, auth_data, params, opts) do
+      case store_credential_from_auth(strategy, user, auth_data, params, opts) do
+        {:ok, _credential} ->
+          {:ok, user}
+
+        {:error, error} ->
+          cleanup_orphaned_user(user, opts)
+          {:error, error}
+      end
     else
       :error -> base64_error(strategy, :register)
       {:error, error} -> {:error, error}
+    end
+  end
+
+  # Compensating cleanup: if credential store fails after user creation, destroy
+  # the user to prevent orphans. Failure to clean up is logged loudly but does
+  # not mask the original error.
+  defp cleanup_orphaned_user(user, opts) do
+    ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+
+    user
+    |> Changeset.new()
+    |> Changeset.set_context(auth_context())
+    |> Ash.destroy(ash_opts)
+    |> case do
+      :ok ->
+        :ok
+
+      {:ok, _} ->
+        :ok
+
+      {:error, error} ->
+        Logger.error(
+          "Failed to clean up orphaned user after WebAuthn credential store failure: " <>
+            inspect(error)
+        )
+
+        :error
     end
   end
 
@@ -356,12 +389,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
           %{sign_count: new_count, last_used_at: DateTime.utc_now()},
           ash_opts
         )
-        |> Ash.update!()
+        |> Ash.update()
+        |> case do
+          {:ok, _} -> :ok
+          {:error, error} -> log_sign_count_failure(error)
+        end
 
       {:error, error} ->
-        Logger.warning("Failed to update WebAuthn sign count: #{inspect(error)}")
-        :ok
+        log_sign_count_failure(error)
     end
+  end
+
+  defp log_sign_count_failure(error) do
+    Logger.warning("Failed to update WebAuthn sign count: #{inspect(error)}")
+    :ok
   end
 
   defp internal_ash_opts(tenant) do
