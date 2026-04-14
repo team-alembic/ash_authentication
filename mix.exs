@@ -247,6 +247,7 @@ defmodule AshAuthentication.MixProject do
       {:plug, "~> 1.13"},
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
+      {:wax_, "~> 0.7", optional: true},
 
       # Dev/test
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},

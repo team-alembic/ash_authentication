@@ -30,6 +30,10 @@ defmodule Example do
     resource Example.UserWithExtraClaims
     resource Example.RecoveryCode
     resource Example.UserWithRecoveryCodes
+    resource Example.UserWithWebAuthn
+    resource Example.WebAuthnCredential
+    resource Example.MultiTenantUserWithWebAuthn
+    resource Example.MultiTenantWebAuthnCredential
   end
 
   json_api do
