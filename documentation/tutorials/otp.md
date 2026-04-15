@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2024 Alembic Pty Ltd
+SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
 
 SPDX-License-Identifier: MIT
 -->
@@ -16,14 +16,92 @@ The OTP strategy provides passwordless authentication where users receive a shor
 > Without rate limiting, an attacker can enumerate all possible codes within the lifetime
 > of a single OTP.
 >
-> **You must protect the sign-in endpoint with brute force detection or rate limiting**
-> before deploying this strategy to production. Options include:
->
-> - A Plug-based rate limiter (e.g. [`PlugAttack`](https://github.com/michalmuskala/plug_attack))
-> - A reverse-proxy rate limit rule (nginx, Cloudflare, etc.)
+> For this reason, the OTP strategy **requires** you to declare a `brute_force_strategy`
+> at the DSL level. The verifier will fail compilation if the declared strategy is not
+> actually wired up to the request and sign-in actions.
 >
 > A 10-minute OTP lifetime with 6 uppercase letters gives ~85 million possible codes.
-> Even so, rate limiting to a handful of attempts per identity per OTP lifetime is essential.
+> Even so, restricting to a handful of attempts per identity per OTP lifetime is essential.
+
+### Choosing a brute force strategy
+
+The `brute_force_strategy` option accepts one of:
+
+- `:rate_limit` — defers to the [`AshRateLimiter`](https://hexdocs.pm/ash_rate_limiter)
+  extension on the same resource. The verifier checks that the extension is present
+  and that every OTP action has a `rate_limit` entry.
+- `{:audit_log, :audit_log_name}` — tracks failed attempts in an audit log add-on
+  and blocks after `audit_log_max_failures` within `audit_log_window`.
+- `{:preparation, MyApp.BruteForceMitigation}` — plug in a custom
+  `Ash.Resource.Preparation` implementation and take full control.
+
+Example using rate limiting:
+
+```elixir
+use Ash.Resource, extensions: [AshAuthentication, AshRateLimiter]
+
+authentication do
+  strategies do
+    otp do
+      identity_field :email
+      brute_force_strategy :rate_limit
+      sender MyApp.Accounts.User.Senders.SendOtp
+    end
+  end
+end
+
+rate_limit do
+  backend MyApp.RateLimiterBackend
+
+  action :request_otp,
+    limit: 5,
+    per: :timer.minutes(15),
+    key: fn query -> "otp:request:#{query.arguments[:email]}" end
+
+  action :sign_in_with_otp,
+    limit: 5,
+    per: :timer.minutes(10),
+    key: fn query -> "otp:sign_in:#{query.arguments[:email]}" end
+end
+```
+
+> #### Scope the rate limit bucket by identity {: .warning}
+>
+> `AshRateLimiter`'s default bucket key is the domain + resource + action name, which
+> means **a single global bucket is shared by all callers**. Without a `key` function,
+> once any 5 callers hit `sign_in_with_otp` in 10 minutes the 6th is blocked —
+> regardless of whose email they supplied. That both lets an attacker DoS the entire
+> app by burning the bucket and fails to stop them from enumerating a single victim's
+> code.
+>
+> Always supply a `key` function that scopes by the `identity_field` argument, as in
+> the example above.
+
+Example using an audit log:
+
+```elixir
+authentication do
+  strategies do
+    otp do
+      identity_field :email
+      brute_force_strategy {:audit_log, :auth_audit_log}
+      audit_log_window {5, :minutes}
+      audit_log_max_failures 5
+      sender MyApp.Accounts.User.Senders.SendOtp
+    end
+  end
+
+  add_ons do
+    audit_log :auth_audit_log do
+      audit_log_resource MyApp.Accounts.AuthAuditLog
+    end
+  end
+end
+```
+
+The audit log add-on tracks all authentication actions by default, so there's no
+need to list them explicitly — failures on `request_otp` and `sign_in_with_otp`
+will both count toward the `audit_log_max_failures` threshold.
 
 ## Prerequisites
 
@@ -38,7 +116,7 @@ Your user resource needs:
 ```elixir
 defmodule MyApp.Accounts.User do
   use Ash.Resource,
-    extensions: [AshAuthentication],
+    extensions: [AshAuthentication, AshRateLimiter],
     domain: MyApp.Accounts
 
   attributes do
@@ -57,9 +135,26 @@ defmodule MyApp.Accounts.User do
     strategies do
       otp do
         identity_field :email
+        brute_force_strategy :rate_limit
         sender MyApp.Accounts.User.Senders.SendOtp
       end
     end
+  end
+
+  # Per-identity rate limiting — see "Choosing a brute force strategy" above
+  # for the reasoning behind scoping the bucket by email.
+  rate_limit do
+    backend MyApp.RateLimiterBackend
+
+    action :request_otp,
+      limit: 5,
+      per: :timer.minutes(15),
+      key: fn query -> "otp:request:#{query.arguments[:email]}" end
+
+    action :sign_in_with_otp,
+      limit: 5,
+      per: :timer.minutes(10),
+      key: fn query -> "otp:sign_in:#{query.arguments[:email]}" end
   end
 
   identities do
@@ -77,7 +172,7 @@ otp do
   identity_field :email
   otp_lifetime {10, :minutes}          # how long the code is valid
   otp_length 6                         # length of the generated code
-  otp_characters :unambiguous_uppercase # :unambiguous_uppercase, :unambiguous_digits, :unambiguous_alphanumeric, :digits_only, :uppercase_letters_only
+  otp_characters :unambiguous_uppercase # :unambiguous_uppercase, :unambiguous_alphanumeric, :digits_only, :uppercase_letters_only
   case_sensitive? false                 # when false, "xkptmh" matches "XKPTMH"
   single_use_token? true               # revoke code after successful sign-in
   sender MyApp.Accounts.User.Senders.SendOtp
@@ -142,6 +237,7 @@ When registration is enabled:
 
 - The **request** action sends an OTP code even if no user with that email exists yet.
 - The **sign-in** action becomes a `:create` action with `upsert? true`. If the user doesn't exist, they are created; if they do, they are matched by their identity.
+- `{:audit_log, ...}` is **not** a valid `brute_force_strategy` in this mode, because audit log mitigation requires an existing user record. Use `:rate_limit` or `{:preparation, MyModule}` instead.
 - The sender receives the email address as a string (instead of a user record) when the user doesn't exist yet. Handle both cases in your sender:
 
 ```elixir
@@ -160,7 +256,7 @@ end
 
 ## How it works
 
-The OTP strategy uses a deterministic JTI (JWT ID) to map short codes back to stored tokens without requiring any schema changes to your token resource.
+The OTP strategy uses a deterministic JTI (JWT ID) to map short codes back to stored tokens without requiring any schema changes to your token resource. The JTI is derived from `(strategy_name, user_subject, otp_code)` via `AshAuthentication.SHA256Provider`, keeping the crypto consistent with the recovery code strategy.
 
 **Request flow:**
 
