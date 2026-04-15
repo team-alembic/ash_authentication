@@ -24,6 +24,17 @@ defmodule AshAuthentication.Strategy.Otp.Dsl do
           doc: "Uniquely identifies the strategy.",
           required: true
         ],
+        brute_force_strategy: [
+          type:
+            {:or,
+             [
+               {:literal, :rate_limit},
+               {:tuple, [{:literal, :audit_log}, :atom]},
+               {:tuple, [{:literal, :preparation}, {:behaviour, Ash.Resource.Preparation}]}
+             ]},
+          doc: "How you are mitigating brute-force OTP checks.",
+          required: true
+        ],
         identity_field: [
           type: :atom,
           doc:
@@ -116,6 +127,25 @@ defmodule AshAuthentication.Strategy.Otp.Dsl do
              {AshAuthentication.SenderFunction, 3}},
           doc: "How to send the OTP code to the user.",
           required: true
+        ],
+        audit_log_window: [
+          type:
+            {:or,
+             [
+               :pos_integer,
+               {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
+             ]},
+          doc:
+            "Time window for counting failed attempts when using the `{:audit_log, ...}` brute force strategy. If no unit is provided, then `minutes` is assumed. Defaults to 5 minutes.",
+          required: false,
+          default: {5, :minutes}
+        ],
+        audit_log_max_failures: [
+          type: :pos_integer,
+          doc:
+            "Maximum allowed failures within the window before blocking when using the `{:audit_log, ...}` brute force strategy. Defaults to 5.",
+          required: false,
+          default: 5
         ]
       ]
     }

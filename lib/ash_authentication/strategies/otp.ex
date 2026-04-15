@@ -41,6 +41,7 @@ defmodule AshAuthentication.Strategy.Otp do
       strategies do
         otp do
           identity_field :email
+          brute_force_strategy :rate_limit
           otp_lifetime {10, :minutes}
           otp_length 6
           otp_characters :unambiguous_uppercase
@@ -86,7 +87,10 @@ defmodule AshAuthentication.Strategy.Otp do
   `AshAuthentication.Strategy` protocol.
   """
 
-  defstruct case_sensitive?: false,
+  defstruct audit_log_max_failures: 5,
+            audit_log_window: {5, :minutes},
+            brute_force_strategy: nil,
+            case_sensitive?: false,
             identity_field: :email,
             lookup_action_name: nil,
             name: nil,
@@ -105,9 +109,12 @@ defmodule AshAuthentication.Strategy.Otp do
 
   use AshAuthentication.Strategy.Custom, entity: Dsl.dsl()
 
-  alias AshAuthentication.{Info, Jwt, TokenResource}
+  alias AshAuthentication.{Info, Jwt, SHA256Provider, TokenResource}
 
   @type t :: %__MODULE__{
+          audit_log_max_failures: pos_integer,
+          audit_log_window: pos_integer | {pos_integer, :days | :hours | :minutes | :seconds},
+          brute_force_strategy: :rate_limit | {:audit_log, atom} | {:preparation, module},
           case_sensitive?: boolean,
           identity_field: atom,
           lookup_action_name: atom | nil,
@@ -137,15 +144,13 @@ defmodule AshAuthentication.Strategy.Otp do
   Compute a deterministic JTI from the strategy name, user subject, and normalized OTP code.
 
   This allows us to store a JWT with a known JTI and later look it up using only
-  the submitted OTP code (without needing the original JWT).
+  the submitted OTP code (without needing the original JWT). Hashing is delegated
+  to `AshAuthentication.SHA256Provider` so the crypto approach stays consistent
+  with other strategies.
   """
   @spec compute_deterministic_jti(t, String.t(), String.t()) :: String.t()
   def compute_deterministic_jti(strategy, subject, normalized_otp) do
-    data = "otp:#{strategy.name}:#{subject}:#{normalized_otp}"
-
-    :sha256
-    |> :crypto.hash(data)
-    |> Base.url_encode64(padding: false)
+    hash!("otp:#{strategy.name}:#{subject}:#{normalized_otp}")
   end
 
   @doc """
@@ -156,11 +161,12 @@ defmodule AshAuthentication.Strategy.Otp do
   """
   @spec compute_deterministic_jti_for_identity(t, String.t(), String.t()) :: String.t()
   def compute_deterministic_jti_for_identity(strategy, identity, normalized_otp) do
-    data = "otp:#{strategy.name}:identity:#{identity}:#{normalized_otp}"
+    hash!("otp:#{strategy.name}:identity:#{identity}:#{normalized_otp}")
+  end
 
-    :sha256
-    |> :crypto.hash(data)
-    |> Base.url_encode64(padding: false)
+  defp hash!(data) do
+    {:ok, hash} = SHA256Provider.hash(data)
+    hash
   end
 
   @doc """

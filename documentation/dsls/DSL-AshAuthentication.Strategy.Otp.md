@@ -38,6 +38,7 @@ defmodule MyApp.Accounts.User do
     strategies do
       otp do
         identity_field :email
+        brute_force_strategy :rate_limit
         otp_lifetime {10, :minutes}
         otp_length 6
         otp_characters :unambiguous_uppercase
@@ -101,6 +102,7 @@ Strategy for authenticating using a one-time password sent to the user
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
+| [`brute_force_strategy`](#authentication-strategies-otp-brute_force_strategy){: #authentication-strategies-otp-brute_force_strategy .spark-required} | `:rate_limit \| {:audit_log, atom} \| {:preparation, module}` |  | How you are mitigating brute-force OTP checks. |
 | [`sender`](#authentication-strategies-otp-sender){: #authentication-strategies-otp-sender .spark-required} | `(any, any, any -> any) \| module` |  | How to send the OTP code to the user. |
 | [`identity_field`](#authentication-strategies-otp-identity_field){: #authentication-strategies-otp-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user, usually something like `username` or `email_address`. |
 | [`otp_lifetime`](#authentication-strategies-otp-otp_lifetime){: #authentication-strategies-otp-otp_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{10, :minutes}` | How long the OTP code is valid. If no unit is provided, then `minutes` is assumed. |
@@ -114,6 +116,8 @@ Strategy for authenticating using a one-time password sent to the user
 | [`sign_in_action_name`](#authentication-strategies-otp-sign_in_action_name){: #authentication-strategies-otp-sign_in_action_name } | `atom` |  | The name to use for the sign in action. Defaults to `sign_in_with_<strategy_name>`. |
 | [`lookup_action_name`](#authentication-strategies-otp-lookup_action_name){: #authentication-strategies-otp-lookup_action_name } | `atom` |  | The action to use when looking up a user by their identity. Defaults to `get_by_<identity_field>`. |
 | [`otp_param_name`](#authentication-strategies-otp-otp_param_name){: #authentication-strategies-otp-otp_param_name } | `atom` | `:otp` | The name of the OTP parameter in the incoming sign-in request. |
+| [`audit_log_window`](#authentication-strategies-otp-audit_log_window){: #authentication-strategies-otp-audit_log_window } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{5, :minutes}` | Time window for counting failed attempts when using the `{:audit_log, ...}` brute force strategy. If no unit is provided, then `minutes` is assumed. Defaults to 5 minutes. |
+| [`audit_log_max_failures`](#authentication-strategies-otp-audit_log_max_failures){: #authentication-strategies-otp-audit_log_max_failures } | `pos_integer` | `5` | Maximum allowed failures within the window before blocking when using the `{:audit_log, ...}` brute force strategy. Defaults to 5. |
 
 
 

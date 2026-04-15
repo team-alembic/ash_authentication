@@ -43,6 +43,7 @@ defmodule Example.UserWithRegisterOtp do
     strategies do
       otp do
         identity_field :email
+        brute_force_strategy({:preparation, Example.TotpNoopPreparation})
         registration_enabled? true
         otp_lifetime {10, :minutes}
         otp_length 6

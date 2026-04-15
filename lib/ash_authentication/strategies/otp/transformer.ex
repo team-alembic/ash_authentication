@@ -28,6 +28,7 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
          strategy <- maybe_set_lookup_action_name(strategy),
          strategy <- maybe_set_otp_generator(strategy),
          strategy <- maybe_transform_otp_lifetime(strategy),
+         strategy <- transform_audit_log_window(strategy),
          {:ok, dsl_state} <-
            maybe_build_action(
              dsl_state,
@@ -63,6 +64,23 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
     do: %{strategy | otp_lifetime: {strategy.otp_lifetime, :minutes}}
 
   defp maybe_transform_otp_lifetime(strategy), do: strategy
+
+  defp transform_audit_log_window(strategy) when is_integer(strategy.audit_log_window),
+    do: %{strategy | audit_log_window: strategy.audit_log_window * 60}
+
+  defp transform_audit_log_window(strategy) when is_tuple(strategy.audit_log_window) do
+    {value, unit} = strategy.audit_log_window
+
+    seconds =
+      case unit do
+        :days -> value * 24 * 60 * 60
+        :hours -> value * 60 * 60
+        :minutes -> value * 60
+        :seconds -> value
+      end
+
+    %{strategy | audit_log_window: seconds}
+  end
 
   # sobelow_skip ["DOS.StringToAtom"]
   defp maybe_set_sign_in_action_name(strategy) when is_nil(strategy.sign_in_action_name),
@@ -157,11 +175,13 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
       )
     ]
 
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: Otp.SignInPreparation
-      )
-    ]
+    preparations =
+      brute_force_preparations(strategy, strategy.sign_in_action_name) ++
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+            preparation: Otp.SignInPreparation
+          )
+        ]
 
     metadata = [
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
@@ -191,16 +211,40 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
       )
     ]
 
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: Otp.RequestPreparation
-      )
-    ]
+    preparations =
+      brute_force_preparations(strategy, strategy.request_action_name) ++
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+            preparation: Otp.RequestPreparation
+          )
+        ]
 
     Transformer.build_entity(Resource.Dsl, [:actions], :read,
       name: strategy.request_action_name,
       arguments: arguments,
       preparations: preparations
     )
+  end
+
+  defp brute_force_preparations(strategy, action_name) do
+    case strategy.brute_force_strategy do
+      {:preparation, preparation} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+            preparation: preparation
+          )
+        ]
+
+      {:audit_log, _audit_log_name} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+            preparation:
+              {AshAuthentication.AddOn.AuditLog.BruteForcePreparation, action_name: action_name}
+          )
+        ]
+
+      _ ->
+        []
+    end
   end
 end

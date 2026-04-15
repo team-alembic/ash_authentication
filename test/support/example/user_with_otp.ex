@@ -48,6 +48,7 @@ defmodule Example.UserWithOtp do
     strategies do
       otp do
         identity_field :email
+        brute_force_strategy({:preparation, Example.TotpNoopPreparation})
         otp_lifetime {10, :minutes}
         otp_length 6
         otp_characters :unambiguous_uppercase
