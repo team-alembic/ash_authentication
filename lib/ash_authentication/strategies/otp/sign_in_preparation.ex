@@ -17,8 +17,8 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
 
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource, Resource.Preparation}
-  alias AshAuthentication.{Info, Jwt, Strategy.Otp, TokenResource}
-  alias AshAuthentication.TokenResource.Info, as: TokenInfo
+  alias AshAuthentication.{Info, Jwt, Strategy.Otp}
+  alias AshAuthentication.Strategy.Otp.SignInHelpers
   require Ash.Query
 
   @doc false
@@ -68,49 +68,12 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
   end
 
   defp verify_and_sign_in(strategy, token_resource, jti, subject, user, context_opts) do
-    case get_otp_token_locked(token_resource, jti, context_opts) do
-      {:ok, [_ | _]} ->
-        case maybe_consume_token(strategy, token_resource, jti, subject, context_opts) do
-          :ok ->
-            {:ok, auth_token, _claims} = Jwt.token_for_user(user, %{}, context_opts)
-            {:ok, [Resource.put_metadata(user, :token, auth_token)]}
-
-          {:error, _} ->
-            {:ok, []}
-        end
-
-      _ ->
-        {:ok, []}
-    end
-  end
-
-  defp maybe_consume_token(%{single_use_token?: false}, _, _, _, _), do: :ok
-
-  defp maybe_consume_token(_strategy, token_resource, jti, subject, context_opts) do
-    if TokenResource.Actions.jti_revoked?(token_resource, jti, context_opts) do
-      {:error, :already_consumed}
+    with {:ok, [_ | _]} <- SignInHelpers.get_otp_token_locked(token_resource, jti, context_opts),
+         :ok <- SignInHelpers.consume_token(strategy, token_resource, jti, subject, context_opts) do
+      {:ok, auth_token, _claims} = Jwt.token_for_user(user, %{}, context_opts)
+      {:ok, [Resource.put_metadata(user, :token, auth_token)]}
     else
-      TokenResource.Actions.revoke_jti(token_resource, jti, subject, context_opts)
-      :ok
-    end
-  end
-
-  defp get_otp_token_locked(token_resource, jti, context_opts) do
-    with {:ok, domain} <- TokenInfo.token_domain(token_resource),
-         {:ok, get_token_action_name} <- TokenInfo.token_get_token_action_name(token_resource) do
-      token_resource
-      |> Ash.Query.new()
-      |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Ash.Query.lock(:for_update)
-      |> Ash.Query.for_read(
-        get_token_action_name,
-        %{"jti" => jti, "purpose" => "otp"},
-        Keyword.take(
-          Keyword.put(context_opts, :domain, domain),
-          [:actor, :authorize?, :tenant, :tracer, :domain]
-        )
-      )
-      |> Ash.read()
+      _ -> {:ok, []}
     end
   end
 end

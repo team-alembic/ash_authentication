@@ -13,8 +13,8 @@ defmodule AshAuthentication.Strategy.Otp.SignInChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Resource, Resource.Change}
-  alias AshAuthentication.{Errors.InvalidToken, Info, Jwt, Strategy.Otp, TokenResource}
-  alias AshAuthentication.TokenResource.Info, as: TokenInfo
+  alias AshAuthentication.{Errors.InvalidToken, Info, Jwt, Strategy.Otp}
+  alias AshAuthentication.Strategy.Otp.SignInHelpers
 
   @doc false
   @impl true
@@ -55,50 +55,18 @@ defmodule AshAuthentication.Strategy.Otp.SignInChange do
     end
   end
 
-  # Runs inside the create/upsert transaction. Locks the token row with
-  # SELECT FOR UPDATE so concurrent sign-in attempts for the same OTP code
-  # serialize here rather than both succeeding.
+  # Runs inside the create/upsert transaction. `SignInHelpers.get_otp_token_locked/3`
+  # takes a SELECT FOR UPDATE lock so concurrent sign-in attempts for the same OTP
+  # code serialize here rather than both succeeding.
   defp verify_token_and_finalize(_changeset, record, strategy, token_resource, jti, context_opts) do
-    case get_otp_token_locked(token_resource, jti, context_opts) do
-      {:ok, [_ | _]} ->
-        with :ok <- maybe_consume_token(strategy, token_resource, jti, record, context_opts) do
-          {:ok, auth_token, _claims} = Jwt.token_for_user(record, %{}, context_opts)
-          {:ok, Resource.put_metadata(record, :token, auth_token)}
-        end
+    subject = AshAuthentication.user_to_subject(record)
 
-      _ ->
-        {:error, otp_error(strategy)}
-    end
-  end
-
-  defp maybe_consume_token(%{single_use_token?: false}, _, _, _, _), do: :ok
-
-  defp maybe_consume_token(strategy, token_resource, jti, record, context_opts) do
-    if TokenResource.Actions.jti_revoked?(token_resource, jti, context_opts) do
-      {:error, otp_error(strategy)}
+    with {:ok, [_ | _]} <- SignInHelpers.get_otp_token_locked(token_resource, jti, context_opts),
+         :ok <- SignInHelpers.consume_token(strategy, token_resource, jti, subject, context_opts) do
+      {:ok, auth_token, _claims} = Jwt.token_for_user(record, %{}, context_opts)
+      {:ok, Resource.put_metadata(record, :token, auth_token)}
     else
-      subject = AshAuthentication.user_to_subject(record)
-      TokenResource.Actions.revoke_jti(token_resource, jti, subject, context_opts)
-      :ok
-    end
-  end
-
-  defp get_otp_token_locked(token_resource, jti, context_opts) do
-    with {:ok, domain} <- TokenInfo.token_domain(token_resource),
-         {:ok, get_token_action_name} <- TokenInfo.token_get_token_action_name(token_resource) do
-      token_resource
-      |> Ash.Query.new()
-      |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Ash.Query.lock(:for_update)
-      |> Ash.Query.for_read(
-        get_token_action_name,
-        %{"jti" => jti, "purpose" => "otp"},
-        Keyword.take(
-          Keyword.put(context_opts, :domain, domain),
-          [:actor, :authorize?, :tenant, :tracer, :domain]
-        )
-      )
-      |> Ash.read()
+      _ -> {:error, otp_error(strategy)}
     end
   end
 
