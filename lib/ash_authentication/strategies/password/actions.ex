@@ -283,6 +283,8 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         options
         |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
 
+      store_all_tokens? = Info.authentication_tokens_store_all_tokens?(resource)
+
       user
       |> Changeset.new()
       |> Changeset.set_context(%{
@@ -293,8 +295,15 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       |> Changeset.for_update(resettable.password_reset_action_name, params, options)
       |> Changeset.after_action(fn _changeset, record ->
         token_resource = Info.authentication_tokens_token_resource!(resource)
-        :ok = TokenResource.revoke(token_resource, token, options)
-        {:ok, record}
+
+        case TokenResource.revoke(
+               token_resource,
+               token,
+               Keyword.put(options, :store_all_tokens?, store_all_tokens?)
+             ) do
+          :ok -> {:ok, record}
+          {:error, reason} -> {:error, reason}
+        end
       end)
       |> Ash.update()
     else

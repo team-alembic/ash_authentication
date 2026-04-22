@@ -35,6 +35,10 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
           Info.domain!(strategy.resource)
         end)
 
+      store_all_tokens? = Info.authentication_tokens_store_all_tokens?(strategy.resource)
+
+      revoke_opts = Keyword.put(opts, :store_all_tokens?, store_all_tokens?)
+
       user
       |> Changeset.new()
       |> Changeset.set_context(%{
@@ -43,7 +47,9 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
         }
       })
       |> Changeset.for_update(strategy.confirm_action_name, params, opts)
-      |> Changeset.after_action(&revoke_token_after_confirm(&1, &2, token_resource, token, opts))
+      |> Changeset.after_action(
+        &revoke_token_after_confirm(&1, &2, token_resource, token, revoke_opts)
+      )
       |> Ash.update()
     else
       :error -> {:error, InvalidToken.exception(type: :confirmation)}
