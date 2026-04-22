@@ -60,9 +60,14 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
   end
 
   defp handle_transaction_result(changeset, {:ok, record}, strategy, token, context) do
-    revoke_single_use_token!(strategy, changeset, token, context)
-    extra_claims = changeset.context[:extra_token_claims] || %{}
-    generate_token_for_record(record, extra_claims, context)
+    case revoke_single_use_token(strategy, changeset, token, context) do
+      :ok ->
+        extra_claims = changeset.context[:extra_token_claims] || %{}
+        generate_token_for_record(record, extra_claims, context)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   defp handle_transaction_result(_changeset, {:error, error}, _strategy, _token, _context) do
@@ -76,10 +81,19 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
     end
   end
 
-  defp revoke_single_use_token!(strategy, changeset, token, context) do
+  defp revoke_single_use_token(strategy, changeset, token, context) do
     if strategy.single_use_token? do
       token_resource = Info.authentication_tokens_token_resource!(changeset.resource)
-      :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
+      store_all_tokens? = Info.authentication_tokens_store_all_tokens?(changeset.resource)
+
+      opts =
+        context
+        |> Ash.Context.to_opts()
+        |> Keyword.put(:store_all_tokens?, store_all_tokens?)
+
+      TokenResource.revoke(token_resource, token, opts)
+    else
+      :ok
     end
   end
 
