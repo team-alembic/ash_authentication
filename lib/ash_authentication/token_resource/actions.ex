@@ -231,12 +231,23 @@ defmodule AshAuthentication.TokenResource.Actions do
          lookup_opts =
            opts
            |> Keyword.take([:actor, :authorize?, :context, :tenant, :tracer])
-           |> Keyword.merge(lock: :for_update, domain: domain, authorize?: false),
+           |> Keyword.merge(
+             lock: :for_update,
+             domain: domain,
+             authorize?: false,
+             error?: false
+           ),
          {:ok, existing} <- Ash.get(resource, [jti: jti], lookup_opts) do
       case existing && existing.purpose do
         "revocation" ->
           {:error,
            InvalidToken.exception(type: :revocation, reason: "token has already been revoked")}
+
+        nil ->
+          # Row missing despite the caller expecting it to exist (e.g. stored
+          # token was deleted, or config changed). Fall back to atomic insert
+          # so the race-safety guarantee is preserved.
+          revoke_atomic_insert(resource, token, opts)
 
         _ ->
           revoke_legacy_upsert(resource, token, opts)
@@ -307,12 +318,20 @@ defmodule AshAuthentication.TokenResource.Actions do
          lookup_opts =
            opts
            |> Keyword.take([:actor, :authorize?, :context, :tenant, :tracer])
-           |> Keyword.merge(lock: :for_update, domain: domain, authorize?: false),
+           |> Keyword.merge(
+             lock: :for_update,
+             domain: domain,
+             authorize?: false,
+             error?: false
+           ),
          {:ok, existing} <- Ash.get(resource, [jti: jti], lookup_opts) do
       case existing && existing.purpose do
         "revocation" ->
           {:error,
            InvalidToken.exception(type: :revocation, reason: "token has already been revoked")}
+
+        nil ->
+          revoke_jti_atomic_insert(resource, jti, subject, opts)
 
         _ ->
           revoke_jti_legacy_upsert(resource, jti, subject, opts)
