@@ -404,8 +404,15 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, resource} <- Jwt.token_to_resource(token, otp_app),
            {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
-        # we want this to blow up if something goes wrong
-        :ok = TokenResource.Actions.revoke(token_resource, token, opts)
+        store_all_tokens? = Info.authentication_tokens_store_all_tokens?(resource)
+        revoke_opts = Keyword.put(opts, :store_all_tokens?, store_all_tokens?)
+
+        # We still want unexpected errors to blow up — only the concurrent
+        # revocation race is an expected non-success during logout.
+        case TokenResource.Actions.revoke(token_resource, token, revoke_opts) do
+          :ok -> :ok
+          {:error, %AshAuthentication.Errors.InvalidToken{type: :revocation}} -> :ok
+        end
 
         conn
       else
@@ -437,8 +444,14 @@ defmodule AshAuthentication.Plug.Helpers do
 
         case Conn.get_session(conn, session_key) do
           token when is_binary(token) ->
-            # we want this to blow up if something goes wrong
-            :ok = TokenResource.Actions.revoke(token_resource, token, opts)
+            # `require_token_presence_for_authentication?: true` implies the
+            # token is stored, so take the lock-and-update revocation path.
+            revoke_opts = Keyword.put(opts, :store_all_tokens?, true)
+
+            case TokenResource.Actions.revoke(token_resource, token, revoke_opts) do
+              :ok -> :ok
+              {:error, %AshAuthentication.Errors.InvalidToken{type: :revocation}} -> :ok
+            end
 
             conn
 
@@ -451,8 +464,13 @@ defmodule AshAuthentication.Plug.Helpers do
 
         with subject when is_binary(subject) <- Conn.get_session(conn, options.subject_name),
              [jti, subject] <- String.split(subject, ":", parts: 2) do
-          :ok =
-            TokenResource.Actions.revoke_jti(token_resource, jti, subject, opts)
+          store_all_tokens? = Info.authentication_tokens_store_all_tokens?(resource)
+          revoke_opts = Keyword.put(opts, :store_all_tokens?, store_all_tokens?)
+
+          case TokenResource.Actions.revoke_jti(token_resource, jti, subject, revoke_opts) do
+            :ok -> :ok
+            {:error, %AshAuthentication.Errors.InvalidToken{type: :revocation}} -> :ok
+          end
 
           conn
         else
