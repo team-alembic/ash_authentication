@@ -34,9 +34,8 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
                {:subject_matches, URI.parse(subject)} do
           changeset
           |> Changeset.force_change_attribute(strategy.identity_field, identity)
-          |> Changeset.after_transaction(
-            &handle_transaction_result(&1, &2, strategy, token, context)
-          )
+          |> Changeset.before_action(&revoke_token_before_commit(&1, strategy, token, context))
+          |> Changeset.after_transaction(&handle_transaction_result(&1, &2, context))
         else
           e ->
             reason = error_reason(e, strategy)
@@ -59,18 +58,19 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInChange do
     end
   end
 
-  defp handle_transaction_result(changeset, {:ok, record}, strategy, token, context) do
+  defp revoke_token_before_commit(changeset, strategy, token, context) do
     case revoke_single_use_token(strategy, changeset, token, context) do
-      :ok ->
-        extra_claims = changeset.context[:extra_token_claims] || %{}
-        generate_token_for_record(record, extra_claims, context)
-
-      {:error, reason} ->
-        {:error, reason}
+      :ok -> changeset
+      {:error, reason} -> Ash.Changeset.add_error(changeset, reason)
     end
   end
 
-  defp handle_transaction_result(_changeset, {:error, error}, _strategy, _token, _context) do
+  defp handle_transaction_result(changeset, {:ok, record}, context) do
+    extra_claims = changeset.context[:extra_token_claims] || %{}
+    generate_token_for_record(record, extra_claims, context)
+  end
+
+  defp handle_transaction_result(_changeset, {:error, error}, _context) do
     {:error, error}
   end
 
