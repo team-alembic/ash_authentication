@@ -168,7 +168,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
   @doc """
   Generate a magic link token for a user.
 
-  Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
+  Used by `AshAuthentication.Strategy.MagicLink.Request`.
   """
   @spec request_token_for(t, Resource.record(), opts :: Keyword.t(), context :: map()) ::
           {:ok, binary} | {:error, AshAuthentication.Errors.AuthenticationFailed.t()}
@@ -194,7 +194,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
   @doc """
   Generate a magic link token for an identity field.
 
-  Used by `AshAuthentication.Strategy.MagicLink.RequestPreparation`.
+  Used by `AshAuthentication.Strategy.MagicLink.Request`.
   """
   @spec request_token_for_identity(t, term(), opts :: Keyword.t(), context :: map()) ::
           {:ok, binary} | {:error, AshAuthentication.Errors.AuthenticationFailed.t()}

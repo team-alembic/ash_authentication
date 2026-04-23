@@ -84,6 +84,24 @@ defmodule AshAuthentication.AuditLogResource.Transformer do
              public?: true
            ),
          :ok <- validate_subject_field(dsl, subject_attr),
+         {:ok, identity_attr} <- Info.audit_log_attributes_identity(dsl),
+         {:ok, dsl} <-
+           maybe_build_attribute(dsl, identity_attr, :string,
+             allow_nil?: true,
+             writable?: true,
+             public?: true,
+             sensitive?: true
+           ),
+         :ok <- validate_identity_field(dsl, identity_attr),
+         {:ok, client_ip_attr} <- Info.audit_log_attributes_client_ip(dsl),
+         {:ok, dsl} <-
+           maybe_build_attribute(dsl, client_ip_attr, :string,
+             allow_nil?: true,
+             writable?: true,
+             public?: true,
+             sensitive?: true
+           ),
+         :ok <- validate_client_ip_field(dsl, client_ip_attr),
          {:ok, strategy_attr} <- Info.audit_log_attributes_strategy(dsl),
          {:ok, dsl} <-
            maybe_build_attribute(dsl, strategy_attr, :atom,
@@ -208,7 +226,9 @@ defmodule AshAuthentication.AuditLogResource.Transformer do
 
   defp validate_accepted_fields(dsl, fields) do
     with {:ok, id} <- Info.audit_log_attributes_id(dsl),
-         {:ok, subject} <- Info.audit_log_attributes_id(dsl),
+         {:ok, subject} <- Info.audit_log_attributes_subject(dsl),
+         {:ok, identity} <- Info.audit_log_attributes_identity(dsl),
+         {:ok, client_ip} <- Info.audit_log_attributes_client_ip(dsl),
          {:ok, strategy} <- Info.audit_log_attributes_strategy(dsl),
          {:ok, audit_log} <- Info.audit_log_attributes_audit_log(dsl),
          {:ok, logged_at} <- Info.audit_log_attributes_logged_at(dsl),
@@ -220,6 +240,8 @@ defmodule AshAuthentication.AuditLogResource.Transformer do
         MapSet.new([
           id,
           subject,
+          identity,
+          client_ip,
           strategy,
           audit_log,
           logged_at,
@@ -323,6 +345,30 @@ defmodule AshAuthentication.AuditLogResource.Transformer do
          :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]),
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
       validate_attribute_option(attribute, resource, :public?, [true])
+    end
+  end
+
+  defp validate_identity_field(dsl, attr) do
+    with {:ok, resource} <- persisted_option(dsl, :module),
+         {:ok, attribute} <- find_attribute(dsl, attr),
+         :ok <-
+           validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :public?, [true]) do
+      validate_attribute_option(attribute, resource, :sensitive?, [true])
+    end
+  end
+
+  defp validate_client_ip_field(dsl, attr) do
+    with {:ok, resource} <- persisted_option(dsl, :module),
+         {:ok, attribute} <- find_attribute(dsl, attr),
+         :ok <-
+           validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
+         :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :public?, [true]) do
+      validate_attribute_option(attribute, resource, :sensitive?, [true])
     end
   end
 

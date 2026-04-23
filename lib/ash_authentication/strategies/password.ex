@@ -164,7 +164,7 @@ defmodule AshAuthentication.Strategy.Password do
   @doc """
   Generate a reset token for a user.
 
-  Used by `AshAuthentication.Strategy.Password.RequestPasswordResetPreparation`.
+  Used by `AshAuthentication.Strategy.Password.RequestPasswordReset`.
   """
   @spec reset_token_for(t(), Resource.record()) ::
           {:ok, String.t()} | {:error, AuthenticationFailed.t()}
