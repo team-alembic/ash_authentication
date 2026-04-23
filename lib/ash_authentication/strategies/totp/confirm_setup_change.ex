@@ -58,19 +58,22 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
           Changeset.add_error(changeset, reason)
       end
     end)
-    |> Changeset.after_action(fn changeset, result ->
-      case changeset.context[:setup_token_to_revoke] do
-        nil ->
-          {:ok, result}
-
-        setup_token ->
-          case revoke_token(setup_token, strategy) do
-            :ok -> {:ok, result}
-            {:error, reason} -> {:error, reason}
-          end
-      end
-    end)
+    |> Changeset.after_action(&maybe_revoke_setup_token(&1, &2, strategy))
     |> Changeset.after_action(&preserve_authentication_metadata/2)
+  end
+
+  defp maybe_revoke_setup_token(changeset, result, strategy) do
+    case changeset.context[:setup_token_to_revoke] do
+      nil -> {:ok, result}
+      setup_token -> revoke_token_for_result(setup_token, result, strategy)
+    end
+  end
+
+  defp revoke_token_for_result(setup_token, result, strategy) do
+    case revoke_token(setup_token, strategy) do
+      :ok -> {:ok, result}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp validate_code_format(code, strategy) do

@@ -283,7 +283,12 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         options
         |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
 
-      store_all_tokens? = Info.authentication_tokens_store_all_tokens?(resource)
+      revoke_opts =
+        Keyword.put(
+          options,
+          :store_all_tokens?,
+          Info.authentication_tokens_store_all_tokens?(resource)
+        )
 
       user
       |> Changeset.new()
@@ -293,18 +298,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         }
       })
       |> Changeset.for_update(resettable.password_reset_action_name, params, options)
-      |> Changeset.after_action(fn _changeset, record ->
-        token_resource = Info.authentication_tokens_token_resource!(resource)
-
-        case TokenResource.revoke(
-               token_resource,
-               token,
-               Keyword.put(options, :store_all_tokens?, store_all_tokens?)
-             ) do
-          :ok -> {:ok, record}
-          {:error, reason} -> {:error, reason}
-        end
-      end)
+      |> Changeset.after_action(&revoke_reset_token(&1, &2, resource, token, revoke_opts))
       |> Ash.update()
     else
       {:error, %Changeset{} = changeset} -> {:error, changeset}
@@ -314,6 +308,15 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
   def reset(strategy, _params, _options) when is_struct(strategy, Password),
     do: {:error, NoSuchAction.exception(resource: strategy.resource, action: :reset, type: :read)}
+
+  defp revoke_reset_token(_changeset, record, resource, token, opts) do
+    token_resource = Info.authentication_tokens_token_resource!(resource)
+
+    case TokenResource.revoke(token_resource, token, opts) do
+      :ok -> {:ok, record}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   defp user_confirmed?(user, field) do
     case Map.get(user, field) do
