@@ -99,6 +99,9 @@ defmodule AshAuthentication.Strategy.Password do
   """
 
   defstruct require_confirmed_with: nil,
+            audit_log_max_failures: 5,
+            audit_log_window: {5, :minutes},
+            brute_force_strategy: nil,
             confirmation_required?: false,
             hash_provider: AshAuthentication.BcryptProvider,
             hashed_password_field: :hashed_password_field,
@@ -135,6 +138,9 @@ defmodule AshAuthentication.Strategy.Password do
 
   @type t :: %Password{
           require_confirmed_with: :atom | nil,
+          audit_log_max_failures: pos_integer,
+          audit_log_window: pos_integer | {pos_integer, :days | :hours | :minutes | :seconds},
+          brute_force_strategy: nil | {:audit_log, atom} | {:preparation, module},
           confirmation_required?: boolean,
           hash_provider: module,
           hashed_password_field: atom,

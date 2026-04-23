@@ -124,7 +124,10 @@ defmodule AshAuthentication.Strategy.MagicLink do
   See the [Magic Link Tutorial](/documentation/tutorial/magic-links.md) for more information.
   """
 
-  defstruct identity_field: :username,
+  defstruct audit_log_max_failures: 5,
+            audit_log_window: {5, :minutes},
+            brute_force_strategy: nil,
+            identity_field: :username,
             lookup_action_name: nil,
             name: nil,
             prevent_hijacking?: true,
@@ -146,6 +149,9 @@ defmodule AshAuthentication.Strategy.MagicLink do
   alias AshAuthentication.Jwt
 
   @type t :: %__MODULE__{
+          audit_log_max_failures: pos_integer,
+          audit_log_window: pos_integer | {pos_integer, :days | :hours | :minutes | :seconds},
+          brute_force_strategy: nil | {:audit_log, atom} | {:preparation, module},
           identity_field: atom,
           lookup_action_name: nil,
           name: atom,

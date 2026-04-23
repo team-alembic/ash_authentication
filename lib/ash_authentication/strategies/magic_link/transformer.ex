@@ -193,12 +193,51 @@ defmodule AshAuthentication.Strategy.MagicLink.Transformer do
       )
     ]
 
+    preparations = brute_force_preparations(strategy, strategy.request_action_name)
+    touches_resources = brute_force_touches_resources(dsl_state, strategy)
+
     Transformer.build_entity(Resource.Dsl, [:actions], :action,
       name: strategy.request_action_name,
       arguments: arguments,
       run: MagicLink.Request,
+      preparations: preparations,
+      touches_resources: touches_resources,
       description: "Send a magic link to a user if they exist."
     )
+  end
+
+  defp brute_force_preparations(strategy, action_name) do
+    case strategy.brute_force_strategy do
+      {:audit_log, _} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :action], :prepare,
+            preparation:
+              {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+               action_name: action_name}
+          )
+        ]
+
+      {:preparation, module} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :action], :prepare,
+            preparation: module
+          )
+        ]
+
+      _ ->
+        []
+    end
+  end
+
+  defp brute_force_touches_resources(dsl_state, strategy) do
+    module = Transformer.get_persisted(dsl_state, :module)
+
+    with {:audit_log, audit_log} <- strategy.brute_force_strategy,
+         {:ok, audit_log} <- AshAuthentication.Info.strategy(dsl_state, audit_log) do
+      Enum.uniq([module, audit_log.audit_log_resource])
+    else
+      _ -> [module]
+    end
   end
 
   defp warn_on_require_interaction(strategy) when strategy.require_interaction?, do: :ok

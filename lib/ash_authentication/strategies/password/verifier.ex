@@ -7,7 +7,14 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
   DSL verifier for the password strategy.
   """
 
-  alias AshAuthentication.{HashProvider, Info, Sender, Strategy.Password}
+  alias AshAuthentication.{
+    AddOn.AuditLog.VerifierHelpers,
+    HashProvider,
+    Info,
+    Sender,
+    Strategy.Password
+  }
+
   alias Spark.{Dsl.Verifier, Error.DslError}
   import AshAuthentication.Validations
 
@@ -18,10 +25,55 @@ defmodule AshAuthentication.Strategy.Password.Verifier do
          :ok <- validate_hash_provider_dep(strategy),
          :ok <- validate_hash_provider_entropy(strategy),
          :ok <- validate_tokens_enabled_for_sign_in_tokens(dsl_state, strategy),
-         :ok <- validate_tokens_enabled_for_resettable(dsl_state, strategy) do
+         :ok <- validate_tokens_enabled_for_resettable(dsl_state, strategy),
+         :ok <- validate_brute_force_strategy(dsl_state, strategy) do
       maybe_validate_resettable_sender(dsl_state, strategy)
     end
   end
+
+  defp validate_brute_force_strategy(_dsl_state, %{brute_force_strategy: nil}), do: :ok
+
+  defp validate_brute_force_strategy(_dsl_state, %{brute_force_strategy: {:preparation, _}}),
+    do: :ok
+
+  defp validate_brute_force_strategy(
+         dsl_state,
+         %{brute_force_strategy: {:audit_log, audit_log_name}} = strategy
+       ) do
+    with {:ok, audit_log} <-
+           VerifierHelpers.validate_audit_log_exists(dsl_state, strategy, audit_log_name),
+         :ok <- maybe_validate_sign_in_audit_log(dsl_state, strategy, audit_log) do
+      maybe_validate_reset_request_audit_log(dsl_state, strategy, audit_log)
+    end
+  end
+
+  defp maybe_validate_sign_in_audit_log(dsl_state, strategy, audit_log)
+       when strategy.sign_in_enabled?,
+       do:
+         VerifierHelpers.validate_action_audit_logged(
+           dsl_state,
+           strategy,
+           strategy.sign_in_action_name,
+           audit_log
+         )
+
+  defp maybe_validate_sign_in_audit_log(_, _, _), do: :ok
+
+  defp maybe_validate_reset_request_audit_log(
+         dsl_state,
+         %{resettable: %{request_password_reset_action_name: action_name}} = strategy,
+         audit_log
+       )
+       when is_atom(action_name),
+       do:
+         VerifierHelpers.validate_action_audit_logged(
+           dsl_state,
+           strategy,
+           action_name,
+           audit_log
+         )
+
+  defp maybe_validate_reset_request_audit_log(_, _, _), do: :ok
 
   defp validate_hash_provider_dep(strategy)
        when strategy.hash_provider == AshAuthentication.BcryptProvider do
