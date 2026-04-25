@@ -27,6 +27,20 @@ defmodule AshAuthentication.AddOn.AuditLog do
     end
   end
   ```
+
+  ## Request remote IP configuration
+
+  Audit log request metadata stores `remote_ip` from
+  `Plug.Conn.get_peer_data(conn).address` by default.
+
+  If your app is behind trusted proxy middleware that has already normalized
+  `conn.remote_ip`, you can opt in to using that value instead:
+
+  `config :ash_authentication, request_remote_ip_source: :conn`
+
+  Supported values are `:peer_data` (default) and `:conn`. Only use `:conn` when
+  your Plug/Phoenix app has a trusted proxy or IP normalization setup that
+  rewrites `conn.remote_ip` from trusted headers.
   """
 
   defstruct audit_log_resource: nil,

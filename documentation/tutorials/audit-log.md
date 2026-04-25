@@ -352,6 +352,18 @@ The IP privacy transformation applies to all IP-related fields in the request me
 - `x_forwarded_for` - Proxy chain IPs
 - `forwarded` - Standard forwarded header with IP information
 
+### Configure IP address source
+By default, `remote_ip` comes from `Plug.Conn.get_peer_data(conn).address`. If your app is behind trusted proxy middleware that has already
+ normalized `conn.remote_ip`, you can opt in to using that value instead:
+
+```elixir
+config :ash_authentication, request_remote_ip_source: :conn
+```
+
+Supported values are `:peer_data` (default) and `:conn`. Only use `:conn` when your 
+Plug/Phoenix app has a trusted proxy or IP normalization setup that rewrites 
+`conn.remote_ip` from trusted headers.
+
 ## Audit log attributes
 
 Each audit log entry contains:
