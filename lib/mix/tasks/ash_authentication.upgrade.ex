@@ -664,77 +664,89 @@ if Code.ensure_loaded?(Igniter) do
           igniter
 
         {igniter, resources_with_strategies} ->
-          igniter =
-            Enum.reduce(resources_with_strategies, igniter, fn {resource, strategies}, igniter ->
-              {igniter, audit_log_name} = ensure_audit_log(igniter, resource)
-
-              Enum.reduce(strategies, igniter, fn strategy_type, igniter ->
-                add_brute_force_to_strategy(igniter, resource, strategy_type, audit_log_name)
-              end)
-            end)
-
-          Igniter.add_notice(igniter, """
-          Brute-force Protection:
-
-          Identity-keyed brute-force protection has been added to your password
-          and magic link strategies via the audit log add-on. Failed sign-in,
-          password reset request, and magic link request attempts are now
-          counted within a 5 minute window per identity, with requests blocked
-          after 5 failures.
-
-          Adjust `audit_log_window` and `audit_log_max_failures` on each
-          strategy if you need different thresholds. If your audit log uses
-          `exclude_actions` or `exclude_strategies` to skip the protected
-          actions, the compile-time verifier will report which actions need
-          to be tracked.
-          """)
+          resources_with_strategies
+          |> Enum.reduce(igniter, &add_brute_force_to_resource/2)
+          |> Igniter.add_notice(brute_force_notice())
       end
+    end
+
+    defp add_brute_force_to_resource({resource, strategies}, igniter) do
+      {igniter, audit_log_name} = ensure_audit_log(igniter, resource)
+
+      Enum.reduce(strategies, igniter, fn strategy_type, igniter ->
+        add_brute_force_to_strategy(igniter, resource, strategy_type, audit_log_name)
+      end)
+    end
+
+    defp brute_force_notice do
+      """
+      Brute-force Protection:
+
+      Identity-keyed brute-force protection has been added to your password
+      and magic link strategies via the audit log add-on. Failed sign-in,
+      password reset request, and magic link request attempts are now
+      counted within a 5 minute window per identity, with requests blocked
+      after 5 failures.
+
+      Adjust `audit_log_window` and `audit_log_max_failures` on each
+      strategy if you need different thresholds. If your audit log uses
+      `exclude_actions` or `exclude_strategies` to skip the protected
+      actions, the compile-time verifier will report which actions need
+      to be tracked.
+      """
     end
 
     defp find_resources_needing_brute_force(igniter) do
       {igniter, resources} = find_resources_with_password_or_magic_link(igniter)
+      Enum.reduce(resources, {igniter, []}, &collect_strategies_needing_brute_force/2)
+    end
 
-      Enum.reduce(resources, {igniter, []}, fn resource, {igniter, acc} ->
-        {igniter, strategies_needing} =
-          Enum.reduce([:password, :magic_link], {igniter, []}, fn strategy_type,
-                                                                  {igniter, strategies} ->
-            case strategy_needs_brute_force?(igniter, resource, strategy_type) do
-              {igniter, true} -> {igniter, [strategy_type | strategies]}
-              {igniter, false} -> {igniter, strategies}
-            end
-          end)
+    defp collect_strategies_needing_brute_force(resource, {igniter, acc}) do
+      {igniter, strategies_needing} =
+        Enum.reduce(
+          [:password, :magic_link],
+          {igniter, []},
+          &reduce_strategy_needing_brute_force(&1, &2, resource)
+        )
 
-        case strategies_needing do
-          [] -> {igniter, acc}
-          strategies -> {igniter, [{resource, Enum.reverse(strategies)} | acc]}
-        end
-      end)
+      case strategies_needing do
+        [] -> {igniter, acc}
+        strategies -> {igniter, [{resource, Enum.reverse(strategies)} | acc]}
+      end
+    end
+
+    defp reduce_strategy_needing_brute_force(strategy_type, {igniter, strategies}, resource) do
+      case strategy_needs_brute_force?(igniter, resource, strategy_type) do
+        {igniter, true} -> {igniter, [strategy_type | strategies]}
+        {igniter, false} -> {igniter, strategies}
+      end
     end
 
     defp strategy_needs_brute_force?(igniter, resource, strategy_type) do
       result =
         Spark.Igniter.find(igniter, resource, fn _, zipper ->
-          with {:ok, strategies_zipper} <- enter_auth_strategies(zipper),
-               {:ok, strategy_zipper} <-
-                 Igniter.Code.Function.move_to_function_call_in_current_scope(
-                   strategies_zipper,
-                   strategy_type,
-                   [1, 2]
-                 ),
-               {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(strategy_zipper) do
-            if has_brute_force_strategy?(do_block_zipper) do
-              :error
-            else
-              {:ok, true}
-            end
-          else
-            _ -> :error
-          end
+          check_strategy_for_brute_force(zipper, strategy_type)
         end)
 
       case result do
         {:ok, igniter, _module, true} -> {igniter, true}
         {:error, igniter} -> {igniter, false}
+      end
+    end
+
+    defp check_strategy_for_brute_force(zipper, strategy_type) do
+      with {:ok, strategies_zipper} <- enter_auth_strategies(zipper),
+           {:ok, strategy_zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               strategies_zipper,
+               strategy_type,
+               [1, 2]
+             ),
+           {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(strategy_zipper),
+           false <- has_brute_force_strategy?(do_block_zipper) do
+        {:ok, true}
+      else
+        _ -> :error
       end
     end
 
