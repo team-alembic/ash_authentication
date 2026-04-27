@@ -52,7 +52,8 @@ if Code.ensure_loaded?(Igniter) do
           "5.0.0" => [
             &fix_google_hd_field/2,
             &convert_revoked_read_action_to_generic/2,
-            &convert_request_actions_to_generic/2
+            &convert_request_actions_to_generic/2,
+            &add_brute_force_protection/2
           ]
         }
 
@@ -647,6 +648,207 @@ if Code.ensure_loaded?(Igniter) do
 
     defp strategy_type_description(:password), do: "password reset instructions"
     defp strategy_type_description(:magic_link), do: "a magic link"
+
+    @doc """
+    Adds identity-keyed brute-force protection to password and magic link strategies.
+
+    For each resource that uses the `password` or `magic_link` strategy, this
+    upgrade ensures an `audit_log` add-on is present (composing the
+    `ash_authentication.add_add_on.audit_log` task to generate one if needed)
+    and adds `brute_force_strategy {:audit_log, <name>}` to each affected
+    strategy block.
+    """
+    def add_brute_force_protection(igniter, _opts) do
+      case find_resources_needing_brute_force(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources_with_strategies} ->
+          igniter =
+            Enum.reduce(resources_with_strategies, igniter, fn {resource, strategies}, igniter ->
+              {igniter, audit_log_name} = ensure_audit_log(igniter, resource)
+
+              Enum.reduce(strategies, igniter, fn strategy_type, igniter ->
+                add_brute_force_to_strategy(igniter, resource, strategy_type, audit_log_name)
+              end)
+            end)
+
+          Igniter.add_notice(igniter, """
+          Brute-force Protection:
+
+          Identity-keyed brute-force protection has been added to your password
+          and magic link strategies via the audit log add-on. Failed sign-in,
+          password reset request, and magic link request attempts are now
+          counted within a 5 minute window per identity, with requests blocked
+          after 5 failures.
+
+          Adjust `audit_log_window` and `audit_log_max_failures` on each
+          strategy if you need different thresholds. If your audit log uses
+          `exclude_actions` or `exclude_strategies` to skip the protected
+          actions, the compile-time verifier will report which actions need
+          to be tracked.
+          """)
+      end
+    end
+
+    defp find_resources_needing_brute_force(igniter) do
+      {igniter, resources} = find_resources_with_password_or_magic_link(igniter)
+
+      Enum.reduce(resources, {igniter, []}, fn resource, {igniter, acc} ->
+        {igniter, strategies_needing} =
+          Enum.reduce([:password, :magic_link], {igniter, []}, fn strategy_type,
+                                                                  {igniter, strategies} ->
+            case strategy_needs_brute_force?(igniter, resource, strategy_type) do
+              {igniter, true} -> {igniter, [strategy_type | strategies]}
+              {igniter, false} -> {igniter, strategies}
+            end
+          end)
+
+        case strategies_needing do
+          [] -> {igniter, acc}
+          strategies -> {igniter, [{resource, Enum.reverse(strategies)} | acc]}
+        end
+      end)
+    end
+
+    defp strategy_needs_brute_force?(igniter, resource, strategy_type) do
+      result =
+        Spark.Igniter.find(igniter, resource, fn _, zipper ->
+          with {:ok, strategies_zipper} <- enter_auth_strategies(zipper),
+               {:ok, strategy_zipper} <-
+                 Igniter.Code.Function.move_to_function_call_in_current_scope(
+                   strategies_zipper,
+                   strategy_type,
+                   [1, 2]
+                 ),
+               {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(strategy_zipper) do
+            if has_brute_force_strategy?(do_block_zipper) do
+              :error
+            else
+              {:ok, true}
+            end
+          else
+            _ -> :error
+          end
+        end)
+
+      case result do
+        {:ok, igniter, _module, true} -> {igniter, true}
+        {:error, igniter} -> {igniter, false}
+      end
+    end
+
+    defp find_resources_with_password_or_magic_link(igniter) do
+      Igniter.Project.Module.find_all_matching_modules(igniter, fn _module, zipper ->
+        case enter_auth_strategies(zipper) do
+          {:ok, zipper} ->
+            has_strategy?(zipper, :password) or has_strategy?(zipper, :magic_link)
+
+          _ ->
+            false
+        end
+      end)
+    end
+
+    defp ensure_audit_log(igniter, resource) do
+      case find_audit_log_name(igniter, resource) do
+        {igniter, nil} ->
+          igniter =
+            Igniter.compose_task(
+              igniter,
+              "ash_authentication.add_add_on.audit_log",
+              ["--user", inspect(resource)]
+            )
+
+          {igniter, :audit_log}
+
+        {igniter, name} ->
+          {igniter, name}
+      end
+    end
+
+    defp find_audit_log_name(igniter, resource) do
+      result =
+        Spark.Igniter.find(igniter, resource, fn _, zipper ->
+          with {:ok, zipper} <-
+                 Igniter.Code.Function.move_to_function_call_in_current_scope(
+                   zipper,
+                   :authentication,
+                   1
+                 ),
+               {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
+               {:ok, zipper} <-
+                 Igniter.Code.Function.move_to_function_call_in_current_scope(
+                   zipper,
+                   :add_ons,
+                   1
+                 ),
+               {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
+               {:ok, audit_log_zipper} <-
+                 Igniter.Code.Function.move_to_function_call_in_current_scope(
+                   zipper,
+                   :audit_log,
+                   [1, 2]
+                 ) do
+            {:ok, audit_log_name(audit_log_zipper)}
+          else
+            _ -> :error
+          end
+        end)
+
+      case result do
+        {:ok, igniter, _module, name} -> {igniter, name}
+        {:error, igniter} -> {igniter, nil}
+      end
+    end
+
+    defp audit_log_name(zipper) do
+      case Igniter.Code.Function.move_to_nth_argument(zipper, 0) do
+        {:ok, name_zipper} ->
+          case Sourceror.Zipper.node(name_zipper) do
+            name when is_atom(name) -> name
+            {:__block__, _, [name]} when is_atom(name) -> name
+            _ -> :audit_log
+          end
+
+        _ ->
+          :audit_log
+      end
+    end
+
+    defp add_brute_force_to_strategy(igniter, resource, strategy_type, audit_log_name) do
+      Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+        with {:ok, strategies_zipper} <- enter_auth_strategies(zipper),
+             {:ok, strategy_zipper} <-
+               Igniter.Code.Function.move_to_function_call_in_current_scope(
+                 strategies_zipper,
+                 strategy_type,
+                 [1, 2]
+               ),
+             {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(strategy_zipper) do
+          updated_zipper =
+            Igniter.Code.Common.add_code(
+              do_block_zipper,
+              "brute_force_strategy {:audit_log, #{inspect(audit_log_name)}}"
+            )
+
+          {:ok, Sourceror.Zipper.top(updated_zipper)}
+        else
+          _ -> {:ok, zipper}
+        end
+      end)
+    end
+
+    defp has_brute_force_strategy?(do_block_zipper) do
+      match?(
+        {:ok, _},
+        Igniter.Code.Function.move_to_function_call_in_current_scope(
+          do_block_zipper,
+          :brute_force_strategy,
+          1
+        )
+      )
+    end
   end
 else
   defmodule Mix.Tasks.AshAuthentication.Upgrade do
