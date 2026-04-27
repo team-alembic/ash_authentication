@@ -7,7 +7,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
   DSL verifier for magic links.
   """
 
-  alias AshAuthentication.{Strategy.MagicLink}
+  alias AshAuthentication.{AddOn.AuditLog.VerifierHelpers, Strategy.MagicLink}
   alias Spark.Error.DslError
   import AshAuthentication.Validations
   import AshAuthentication.Validations.Action
@@ -18,8 +18,29 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
   def verify(strategy, dsl_state) do
     with {:ok, identity_attribute} <- validate_identity_attribute(dsl_state, strategy),
          :ok <- validate_request_action(dsl_state, strategy, identity_attribute),
-         :ok <- prevent_hijacking(dsl_state, strategy) do
+         :ok <- prevent_hijacking(dsl_state, strategy),
+         :ok <- validate_brute_force_strategy(dsl_state, strategy) do
       validate_sign_in_action(dsl_state, strategy)
+    end
+  end
+
+  defp validate_brute_force_strategy(_dsl_state, %{brute_force_strategy: nil}), do: :ok
+
+  defp validate_brute_force_strategy(_dsl_state, %{brute_force_strategy: {:preparation, _}}),
+    do: :ok
+
+  defp validate_brute_force_strategy(
+         dsl_state,
+         %{brute_force_strategy: {:audit_log, audit_log_name}} = strategy
+       ) do
+    with {:ok, audit_log} <-
+           VerifierHelpers.validate_audit_log_exists(dsl_state, strategy, audit_log_name) do
+      VerifierHelpers.validate_action_audit_logged(
+        dsl_state,
+        strategy,
+        strategy.request_action_name,
+        audit_log
+      )
     end
   end
 

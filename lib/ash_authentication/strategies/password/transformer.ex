@@ -256,11 +256,13 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       )
     ]
 
-    preparations = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-        preparation: Password.SignInPreparation
-      )
-    ]
+    preparations =
+      brute_force_preparations(strategy, strategy.sign_in_action_name) ++
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+            preparation: Password.SignInPreparation
+          )
+        ]
 
     metadata =
       if AshAuthentication.Info.authentication_tokens_enabled?(dsl_state) do
@@ -284,6 +286,29 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       get?: true,
       description: "Attempt to sign in using a username and password."
     )
+  end
+
+  defp brute_force_preparations(strategy, action_name) do
+    case strategy.brute_force_strategy do
+      {:audit_log, _} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+            preparation:
+              {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+               action_name: action_name}
+          )
+        ]
+
+      {:preparation, module} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+            preparation: module
+          )
+        ]
+
+      _ ->
+        []
+    end
   end
 
   defp validate_sign_in_action(dsl_state, strategy) when strategy.sign_in_enabled? == true do
@@ -443,12 +468,57 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
       )
     ]
 
+    preparations =
+      brute_force_generic_preparations(
+        strategy,
+        resettable.request_password_reset_action_name
+      )
+
+    touches_resources =
+      brute_force_touches_resources(dsl_state, strategy)
+
     Transformer.build_entity(Resource.Dsl, [:actions], :action,
       name: resettable.request_password_reset_action_name,
       arguments: arguments,
       run: {Password.RequestPasswordReset, action: :"get_by_#{strategy.identity_field}"},
+      preparations: preparations,
+      touches_resources: touches_resources,
       description: "Send password reset instructions to a user if they exist."
     )
+  end
+
+  defp brute_force_generic_preparations(strategy, action_name) do
+    case strategy.brute_force_strategy do
+      {:audit_log, _} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :action], :prepare,
+            preparation:
+              {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+               action_name: action_name}
+          )
+        ]
+
+      {:preparation, module} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :action], :prepare,
+            preparation: module
+          )
+        ]
+
+      _ ->
+        []
+    end
+  end
+
+  defp brute_force_touches_resources(dsl_state, strategy) do
+    module = Transformer.get_persisted(dsl_state, :module)
+
+    with {:audit_log, audit_log} <- strategy.brute_force_strategy,
+         {:ok, audit_log} <- AshAuthentication.Info.strategy(dsl_state, audit_log) do
+      Enum.uniq([module, audit_log.audit_log_resource])
+    else
+      _ -> [module]
+    end
   end
 
   defp validate_reset_request_action(dsl_state, resettable, strategy) do

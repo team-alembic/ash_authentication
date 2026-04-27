@@ -25,8 +25,9 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
       tracked_actions = Auditor.get_tracked_actions(changeset.resource, opts[:strategy])
 
       if changeset.action.name in tracked_actions do
-        Ash.Changeset.after_transaction(
-          changeset,
+        changeset
+        |> Auditor.tag_status_override_ref()
+        |> Ash.Changeset.after_transaction(
           &Auditor.after_transaction(&1, &2, opts[:strategy], context)
         )
       else
@@ -49,8 +50,9 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
       tracked_actions = Auditor.get_tracked_actions(query.resource, opts[:strategy])
 
       if query.action.name in tracked_actions do
-        Ash.Query.after_transaction(
-          query,
+        query
+        |> Auditor.tag_status_override_ref()
+        |> Ash.Query.after_transaction(
           &Auditor.after_transaction(&1, &2, opts[:strategy], context)
         )
       else
@@ -62,8 +64,9 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
       tracked_actions = Auditor.get_tracked_actions(input.resource, opts[:strategy])
 
       if input.action.name in tracked_actions do
-        Ash.ActionInput.after_transaction(
-          input,
+        input
+        |> Auditor.tag_status_override_ref()
+        |> Ash.ActionInput.after_transaction(
           &Auditor.after_transaction(&1, &2, opts[:strategy], context)
         )
       else
@@ -93,14 +96,18 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
     audit_strategy = AshAuthentication.Info.strategy!(input.resource, strategy_name)
     action_strategy = get_action_strategy(input, audit_strategy)
 
-    status = determine_status(result)
+    status = determine_status(input, result)
     subject = extract_subject(result, input.resource)
     request = extract_request(context)
+    identity = extract_identity(input, action_strategy)
+    client_ip = extract_client_ip(request, audit_strategy)
     extra_data = build_extra_data(context, request, input, audit_strategy)
 
     params = %{
       strategy: action_strategy.name,
       subject: subject,
+      identity: identity,
+      client_ip: client_ip,
       audit_log: audit_strategy.name,
       logged_at: DateTime.utc_now(),
       action_name: input.action.name,
@@ -128,7 +135,83 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
     end
   end
 
-  defp determine_status(result) do
+  @doc """
+  Tag a query/changeset/action input with a unique reference used to bridge
+  status overrides from downstream `after_action` callbacks into the audit
+  log's `after_transaction` callback.
+
+  Called automatically by the audit-log `Preparation` and `Change` modules;
+  you should not need to call this directly.
+  """
+  @spec tag_status_override_ref(input) :: input
+  def tag_status_override_ref(input) do
+    ref = make_ref()
+
+    put_private_context(input, :ash_authentication_audit_log_ref, ref)
+  end
+
+  @doc """
+  Record a status override for the audit log entry that will be written for
+  this action.
+
+  Called from a preparation's `after_action` (or change's `after_action`) when
+  the result of the action alone is not sufficient to determine whether the
+  operation should be recorded as `:success` or `:failure` (for example,
+  password reset and magic-link request actions return `:ok` regardless of
+  whether the submitted identity resolved to a known user).
+
+  If the audit-log add-on is not configured for this action, this call is a
+  no-op.
+  """
+  @spec record_status_override(input, :success | :failure | :unknown) :: :ok
+  def record_status_override(input, status)
+      when status in [:success, :failure, :unknown] do
+    case status_override_ref(input) do
+      nil -> :ok
+      ref -> Process.put({__MODULE__, :status_override, ref}, status)
+    end
+
+    :ok
+  end
+
+  defp determine_status(input, result) do
+    case take_status_override(input) do
+      status when status in [:success, :failure, :unknown] -> status
+      _ -> determine_status_from_result(result)
+    end
+  end
+
+  defp take_status_override(input) do
+    case status_override_ref(input) do
+      nil ->
+        nil
+
+      ref ->
+        Process.delete({__MODULE__, :status_override, ref})
+    end
+  end
+
+  defp status_override_ref(input) do
+    input
+    |> Map.get(:context, %{})
+    |> Kernel.||(%{})
+    |> Map.get(:private, %{})
+    |> Map.get(:ash_authentication_audit_log_ref)
+  end
+
+  defp put_private_context(%Ash.Query{} = query, key, value) do
+    Ash.Query.set_context(query, %{private: %{key => value}})
+  end
+
+  defp put_private_context(%Ash.Changeset{} = changeset, key, value) do
+    Ash.Changeset.set_context(changeset, %{private: %{key => value}})
+  end
+
+  defp put_private_context(%Ash.ActionInput{} = input, key, value) do
+    Ash.ActionInput.set_context(input, %{private: %{key => value}})
+  end
+
+  defp determine_status_from_result(result) do
     case result do
       :ok ->
         :success
@@ -173,6 +256,45 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
     |> Map.get(:source_context, %{})
     |> Map.get(:ash_authentication_request, %{})
     |> Map.merge(Map.get(context, :ash_authentication_request, %{}))
+  end
+
+  defp extract_identity(input, action_strategy) do
+    with identity_field when is_atom(identity_field) <-
+           Map.get(action_strategy, :identity_field),
+         value when not is_nil(value) <-
+           get_argument_or_attribute(input, identity_field) do
+      to_string(value)
+    else
+      _ -> nil
+    end
+  end
+
+  defp get_argument_or_attribute(input, field) when is_struct(input, Ash.Changeset) do
+    case Map.get(input.arguments, field) do
+      nil -> Ash.Changeset.get_attribute(input, field)
+      value -> value
+    end
+  end
+
+  defp get_argument_or_attribute(input, field) do
+    Map.get(input.arguments, field)
+  end
+
+  defp extract_client_ip(request, audit_strategy) do
+    case Map.get(request, :remote_ip) do
+      nil ->
+        nil
+
+      ip ->
+        ip_privacy_mode = Map.get(audit_strategy, :ip_privacy_mode, :none)
+
+        truncation_masks = %{
+          ipv4: Map.get(audit_strategy, :ipv4_truncation_mask, 24),
+          ipv6: Map.get(audit_strategy, :ipv6_truncation_mask, 48)
+        }
+
+        IpPrivacy.apply_privacy(ip, ip_privacy_mode, %{truncation_masks: truncation_masks})
+    end
   end
 
   defp build_extra_data(context, request, input, audit_strategy) do
