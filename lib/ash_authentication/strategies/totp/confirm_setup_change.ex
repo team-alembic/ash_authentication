@@ -58,17 +58,22 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
           Changeset.add_error(changeset, reason)
       end
     end)
-    |> Changeset.after_action(fn changeset, result ->
-      case changeset.context[:setup_token_to_revoke] do
-        nil ->
-          {:ok, result}
-
-        setup_token ->
-          revoke_token(setup_token, strategy)
-          {:ok, result}
-      end
-    end)
+    |> Changeset.after_action(&maybe_revoke_setup_token(&1, &2, strategy))
     |> Changeset.after_action(&preserve_authentication_metadata/2)
+  end
+
+  defp maybe_revoke_setup_token(changeset, result, strategy) do
+    case changeset.context[:setup_token_to_revoke] do
+      nil -> {:ok, result}
+      setup_token -> revoke_token_for_result(setup_token, result, strategy)
+    end
+  end
+
+  defp revoke_token_for_result(setup_token, result, strategy) do
+    case revoke_token(setup_token, strategy) do
+      :ok -> {:ok, result}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp validate_code_format(code, strategy) do
@@ -127,7 +132,10 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
 
   defp revoke_token(setup_token, strategy) do
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource) do
-      TokenResource.Actions.revoke(token_resource, setup_token, [])
+      # TOTP setup tokens are always stored (with the pending secret in
+      # `extra_data`) regardless of the `store_all_tokens?` flag, so we always
+      # take the lock-and-update revocation path.
+      TokenResource.Actions.revoke(token_resource, setup_token, store_all_tokens?: true)
     end
   end
 

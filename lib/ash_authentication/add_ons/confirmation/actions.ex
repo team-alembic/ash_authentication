@@ -35,6 +35,11 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
           Info.domain!(strategy.resource)
         end)
 
+      # Confirmation tokens are always stored by `store_changes/3`, regardless
+      # of the `store_all_tokens?` flag on the authentication resource, so we
+      # always take the lock-and-update path when revoking them.
+      revoke_opts = Keyword.put(opts, :store_all_tokens?, true)
+
       user
       |> Changeset.new()
       |> Changeset.set_context(%{
@@ -43,7 +48,9 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
         }
       })
       |> Changeset.for_update(strategy.confirm_action_name, params, opts)
-      |> Changeset.after_action(&revoke_token_after_confirm(&1, &2, token_resource, token, opts))
+      |> Changeset.after_action(
+        &revoke_token_after_confirm(&1, &2, token_resource, token, revoke_opts)
+      )
       |> Ash.update()
     else
       :error -> {:error, InvalidToken.exception(type: :confirmation)}
