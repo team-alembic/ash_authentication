@@ -128,6 +128,75 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
     end
   end
 
+  describe "OTP natural failure flow" do
+    test "wrong OTP code logs an audit entry with status: :failure" do
+      user = build_user_with_audit_log()
+      {:ok, strategy} = Info.strategy(Example.UserWithAuditLog, :otp)
+
+      _ = request_and_extract_code(strategy, to_string(user.email))
+
+      capture_log(fn ->
+        assert {:error, _} =
+                 Strategy.action(strategy, :sign_in, %{
+                   "email" => to_string(user.email),
+                   "otp" => "ZZZZZZ"
+                 })
+      end)
+
+      Batcher.flush()
+
+      failures = otp_audit_entries(:failure, :sign_in_with_otp)
+      assert Enum.count(failures) == 1
+    end
+
+    test "request for unknown identity logs an audit entry with status: :failure" do
+      {:ok, strategy} = Info.strategy(Example.UserWithAuditLog, :otp)
+
+      capture_log(fn ->
+        assert :ok =
+                 Strategy.action(strategy, :request, %{
+                   "email" => "ghost-#{System.unique_integer([:positive])}@example.com"
+                 })
+      end)
+
+      Batcher.flush()
+
+      assert otp_audit_entries(:failure, :request_otp) |> Enum.count() == 1
+    end
+
+    test "natural failures accumulate and trigger brute-force protection" do
+      user = build_user_with_audit_log()
+      {:ok, strategy} = Info.strategy(Example.UserWithAuditLog, :otp)
+
+      capture_log(fn ->
+        for _ <- 1..5 do
+          {:error, _} =
+            Strategy.action(strategy, :sign_in, %{
+              "email" => to_string(user.email),
+              "otp" => "ZZZZZZ"
+            })
+        end
+      end)
+
+      Batcher.flush()
+
+      capture_log(fn ->
+        assert {:error, error} =
+                 Strategy.action(strategy, :request, %{"email" => to_string(user.email)})
+
+        assert Exception.message(error) =~ "Authentication failed"
+      end)
+    end
+  end
+
+  defp otp_audit_entries(status, action_name) do
+    require Ash.Query
+
+    Example.AuditLog
+    |> Ash.Query.filter(strategy == :otp and status == ^status and action_name == ^action_name)
+    |> Ash.read!(authorize?: false)
+  end
+
   defp request_and_extract_code(strategy, email) do
     log =
       capture_log(fn ->
@@ -146,12 +215,14 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
     minutes_ago = Keyword.get(opts, :minutes_ago, 0)
 
     subject = AshAuthentication.user_to_subject(user)
+    identity = to_string(user.email)
     logged_at = DateTime.add(DateTime.utc_now(), -minutes_ago, :minute)
 
     for _ <- 1..count do
       Example.AuditLog
       |> Ash.Changeset.for_create(:log_activity, %{
         subject: subject,
+        identity: identity,
         strategy: :otp,
         audit_log: :audit_log,
         logged_at: logged_at,

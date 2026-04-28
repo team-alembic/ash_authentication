@@ -50,19 +50,38 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
            ),
          :ok <-
            validate_action_argument_option(action, strategy.identity_field, :allow_nil?, [false]),
-         :ok <- validate_field_in_values(action, :type, [:read]) do
-      validate_action_has_preparation(action, Otp.RequestPreparation)
-    else
-      {:error, message} when is_binary(message) ->
-        {:error,
-         DslError.exception(
-           path: [:actions, strategy.request_action_name],
-           message: message
-         )}
-
-      {:error, exception} when is_exception(exception) ->
-        {:error, exception}
+         :ok <- validate_request_action_type(action, strategy),
+         {:ok, lookup_action} <- validate_action_exists(dsl_state, strategy.lookup_action_name),
+         :ok <- validate_action_has_argument(lookup_action, identity_attribute.name),
+         :ok <-
+           validate_action_argument_option(
+             lookup_action,
+             strategy.identity_field,
+             :type,
+             [identity_attribute.type]
+           ),
+         :ok <-
+           validate_action_argument_option(
+             lookup_action,
+             strategy.identity_field,
+             :allow_nil?,
+             [false]
+           ) do
+      validate_action_option(lookup_action, :get?, [true])
     end
+  end
+
+  defp validate_request_action_type(%{type: :action}, _strategy), do: :ok
+
+  defp validate_request_action_type(%{type: actual, name: name}, strategy) do
+    {:error,
+     DslError.exception(
+       path: [:authentication, :strategies, strategy.name],
+       message:
+         "Action `#{name}` must be type `:action`, got `:#{actual}`. " <>
+           "OTP request actions are generic actions; remove the action definition to use the auto-generated one " <>
+           "or define it as `action :#{name}, :ok do ... end` with `run AshAuthentication.Strategy.Otp.Request`."
+     )}
   end
 
   defp validate_sign_in_action(dsl_state, strategy, identity_attribute) do
@@ -350,8 +369,10 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
 
   defp validate_preparation_supports_query(dsl_state, strategy, module) do
     supported_subjects = get_preparation_supports(module)
+    required = required_preparation_subjects(strategy)
+    missing = required -- supported_subjects
 
-    if Ash.Query in supported_subjects do
+    if missing == [] do
       :ok
     else
       resource_module = Verifier.get_persisted(dsl_state, :module)
@@ -361,20 +382,29 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
          module: resource_module,
          path: [:authentication, :strategies, strategy.name, :brute_force_strategy],
          message: """
-         The brute force preparation `#{inspect(module)}` does not support `Ash.Query`.
+         The brute force preparation `#{inspect(module)}` does not support: #{inspect(missing)}.
 
-         The OTP strategy's request and sign-in actions are read actions, so the preparation must support `Ash.Query`.
+         OTP applies the brute-force preparation to the request action (an `Ash.ActionInput`) #{sign_in_subject_description(strategy)}.
 
          The preparation currently supports: #{inspect(supported_subjects)}
 
          To fix this, implement the `supports/1` callback in your preparation module:
 
              @impl true
-             def supports(_opts), do: [Ash.Query]
+             def supports(_opts), do: #{inspect(required)}
          """
        )}
     end
   end
+
+  defp required_preparation_subjects(%{registration_enabled?: true}), do: [Ash.ActionInput]
+  defp required_preparation_subjects(_strategy), do: [Ash.Query, Ash.ActionInput]
+
+  defp sign_in_subject_description(%{registration_enabled?: true}),
+    do: "(the sign-in action is a `:create` action and is not protected by this preparation)"
+
+  defp sign_in_subject_description(_strategy),
+    do: "and to the sign-in action (an `Ash.Query`)"
 
   defp get_preparation_supports(module) when is_atom(module), do: module.supports([])
 

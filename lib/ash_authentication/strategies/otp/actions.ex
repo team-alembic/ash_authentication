@@ -10,7 +10,7 @@ defmodule AshAuthentication.Strategy.Otp.Actions do
   authentication.
   """
 
-  alias Ash.{Changeset, Query, Resource}
+  alias Ash.{ActionInput, Changeset, Query, Resource}
   alias AshAuthentication.{Errors, Info, Strategy.Otp}
 
   @doc """
@@ -25,12 +25,12 @@ defmodule AshAuthentication.Strategy.Otp.Actions do
       end)
 
     strategy.resource
-    |> Query.new()
-    |> Query.set_context(%{private: %{ash_authentication?: true}})
-    |> Query.for_read(strategy.request_action_name, params, options)
-    |> Ash.read()
+    |> ActionInput.new()
+    |> ActionInput.set_context(%{private: %{ash_authentication?: true}})
+    |> ActionInput.for_action(strategy.request_action_name, params, options)
+    |> Ash.run_action()
     |> case do
-      {:ok, _} -> :ok
+      :ok -> :ok
       {:error, reason} -> {:error, reason}
     end
   end

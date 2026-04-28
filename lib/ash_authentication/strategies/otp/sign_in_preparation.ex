@@ -12,12 +12,22 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
   3. Looks up the stored OTP token by JTI with a SELECT FOR UPDATE lock to prevent
      concurrent requests consuming the same code.
   4. If found and valid, optionally revokes it (single-use), generates an auth JWT,
-     and returns the user with the token in metadata.
+     and returns the user with the token in metadata. Otherwise returns an
+     `AuthenticationFailed` error so the audit log records the attempt as a
+     failure.
   """
 
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource, Resource.Preparation}
-  alias AshAuthentication.{Info, Jwt, Strategy.Otp}
+
+  alias AshAuthentication.{
+    Errors.AuthenticationFailed,
+    Errors.InvalidToken,
+    Info,
+    Jwt,
+    Strategy.Otp
+  }
+
   alias AshAuthentication.Strategy.Otp.SignInHelpers
   require Ash.Query
 
@@ -54,17 +64,14 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
       verify_and_sign_in(strategy, token_resource, jti, subject, user, context_opts)
     end)
     |> case do
-      {:ok, result} -> result
-      {:error, _} -> {:ok, []}
+      {:ok, {:ok, _} = result} -> result
+      {:ok, {:error, _} = error} -> error
+      {:error, _} -> {:error, invalid_otp_error(strategy)}
     end
   end
 
-  defp after_action(_query, [], _strategy, _otp_code, _context) do
-    {:ok, []}
-  end
-
-  defp after_action(_query, _users, _strategy, _otp_code, _context) do
-    {:ok, []}
+  defp after_action(_query, _users, strategy, _otp_code, _context) do
+    {:error, invalid_otp_error(strategy)}
   end
 
   defp verify_and_sign_in(strategy, token_resource, jti, subject, user, context_opts) do
@@ -73,7 +80,19 @@ defmodule AshAuthentication.Strategy.Otp.SignInPreparation do
       {:ok, auth_token, _claims} = Jwt.token_for_user(user, %{}, context_opts)
       {:ok, [Resource.put_metadata(user, :token, auth_token)]}
     else
-      _ -> {:ok, []}
+      _ -> {:error, invalid_otp_error(strategy)}
     end
+  end
+
+  defp invalid_otp_error(strategy) do
+    AuthenticationFailed.exception(
+      strategy: strategy,
+      caused_by:
+        InvalidToken.exception(
+          field: strategy.otp_param_name,
+          reason: "Invalid or expired OTP code",
+          type: :otp
+        )
+    )
   end
 end

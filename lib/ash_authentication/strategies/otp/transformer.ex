@@ -32,6 +32,12 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
          {:ok, dsl_state} <-
            maybe_build_action(
              dsl_state,
+             strategy.lookup_action_name,
+             &build_lookup_action(&1, strategy)
+           ),
+         {:ok, dsl_state} <-
+           maybe_build_action(
+             dsl_state,
              strategy.sign_in_action_name,
              &build_sign_in_action(&1, strategy)
            ),
@@ -176,7 +182,7 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
     ]
 
     preparations =
-      brute_force_preparations(strategy, strategy.sign_in_action_name) ++
+      sign_in_brute_force_preparations(strategy, strategy.sign_in_action_name) ++
         [
           Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
             preparation: Otp.SignInPreparation
@@ -200,33 +206,54 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
     )
   end
 
+  defp build_lookup_action(dsl_state, strategy) do
+    identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
+    field = strategy.identity_field
+
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: field,
+        type: identity_attribute.type,
+        allow_nil?: false,
+        description: "The #{field} to look up."
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :read,
+      name: strategy.lookup_action_name,
+      arguments: arguments,
+      get_by: [field],
+      get?: true,
+      description: "Look up a user by #{field}."
+    )
+  end
+
   defp build_request_action(dsl_state, strategy) do
     identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
 
     arguments = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+      Transformer.build_entity!(Resource.Dsl, [:actions, :action], :argument,
         name: strategy.identity_field,
         type: identity_attribute.type,
-        allow_nil?: false
+        allow_nil?: false,
+        description: "The identity to send a one-time password to."
       )
     ]
 
-    preparations =
-      brute_force_preparations(strategy, strategy.request_action_name) ++
-        [
-          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
-            preparation: Otp.RequestPreparation
-          )
-        ]
+    preparations = request_brute_force_preparations(strategy, strategy.request_action_name)
+    touches_resources = brute_force_touches_resources(dsl_state, strategy)
 
-    Transformer.build_entity(Resource.Dsl, [:actions], :read,
+    Transformer.build_entity(Resource.Dsl, [:actions], :action,
       name: strategy.request_action_name,
       arguments: arguments,
-      preparations: preparations
+      run: Otp.Request,
+      preparations: preparations,
+      touches_resources: touches_resources,
+      description: "Send a one-time password to a user if they exist."
     )
   end
 
-  defp brute_force_preparations(strategy, action_name) do
+  defp sign_in_brute_force_preparations(strategy, action_name) do
     case strategy.brute_force_strategy do
       {:preparation, preparation} ->
         [
@@ -245,6 +272,40 @@ defmodule AshAuthentication.Strategy.Otp.Transformer do
 
       _ ->
         []
+    end
+  end
+
+  defp request_brute_force_preparations(strategy, action_name) do
+    case strategy.brute_force_strategy do
+      {:preparation, preparation} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :action], :prepare,
+            preparation: preparation
+          )
+        ]
+
+      {:audit_log, _audit_log_name} ->
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :action], :prepare,
+            preparation:
+              {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+               action_name: action_name}
+          )
+        ]
+
+      _ ->
+        []
+    end
+  end
+
+  defp brute_force_touches_resources(dsl_state, strategy) do
+    module = Transformer.get_persisted(dsl_state, :module)
+
+    with {:audit_log, audit_log} <- strategy.brute_force_strategy,
+         {:ok, audit_log} <- AshAuthentication.Info.strategy(dsl_state, audit_log) do
+      Enum.uniq([module, audit_log.audit_log_resource])
+    else
+      _ -> [module]
     end
   end
 end
