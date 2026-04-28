@@ -27,6 +27,9 @@ defmodule MyApp.Accounts.User do
 end
 ```
 
+Request metadata uses `conn.remote_ip` for `remote_ip`, so proxy-aware plugs
+can rewrite it from forwarded/proxy metadata before AshAuthentication runs.
+
 
 
 ### authentication.add_ons.audit_log

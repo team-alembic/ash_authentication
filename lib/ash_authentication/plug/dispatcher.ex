@@ -77,7 +77,7 @@ defmodule AshAuthentication.Plug.Dispatcher do
 
     request_context = %{
       ash_authentication_request: %{
-        remote_ip: peer_data.address |> :inet.ntoa() |> to_string(),
+        remote_ip: format_ip(conn.remote_ip),
         remote_port: peer_data.port,
         http_host: conn.host,
         http_method: conn.method,
@@ -89,4 +89,6 @@ defmodule AshAuthentication.Plug.Dispatcher do
     existing_context = Ash.PlugHelpers.get_context(conn) || %{}
     Ash.PlugHelpers.set_context(conn, Map.merge(existing_context, request_context))
   end
+
+  defp format_ip(ip), do: ip |> :inet.ntoa() |> to_string()
 end

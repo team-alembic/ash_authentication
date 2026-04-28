@@ -366,7 +366,9 @@ Each audit log entry contains:
 - `extra_data` - Additional information including:
   - `actor` - The actor performing the action (if any)
   - `tenant` - The tenant context (if using multi-tenancy)
-  - `request` - Request metadata
+  - `request` - Request metadata. `remote_ip` is taken from `conn.remote_ip`,
+    so proxy-aware plugs can rewrite it from forwarded/proxy metadata before
+    AshAuthentication runs
   - `params` - Non-sensitive parameters from the action
 - `resource` - The resource module that was authenticated
 
