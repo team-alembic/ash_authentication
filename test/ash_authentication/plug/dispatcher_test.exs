@@ -4,7 +4,7 @@
 
 defmodule AshAuthentication.Plug.DispatcherTest do
   @moduledoc false
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   alias AshAuthentication.Plug.Dispatcher
 
   import Plug.Test, only: [conn: 3, put_peer_data: 2]
