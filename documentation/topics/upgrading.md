@@ -19,7 +19,7 @@ This version requires Assent ~> 0.3.0 (updated from ~> 0.2.9) and adds `nimble_t
 If you have [Igniter](https://hexdocs.pm/igniter) installed, run:
 
 ```bash
-mix ash_authentication.upgrade 4.x.x 5.0.0
+mix igniter.upgrade ash_authentication 4.x.x 5.0.0
 ```
 
 Replace `4.x.x` with your current version. This will automatically:
@@ -28,6 +28,7 @@ Replace `4.x.x` with your current version. This will automatically:
 - Convert password reset and magic link request actions from `:read` to `:action` type
 - Create `get_by_<identity_field>` read actions where needed
 - Update `"google_hd"` references to `"hd"` in your codebase
+- Add identity-keyed brute-force protection to password and magic link strategies, generating an `audit_log` add-on (and audit log resource) if one is not already present
 
 ### Breaking Changes
 
@@ -122,6 +123,15 @@ This composes both the AA resource-level task and the AAP Phoenix integration ta
 #### Extra JWT Claims
 
 You can now add custom claims to JWT tokens using the `extra_claims` option in the tokens DSL section, or dynamically via `AshAuthentication.add_token_claims/2`. See the [tokens guide](/documentation/topics/tokens.md) for details.
+
+#### Identity-keyed brute-force protection
+
+The `password` and `magic_link` strategies now support a `brute_force_strategy` option that counts recent failures by identity (via the audit log add-on) and blocks further attempts when the configured threshold is reached. The upgrader enables this automatically by:
+
+- Ensuring an `audit_log` add-on (and audit log resource) is present on each resource using `password` or `magic_link`.
+- Adding `brute_force_strategy {:audit_log, <name>}` to each affected strategy block.
+
+Defaults to a 5 minute window with 5 allowed failures; tune `audit_log_window` and `audit_log_max_failures` on each strategy if you need different thresholds.
 
 ### Other Improvements
 

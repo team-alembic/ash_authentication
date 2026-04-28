@@ -495,4 +495,334 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
       |> assert_has_notice(&String.contains?(&1, "email_verified"))
     end
   end
+
+  describe "add_brute_force_protection/2" do
+    test "adds brute_force_strategy to password and magic_link strategies and composes audit_log task" do
+      user_resource = """
+      defmodule Test.Accounts.User do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :email, :ci_string, allow_nil?: false, public?: true
+          attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
+        end
+
+        identities do
+          identity :unique_email, [:email]
+        end
+
+        actions do
+          defaults [:read, :create]
+        end
+
+        authentication do
+          tokens do
+            enabled? true
+            token_resource Test.Accounts.Token
+            signing_secret fn _, _ -> {:ok, "test_secret_that_is_at_least_32_bytes_long"} end
+          end
+
+          strategies do
+            password :password do
+              identity_field :email
+            end
+
+            magic_link do
+              identity_field :email
+              sender fn _user, _token, _opts -> :ok end
+            end
+          end
+        end
+      end
+      """
+
+      token_resource = """
+      defmodule Test.Accounts.Token do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication.TokenResource],
+          data_layer: Ash.DataLayer.Ets
+
+        token do
+          api Test.Accounts
+        end
+      end
+      """
+
+      domain = """
+      defmodule Test.Accounts do
+        use Ash.Domain
+
+        resources do
+          resource Test.Accounts.User
+          resource Test.Accounts.Token
+        end
+      end
+      """
+
+      igniter =
+        test_project(
+          files: %{
+            "lib/test/accounts/user.ex" => user_resource,
+            "lib/test/accounts/token.ex" => token_resource,
+            "lib/test/accounts.ex" => domain
+          }
+        )
+
+      igniter = Upgrade.add_brute_force_protection(igniter, [])
+
+      igniter
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |      brute_force_strategy({:audit_log, :audit_log})
+      """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |    add_ons do
+      + |      audit_log do
+      """)
+      |> assert_has_notice(&String.contains?(&1, "Brute-force Protection"))
+    end
+
+    test "uses existing audit_log name when one is already configured" do
+      user_resource = """
+      defmodule Test.Accounts.User do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :email, :ci_string, allow_nil?: false, public?: true
+          attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
+        end
+
+        identities do
+          identity :unique_email, [:email]
+        end
+
+        actions do
+          defaults [:read, :create]
+        end
+
+        authentication do
+          tokens do
+            enabled? true
+            token_resource Test.Accounts.Token
+            signing_secret fn _, _ -> {:ok, "test_secret_that_is_at_least_32_bytes_long"} end
+          end
+
+          add_ons do
+            audit_log :my_audit_log do
+              audit_log_resource Test.Accounts.AuditLog
+            end
+          end
+
+          strategies do
+            password :password do
+              identity_field :email
+            end
+          end
+        end
+      end
+      """
+
+      token_resource = """
+      defmodule Test.Accounts.Token do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication.TokenResource],
+          data_layer: Ash.DataLayer.Ets
+
+        token do
+          api Test.Accounts
+        end
+      end
+      """
+
+      domain = """
+      defmodule Test.Accounts do
+        use Ash.Domain
+
+        resources do
+          resource Test.Accounts.User
+          resource Test.Accounts.Token
+        end
+      end
+      """
+
+      igniter =
+        test_project(
+          files: %{
+            "lib/test/accounts/user.ex" => user_resource,
+            "lib/test/accounts/token.ex" => token_resource,
+            "lib/test/accounts.ex" => domain
+          }
+        )
+
+      igniter = Upgrade.add_brute_force_protection(igniter, [])
+
+      assert_has_patch(igniter, "lib/test/accounts/user.ex", """
+      + |      brute_force_strategy({:audit_log, :my_audit_log})
+      """)
+    end
+
+    test "does not duplicate brute_force_strategy when already present" do
+      user_resource = """
+      defmodule Test.Accounts.User do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :email, :ci_string, allow_nil?: false, public?: true
+          attribute :hashed_password, :string, allow_nil?: false, sensitive?: true
+        end
+
+        identities do
+          identity :unique_email, [:email]
+        end
+
+        actions do
+          defaults [:read, :create]
+        end
+
+        authentication do
+          tokens do
+            enabled? true
+            token_resource Test.Accounts.Token
+            signing_secret fn _, _ -> {:ok, "test_secret_that_is_at_least_32_bytes_long"} end
+          end
+
+          add_ons do
+            audit_log do
+              audit_log_resource Test.Accounts.AuditLog
+            end
+          end
+
+          strategies do
+            password :password do
+              identity_field :email
+              brute_force_strategy {:audit_log, :audit_log}
+            end
+          end
+        end
+      end
+      """
+
+      token_resource = """
+      defmodule Test.Accounts.Token do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication.TokenResource],
+          data_layer: Ash.DataLayer.Ets
+
+        token do
+          api Test.Accounts
+        end
+      end
+      """
+
+      domain = """
+      defmodule Test.Accounts do
+        use Ash.Domain
+
+        resources do
+          resource Test.Accounts.User
+          resource Test.Accounts.Token
+        end
+      end
+      """
+
+      igniter =
+        test_project(
+          files: %{
+            "lib/test/accounts/user.ex" => user_resource,
+            "lib/test/accounts/token.ex" => token_resource,
+            "lib/test/accounts.ex" => domain
+          }
+        )
+
+      igniter = Upgrade.add_brute_force_protection(igniter, [])
+
+      assert_unchanged(igniter, "lib/test/accounts/user.ex")
+    end
+
+    test "does not modify resources without password or magic_link strategies" do
+      user_resource = """
+      defmodule Test.Accounts.User do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :email, :ci_string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read, :create]
+        end
+
+        authentication do
+          tokens do
+            enabled? true
+            token_resource Test.Accounts.Token
+            signing_secret fn _, _ -> {:ok, "test_secret_that_is_at_least_32_bytes_long"} end
+          end
+
+          strategies do
+            api_key do
+              api_key_relationship :api_keys
+              api_key_hash_attribute :api_key_hash
+            end
+          end
+        end
+      end
+      """
+
+      token_resource = """
+      defmodule Test.Accounts.Token do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication.TokenResource],
+          data_layer: Ash.DataLayer.Ets
+
+        token do
+          api Test.Accounts
+        end
+      end
+      """
+
+      domain = """
+      defmodule Test.Accounts do
+        use Ash.Domain
+
+        resources do
+          resource Test.Accounts.User
+          resource Test.Accounts.Token
+        end
+      end
+      """
+
+      igniter =
+        test_project(
+          files: %{
+            "lib/test/accounts/user.ex" => user_resource,
+            "lib/test/accounts/token.ex" => token_resource,
+            "lib/test/accounts.ex" => domain
+          }
+        )
+
+      igniter = Upgrade.add_brute_force_protection(igniter, [])
+
+      assert_unchanged(igniter, "lib/test/accounts/user.ex")
+    end
+  end
 end

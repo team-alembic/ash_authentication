@@ -77,12 +77,31 @@ defmodule AshAuthentication.TokenResource do
               """,
               default: :revoke_token
             ],
+            revoke_token_insert_action_name: [
+              type: :atom,
+              doc: """
+              The name of the action used to insert a revocation record when
+              the token was not previously stored. Unlike `revoke_token`, this
+              action does not use upsert semantics, so concurrent duplicate
+              revocations fail with a primary key conflict.
+              """,
+              default: :revoke_token_insert
+            ],
             revoke_jti_action_name: [
               type: :atom,
               doc: """
               The name of the action used to revoke jtis.
               """,
               default: :revoke_jti
+            ],
+            revoke_jti_insert_action_name: [
+              type: :atom,
+              doc: """
+              The name of the action used to insert a revocation record by JTI
+              when the token was not previously stored. Non-upsert variant of
+              `revoke_jti`.
+              """,
+              default: :revoke_jti_insert
             ],
             revoke_all_stored_for_subject_action_name: [
               type: :atom,

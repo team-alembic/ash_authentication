@@ -63,18 +63,29 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
   end
 
   defp handle_sign_in_result(query, [record], strategy, claims, token, context) do
-    revoke_single_use_token!(strategy, query, token, context)
-    generate_token_for_record(record, query, strategy, claims, context)
+    case revoke_single_use_token(strategy, query, token, context) do
+      :ok -> generate_token_for_record(record, query, strategy, claims, context)
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp handle_sign_in_result(_query, [], _strategy, _claims, _token, _context) do
     {:ok, []}
   end
 
-  defp revoke_single_use_token!(strategy, query, token, context) do
+  defp revoke_single_use_token(strategy, query, token, context) do
     if strategy.single_use_token? do
       token_resource = Info.authentication_tokens_token_resource!(query.resource)
-      :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
+      store_all_tokens? = Info.authentication_tokens_store_all_tokens?(query.resource)
+
+      opts =
+        context
+        |> Ash.Context.to_opts()
+        |> Keyword.put(:store_all_tokens?, store_all_tokens?)
+
+      TokenResource.revoke(token_resource, token, opts)
+    else
+      :ok
     end
   end
 

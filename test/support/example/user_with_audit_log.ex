@@ -53,6 +53,7 @@ defmodule Example.UserWithAuditLog do
     strategies do
       password do
         identity_field :email
+        brute_force_strategy({:audit_log, :audit_log})
 
         resettable do
           sender fn _user, _token, _opts -> :ok end
@@ -62,6 +63,7 @@ defmodule Example.UserWithAuditLog do
       magic_link do
         identity_field :email
         sender fn _user, _token, _opts -> :ok end
+        brute_force_strategy({:audit_log, :audit_log})
       end
 
       remember_me :remember_me do

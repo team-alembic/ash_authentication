@@ -74,8 +74,14 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   defp revoke_sign_in_token(query, [user], strategy, context) do
     token_resource = Info.authentication_tokens_token_resource!(strategy.resource)
     token = Query.get_argument(query, :token)
+    store_all_tokens? = Info.authentication_tokens_store_all_tokens?(strategy.resource)
 
-    case TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context)) do
+    opts =
+      context
+      |> Ash.Context.to_opts()
+      |> Keyword.put(:store_all_tokens?, store_all_tokens?)
+
+    case TokenResource.revoke(token_resource, token, opts) do
       :ok ->
         {:ok, [user]}
 

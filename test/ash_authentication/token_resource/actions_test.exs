@@ -5,7 +5,8 @@
 defmodule AshAuthentication.TokenResource.ActionsTest do
   @moduledoc false
   use DataCase, async: false
-  alias AshAuthentication.{Jwt, TokenResource.Actions}
+  require Ash.Query
+  alias AshAuthentication.{Errors.InvalidToken, Jwt, TokenResource.Actions}
 
   describe "read_expired/1..2" do
     test "it errors when passed a non-token resource" do
@@ -125,6 +126,35 @@ defmodule AshAuthentication.TokenResource.ActionsTest do
       :ok = Actions.revoke(Example.Token, token)
 
       refute Actions.valid_jti?(Example.Token, jti)
+    end
+  end
+
+  describe "revoke/3 race protection" do
+    test "a second revoke of the same token returns an error (store_all_tokens?: true)" do
+      user = build_user()
+      token = user.__metadata__.token
+
+      assert :ok = Actions.revoke(Example.Token, token, store_all_tokens?: true)
+
+      assert {:error, %InvalidToken{type: :revocation}} =
+               Actions.revoke(Example.Token, token, store_all_tokens?: true)
+    end
+
+    test "a second revoke of the same token returns an error (store_all_tokens?: false)" do
+      user = build_user()
+      token = user.__metadata__.token
+
+      # Simulate a non-stored token by destroying the stored-token row first.
+      {:ok, %{"jti" => jti}} = Jwt.peek(token)
+
+      Example.Token
+      |> Ash.Query.filter(jti: jti)
+      |> Ash.bulk_destroy!(:destroy, %{}, authorize?: false)
+
+      assert :ok = Actions.revoke(Example.Token, token, store_all_tokens?: false)
+
+      assert {:error, %InvalidToken{type: :revocation}} =
+               Actions.revoke(Example.Token, token, store_all_tokens?: false)
     end
   end
 end

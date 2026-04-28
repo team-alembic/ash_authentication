@@ -18,7 +18,10 @@ defmodule AshAuthentication.Strategy.RememberMe.Token.Helpers do
   def revoke_remember_me_token(token, otp_app, opts) do
     with {:ok, resource} <- Jwt.token_to_resource(to_string(token), otp_app),
          {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
-      :ok = TokenResource.Actions.revoke(token_resource, token, opts)
+      store_all_tokens? = Info.authentication_tokens_store_all_tokens?(resource)
+      opts = Keyword.put(opts, :store_all_tokens?, store_all_tokens?)
+
+      TokenResource.Actions.revoke(token_resource, token, opts)
     else
       :error -> :error
     end

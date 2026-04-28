@@ -8,7 +8,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
   """
   use Ash.Resource.Actions.Implementation
   alias Ash.{ActionInput, Query}
-  alias AshAuthentication.{Errors.SenderFailed, Info, Strategy.MagicLink}
+  alias AshAuthentication.{AddOn.AuditLog.Auditor, Errors.SenderFailed, Info, Strategy.MagicLink}
   # require Ash.Query
 
   @doc false
@@ -45,8 +45,13 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
                  source_context: context.source_context
                ),
              :ok <- sender.send(to_string(identity), token, build_opts) do
+          Auditor.record_status_override(input, :success)
           :ok
         else
+          false ->
+            Auditor.record_status_override(input, :failure)
+            :ok
+
           {:error, reason} when not is_struct(reason) ->
             {sender, _} = strategy.sender
 
@@ -57,6 +62,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
             error
 
           _ ->
+            Auditor.record_status_override(input, :failure)
             :ok
         end
 
@@ -70,6 +76,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Request do
                  source_context: context.source_context
                ),
              :ok <- sender.send(user, token, build_opts) do
+          Auditor.record_status_override(input, :success)
           :ok
         else
           {:error, reason} when not is_struct(reason) ->

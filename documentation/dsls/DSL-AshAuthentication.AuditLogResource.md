@@ -132,6 +132,8 @@ Attribute renaming configuration
 |------|------|---------|------|
 | [`id`](#audit_log-attributes-id){: #audit_log-attributes-id } | `atom` | `:id` | The name of the primary key attribute |
 | [`subject`](#audit_log-attributes-subject){: #audit_log-attributes-subject } | `atom` | `:subject` | The attribute within which to store the user's authentication subject (if available). |
+| [`identity`](#audit_log-attributes-identity){: #audit_log-attributes-identity } | `atom` | `:identity` | The attribute within which to store the identity field value submitted to the action (e.g. the email or username), if known. |
+| [`client_ip`](#audit_log-attributes-client_ip){: #audit_log-attributes-client_ip } | `atom` | `:client_ip` | The attribute within which to store the client IP address of the request, if known. The stored value is subject to the `ip_privacy_mode` configured on the audit log add-on. |
 | [`strategy`](#audit_log-attributes-strategy){: #audit_log-attributes-strategy } | `atom` | `:strategy` | The attribute within which to store the authentication strategy's name. |
 | [`audit_log`](#audit_log-attributes-audit_log){: #audit_log-attributes-audit_log } | `atom` | `:audit_log` | The attribute within which to store the audit log add-on's name. |
 | [`logged_at`](#audit_log-attributes-logged_at){: #audit_log-attributes-logged_at } | `atom` | `:logged_at` | The attribute within which to store the time that the event occurred. |

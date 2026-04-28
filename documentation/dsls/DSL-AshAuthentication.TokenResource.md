@@ -91,7 +91,9 @@ Configuration options for token revocation
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`revoke_token_action_name`](#token-revocation-revoke_token_action_name){: #token-revocation-revoke_token_action_name } | `atom` | `:revoke_token` | The name of the action used to revoke tokens. |
+| [`revoke_token_insert_action_name`](#token-revocation-revoke_token_insert_action_name){: #token-revocation-revoke_token_insert_action_name } | `atom` | `:revoke_token_insert` | The name of the action used to insert a revocation record when the token was not previously stored. Unlike `revoke_token`, this action does not use upsert semantics, so concurrent duplicate revocations fail with a primary key conflict. |
 | [`revoke_jti_action_name`](#token-revocation-revoke_jti_action_name){: #token-revocation-revoke_jti_action_name } | `atom` | `:revoke_jti` | The name of the action used to revoke jtis. |
+| [`revoke_jti_insert_action_name`](#token-revocation-revoke_jti_insert_action_name){: #token-revocation-revoke_jti_insert_action_name } | `atom` | `:revoke_jti_insert` | The name of the action used to insert a revocation record by JTI when the token was not previously stored. Non-upsert variant of `revoke_jti`. |
 | [`revoke_all_stored_for_subject_action_name`](#token-revocation-revoke_all_stored_for_subject_action_name){: #token-revocation-revoke_all_stored_for_subject_action_name } | `atom` | `:revoke_all_stored_for_subject` | The name of the action used to revoke all stored tokens for a given subject. |
 | [`is_revoked_action_name`](#token-revocation-is_revoked_action_name){: #token-revocation-is_revoked_action_name } | `atom` | `:revoked?` | The name of the action used to check if a token is revoked. |
 
