@@ -137,6 +137,62 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
     end
   end
 
+  @doc """
+  Generate and return a registration challenge for adding a credential to the
+  current user.
+
+  Requires an authenticated actor on the connection.
+  """
+  @spec add_credential_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
+  def add_credential_challenge(conn, strategy) do
+    case get_actor(conn) do
+      nil ->
+        store_authentication_result(conn, unauthenticated_error(strategy, :add_credential))
+
+      _actor ->
+        registration_challenge(conn, strategy)
+    end
+  end
+
+  @doc """
+  Handle an `add_credential` request — attach a new credential to the
+  authenticated user.
+
+  Requires an authenticated actor on the connection.
+  """
+  @spec add_credential(Conn.t(), WebAuthn.t()) :: Conn.t()
+  def add_credential(conn, strategy) do
+    with actor when not is_nil(actor) <- get_actor(conn),
+         %Wax.Challenge{} = challenge <- reconstruct_challenge(conn, :attestation, strategy) do
+      conn = Conn.delete_session(conn, @session_key)
+      params = subject_params(conn, strategy)
+      opts = opts(conn) ++ [challenge: challenge, user: actor]
+      result = WebAuthn.Actions.add_credential(strategy, params, opts)
+      store_authentication_result(conn, result)
+    else
+      nil ->
+        store_authentication_result(conn, unauthenticated_error(strategy, :add_credential))
+
+      _ ->
+        conn
+        |> Conn.delete_session(@session_key)
+        |> store_authentication_result(missing_challenge_error(strategy, :add_credential))
+    end
+  end
+
+  defp unauthenticated_error(strategy, action) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       caused_by: %{
+         module: __MODULE__,
+         strategy: strategy,
+         action: action,
+         message: "An authenticated user is required to add a credential"
+       }
+     )}
+  end
+
   defp missing_challenge_error(strategy, action) do
     {:error,
      AuthenticationFailed.exception(
