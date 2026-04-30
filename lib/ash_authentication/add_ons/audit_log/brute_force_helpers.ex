@@ -14,6 +14,7 @@ defmodule AshAuthentication.AddOn.AuditLog.BruteForceHelpers do
 
   require Ash.Query
   import Ash.Expr
+  import AshAuthentication.Utils, only: [maybe_lock: 2]
 
   alias AshAuthentication.AuditLogResource
 
@@ -62,7 +63,7 @@ defmodule AshAuthentication.AddOn.AuditLog.BruteForceHelpers do
     |> apply_criteria(audit_log_resource, criteria)
     |> Ash.Query.filter(^ref(status_attr) == :failure)
     |> Ash.Query.filter(^ref(logged_at_attr) >= ^cutoff)
-    |> Ash.Query.lock("FOR UPDATE")
+    |> maybe_lock("FOR UPDATE")
     |> Ash.count()
   end
 

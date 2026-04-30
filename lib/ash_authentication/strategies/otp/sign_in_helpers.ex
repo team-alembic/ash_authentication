@@ -7,6 +7,7 @@ defmodule AshAuthentication.Strategy.Otp.SignInHelpers do
 
   alias AshAuthentication.TokenResource
   alias AshAuthentication.TokenResource.Info, as: TokenInfo
+  import AshAuthentication.Utils, only: [maybe_lock: 2]
 
   @doc """
   Fetch a stored OTP token by JTI while holding a `SELECT FOR UPDATE` row lock.
@@ -23,7 +24,7 @@ defmodule AshAuthentication.Strategy.Otp.SignInHelpers do
       token_resource
       |> Ash.Query.new()
       |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Ash.Query.lock(:for_update)
+      |> maybe_lock(:for_update)
       |> Ash.Query.for_read(
         get_token_action_name,
         %{"jti" => jti, "purpose" => "otp"},

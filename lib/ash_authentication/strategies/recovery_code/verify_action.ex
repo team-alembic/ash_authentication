@@ -19,6 +19,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.VerifyAction do
   use Ash.Resource.Actions.Implementation
   require Ash.Query
   import Ash.Expr, only: [ref: 1]
+  import AshAuthentication.Utils, only: [maybe_lock: 2]
   alias Ash.ActionInput
   alias AshAuthentication.Info
 
@@ -90,7 +91,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.VerifyAction do
       strategy.recovery_code_resource
       |> Ash.Query.filter(^ref(user_id_field) == ^user.id)
       |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
-      |> Ash.Query.lock(:for_update)
+      |> maybe_lock(:for_update)
       |> Ash.read!(Keyword.merge(opts, domain: domain))
 
     matched = find_matching_code(codes, code, code_field, strategy)

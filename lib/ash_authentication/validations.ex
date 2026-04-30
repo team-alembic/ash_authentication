@@ -206,4 +206,39 @@ defmodule AshAuthentication.Validations do
          )}
     end
   end
+
+  @doc """
+  Emit a `Logger.warning` if the given resource's data layer does not support
+  the `{:lock, :for_update}` capability.
+
+  Used by verifiers for resources that AshAuthentication tries to lock at
+  runtime (the token resource, the audit log resource, the recovery code
+  resource). On data layers that don't support locking the lock is skipped
+  at runtime — but races between concurrent processes are no longer
+  prevented, which the user should know about.
+
+  Returns `:ok` either way; this is advisory, not a hard failure.
+  """
+  @spec warn_if_data_layer_cannot_lock(Ash.Resource.t(), String.t()) :: :ok
+  def warn_if_data_layer_cannot_lock(resource, context) do
+    if Ash.DataLayer.data_layer_can?(resource, {:lock, :for_update}) do
+      :ok
+    else
+      require Logger
+
+      Logger.warning("""
+      The data layer for #{inspect(resource)} does not support row locking.
+
+      #{context}
+
+      AshAuthentication will skip the lock at runtime so the operation does
+      not crash, but races between concurrent processes are no longer
+      serialised by the database. If you need lock-based safety, switch to a
+      data layer that supports `{:lock, :for_update}` (for example
+      `AshPostgres.DataLayer`).
+      """)
+
+      :ok
+    end
+  end
 end

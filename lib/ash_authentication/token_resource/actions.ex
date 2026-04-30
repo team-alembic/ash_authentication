@@ -232,11 +232,11 @@ defmodule AshAuthentication.TokenResource.Actions do
            opts
            |> Keyword.take([:actor, :authorize?, :context, :tenant, :tracer])
            |> Keyword.merge(
-             lock: :for_update,
              domain: domain,
              authorize?: false,
              error?: false
-           ),
+           )
+           |> maybe_lock_opt(resource, :for_update),
          {:ok, existing} <- Ash.get(resource, [jti: jti], lookup_opts) do
       case existing && existing.purpose do
         "revocation" ->
@@ -319,11 +319,11 @@ defmodule AshAuthentication.TokenResource.Actions do
            opts
            |> Keyword.take([:actor, :authorize?, :context, :tenant, :tracer])
            |> Keyword.merge(
-             lock: :for_update,
              domain: domain,
              authorize?: false,
              error?: false
-           ),
+           )
+           |> maybe_lock_opt(resource, :for_update),
          {:ok, existing} <- Ash.get(resource, [jti: jti], lookup_opts) do
       case existing && existing.purpose do
         "revocation" ->

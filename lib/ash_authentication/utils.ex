@@ -304,4 +304,40 @@ defmodule AshAuthentication.Utils do
     do: Map.new(map, fn {k, v} -> {k, normalize_null(v)} end)
 
   def normalize_null(value), do: value
+
+  @doc """
+  Apply `Ash.Query.lock/2` only when the resource's data layer supports the
+  given lock type. On data layers that don't support locking (e.g. ETS),
+  returns the query unchanged.
+
+  This is intentionally a soft fallback: data layers without locking are
+  typically single-process and serialise writes by other means, so the
+  atomicity that the lock provides on SQL-backed data layers is already
+  guaranteed there. Resources that genuinely need lock-based safety should
+  surface a compile-time warning via the relevant verifier.
+  """
+  @spec maybe_lock(Ash.Query.t(), Ash.DataLayer.lock_type()) :: Ash.Query.t()
+  def maybe_lock(query, lock_type) do
+    if Ash.DataLayer.data_layer_can?(query.resource, {:lock, lock_type}) do
+      Ash.Query.lock(query, lock_type)
+    else
+      query
+    end
+  end
+
+  @doc """
+  Add a `:lock` keyword option to `opts` only when the resource's data
+  layer supports the given lock type.
+
+  Counterpart to `maybe_lock/2` for code paths that pass options directly
+  to `Ash.get/3` and friends rather than building a query.
+  """
+  @spec maybe_lock_opt(keyword, Ash.Resource.t(), Ash.DataLayer.lock_type()) :: keyword
+  def maybe_lock_opt(opts, resource, lock_type) do
+    if Ash.DataLayer.data_layer_can?(resource, {:lock, lock_type}) do
+      Keyword.put(opts, :lock, lock_type)
+    else
+      opts
+    end
+  end
 end

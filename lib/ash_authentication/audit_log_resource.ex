@@ -203,7 +203,8 @@ defmodule AshAuthentication.AuditLogResource do
 
   use Spark.Dsl.Extension,
     sections: @dsl,
-    transformers: [AuditLogResource.Transformer]
+    transformers: [AuditLogResource.Transformer],
+    verifiers: [AuditLogResource.Verifier]
 
   @doc """
   Log an authentication event into the audit logger.

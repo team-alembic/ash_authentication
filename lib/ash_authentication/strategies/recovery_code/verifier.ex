@@ -12,13 +12,19 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
   alias Spark.Dsl.Verifier
   alias Spark.Error.DslError
 
+  import AshAuthentication.Validations, only: [warn_if_data_layer_cannot_lock: 2]
+
   @doc false
   @spec verify(RecoveryCode.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl) do
     with :ok <- validate_brute_force_strategy(dsl, strategy),
          :ok <- validate_entropy(dsl, strategy),
-         :ok <- validate_code_alphabet(dsl, strategy) do
-      validate_recovery_code_resource(dsl, strategy)
+         :ok <- validate_code_alphabet(dsl, strategy),
+         :ok <- validate_recovery_code_resource(dsl, strategy) do
+      warn_if_data_layer_cannot_lock(
+        strategy.recovery_code_resource,
+        "Recovery-code verification reads stored codes inside a `SELECT FOR UPDATE` window when using a non-deterministic hash provider, so concurrent verifications can't both consume the same code."
+      )
     end
   end
 

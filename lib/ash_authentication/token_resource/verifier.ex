@@ -11,14 +11,19 @@ defmodule AshAuthentication.TokenResource.Verifier do
   require Logger
   alias Spark.{Dsl.Verifier, Error.DslError}
   import AshAuthentication.Utils
+  import AshAuthentication.Validations, only: [warn_if_data_layer_cannot_lock: 2]
   import AshAuthentication.Validations.Action
 
   @doc false
   @impl true
   @spec verify(map) :: :ok | {:error, term}
   def verify(dsl_state) do
-    with :ok <- validate_domain_presence(dsl_state) do
-      maybe_validate_is_revoked_action_arguments(dsl_state)
+    with :ok <- validate_domain_presence(dsl_state),
+         :ok <- maybe_validate_is_revoked_action_arguments(dsl_state) do
+      warn_if_data_layer_cannot_lock(
+        Verifier.get_persisted(dsl_state, :module),
+        "Token revocation relies on a `SELECT FOR UPDATE` row lock to make concurrent revocation race-free."
+      )
     end
   end
 
