@@ -11,6 +11,28 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.5](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.4...v5.0.0-rc.5) (2026-04-30)
+
+
+
+
+### Bug Fixes:
+
+* gracefully degrade row locks on data layers without lock support (#1158) by James Harton
+
+## [v5.0.0-rc.4](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.3...v5.0.0-rc.4) (2026-04-30)
+
+
+
+
+### Features:
+
+* add igniter generator for OTP strategy (#1157) by James Harton
+
+* Add OTP strategy (#1141) by Torkild Gundersen Kjevik
+
+* brute-force protection for password and magic link sign-in (#1154) by James Harton
+
 ## [v5.0.0-rc.3](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.2...v5.0.0-rc.3) (2026-04-13)
 
 

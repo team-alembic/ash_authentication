@@ -14,6 +14,7 @@ if Code.ensure_loaded?(Igniter) do
     @strategies [
       password: "Register and sign in with a username/email and a password.",
       magic_link: "Register and sign in with a magic link, sent via email to the user.",
+      otp: "Sign in with a short one-time password sent via email or SMS.",
       api_key: "Sign in with an API key.",
       totp: "Authenticate with a time-based one-time password (TOTP).",
       recovery_code: "Authenticate with one-time recovery codes as a 2FA fallback.",
@@ -36,6 +37,7 @@ if Code.ensure_loaded?(Igniter) do
     @strategy_tasks %{
       "password" => "ash_authentication.add_strategy.password",
       "magic_link" => "ash_authentication.add_strategy.magic_link",
+      "otp" => "ash_authentication.add_strategy.otp",
       "api_key" => "ash_authentication.add_strategy.api_key",
       "totp" => "ash_authentication.add_strategy.totp",
       "recovery_code" => "ash_authentication.add_strategy.recovery_code",
@@ -62,6 +64,7 @@ if Code.ensure_loaded?(Igniter) do
 
       * `mix ash_authentication.add_strategy.password`
       * `mix ash_authentication.add_strategy.magic_link`
+      * `mix ash_authentication.add_strategy.otp`
       * `mix ash_authentication.add_strategy.api_key`
       * `mix ash_authentication.add_strategy.totp`
 

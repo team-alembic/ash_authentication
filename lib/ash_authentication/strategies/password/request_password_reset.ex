@@ -13,7 +13,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
     b. and the password reset sender is invoked
   """
   use Ash.Resource.Actions.Implementation
-  alias AshAuthentication.{Errors.SenderFailed, Info, Strategy.Password}
+  alias AshAuthentication.{AddOn.AuditLog.Auditor, Errors.SenderFailed, Info, Strategy.Password}
   require Logger
 
   @doc false
@@ -47,6 +47,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
       with {:ok, user} when not is_nil(user) <- query_result,
            {:ok, token} <- Password.reset_token_for(strategy, user),
            :ok <- sender.send(user, token, Keyword.put(send_opts, :tenant, context.tenant)) do
+        Auditor.record_status_override(action_input, :success)
         :ok
       else
         {:error, %SenderFailed{}} = error ->
@@ -57,6 +58,7 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
            SenderFailed.exception(sender: sender, reason: reason, strategy: strategy.name)}
 
         {:ok, nil} ->
+          Auditor.record_status_override(action_input, :failure)
           :ok
 
         {:error, error} ->

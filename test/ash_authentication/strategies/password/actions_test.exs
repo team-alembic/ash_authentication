@@ -5,6 +5,7 @@
 defmodule AshAuthentication.Strategy.Password.ActionsTest do
   @moduledoc false
   use DataCase
+  use Mimic
   import ExUnit.CaptureLog
 
   alias AshAuthentication.{
@@ -291,6 +292,30 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
 
       assert {:ok, _} = Actions.reset(strategy, params, [])
       assert {:error, %InvalidToken{}} = Actions.reset(strategy, params, [])
+    end
+
+    test "the password update rolls back when token revocation fails mid-transaction" do
+      user = build_user()
+      original_hashed_password = user.hashed_password
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      assert {:ok, token} = Password.reset_token_for(strategy, user)
+
+      new_password = password()
+
+      params = %{
+        "reset_token" => token,
+        "password" => new_password,
+        "password_confirmation" => new_password
+      }
+
+      Mimic.expect(AshAuthentication.TokenResource, :revoke, fn _, _, _ ->
+        {:error, InvalidToken.exception(type: :revocation)}
+      end)
+
+      assert {:error, _} = Actions.reset(strategy, params, [])
+
+      reloaded = Ash.get!(Example.User, user.id, authorize?: false)
+      assert reloaded.hashed_password == original_hashed_password
     end
   end
 end

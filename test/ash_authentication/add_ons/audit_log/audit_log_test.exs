@@ -232,6 +232,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       assert reset_request_log.status == :success
       # reset_request returns :ok (not a user record) for security, so subject is nil
       assert is_nil(reset_request_log.subject)
+      assert reset_request_log.identity == to_string(user.email)
       assert reset_request_log.resource == Example.UserWithAuditLog
     end
 
@@ -253,9 +254,11 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       assert reset_request_log.strategy == :password
       assert reset_request_log.action_name == :request_password_reset_with_password
-      assert reset_request_log.status == :success
-      # For security, reset_request always returns :ok even if user doesn't exist
+      # The action returns :ok to the caller to avoid identity enumeration, but the
+      # audit log records :failure because no reset token was actually issued.
+      assert reset_request_log.status == :failure
       assert is_nil(reset_request_log.subject)
+      assert reset_request_log.identity == "nonexistent@example.com"
       assert reset_request_log.resource == Example.UserWithAuditLog
     end
 
@@ -432,6 +435,86 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       sign_in_log = Enum.find(logs, &(&1.action_name == :sign_in_with_password))
       assert DateTime.compare(sign_in_log.logged_at, before_time) in [:gt, :eq]
       assert DateTime.compare(sign_in_log.logged_at, after_time) in [:lt, :eq]
+    end
+
+    test "it creates a success audit log entry on magic link request for known email" do
+      user = build_user_with_audit_log()
+      strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
+
+      assert :ok = Strategy.action(strategy, :request, %{"email" => to_string(user.email)})
+
+      Batcher.flush()
+
+      log =
+        Example.AuditLog
+        |> Ash.read!()
+        |> Enum.find(&(&1.action_name == :request_magic_link))
+
+      assert log.strategy == :magic_link
+      assert log.status == :success
+      assert log.identity == to_string(user.email)
+    end
+
+    test "it creates a failure audit log entry on magic link request for unknown email" do
+      strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
+
+      assert :ok = Strategy.action(strategy, :request, %{"email" => "nobody@example.com"})
+
+      Batcher.flush()
+
+      log =
+        Example.AuditLog
+        |> Ash.read!()
+        |> Enum.find(&(&1.action_name == :request_magic_link))
+
+      # The action returns :ok to avoid identity enumeration, but the audit log
+      # records :failure because no token was issued.
+      assert log.strategy == :magic_link
+      assert log.status == :failure
+      assert log.identity == "nobody@example.com"
+    end
+
+    test "it records the identity on a failed password sign in" do
+      params = %{
+        "email" => "nobody@example.com",
+        "password" => "anything"
+      }
+
+      strategy = Info.strategy!(Example.UserWithAuditLog, :password)
+
+      assert {:error, _} = Strategy.action(strategy, :sign_in, params)
+
+      Batcher.flush()
+
+      [log] = Example.AuditLog |> Ash.read!()
+
+      assert log.status == :failure
+      assert log.identity == "nobody@example.com"
+    end
+
+    test "it records client_ip from the request context when available" do
+      user = build_user_with_audit_log()
+
+      params = %{
+        "email" => user.email,
+        "password" => user.__metadata__.password
+      }
+
+      strategy = Info.strategy!(Example.UserWithAuditLog, :password)
+
+      assert {:ok, _} =
+               Strategy.action(strategy, :sign_in, params,
+                 context: %{ash_authentication_request: %{remote_ip: "203.0.113.7"}}
+               )
+
+      Batcher.flush()
+
+      log =
+        Example.AuditLog
+        |> Ash.read!()
+        |> Enum.find(&(&1.action_name == :sign_in_with_password))
+
+      assert log.client_ip == "203.0.113.7"
     end
   end
 

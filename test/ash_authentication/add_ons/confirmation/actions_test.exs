@@ -5,6 +5,7 @@
 defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
   @moduledoc false
   use DataCase, async: true
+  use Mimic
 
   import Ecto.Query
 
@@ -80,6 +81,29 @@ defmodule AshAuthentication.AddOn.Confirmation.ActionsTest do
       assert {:ok, _user} = Actions.confirm(strategy, %{"confirm" => token}, [])
 
       assert {:error, %InvalidToken{}} = Actions.confirm(strategy, %{"confirm" => token}, [])
+    end
+
+    test "the user update rolls back when token revocation fails mid-transaction" do
+      {:ok, strategy} = Info.strategy(Example.User, :confirm)
+
+      user = build_user()
+      original_username = to_string(user.username)
+      new_username = username()
+
+      changeset =
+        user
+        |> Changeset.for_update(:update, %{"username" => new_username})
+
+      {:ok, token} = Confirmation.confirmation_token(strategy, changeset, user)
+
+      Mimic.expect(AshAuthentication.TokenResource, :revoke, fn _, _, _ ->
+        {:error, InvalidToken.exception(type: :revocation)}
+      end)
+
+      assert {:error, _} = Actions.confirm(strategy, %{"confirm" => token}, [])
+
+      reloaded = Ash.get!(Example.User, user.id, authorize?: false)
+      assert to_string(reloaded.username) == original_username
     end
   end
 

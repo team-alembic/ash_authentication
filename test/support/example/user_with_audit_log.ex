@@ -9,6 +9,8 @@ defmodule Example.UserWithAuditLog do
     extensions: [AshAuthentication],
     domain: Example
 
+  require Logger
+
   attributes do
     uuid_primary_key :id, writable?: true
 
@@ -51,6 +53,7 @@ defmodule Example.UserWithAuditLog do
     strategies do
       password do
         identity_field :email
+        brute_force_strategy({:audit_log, :audit_log})
 
         resettable do
           sender fn _user, _token, _opts -> :ok end
@@ -60,6 +63,7 @@ defmodule Example.UserWithAuditLog do
       magic_link do
         identity_field :email
         sender fn _user, _token, _opts -> :ok end
+        brute_force_strategy({:audit_log, :audit_log})
       end
 
       remember_me :remember_me do
@@ -72,6 +76,15 @@ defmodule Example.UserWithAuditLog do
         identity_field :email
         sign_in_enabled? true
         brute_force_strategy({:audit_log, :audit_log})
+      end
+
+      otp do
+        identity_field :email
+        brute_force_strategy({:audit_log, :audit_log})
+
+        sender fn user, otp_code, _opts ->
+          Logger.info("OTP request for #{user.email}, code #{inspect(otp_code)}")
+        end
       end
     end
   end

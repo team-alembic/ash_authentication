@@ -79,6 +79,18 @@ defmodule AshAuthentication.AuditLogResource do
                 "The attribute within which to store the user's authentication subject (if available).",
               default: :subject
             ],
+            identity: [
+              type: :atom,
+              doc:
+                "The attribute within which to store the identity field value submitted to the action (e.g. the email or username), if known.",
+              default: :identity
+            ],
+            client_ip: [
+              type: :atom,
+              doc:
+                "The attribute within which to store the client IP address of the request, if known. The stored value is subject to the `ip_privacy_mode` configured on the audit log add-on.",
+              default: :client_ip
+            ],
             strategy: [
               type: :atom,
               doc: "The attribute within which to store the authentication strategy's name.",
@@ -191,7 +203,8 @@ defmodule AshAuthentication.AuditLogResource do
 
   use Spark.Dsl.Extension,
     sections: @dsl,
-    transformers: [AuditLogResource.Transformer]
+    transformers: [AuditLogResource.Transformer],
+    verifiers: [AuditLogResource.Verifier]
 
   @doc """
   Log an authentication event into the audit logger.

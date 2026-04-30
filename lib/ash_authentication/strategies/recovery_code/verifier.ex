@@ -6,17 +6,25 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
   @moduledoc """
   DSL verifier for the recovery_code strategy.
   """
+  alias Ash.Resource
+  alias AshAuthentication.AddOn.AuditLog.VerifierHelpers
   alias AshAuthentication.Strategy.RecoveryCode
   alias Spark.Dsl.Verifier
   alias Spark.Error.DslError
+
+  import AshAuthentication.Validations, only: [warn_if_data_layer_cannot_lock: 2]
 
   @doc false
   @spec verify(RecoveryCode.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl) do
     with :ok <- validate_brute_force_strategy(dsl, strategy),
          :ok <- validate_entropy(dsl, strategy),
-         :ok <- validate_code_alphabet(dsl, strategy) do
-      validate_recovery_code_resource(dsl, strategy)
+         :ok <- validate_code_alphabet(dsl, strategy),
+         :ok <- validate_recovery_code_resource(dsl, strategy) do
+      warn_if_data_layer_cannot_lock(
+        strategy.recovery_code_resource,
+        "Recovery-code verification reads stored codes inside a `SELECT FOR UPDATE` window when using a non-deterministic hash provider, so concurrent verifications can't both consume the same code."
+      )
     end
   end
 
@@ -31,8 +39,13 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
          dsl,
          %{brute_force_strategy: {:audit_log, audit_log}} = strategy
        ) do
-    with {:ok, audit_log} <- validate_audit_log_exists(dsl, strategy, audit_log) do
-      validate_action_audit_logged(dsl, strategy, strategy.verify_action_name, audit_log)
+    with {:ok, audit_log} <- VerifierHelpers.validate_audit_log_exists(dsl, strategy, audit_log) do
+      VerifierHelpers.validate_action_audit_logged(
+        dsl,
+        strategy,
+        strategy.verify_action_name,
+        audit_log
+      )
     end
   end
 
@@ -110,7 +123,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
   end
 
   defp validate_code_field(resource, strategy, module) do
-    case Ash.Resource.Info.attribute(resource, strategy.code_field) do
+    case Resource.Info.attribute(resource, strategy.code_field) do
       nil ->
         {:error,
          DslError.exception(
@@ -142,7 +155,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
   end
 
   defp validate_user_relationship_name(resource, strategy, module) do
-    case Ash.Resource.Info.relationship(resource, strategy.user_relationship_name) do
+    case Resource.Info.relationship(resource, strategy.user_relationship_name) do
       nil ->
         {:error,
          DslError.exception(
@@ -173,7 +186,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
   end
 
   defp validate_destroy_action(resource, strategy, module) do
-    if Ash.Resource.Info.action(resource, :destroy) do
+    if Resource.Info.action(resource, :destroy) do
       :ok
     else
       {:error,
@@ -271,56 +284,5 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Verifier do
 
   defp get_preparation_supports({module, opts}) when is_atom(module) do
     module.supports(opts)
-  end
-
-  defp validate_audit_log_exists(dsl, strategy, audit_log) do
-    module = Verifier.get_persisted(dsl, :module)
-
-    case AshAuthentication.Info.strategy(dsl, audit_log) do
-      {:ok, audit_log} when audit_log.provider == :audit_log ->
-        {:ok, audit_log}
-
-      {:ok, other_strategy} ->
-        {:error,
-         DslError.exception(
-           module: module,
-           path: [:authentication, :strategies, strategy.name, :brute_force_strategy],
-           message: """
-           The brute force strategy is set to `{:audit_log, #{inspect(audit_log)}}`.  There is a strategy named `#{inspect(audit_log)}` present, however it is a #{other_strategy.provider} strategy.
-           """
-         )}
-
-      :error ->
-        {:error,
-         DslError.exception(
-           module: module,
-           path: [:authentication, :strategies, strategy.name, :brute_force_strategy],
-           message: """
-           The brute force strategy is set to `{:audit_log, #{inspect(audit_log)}}`, however there is no audit-log add-on with that name.
-           """
-         )}
-    end
-  end
-
-  defp validate_action_audit_logged(dsl, strategy, action, audit_log) do
-    logged_actions =
-      dsl
-      |> Verifier.get_persisted({:audit_log, audit_log.name, :actions}, [])
-      |> Enum.map(&elem(&1, 0))
-
-    if action in logged_actions do
-      :ok
-    else
-      module = Verifier.get_persisted(dsl, :module)
-
-      {:error,
-       DslError.exception(
-         module: module,
-         path: [:authentication, :strategies, strategy.name, :brute_force_strategy],
-         message: """
-         The brute force strategy is set to `{:audit_log, #{inspect(audit_log)}}`, however the action `#{inspect(action)}` is not logged by that audit log.
-         """
-       )}
-    end
   end
 end
