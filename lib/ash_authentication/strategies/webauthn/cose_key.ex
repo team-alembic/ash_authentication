@@ -41,9 +41,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.CoseKey do
 
   @impl true
   def cast_stored(value, _) when is_binary(value) do
-    case CBOR.decode(value) do
-      {:ok, decoded, _} when is_map(decoded) -> {:ok, decoded}
-      _ -> :error
+    if byte_size(value) > @max_cose_key_size do
+      :error
+    else
+      case CBOR.decode(value) do
+        {:ok, decoded, _} when is_map(decoded) -> {:ok, decoded}
+        _ -> :error
+      end
     end
   end
 

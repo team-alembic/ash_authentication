@@ -56,6 +56,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.CoseKeyTest do
     test "rejects invalid CBOR" do
       assert :error = CoseKey.cast_stored("not-cbor", [])
     end
+
+    test "rejects oversized binary" do
+      oversize = :crypto.strong_rand_bytes(262_145)
+      assert :error = CoseKey.cast_stored(oversize, [])
+    end
   end
 
   describe "round trip" do
