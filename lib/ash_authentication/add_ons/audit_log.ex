@@ -27,6 +27,9 @@ defmodule AshAuthentication.AddOn.AuditLog do
     end
   end
   ```
+
+  Request metadata uses `conn.remote_ip` for `remote_ip`, so proxy-aware plugs
+  can rewrite it from forwarded/proxy metadata before AshAuthentication runs.
   """
 
   defstruct audit_log_resource: nil,
