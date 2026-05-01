@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule Example.Repo.TenantMigrations.AddWebauthn do
   @moduledoc """
   Updates resources based on their most recent snapshots.

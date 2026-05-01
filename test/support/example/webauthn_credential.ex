@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule Example.WebAuthnCredential do
   @moduledoc false
   use Ash.Resource,

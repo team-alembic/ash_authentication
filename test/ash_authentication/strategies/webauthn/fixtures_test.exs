@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.WebAuthn.FixturesTest do
   use ExUnit.Case, async: true
 

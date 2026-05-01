@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
   @moduledoc """
   DSL transformer for the WebAuthn strategy.

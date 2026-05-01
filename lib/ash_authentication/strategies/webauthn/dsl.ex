@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
   @moduledoc """
   Defines the Spark DSL entity for the WebAuthn strategy.

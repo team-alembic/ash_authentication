@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
   @moduledoc """
   Prepare a query for WebAuthn sign in.

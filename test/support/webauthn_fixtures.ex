@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshAuthentication.Test.WebAuthnFixtures do
   @moduledoc """
   Generates valid WebAuthn registration and authentication fixture data
