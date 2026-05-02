@@ -20,41 +20,36 @@ defmodule AshAuthentication.Strategy.WebAuthn.CoseKey do
 
   @impl true
   def cast_input(value, _) when is_map(value), do: {:ok, value}
-
-  def cast_input(value, _) when is_binary(value) do
-    if byte_size(value) > @max_cose_key_size do
-      :error
-    else
-      case CBOR.decode(value) do
-        {:ok, decoded, _} when is_map(decoded) -> {:ok, decoded}
-        _ -> :error
-      end
-    end
-  end
-
+  def cast_input(value, _) when is_binary(value), do: cast_cose_key(value)
   def cast_input(nil, _), do: {:ok, nil}
   def cast_input(_, _), do: :error
 
   @impl true
-  def dump_to_native(value, _) when is_map(value) do
-    {:ok, CBOR.encode(value) |> IO.iodata_to_binary()}
-  end
-
+  def dump_to_native(value, _) when is_map(value), do: dump_cose_key(value)
   def dump_to_native(nil, _), do: {:ok, nil}
   def dump_to_native(_, _), do: :error
 
   @impl true
-  def cast_stored(value, _) when is_binary(value) do
-    if byte_size(value) > @max_cose_key_size do
-      :error
-    else
-      case CBOR.decode(value) do
-        {:ok, decoded, _} when is_map(decoded) -> {:ok, decoded}
-        _ -> :error
-      end
-    end
-  end
-
+  def cast_stored(value, _) when is_binary(value), do: cast_cose_key(value)
   def cast_stored(nil, _), do: {:ok, nil}
   def cast_stored(_, _), do: :error
+
+  if Code.ensure_loaded?(CBOR) do
+    defp cast_cose_key(value) do
+      if byte_size(value) > @max_cose_key_size do
+        :error
+      else
+        case CBOR.decode(value) do
+          {:ok, decoded, _} when is_map(decoded) -> {:ok, decoded}
+          _ -> :error
+        end
+      end
+    end
+
+    defp dump_cose_key(value), do: {:ok, CBOR.encode(value) |> IO.iodata_to_binary()}
+  else
+    defp cast_cose_key(value) when byte_size(value) > @max_cose_key_size, do: :error
+    defp cast_cose_key(_value), do: :error
+    defp dump_cose_key(_value), do: :error
+  end
 end
