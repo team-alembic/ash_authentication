@@ -30,10 +30,17 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
     end
   end
 
-  defp prevent_hijacking(_dsl_state, %{prevent_hijacking?: false}), do: :ok
-  defp prevent_hijacking(_dsl_state, %{registration_enabled?: false}), do: :ok
+  @doc """
+  Verifies that an OAuth2-derived strategy isn't paired with a password strategy
+  unless a confirmation add-on is also present, which would otherwise allow an
+  attacker to hijack an existing local account by registering through the OAuth
+  provider with a matching identity field.
+  """
+  @spec prevent_hijacking(map, OAuth2.t()) :: :ok | {:error, Exception.t()}
+  def prevent_hijacking(_dsl_state, %{prevent_hijacking?: false}), do: :ok
+  def prevent_hijacking(_dsl_state, %{registration_enabled?: false}), do: :ok
 
-  defp prevent_hijacking(dsl_state, strategy) do
+  def prevent_hijacking(dsl_state, strategy) do
     case Enum.find(
            AshAuthentication.Info.authentication_strategies(dsl_state),
            fn other_strategy ->

@@ -12,11 +12,12 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
 
   @doc false
   @spec verify(OAuth2.t(), map) :: :ok | {:error, Exception.t()}
-  def verify(strategy, _dsl_state) do
+  def verify(strategy, dsl_state) do
     with :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :client_secret, [nil]),
          :ok <- validate_secret(strategy, :base_url),
-         :ok <- validate_secret(strategy, :nonce, [true, false]) do
+         :ok <- validate_secret(strategy, :nonce, [true, false]),
+         :ok <- OAuth2.Verifier.prevent_hijacking(dsl_state, strategy) do
       if strategy.auth_method == :private_key_jwt do
         validate_secret(strategy, :private_key)
       else
