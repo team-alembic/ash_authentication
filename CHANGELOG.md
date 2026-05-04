@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.7](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.6...v5.0.0-rc.7) (2026-05-04)
+
+
+
+
+### Bug Fixes:
+
+* register `Ash.Policy.Authorizer` on the WebAuthn credential resource (#1164) by James Harton
+
 ## [v5.0.0-rc.6](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.5...v5.0.0-rc.6) (2026-05-04)
 
 
