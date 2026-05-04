@@ -37,7 +37,7 @@ defmodule Oauth2ServerTest.OAuthClient do
     attribute :token_endpoint_auth_method, :string, public?: true, default: "none"
     attribute :scope, :string, public?: true, default: "mcp"
     attribute :last_used_at, :utc_datetime_usec, public?: true
-    create_timestamp :created_at
+    create_timestamp :inserted_at
     update_timestamp :updated_at
   end
 

@@ -7,9 +7,9 @@ if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.AshAuthentication.AddOauth2Server do
     use Igniter.Mix.Task
 
-    @example "mix ash_authentication.add_oauth2_server --resource-url http://localhost:4000/mcp"
+    @example "mix ash_authentication.add_oauth2_server"
 
-    @shortdoc "Scaffolds an OAuth 2.1 authorization server for an MCP/API resource"
+    @shortdoc "Scaffolds an OAuth 2.1 authorization server"
 
     @moduledoc """
     #{@shortdoc}
@@ -20,8 +20,9 @@ if Code.ensure_loaded?(Igniter) do
         `OauthAuthorizationCode`, `OauthRefreshToken`, `OauthConsent`.
       * An `Oauth2Server` config module that pulls them together.
       * Three `secret_for/4` clauses on the user's Secrets module
-        (`:issuer_url`, `:resource_url`, `:signing_secret`).
-      * Application-config defaults in `config/dev.exs` for those URLs.
+        (`:issuer_url`, `:resource_url`, `:signing_secret`) that read from
+        application env, so prod overrides go in `config/runtime.exs`.
+      * Localhost defaults in `config/dev.exs` for development.
       * Migrations for the new resources (via `ash.codegen`).
 
     The router macros are NOT auto-mounted. Add them to your router by
@@ -37,6 +38,22 @@ if Code.ensure_loaded?(Igniter) do
           oauth2_server_protocol_routes oauth2_server: MyApp.Oauth2Server
         end
 
+    Then mount `AshAuthentication.Phoenix.Oauth2Server.BearerPlug` on
+    whatever resource you want OAuth-protected.
+
+    ## Production config
+
+    The dev URLs written to `config/dev.exs` are placeholders. For prod,
+    set the real values in `config/runtime.exs`:
+
+        config :my_app,
+          oauth2_issuer_url: System.get_env("OAUTH2_ISSUER_URL"),
+          oauth2_resource_url: System.get_env("OAUTH2_RESOURCE_URL"),
+          oauth2_signing_secret: System.get_env("OAUTH2_SIGNING_SECRET")
+
+    `oauth2_resource_url` is the URL clients will reach your protected
+    resource at. It's bound to the access token's `aud` claim.
+
     ## Example
 
     ```bash
@@ -50,11 +67,11 @@ if Code.ensure_loaded?(Igniter) do
       * `--server-module`, `-s` — Where to put the `Oauth2Server` module.
         Default: `MyApp.Oauth2Server`.
       * `--secrets-module` — Module implementing `AshAuthentication.Secret`.
-        Default: detected from your User's `tokens.signing_secret`, falling
-        back to `MyApp.Secrets`.
-      * `--resource-url` — Resource URL bound to access tokens (`aud`).
-        Default: `http://localhost:4000/mcp`.
-      * `--issuer-url` — Issuer URL. Default: `http://localhost:4000`.
+        Default: `MyApp.Secrets`.
+      * `--issuer-url` — Issuer URL written to `config/dev.exs`.
+        Default: `http://localhost:4000`.
+      * `--resource-url` — Resource URL written to `config/dev.exs`.
+        Default: same as `--issuer-url`.
       * `--scope` — Scope advertised in metadata. Default: `mcp`.
     """
 
@@ -80,7 +97,6 @@ if Code.ensure_loaded?(Igniter) do
           s: :server_module
         ],
         defaults: [
-          resource_url: "http://localhost:4000/mcp",
           issuer_url: "http://localhost:4000",
           scope: "mcp"
         ]
@@ -99,7 +115,12 @@ if Code.ensure_loaded?(Igniter) do
           |> add_secrets(options)
           |> add_app_config(options)
           |> Ash.Igniter.codegen("add_oauth2_server")
-          |> Igniter.add_notice(post_install_notice(options))
+          |> then(fn igniter ->
+            Igniter.add_notice(
+              igniter,
+              post_install_notice(options, Igniter.Project.Application.app_name(igniter))
+            )
+          end)
 
         {false, igniter} ->
           Igniter.add_issue(igniter, """
@@ -447,6 +468,7 @@ if Code.ensure_loaded?(Igniter) do
     defp add_app_config(igniter, options) do
       otp_app = Igniter.Project.Application.app_name(igniter)
       signing_secret = generate_signing_secret()
+      resource_url = options[:resource_url] || options[:issuer_url]
 
       igniter
       |> Igniter.Project.Config.configure(
@@ -459,7 +481,7 @@ if Code.ensure_loaded?(Igniter) do
         "dev.exs",
         otp_app,
         [:oauth2_resource_url],
-        options[:resource_url]
+        resource_url
       )
       |> Igniter.Project.Config.configure(
         "dev.exs",
@@ -516,31 +538,37 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp post_install_notice(options) do
+    defp post_install_notice(options, otp_app) do
       """
       OAuth 2.1 server scaffolded.
 
-      Wire up the routes by adding these to your Phoenix router:
+      1. Wire the OAuth routes into your Phoenix router (see your existing
+         `:browser` and `:api` pipelines for what to pipe through):
 
-          scope "/" do
-            pipe_through :browser
-            oauth2_server_consent_routes oauth2_server: #{inspect(options[:server_module])}
-          end
+             scope "/" do
+               pipe_through :browser
+               oauth2_server_consent_routes oauth2_server: #{inspect(options[:server_module])}
+             end
 
-          scope "/" do
-            pipe_through :api
-            oauth2_server_protocol_routes oauth2_server: #{inspect(options[:server_module])}
-          end
+             scope "/" do
+               pipe_through :api
+               oauth2_server_protocol_routes oauth2_server: #{inspect(options[:server_module])}
+             end
 
-      And mount your protected resource (e.g., MCP) behind the bearer plug:
+      2. Mount the bearer plug on whatever resource(s) you want
+         OAuth-protected (an API, MCP endpoint, admin tool, etc.):
 
-          pipeline :mcp_protected do
-            plug :accepts, ["json"]
-            plug AshAuthentication.Phoenix.Oauth2Server.BearerPlug,
-              oauth2_server: #{inspect(options[:server_module])}
-          end
+             plug AshAuthentication.Phoenix.Oauth2Server.BearerPlug,
+               oauth2_server: #{inspect(options[:server_module])}
 
-      Then run `mix ecto.migrate` to apply the new tables.
+      3. Run `mix ecto.migrate` to apply the new tables.
+
+      4. For production, set real values in `config/runtime.exs`:
+
+             config :#{otp_app},
+               oauth2_issuer_url: System.get_env("OAUTH2_ISSUER_URL"),
+               oauth2_resource_url: System.get_env("OAUTH2_RESOURCE_URL"),
+               oauth2_signing_secret: System.get_env("OAUTH2_SIGNING_SECRET")
       """
     end
   end

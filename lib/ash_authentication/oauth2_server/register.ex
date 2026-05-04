@@ -104,7 +104,7 @@ defmodule AshAuthentication.Oauth2Server.Register do
   defp response_body(server, client) do
     base = %{
       "client_id" => client.id,
-      "client_id_issued_at" => DateTime.to_unix(client.created_at),
+      "client_id_issued_at" => DateTime.to_unix(client.inserted_at),
       "client_name" => client.client_name,
       "redirect_uris" => client.redirect_uris,
       "grant_types" => client.grant_types,
