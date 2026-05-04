@@ -11,6 +11,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.6](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.5...v5.0.0-rc.6) (2026-05-04)
+
+
+
+
+### Features:
+
+* add Okta authentication strategy (#1163) by Zach Daniel
+
+* add Igniter generator for the WebAuthn strategy (#1160) by James Harton
+
+* add WebAuthn/Passkey authentication strategy (#1159) by James Harton
+
+### Bug Fixes:
+
+* WebAuthn optional dependency compilation (#1162) by Jechol Lee
+
+* use `conn.remote_ip` over peer data for audit log (#1156) by quintinm-dev
+
 ## [v5.0.0-rc.5](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.4...v5.0.0-rc.5) (2026-04-30)
 
 
