@@ -68,6 +68,14 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff(result) =~ "AshAuthentication.Checks.AshAuthenticationInteraction"
   end
 
+  test "credential resource registers Ash.Policy.Authorizer", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", @args)
+
+    assert diff(result) =~ "authorizers: [Ash.Policy.Authorizer]"
+  end
+
   test "adds the has_many :webauthn_credentials relationship to the user", %{igniter: igniter} do
     result =
       igniter

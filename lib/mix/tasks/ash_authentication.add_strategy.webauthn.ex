@@ -258,9 +258,9 @@ if Code.ensure_loaded?(Igniter) do
 
     defp data_layer_extension do
       cond do
-        Code.ensure_loaded?(AshPostgres.DataLayer) -> "postgres"
-        Code.ensure_loaded?(AshSqlite.DataLayer) -> "sqlite"
-        true -> ""
+        Code.ensure_loaded?(AshPostgres.DataLayer) -> "Ash.Policy.Authorizer,postgres"
+        Code.ensure_loaded?(AshSqlite.DataLayer) -> "Ash.Policy.Authorizer,sqlite"
+        true -> "Ash.Policy.Authorizer"
       end
     end
   end
