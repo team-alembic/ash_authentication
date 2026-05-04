@@ -386,6 +386,7 @@ if Code.ensure_loaded?(Igniter) do
         upsert? true
         upsert_identity :by_user_client
         accept [:user_id, :client_id, :scope]
+        change set_attribute(:granted_at, &DateTime.utc_now/0)
       end
       """)
       |> Ash.Resource.Igniter.add_new_identity(mod, :by_user_client, """
@@ -555,15 +556,25 @@ if Code.ensure_loaded?(Igniter) do
                oauth2_server_protocol_routes oauth2_server: #{inspect(options[:server_module])}
              end
 
-      2. Mount the bearer plug on whatever resource(s) you want
+      2. Make sure your `:browser` pipeline sets the actor. The consent
+         endpoint uses `Ash.PlugHelpers.get_actor/1` to figure out who's
+         consenting, so the pipeline needs the standard pair:
+
+             plug :load_from_session
+             plug :set_actor, :user
+
+         If the actor isn't set, signed-in users will get bounced through
+         the sign-in flow as if they weren't logged in.
+
+      3. Mount the bearer plug on whatever resource(s) you want
          OAuth-protected (an API, MCP endpoint, admin tool, etc.):
 
              plug AshAuthentication.Phoenix.Oauth2Server.BearerPlug,
                oauth2_server: #{inspect(options[:server_module])}
 
-      3. Run `mix ecto.migrate` to apply the new tables.
+      4. Run `mix ecto.migrate` to apply the new tables.
 
-      4. For production, set real values in `config/runtime.exs`:
+      5. For production, set real values in `config/runtime.exs`:
 
              config :#{otp_app},
                oauth2_issuer_url: System.get_env("OAUTH2_ISSUER_URL"),
