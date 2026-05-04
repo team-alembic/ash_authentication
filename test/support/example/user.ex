@@ -146,6 +146,17 @@ defmodule Example.User do
       change AshAuthentication.Strategy.OAuth2.IdentityChange
     end
 
+    create :register_with_sso do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.DynamicOidc.IdentityChange
+    end
+
     read :sign_in_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
@@ -343,6 +354,12 @@ defmodule Example.User do
         redirect_uri &get_config/2
         base_url &get_config/2
         identity_resource Example.UserIdentity
+      end
+
+      dynamic_oidc :sso do
+        connection_resource Example.OidcConnection
+        identity_resource Example.UserIdentity
+        redirect_uri "http://localhost:4000/auth"
       end
 
       slack do

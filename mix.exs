@@ -92,6 +92,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Apple)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Auth0.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Auth0)},
+        {"documentation/dsls/DSL-AshAuthentication.Strategy.DynamicOidc.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.DynamicOidc)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Github.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Github)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Google.md",
@@ -116,6 +118,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Slack)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.Totp.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Totp)},
+        {"documentation/dsls/DSL-AshAuthentication.OidcConnection.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.OidcConnection)},
         {"documentation/dsls/DSL-AshAuthentication.TokenResource.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.TokenResource)},
         {"documentation/dsls/DSL-AshAuthentication.UserIdentity.md",
@@ -181,6 +185,7 @@ defmodule AshAuthentication.MixProject do
       groups_for_modules: [
         Extensions: [
           AshAuthentication,
+          AshAuthentication.OidcConnection,
           AshAuthentication.TokenResource,
           AshAuthentication.UserIdentity
         ],
@@ -191,6 +196,7 @@ defmodule AshAuthentication.MixProject do
           AshAuthentication.Strategy.Apple,
           AshAuthentication.Strategy.Auth0,
           AshAuthentication.Strategy.Custom,
+          AshAuthentication.Strategy.DynamicOidc,
           AshAuthentication.Strategy.Github,
           AshAuthentication.Strategy.Google,
           AshAuthentication.Strategy.Microsoft,
@@ -208,6 +214,7 @@ defmodule AshAuthentication.MixProject do
         ],
         Introspection: [
           AshAuthentication.Info,
+          AshAuthentication.OidcConnection.Info,
           AshAuthentication.TokenResource.Info,
           AshAuthentication.UserIdentity.Info
         ],
@@ -286,6 +293,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.ApiKey",
       "AshAuthentication.Strategy.Apple",
       "AshAuthentication.Strategy.Auth0",
+      "AshAuthentication.Strategy.DynamicOidc",
       "AshAuthentication.Strategy.Github",
       "AshAuthentication.Strategy.Google",
       "AshAuthentication.Strategy.MagicLink",
@@ -299,6 +307,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.RememberMe",
       "AshAuthentication.Strategy.Slack",
       "AshAuthentication.Strategy.Totp",
+      "AshAuthentication.OidcConnection",
       "AshAuthentication.TokenResource",
       "AshAuthentication.UserIdentity"
     ]
