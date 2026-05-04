@@ -89,6 +89,21 @@ defmodule ExampleMultiTenant.User do
       change(AshAuthentication.Strategy.OAuth2.IdentityChange)
     end
 
+    create :register_with_okta do
+      argument(:user_info, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false)
+      upsert?(true)
+      upsert_identity(:username)
+
+      change(AshAuthentication.GenerateTokenChange)
+
+      change(
+        {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [nickname: :username]}
+      )
+
+      change(AshAuthentication.Strategy.OAuth2.IdentityChange)
+    end
+
     read :sign_in_with_oauth2 do
       argument(:user_info, :map, allow_nil?: false)
       argument(:oauth_tokens, :map, allow_nil?: false)
@@ -259,6 +274,14 @@ defmodule ExampleMultiTenant.User do
         redirect_uri &get_config/2
         base_url &get_config/2
         trusted_audiences &get_config/2
+      end
+
+      okta do
+        client_id &get_config/2
+        client_secret &get_config/2
+        redirect_uri &get_config/2
+        base_url &get_config/2
+        identity_resource ExampleMultiTenant.UserIdentity
       end
 
       slack do

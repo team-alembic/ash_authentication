@@ -70,6 +70,7 @@ defmodule AshAuthentication do
        - `AshAuthentication.Strategy.Google`
        - `AshAuthentication.Strategy.Microsoft`
        - `AshAuthentication.Strategy.Oidc`
+       - `AshAuthentication.Strategy.Okta`
        - `AshAuthentication.Strategy.Slack`
   3. `AshAuthentication.Strategy.MagicLink`
      - authenticate by sending a single-use link to the user.
@@ -150,6 +151,7 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.Microsoft,
     AshAuthentication.Strategy.OAuth2,
     AshAuthentication.Strategy.Oidc,
+    AshAuthentication.Strategy.Okta,
     AshAuthentication.Strategy.Otp,
     AshAuthentication.Strategy.Password,
     AshAuthentication.Strategy.RecoveryCode,
