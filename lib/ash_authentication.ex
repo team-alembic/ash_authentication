@@ -145,6 +145,7 @@ defmodule AshAuthentication do
     AshAuthentication.Strategy.ApiKey,
     AshAuthentication.Strategy.Apple,
     AshAuthentication.Strategy.Auth0,
+    AshAuthentication.Strategy.DynamicOidc,
     AshAuthentication.Strategy.Github,
     AshAuthentication.Strategy.Google,
     AshAuthentication.Strategy.MagicLink,
