@@ -16,11 +16,34 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   @doc false
   @spec verify(WebAuthn.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
-    with :ok <- validate_rp_id(strategy),
+    with :ok <- validate_wax_dependency(),
+         :ok <- validate_rp_id(strategy),
          :ok <- validate_credential_resource(strategy),
          :ok <- validate_credentials_relationship(strategy, dsl_state),
          :ok <- validate_credential_resource_shape(strategy) do
       validate_tokens_enabled(dsl_state)
+    end
+  end
+
+  defp validate_wax_dependency do
+    if Code.ensure_loaded?(Wax) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies, :webauthn],
+         message: """
+         The WebAuthn strategy requires the optional `:wax_` dependency.
+
+         Add it to your dependencies:
+
+             {:wax_, "~> 0.7"}
+
+         If `ash_authentication` was already compiled without `:wax_`, recompile it:
+
+             mix deps.compile ash_authentication --force
+         """
+       )}
     end
   end
 
