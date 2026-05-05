@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-# sobelow_skip ["DOS.BinToAtom"]
 defmodule AshAuthentication.Strategy.DynamicOidc.IdentityChange do
   @moduledoc """
   Updates the identity resource when a user is registered through a
@@ -40,6 +39,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc.IdentityChange do
 
   defp do_change(changeset, strategy) when is_falsy(strategy.identity_resource), do: changeset
 
+  # sobelow_skip ["DOS.BinToAtom"]
   defp do_change(changeset, strategy) do
     Changeset.after_action(changeset, fn changeset, user ->
       with {:ok, user_id_attribute_name} <-
