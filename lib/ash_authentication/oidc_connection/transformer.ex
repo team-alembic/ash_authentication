@@ -79,12 +79,10 @@ defmodule AshAuthentication.OidcConnection.Transformer do
              public?: true
            ),
          {:ok, read_action_name} <-
-           OidcConnection.Info.oidc_connection_read_action_name(dsl_state),
-         {:ok, dsl_state} <-
-           maybe_build_action(dsl_state, read_action_name, fn _ ->
-             build_read_action(read_action_name)
-           end) do
-      {:ok, dsl_state}
+           OidcConnection.Info.oidc_connection_read_action_name(dsl_state) do
+      maybe_build_action(dsl_state, read_action_name, fn _ ->
+        build_read_action(read_action_name)
+      end)
     end
   end
 

@@ -72,6 +72,11 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.DynamicOidc 
   def plug(strategy, :request, conn), do: DynamicOidc.Plug.request(conn, strategy)
   def plug(strategy, :callback, conn), do: DynamicOidc.Plug.callback(conn, strategy)
 
+  # The OAuth2.Actions functions are typespec'd against `OAuth2.t()`, but
+  # work fine on the populated DynamicOidc struct since the runtime
+  # behaviour only touches shared fields.
+  @dialyzer {:nowarn_function, [action: 4]}
+
   @doc """
   Perform actions.
   """

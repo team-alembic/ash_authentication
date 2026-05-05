@@ -27,8 +27,7 @@ if Code.ensure_loaded?(Igniter) do
       slack: "Sign in with Slack.",
       oidc: "Sign in with a generic OpenID Connect provider.",
       oauth2: "Sign in with a generic OAuth2 provider.",
-      dynamic_oidc:
-        "Sign in with database-driven OIDC connections (B2B/multi-tenant SSO).",
+      dynamic_oidc: "Sign in with database-driven OIDC connections (B2B/multi-tenant SSO).",
       webauthn: "Sign in with a WebAuthn/Passkey credential."
     ]
 

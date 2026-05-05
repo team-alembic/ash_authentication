@@ -91,6 +91,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
   # value at request time. Compile-time DSL fills in the static config;
   # the plug fills in `base_url`, `client_id`, `client_secret` from the
   # matched connection row.
+  # credo:disable-for-next-line Credo.Check.Warning.StructFieldAmount
   defstruct assent_strategy: Assent.Strategy.OIDC,
             auth_method: nil,
             authorization_params: [],

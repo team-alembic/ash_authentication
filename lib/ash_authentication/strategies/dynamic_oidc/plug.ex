@@ -17,11 +17,18 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
       again, populates the strategy, and runs the standard callback flow.
   """
 
-  alias AshAuthentication.{Errors, OidcConnection, Strategy.DynamicOidc, Strategy.OAuth2}
+  alias Ash.Error.Framework.AssumptionFailed
+  alias AshAuthentication.{Errors, Info, OidcConnection, Strategy.DynamicOidc, Strategy.OAuth2}
   alias Plug.Conn
+  alias Spark.Dsl.Extension
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   import Plug.Conn
+
+  # The OAuth2 plug typespecs an `OAuth2.t()` strategy, but the runtime
+  # behaviour only accesses fields shared between OAuth2 and DynamicOidc.
+  # Suppress the static type mismatch — runtime is correct.
+  @dialyzer {:nowarn_function, [request: 2, callback: 2]}
 
   @doc """
   Initiate sign-in for the connection identified in the request path.
@@ -80,9 +87,8 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
   end
 
   defp populate_strategy(strategy, connection_id, conn) do
-    with {:ok, connection} <- load_connection(strategy, connection_id, conn),
-         {:ok, populated} <- merge_connection_into_strategy(strategy, connection) do
-      {:ok, populated}
+    with {:ok, connection} <- load_connection(strategy, connection_id, conn) do
+      merge_connection_into_strategy(strategy, connection)
     end
   end
 
@@ -115,7 +121,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
   end
 
   defp field_names(strategy) do
-    dsl_state = Spark.Dsl.Extension.get_persisted(strategy.connection_resource, :spark_dsl_config)
+    dsl_state = Extension.get_persisted(strategy.connection_resource, :spark_dsl_config)
 
     [
       OidcConnection.Info.oidc_connection_base_url_field!(dsl_state),
@@ -125,7 +131,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
   end
 
   defp merge_connection_into_strategy(strategy, connection) do
-    dsl_state = Spark.Dsl.Extension.get_persisted(strategy.connection_resource, :spark_dsl_config)
+    dsl_state = Extension.get_persisted(strategy.connection_resource, :spark_dsl_config)
 
     base_url_field = OidcConnection.Info.oidc_connection_base_url_field!(dsl_state)
     client_id_field = OidcConnection.Info.oidc_connection_client_id_field!(dsl_state)
@@ -142,13 +148,13 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
   end
 
   defp connection_session_key(strategy) do
-    case AshAuthentication.Info.authentication_subject_name(strategy.resource) do
+    case Info.authentication_subject_name(strategy.resource) do
       {:ok, subject_name} ->
         {:ok, "#{subject_name}/#{strategy.name}/connection_id"}
 
       :error ->
         {:error,
-         Ash.Error.Framework.AssumptionFailed.exception(
+         AssumptionFailed.exception(
            message: "Resource `#{inspect(strategy.resource)}` has no subject name"
          )}
     end
