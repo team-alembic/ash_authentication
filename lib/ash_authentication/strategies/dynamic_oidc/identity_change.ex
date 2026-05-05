@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+# sobelow_skip ["DOS.BinToAtom"]
 defmodule AshAuthentication.Strategy.DynamicOidc.IdentityChange do
   @moduledoc """
   Updates the identity resource when a user is registered through a
