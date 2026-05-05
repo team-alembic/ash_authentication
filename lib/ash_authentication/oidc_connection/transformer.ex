@@ -91,9 +91,9 @@ defmodule AshAuthentication.OidcConnection.Transformer do
   # build the default string attribute for it. Users can replace the
   # auto-built attribute by defining one of those themselves — e.g. a
   # calculation that decrypts an encrypted column on load.
-  # sobelow_skip ["DOS.BinToAtom"]
   defp maybe_build_field(dsl_state, dsl_key, type, opts) do
-    {:ok, field_name} = apply(OidcConnection.Info, :"oidc_connection_#{dsl_key}", [dsl_state])
+    info_function = String.to_existing_atom("oidc_connection_#{dsl_key}")
+    {:ok, field_name} = apply(OidcConnection.Info, info_function, [dsl_state])
 
     cond do
       is_nil(field_name) -> {:ok, dsl_state}

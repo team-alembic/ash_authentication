@@ -39,18 +39,19 @@ defmodule AshAuthentication.Strategy.DynamicOidc.IdentityChange do
 
   defp do_change(changeset, strategy) when is_falsy(strategy.identity_resource), do: changeset
 
-  # sobelow_skip ["DOS.BinToAtom"]
   defp do_change(changeset, strategy) do
     Changeset.after_action(changeset, fn changeset, user ->
       with {:ok, user_id_attribute_name} <-
              UserIdentity.Info.user_identity_user_id_attribute_name(strategy.identity_resource),
-           {:ok, _identity} <-
-             UserIdentity.Actions.upsert(strategy.identity_resource, %{
+           attrs <-
+             %{
                user_info: Changeset.get_argument(changeset, :user_info),
                oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens),
-               strategy: namespaced_strategy_name(strategy),
-               "#{user_id_attribute_name}": user.id
-             }) do
+               strategy: namespaced_strategy_name(strategy)
+             }
+             |> Map.put(user_id_attribute_name, user.id),
+           {:ok, _identity} <-
+             UserIdentity.Actions.upsert(strategy.identity_resource, attrs) do
         user
         |> Ash.load(
           [
