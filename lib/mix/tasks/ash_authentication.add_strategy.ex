@@ -116,10 +116,7 @@ if Code.ensure_loaded?(Igniter) do
           authorize_url: :string,
           token_url: :string,
           user_url: :string,
-          team_id: :string,
-          rp_id: :string,
-          rp_name: :string,
-          origin: :string
+          team_id: :string
         ],
         aliases: [
           a: :accounts,

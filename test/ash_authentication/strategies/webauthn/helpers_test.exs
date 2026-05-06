@@ -37,6 +37,46 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
     end
   end
 
+  describe "Secret module resolution" do
+    defmodule TestSecrets do
+      use AshAuthentication.Secret
+
+      def secret_for([:authentication, :strategies, :webauthn, :rp_id], _, _, _),
+        do: {:ok, "secret.example.com"}
+
+      def secret_for([:authentication, :strategies, :webauthn, :rp_name], _, _, _),
+        do: {:ok, "Secret App"}
+
+      def secret_for([:authentication, :strategies, :webauthn, :origin], _, _, _),
+        do: {:ok, "https://secret.example.com:4001"}
+
+      def secret_for(_, _, _, _), do: :error
+    end
+
+    test "resolve_rp_id reads from a Secret module" do
+      strategy = %WebAuthn{name: :webauthn, resource: __MODULE__, rp_id: {TestSecrets, []}}
+      assert "secret.example.com" = Helpers.resolve_rp_id(strategy, nil)
+    end
+
+    test "resolve_rp_name reads from a Secret module" do
+      strategy = %WebAuthn{name: :webauthn, resource: __MODULE__, rp_name: {TestSecrets, []}}
+      assert "Secret App" = Helpers.resolve_rp_name(strategy, nil)
+    end
+
+    test "resolve_origin reads from a Secret module" do
+      strategy = %WebAuthn{name: :webauthn, resource: __MODULE__, origin: {TestSecrets, []}}
+      assert "https://secret.example.com:4001" = Helpers.resolve_origin(strategy, nil)
+    end
+
+    test "raises when the Secret module returns :error" do
+      strategy = %WebAuthn{name: :other, resource: __MODULE__, rp_id: {TestSecrets, []}}
+
+      assert_raise RuntimeError, ~r/returned `:error`/, fn ->
+        Helpers.resolve_rp_id(strategy, nil)
+      end
+    end
+  end
+
   describe "wax_opts/2" do
     test "builds Wax options from strategy" do
       strategy = %WebAuthn{

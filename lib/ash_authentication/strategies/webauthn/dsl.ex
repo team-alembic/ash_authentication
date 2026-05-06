@@ -49,7 +49,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             {:or,
              [
                :string,
-               {:mfa_or_fun, 1}
+               {:mfa_or_fun, 1},
+               {:spark_function_behaviour, AshAuthentication.Secret,
+                {AshAuthentication.SecretFunction, 2}}
              ]},
           doc: """
           Relying Party ID - your domain name (e.g. "example.com").
@@ -58,6 +60,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           receives the tenant and returns the domain string:
 
               rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []}
+
+          For application-environment-driven configuration, point at a module
+          implementing `AshAuthentication.Secret`:
+
+              rp_id MyApp.Secrets
           """,
           required: true
         ],
@@ -66,7 +73,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             {:or,
              [
                :string,
-               {:mfa_or_fun, 1}
+               {:mfa_or_fun, 1},
+               {:spark_function_behaviour, AshAuthentication.Secret,
+                {AshAuthentication.SecretFunction, 2}}
              ]},
           doc: """
           Relying Party display name shown to the user during registration.
@@ -74,6 +83,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           For multi-tenant setups, pass an MFA tuple or 1-arity function:
 
               rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []}
+
+          For application-environment-driven configuration, point at a module
+          implementing `AshAuthentication.Secret`:
+
+              rp_name MyApp.Secrets
           """,
           required: true
         ],
@@ -82,7 +96,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             {:or,
              [
                :string,
-               {:mfa_or_fun, 1}
+               {:mfa_or_fun, 1},
+               {:spark_function_behaviour, AshAuthentication.Secret,
+                {AshAuthentication.SecretFunction, 2}}
              ]},
           doc: """
           The expected origin for WebAuthn ceremonies.
@@ -108,6 +124,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           **Dynamic (multi-tenant):**
 
               origin {MyApp.WebAuthn, :origin_for_tenant, []}
+
+          **Application-environment-driven:**
+
+              origin MyApp.Secrets
           """,
           required: false
         ],
