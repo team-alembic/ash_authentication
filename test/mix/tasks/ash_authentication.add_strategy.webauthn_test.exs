@@ -157,4 +157,18 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff =~ ~s|webauthn_rp_name: System.get_env("WEBAUTHN_RP_NAME")|
     assert diff =~ ~s|webauthn_origin: System.get_env("WEBAUTHN_ORIGIN")|
   end
+
+  test "drops `allow_nil? false` from hashed_password when password is also installed",
+       %{igniter: igniter} do
+    igniter
+    |> Igniter.compose_task("ash_authentication.add_strategy", ["password"])
+    |> apply_igniter!()
+    |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+    |> assert_has_patch("lib/test/accounts/user.ex", """
+      |    attribute :hashed_password, :string do
+    - |      allow_nil?(false)
+      |      sensitive?(true)
+      |    end
+    """)
+  end
 end

@@ -20,8 +20,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
          :ok <- validate_rp_id(strategy),
          :ok <- validate_credential_resource(strategy),
          :ok <- validate_credentials_relationship(strategy, dsl_state),
-         :ok <- validate_credential_resource_shape(strategy) do
-      validate_tokens_enabled(dsl_state)
+         :ok <- validate_credential_resource_shape(strategy),
+         :ok <- validate_tokens_enabled(dsl_state) do
+      validate_hashed_password_optional(strategy, dsl_state)
     end
   end
 
@@ -215,6 +216,36 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
              end
          """
        )}
+    end
+  end
+
+  # WebAuthn registration creates a user without a password, so when the
+  # password strategy also exists on the same resource, `hashed_password` must
+  # be nil-able. Surface the conflict at compile time instead of at the first
+  # registration attempt.
+  defp validate_hashed_password_optional(strategy, dsl_state) do
+    with true <- strategy.registration_enabled?,
+         true <- AshAuthentication.Info.strategy_enabled?(dsl_state, :password),
+         %{allow_nil?: false} <- ResourceInfo.attribute(dsl_state, :hashed_password) do
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies, strategy.name],
+         message: """
+         The `:hashed_password` attribute is `allow_nil? false`, but the WebAuthn
+         strategy registers users without a password. Both strategies can coexist
+         on the same resource only if `:hashed_password` is nil-able.
+
+         Update the attribute on `#{inspect(strategy.resource)}`:
+
+             attribute :hashed_password, :string do
+               sensitive? true
+             end
+
+         (i.e. drop the `allow_nil? false` line — the default is `true`.)
+         """
+       )}
+    else
+      _ -> :ok
     end
   end
 end
