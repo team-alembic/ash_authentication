@@ -253,6 +253,7 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   """
 
   defstruct name: nil,
+            provider: :webauthn,
             resource: nil,
             credential_resource: nil,
             rp_id: nil,
@@ -288,6 +289,7 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
   @type t :: %WebAuthn{
           name: atom,
+          provider: :webauthn,
           resource: module,
           credential_resource: module,
           rp_id: String.t() | {module, atom, list} | {module, keyword},
