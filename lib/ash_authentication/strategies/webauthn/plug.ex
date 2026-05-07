@@ -128,6 +128,15 @@ if Code.ensure_loaded?(Wax.Challenge) do
       |> Conn.send_resp(200, Jason.encode!(response))
     end
 
+    @doc "Exchange a short-lived sign-in token for an authenticated session."
+    @spec sign_in_with_token(Conn.t(), WebAuthn.t()) :: Conn.t()
+    def sign_in_with_token(conn, strategy) do
+      params = conn.params
+      opts = opts(conn)
+      result = Strategy.action(strategy, :sign_in_with_token, params, opts)
+      store_authentication_result(conn, result)
+    end
+
     @doc "Handle an authentication request."
     @spec sign_in(Conn.t(), WebAuthn.t()) :: Conn.t()
     def sign_in(conn, strategy) do
@@ -347,6 +356,9 @@ else
 
     def sign_in(conn, strategy),
       do: missing_wax_dependency(conn, strategy, :sign_in)
+
+    def sign_in_with_token(conn, strategy),
+      do: missing_wax_dependency(conn, strategy, :sign_in_with_token)
 
     def add_credential_challenge(conn, strategy),
       do: missing_wax_dependency(conn, strategy, :add_credential_challenge)

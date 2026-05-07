@@ -221,6 +221,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "The name of the sign-in action on the user resource. Defaults to `sign_in_with_<strategy_name>`.",
           required: false
         ],
+        sign_in_with_token_action_name: [
+          type: :atom,
+          doc:
+            "The name of the action used to sign in with a short-lived token issued by a successful WebAuthn ceremony. Defaults to `sign_in_with_<strategy_name>_token`.",
+          required: false
+        ],
         store_credential_action_name: [
           type: :atom,
           doc:

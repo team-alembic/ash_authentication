@@ -15,6 +15,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
           | :register
           | :authentication_challenge
           | :sign_in
+          | :sign_in_with_token
           | :add_credential_challenge
           | :add_credential
 
@@ -25,7 +26,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   @doc false
   @spec phases(WebAuthn.t()) :: [phase]
   def phases(strategy) do
-    auth_phases = [:authentication_challenge, :sign_in]
+    auth_phases = [:authentication_challenge, :sign_in, :sign_in_with_token]
     add_phases = [:add_credential_challenge, :add_credential]
 
     if strategy.registration_enabled? do
@@ -39,9 +40,9 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   @spec actions(WebAuthn.t()) :: [atom]
   def actions(strategy) do
     if strategy.registration_enabled? do
-      [:register, :sign_in, :add_credential]
+      [:register, :sign_in, :sign_in_with_token, :add_credential]
     else
-      [:sign_in, :add_credential]
+      [:sign_in, :sign_in_with_token, :add_credential]
     end
   end
 
@@ -52,6 +53,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   def method_for_phase(_, :add_credential_challenge), do: :get
   def method_for_phase(_, :register), do: :post
   def method_for_phase(_, :sign_in), do: :post
+  def method_for_phase(_, :sign_in_with_token), do: :post
   def method_for_phase(_, :add_credential), do: :post
 
   @doc false
@@ -85,6 +87,9 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   def plug(strategy, :sign_in, conn),
     do: WebAuthn.Plug.sign_in(conn, strategy)
 
+  def plug(strategy, :sign_in_with_token, conn),
+    do: WebAuthn.Plug.sign_in_with_token(conn, strategy)
+
   def plug(strategy, :add_credential_challenge, conn),
     do: WebAuthn.Plug.add_credential_challenge(conn, strategy)
 
@@ -98,6 +103,9 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
 
   def action(strategy, :sign_in, params, options),
     do: WebAuthn.Actions.sign_in(strategy, params, options)
+
+  def action(strategy, :sign_in_with_token, params, options),
+    do: WebAuthn.Actions.sign_in_with_token(strategy, params, options)
 
   def action(strategy, :add_credential, params, options),
     do: WebAuthn.Actions.add_credential(strategy, params, options)

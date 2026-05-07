@@ -100,6 +100,60 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       end
     end
 
+    @doc """
+    Sign in a user using a short-lived sign-in token issued by a successful
+    WebAuthn ceremony.
+
+    The token is verified, the matching user is loaded, and a fresh
+    authentication token is placed in `user.__metadata__.token` for use as a
+    session credential.
+    """
+    @spec sign_in_with_token(WebAuthn.t(), map, keyword) ::
+            {:ok, Ash.Resource.record()} | {:error, any}
+    def sign_in_with_token(strategy, params, opts \\ []) do
+      opts =
+        opts
+        |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
+        |> Keyword.put_new(:skip_unknown_inputs, [:*])
+
+      strategy.resource
+      |> Query.new()
+      |> Query.set_context(%{private: %{ash_authentication?: true}})
+      |> Query.for_read(strategy.sign_in_with_token_action_name, params, opts)
+      |> Ash.read()
+      |> case do
+        {:ok, [user]} ->
+          {:ok, user}
+
+        {:error, error} when is_struct(error, AuthenticationFailed) ->
+          {:error, error}
+
+        {:error, error} when is_exception(error) ->
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             caused_by: %{
+               module: __MODULE__,
+               strategy: strategy,
+               action: strategy.sign_in_with_token_action_name,
+               message: Exception.message(error)
+             }
+           )}
+
+        {:error, reason} ->
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             caused_by: %{
+               module: __MODULE__,
+               strategy: strategy,
+               action: strategy.sign_in_with_token_action_name,
+               message: reason
+             }
+           )}
+      end
+    end
+
     @doc "Sign in a user with a WebAuthn credential."
     @spec sign_in(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.record()} | {:error, any}
     def sign_in(strategy, params, opts \\ []) do
@@ -457,6 +511,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     def register(strategy, _params, _opts \\ []),
       do: missing_wax_dependency(strategy, :register)
+
+    def sign_in_with_token(strategy, _params, _opts \\ []),
+      do: missing_wax_dependency(strategy, :sign_in_with_token)
 
     def sign_in(strategy, _params, _opts \\ []),
       do: missing_wax_dependency(strategy, :sign_in)
