@@ -105,20 +105,35 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInWithTokenPreparation do
   defp verify_result(query, [user], _strategy, context) do
     extra_claims = query.context[:extra_token_claims] || %{}
 
-    claims =
+    inherited =
       query.context
       |> Map.get(:token_claims, %{})
-      |> Map.take(["tenant"])
-      |> Map.merge(extra_claims)
+      |> Map.take(["tenant", "webauthn_verified_at"])
+
+    claims = Map.merge(inherited, extra_claims)
 
     case Jwt.token_for_user(user, claims, Ash.Context.to_opts(context)) do
       {:ok, token, _claims} ->
-        {:ok, [Resource.put_metadata(user, :token, token)]}
+        user =
+          user
+          |> Resource.put_metadata(:token, token)
+          |> maybe_put_webauthn_verified_at_metadata(inherited)
+
+        {:ok, [user]}
 
       {:error, error} ->
         {:error, error}
     end
   end
+
+  defp maybe_put_webauthn_verified_at_metadata(user, %{"webauthn_verified_at" => iso}) do
+    case DateTime.from_iso8601(iso) do
+      {:ok, dt, _} -> Resource.put_metadata(user, :webauthn_verified_at, dt)
+      _ -> user
+    end
+  end
+
+  defp maybe_put_webauthn_verified_at_metadata(user, _), do: user
 
   defp verify_result(query, [], strategy, _context),
     do: no_users_returned(query, strategy)
