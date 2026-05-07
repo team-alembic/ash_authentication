@@ -252,8 +252,6 @@ if Code.ensure_loaded?(Igniter) do
       otp_app = Igniter.Project.Application.app_name(igniter)
       strategy_name = options[:name]
       rp_name_default = humanise_app_name(otp_app)
-      {igniter, dev_origin} = origin_for_env(igniter, "dev.exs")
-      {igniter, test_origin} = origin_for_env(igniter, "test.exs")
 
       igniter
       |> AshAuthentication.Igniter.add_new_secret_from_env(
@@ -290,7 +288,7 @@ if Code.ensure_loaded?(Igniter) do
         "dev.exs",
         otp_app,
         [:webauthn_origin],
-        dev_origin
+        "http://localhost:4000"
       )
       |> Igniter.Project.Config.configure_new(
         "test.exs",
@@ -308,7 +306,7 @@ if Code.ensure_loaded?(Igniter) do
         "test.exs",
         otp_app,
         [:webauthn_origin],
-        test_origin
+        "http://localhost:4000"
       )
       |> Igniter.Project.Config.configure_runtime_env(
         :prod,
@@ -339,44 +337,6 @@ if Code.ensure_loaded?(Igniter) do
       |> Atom.to_string()
       |> String.split("_")
       |> Enum.map_join(" ", &String.capitalize/1)
-    end
-
-    defp origin_for_env(igniter, file_name) do
-      {igniter, port} = endpoint_port(igniter, file_name)
-      {igniter, "http://localhost:#{port}"}
-    end
-
-    defp endpoint_port(igniter, file_name) do
-      path = Path.join("config", file_name)
-      igniter = Igniter.include_existing_file(igniter, path)
-
-      port =
-        case Rewrite.source(igniter.rewrite, path) do
-          {:ok, source} ->
-            content = Rewrite.Source.get(source, :content)
-            extract_endpoint_port(content, igniter)
-
-          _ ->
-            nil
-        end
-
-      {igniter, port || 4000}
-    end
-
-    defp extract_endpoint_port(content, igniter) do
-      endpoint =
-        case Igniter.Libs.Phoenix.web_module(igniter) do
-          nil -> nil
-          web_module -> Module.concat(web_module, Endpoint)
-        end
-
-      with endpoint when not is_nil(endpoint) <- endpoint,
-           pattern = ~r/#{Regex.escape(inspect(endpoint))},.*?port:\s*(\d+)/s,
-           [_, port] <- Regex.run(pattern, content) do
-        String.to_integer(port)
-      else
-        _ -> nil
-      end
     end
 
     defp data_layer_extension do
