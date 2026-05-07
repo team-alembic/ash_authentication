@@ -34,6 +34,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
              &:"sign_in_with_#{&1.name}_token"
            ),
          strategy <-
+           maybe_set_field_lazy(strategy, :verify_action_name, &:"verify_#{&1.name}"),
+         strategy <-
            maybe_set_field_lazy(
              strategy,
              :store_credential_action_name,
@@ -91,6 +93,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
              strategy.sign_in_with_token_action_name,
              &build_sign_in_with_token_action(&1, strategy)
            ),
+         {:ok, dsl_state} <-
+           (if strategy.verify_enabled? do
+              maybe_build_action(
+                dsl_state,
+                strategy.verify_action_name,
+                &build_verify_action(&1, strategy)
+              )
+            else
+              {:ok, dsl_state}
+            end),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
       strategy = %{strategy | resource: resource}
 
@@ -114,6 +126,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
     actions =
       if strategy.registration_enabled?,
         do: [strategy.register_action_name | actions],
+        else: actions
+
+    actions =
+      if strategy.verify_enabled?,
+        do: [strategy.verify_action_name | actions],
         else: actions
 
     actions
@@ -229,6 +246,60 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
       metadata: metadata,
       get?: true,
       description: "Sign in a user with a WebAuthn credential."
+    )
+  end
+
+  defp build_verify_action(_dsl_state, strategy) do
+    arguments = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :raw_id,
+        type: :string,
+        allow_nil?: false,
+        description: "The base64url-encoded credential id from the assertion."
+      ),
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :authenticator_data,
+        type: :string,
+        allow_nil?: false,
+        description: "The base64url-encoded authenticator data from the assertion."
+      ),
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :signature,
+        type: :string,
+        allow_nil?: false,
+        description: "The base64url-encoded signature from the assertion."
+      ),
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+        name: :client_data_json,
+        type: :string,
+        allow_nil?: false,
+        description: "The base64url-encoded client data JSON from the assertion."
+      )
+    ]
+
+    metadata = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
+        name: :webauthn_verified_at,
+        type: :utc_datetime_usec,
+        allow_nil?: false,
+        description: "The instant at which the second-factor verification succeeded."
+      ),
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :metadata,
+        name: :token,
+        type: :string,
+        allow_nil?: true,
+        description:
+          "A fresh JWT containing the `webauthn_verified_at` claim, when tokens are enabled."
+      )
+    ]
+
+    Transformer.build_entity(Resource.Dsl, [:actions], :read,
+      name: strategy.verify_action_name,
+      arguments: arguments,
+      metadata: metadata,
+      get?: true,
+      description:
+        "Verify a WebAuthn assertion as a second factor for the currently authenticated user."
     )
   end
 

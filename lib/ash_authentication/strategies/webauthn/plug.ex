@@ -156,6 +156,84 @@ if Code.ensure_loaded?(Wax.Challenge) do
     end
 
     @doc """
+    Generate and return a verification (second-factor) challenge.
+
+    Requires an authenticated actor on the connection. The actor's existing
+    credentials are listed as `allow_credentials` so the browser only offers
+    those.
+    """
+    @spec verify_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
+    def verify_challenge(conn, strategy) do
+      case get_actor(conn) do
+        nil ->
+          store_authentication_result(conn, unauthenticated_error(strategy, :verify_challenge))
+
+        actor ->
+          tenant = get_tenant(conn)
+          allow_credentials = lookup_actor_credentials(strategy, actor, tenant)
+
+          {:ok, challenge} =
+            WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
+              origin: origin_from_conn(conn)
+            )
+
+          response = %{
+            challenge: Base.url_encode64(challenge.bytes, padding: false),
+            rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
+            userVerification: strategy.user_verification,
+            timeout: strategy.timeout,
+            allowCredentials:
+              Enum.map(allow_credentials, fn {cred_id, _key} ->
+                %{id: Base.url_encode64(cred_id, padding: false), type: "public-key"}
+              end)
+          }
+
+          challenge_data = %{
+            bytes: Base.encode64(challenge.bytes),
+            type: challenge.type,
+            origin: challenge.origin,
+            rp_id: challenge.rp_id,
+            allow_credentials:
+              Enum.map(allow_credentials, fn {cred_id, cose_key} ->
+                {Base.encode64(cred_id), cose_key}
+              end),
+            issued_at: challenge.issued_at
+          }
+
+          conn
+          |> Conn.put_session(@session_key, challenge_data)
+          |> Conn.put_resp_content_type("application/json")
+          |> Conn.send_resp(200, Jason.encode!(response))
+      end
+    end
+
+    @doc """
+    Handle a second-factor verify request — confirm that the assertion was
+    signed by one of the authenticated actor's credentials. On success the
+    actor's `:webauthn_verified_at` metadata is stamped and a fresh token
+    carrying the same value as a JWT claim is issued.
+    """
+    @spec verify(Conn.t(), WebAuthn.t()) :: Conn.t()
+    def verify(conn, strategy) do
+      with actor when not is_nil(actor) <- get_actor(conn),
+           %Wax.Challenge{} = challenge <- reconstruct_challenge(conn, :authentication, strategy) do
+        conn = Conn.delete_session(conn, @session_key)
+        params = subject_params(conn, strategy)
+        opts = opts(conn) ++ [challenge: challenge, actor: actor]
+        result = Strategy.action(strategy, :verify, params, opts)
+        store_authentication_result(conn, result)
+      else
+        nil ->
+          store_authentication_result(conn, unauthenticated_error(strategy, :verify))
+
+        _ ->
+          conn
+          |> Conn.delete_session(@session_key)
+          |> store_authentication_result(missing_challenge_error(strategy, :verify))
+      end
+    end
+
+    @doc """
     Generate and return a registration challenge for adding a credential to the
     current user.
 
@@ -297,6 +375,34 @@ if Code.ensure_loaded?(Wax.Challenge) do
 
     # FIXED: Look up credentials for a SPECIFIC user by identity field.
     # The original version read ALL credentials for ALL users.
+    defp lookup_actor_credentials(strategy, actor, tenant) do
+      ash_opts = [authorize?: false]
+      ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+
+      case Ash.load(actor, [strategy.credentials_relationship_name], ash_opts) do
+        {:ok, loaded} ->
+          loaded
+          |> Map.get(strategy.credentials_relationship_name, [])
+          |> Enum.map(fn cred ->
+            {Map.get(cred, strategy.credential_id_field),
+             Map.get(cred, strategy.public_key_field)}
+          end)
+
+        _ ->
+          []
+      end
+    rescue
+      error in [
+        Ash.Error.Invalid,
+        Ash.Error.Forbidden,
+        Ash.Error.Framework,
+        Ash.Error.Unknown
+      ] ->
+        Logger.warning("WebAuthn actor-credential lookup failed: #{Exception.message(error)}")
+
+        []
+    end
+
     defp lookup_user_credentials(strategy, identity_value, tenant) do
       context = %{private: %{ash_authentication?: true}}
       ash_opts = [authorize?: false]
@@ -359,6 +465,12 @@ else
 
     def sign_in_with_token(conn, strategy),
       do: missing_wax_dependency(conn, strategy, :sign_in_with_token)
+
+    def verify_challenge(conn, strategy),
+      do: missing_wax_dependency(conn, strategy, :verify_challenge)
+
+    def verify(conn, strategy),
+      do: missing_wax_dependency(conn, strategy, :verify)
 
     def add_credential_challenge(conn, strategy),
       do: missing_wax_dependency(conn, strategy, :add_credential_challenge)

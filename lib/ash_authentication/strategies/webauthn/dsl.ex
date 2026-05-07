@@ -209,6 +209,18 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           doc: "Whether to allow new user registration via WebAuthn.",
           default: true
         ],
+        sign_in_enabled?: [
+          type: :boolean,
+          doc:
+            "Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor.",
+          default: true
+        ],
+        verify_enabled?: [
+          type: :boolean,
+          doc:
+            "Whether the strategy exposes a `:verify` phase that proves possession of a passkey for an already-authenticated user. Used for second-factor and step-up flows.",
+          default: true
+        ],
         register_action_name: [
           type: :atom,
           doc:
@@ -225,6 +237,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           type: :atom,
           doc:
             "The name of the action used to sign in with a short-lived token issued by a successful WebAuthn ceremony. Defaults to `sign_in_with_<strategy_name>_token`.",
+          required: false
+        ],
+        verify_action_name: [
+          type: :atom,
+          doc:
+            "The name of the second-factor verify action on the user resource. Defaults to `verify_<strategy_name>`.",
           required: false
         ],
         store_credential_action_name: [

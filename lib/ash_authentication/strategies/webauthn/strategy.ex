@@ -16,6 +16,8 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
           | :authentication_challenge
           | :sign_in
           | :sign_in_with_token
+          | :verify_challenge
+          | :verify
           | :add_credential_challenge
           | :add_credential
 
@@ -26,34 +28,37 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   @doc false
   @spec phases(WebAuthn.t()) :: [phase]
   def phases(strategy) do
-    auth_phases = [:authentication_challenge, :sign_in, :sign_in_with_token]
-    add_phases = [:add_credential_challenge, :add_credential]
-
-    if strategy.registration_enabled? do
-      [:registration_challenge, :register] ++ auth_phases ++ add_phases
-    else
-      auth_phases ++ add_phases
-    end
+    []
+    |> maybe_concat(strategy.registration_enabled?, [:registration_challenge, :register])
+    |> maybe_concat(strategy.sign_in_enabled?, [
+      :authentication_challenge,
+      :sign_in,
+      :sign_in_with_token
+    ])
+    |> maybe_concat(strategy.verify_enabled?, [:verify_challenge, :verify])
+    |> Kernel.++([:add_credential_challenge, :add_credential])
   end
 
   @doc false
   @spec actions(WebAuthn.t()) :: [atom]
   def actions(strategy) do
-    if strategy.registration_enabled? do
-      [:register, :sign_in, :sign_in_with_token, :add_credential]
-    else
-      [:sign_in, :sign_in_with_token, :add_credential]
-    end
+    []
+    |> maybe_append(strategy.registration_enabled?, :register)
+    |> maybe_concat(strategy.sign_in_enabled?, [:sign_in, :sign_in_with_token])
+    |> maybe_append(strategy.verify_enabled?, :verify)
+    |> Kernel.++([:add_credential])
   end
 
   @doc false
   @spec method_for_phase(WebAuthn.t(), phase) :: Strategy.http_method()
   def method_for_phase(_, :registration_challenge), do: :get
   def method_for_phase(_, :authentication_challenge), do: :get
+  def method_for_phase(_, :verify_challenge), do: :get
   def method_for_phase(_, :add_credential_challenge), do: :get
   def method_for_phase(_, :register), do: :post
   def method_for_phase(_, :sign_in), do: :post
   def method_for_phase(_, :sign_in_with_token), do: :post
+  def method_for_phase(_, :verify), do: :post
   def method_for_phase(_, :add_credential), do: :post
 
   @doc false
@@ -90,6 +95,12 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   def plug(strategy, :sign_in_with_token, conn),
     do: WebAuthn.Plug.sign_in_with_token(conn, strategy)
 
+  def plug(strategy, :verify_challenge, conn),
+    do: WebAuthn.Plug.verify_challenge(conn, strategy)
+
+  def plug(strategy, :verify, conn),
+    do: WebAuthn.Plug.verify(conn, strategy)
+
   def plug(strategy, :add_credential_challenge, conn),
     do: WebAuthn.Plug.add_credential_challenge(conn, strategy)
 
@@ -107,10 +118,18 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   def action(strategy, :sign_in_with_token, params, options),
     do: WebAuthn.Actions.sign_in_with_token(strategy, params, options)
 
+  def action(strategy, :verify, params, options),
+    do: WebAuthn.Actions.verify(strategy, params, options)
+
   def action(strategy, :add_credential, params, options),
     do: WebAuthn.Actions.add_credential(strategy, params, options)
 
   @doc false
   @spec tokens_required?(WebAuthn.t()) :: boolean
   def tokens_required?(_), do: true
+
+  defp maybe_append(list, true, item), do: list ++ [item]
+  defp maybe_append(list, false, _item), do: list
+  defp maybe_concat(list, true, items), do: list ++ items
+  defp maybe_concat(list, false, _items), do: list
 end
