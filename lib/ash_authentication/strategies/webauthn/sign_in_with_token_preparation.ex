@@ -126,6 +126,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInWithTokenPreparation do
     end
   end
 
+  defp verify_result(query, [], strategy, _context),
+    do: no_users_returned(query, strategy)
+
+  defp verify_result(query, users, strategy, _context) when is_list(users),
+    do: too_many_users_returned(query, strategy)
+
   defp maybe_put_webauthn_verified_at_metadata(user, %{"webauthn_verified_at" => iso}) do
     case DateTime.from_iso8601(iso) do
       {:ok, dt, _} -> Resource.put_metadata(user, :webauthn_verified_at, dt)
@@ -134,12 +140,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInWithTokenPreparation do
   end
 
   defp maybe_put_webauthn_verified_at_metadata(user, _), do: user
-
-  defp verify_result(query, [], strategy, _context),
-    do: no_users_returned(query, strategy)
-
-  defp verify_result(query, users, strategy, _context) when is_list(users),
-    do: too_many_users_returned(query, strategy)
 
   defp verify_sign_in_token_purpose(%{"purpose" => "sign_in"}), do: :ok
   defp verify_sign_in_token_purpose(_), do: {:error, "The token purpose is not valid"}
