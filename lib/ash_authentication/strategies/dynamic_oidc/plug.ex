@@ -20,7 +20,6 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
   alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.{Errors, Info, OidcConnection, Strategy.DynamicOidc, Strategy.OAuth2}
   alias Plug.Conn
-  alias Spark.Dsl.Extension
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   import Plug.Conn
@@ -121,21 +120,21 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
   end
 
   defp field_names(strategy) do
-    dsl_state = Extension.get_persisted(strategy.connection_resource, :spark_dsl_config)
+    resource = strategy.connection_resource
 
     [
-      OidcConnection.Info.oidc_connection_base_url_field!(dsl_state),
-      OidcConnection.Info.oidc_connection_client_id_field!(dsl_state),
-      OidcConnection.Info.oidc_connection_client_secret_field!(dsl_state)
+      OidcConnection.Info.oidc_connection_base_url_field!(resource),
+      OidcConnection.Info.oidc_connection_client_id_field!(resource),
+      OidcConnection.Info.oidc_connection_client_secret_field!(resource)
     ]
   end
 
   defp merge_connection_into_strategy(strategy, connection) do
-    dsl_state = Extension.get_persisted(strategy.connection_resource, :spark_dsl_config)
+    resource = strategy.connection_resource
 
-    base_url_field = OidcConnection.Info.oidc_connection_base_url_field!(dsl_state)
-    client_id_field = OidcConnection.Info.oidc_connection_client_id_field!(dsl_state)
-    client_secret_field = OidcConnection.Info.oidc_connection_client_secret_field!(dsl_state)
+    base_url_field = OidcConnection.Info.oidc_connection_base_url_field!(resource)
+    client_id_field = OidcConnection.Info.oidc_connection_client_id_field!(resource)
+    client_secret_field = OidcConnection.Info.oidc_connection_client_secret_field!(resource)
 
     {:ok,
      %{
