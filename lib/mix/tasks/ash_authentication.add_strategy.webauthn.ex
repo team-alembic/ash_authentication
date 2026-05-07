@@ -285,12 +285,6 @@ if Code.ensure_loaded?(Igniter) do
         rp_name_default
       )
       |> Igniter.Project.Config.configure_new(
-        "dev.exs",
-        otp_app,
-        [:webauthn_origin],
-        "http://localhost:4000"
-      )
-      |> Igniter.Project.Config.configure_new(
         "test.exs",
         otp_app,
         [:webauthn_rp_id],
@@ -301,12 +295,6 @@ if Code.ensure_loaded?(Igniter) do
         otp_app,
         [:webauthn_rp_name],
         rp_name_default
-      )
-      |> Igniter.Project.Config.configure_new(
-        "test.exs",
-        otp_app,
-        [:webauthn_origin],
-        "http://localhost:4000"
       )
       |> Igniter.Project.Config.configure_runtime_env(
         :prod,

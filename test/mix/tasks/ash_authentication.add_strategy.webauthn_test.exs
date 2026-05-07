@@ -102,7 +102,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
-    diff = diff(result, path: "lib/test/secrets.ex")
+    diff = diff(result, only: "lib/test/secrets.ex")
     assert diff =~ "[:authentication, :strategies, :webauthn, :rp_id]"
     assert diff =~ "[:authentication, :strategies, :webauthn, :rp_name]"
     assert diff =~ "[:authentication, :strategies, :webauthn, :origin]"
@@ -111,26 +111,40 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff =~ "Application.fetch_env(:test, :webauthn_origin)"
   end
 
-  test "seeds dev.exs with sensible defaults", %{igniter: igniter} do
+  test "seeds dev.exs with sensible rp_id and rp_name defaults", %{igniter: igniter} do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
-    diff = diff(result, path: "config/dev.exs")
+    diff = diff(result, only: "config/dev.exs")
     assert diff =~ "webauthn_rp_id: \"localhost\""
     assert diff =~ "webauthn_rp_name: \"Test\""
-    assert diff =~ "webauthn_origin: \"http://localhost:4000\""
   end
 
-  test "seeds test.exs with sensible defaults", %{igniter: igniter} do
+  test "does not seed dev.exs `webauthn_origin` (it's resolved at runtime)", %{igniter: igniter} do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
-    diff = diff(result, path: "config/test.exs")
+    refute diff(result, only: "config/dev.exs") =~ "webauthn_origin"
+  end
+
+  test "seeds test.exs with sensible rp_id and rp_name defaults", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    diff = diff(result, only: "config/test.exs")
     assert diff =~ "webauthn_rp_id: \"localhost\""
     assert diff =~ "webauthn_rp_name: \"Test\""
-    assert diff =~ "webauthn_origin: \"http://localhost:4000\""
+  end
+
+  test "does not seed test.exs `webauthn_origin` (it's resolved at runtime)", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    refute diff(result, only: "config/test.exs") =~ "webauthn_origin"
   end
 
   test "configures runtime.exs to read env vars in :prod", %{igniter: igniter} do
@@ -138,7 +152,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
-    diff = diff(result, path: "config/runtime.exs")
+    diff = diff(result, only: "config/runtime.exs")
     assert diff =~ ~s|webauthn_rp_id: System.get_env("WEBAUTHN_RP_ID")|
     assert diff =~ ~s|webauthn_rp_name: System.get_env("WEBAUTHN_RP_NAME")|
     assert diff =~ ~s|webauthn_origin: System.get_env("WEBAUTHN_ORIGIN")|

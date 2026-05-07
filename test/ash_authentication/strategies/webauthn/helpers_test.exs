@@ -68,7 +68,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       assert "https://secret.example.com:4001" = Helpers.resolve_origin(strategy, nil)
     end
 
-    test "raises when the Secret module returns :error" do
+    test "resolve_origin returns nil when the Secret module returns `:error`" do
+      strategy = %WebAuthn{name: :other, resource: __MODULE__, origin: {TestSecrets, []}}
+      assert is_nil(Helpers.resolve_origin(strategy, nil))
+    end
+
+    test "raises when the Secret module returns `:error` for a required field" do
       strategy = %WebAuthn{name: :other, resource: __MODULE__, rp_id: {TestSecrets, []}}
 
       assert_raise RuntimeError, ~r/returned `:error`/, fn ->
@@ -77,7 +82,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
     end
   end
 
-  describe "wax_opts/2" do
+  describe "wax_opts/3" do
     test "builds Wax options from strategy" do
       strategy = %WebAuthn{
         rp_id: "example.com",
@@ -102,6 +107,41 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       opts = Helpers.wax_opts(strategy, "tenant1")
       assert opts[:origin] == "https://tenant1.example.com"
       assert opts[:rp_id] == "tenant1.example.com"
+    end
+
+    test "configured origin wins over the runtime fallback" do
+      strategy = %WebAuthn{
+        rp_id: "example.com",
+        origin: "https://example.com:8443",
+        user_verification: "preferred",
+        attestation: "none"
+      }
+
+      opts = Helpers.wax_opts(strategy, nil, origin: "http://localhost:4001")
+      assert opts[:origin] == "https://example.com:8443"
+    end
+
+    test "uses opts[:origin] when the strategy has no configured origin" do
+      strategy = %WebAuthn{
+        rp_id: "example.com",
+        origin: nil,
+        user_verification: "preferred",
+        attestation: "none"
+      }
+
+      opts = Helpers.wax_opts(strategy, nil, origin: "http://localhost:4001")
+      assert opts[:origin] == "http://localhost:4001"
+    end
+
+    test "falls back to https://rp_id when neither configured nor runtime origin is supplied" do
+      strategy = %WebAuthn{
+        rp_id: "example.com",
+        origin: nil,
+        user_verification: "preferred",
+        attestation: "none"
+      }
+
+      assert Helpers.wax_opts(strategy, nil)[:origin] == "https://example.com"
     end
   end
 

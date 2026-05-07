@@ -21,10 +21,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
   def resolve_rp_name(%{rp_name: rp_name} = strategy, tenant),
     do: resolve(:rp_name, rp_name, strategy, tenant)
 
-  @doc "Resolve the origin, which may be explicit, dynamic per tenant, or derived from rp_id."
-  @spec resolve_origin(WebAuthn.t(), any) :: String.t()
-  def resolve_origin(%{origin: nil} = strategy, tenant),
-    do: "https://#{resolve_rp_id(strategy, tenant)}"
+  @doc """
+  Resolve the configured origin, if any.
+
+  Returns `nil` if the strategy has no origin configured, or if the configured
+  Secret module returns `:error` for the origin path. Callers (e.g.
+  `wax_opts/3`) decide what to do with `nil` — typically falling back to a
+  runtime-derived origin (Plug `conn` / LiveView `socket.host_uri`) before
+  finally defaulting to `"https://" <> rp_id`.
+
+  Static strings, MFA tuples, and anonymous functions always return a value
+  (or raise if the user-supplied callable does).
+  """
+  @spec resolve_origin(WebAuthn.t(), any) :: String.t() | nil
+  def resolve_origin(%{origin: nil}, _tenant), do: nil
 
   def resolve_origin(%{origin: origin} = strategy, tenant),
     do: resolve(:origin, origin, strategy, tenant)
@@ -50,6 +60,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
       {:ok, other} ->
         raise "Expected #{inspect(secret_module)} `secret_for/4` for #{inspect(path)} to return `{:ok, binary}`, got `{:ok, #{inspect(other)}}`."
 
+      :error when key == :origin ->
+        nil
+
       :error ->
         raise "#{inspect(secret_module)} `secret_for/4` returned `:error` for #{inspect(path)} on resource #{inspect(strategy.resource)}."
     end
@@ -58,14 +71,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
   @doc """
   Build Wax options from the strategy, resolving dynamic values for the given tenant.
 
-  Pass `origin: "..."` in `opts` to override the strategy's configured origin
-  (e.g. when serving from a Plug or LiveView, you can pass the request's actual
-  origin instead of the statically configured one).
+  Origin precedence:
+
+  1. The strategy's configured origin (literal, MFA, or Secret module). This is
+     the canonical answer, and the only one that wins in production where the
+     origin is set explicitly via env var.
+  2. `opts[:origin]` — a runtime fallback supplied by callers that have access
+     to the request (Plug `conn`, LiveView `socket.host_uri`). This is what
+     makes dev/test "just work" without baking a port into config.
+  3. `https://\#{rp_id}` — last-resort default, matching Wax's own behaviour.
   """
   @spec wax_opts(WebAuthn.t(), any, keyword) :: keyword
   def wax_opts(strategy, tenant, opts \\ []) do
     rp_id = resolve_rp_id(strategy, tenant)
-    origin = Keyword.get_lazy(opts, :origin, fn -> resolve_origin(strategy, tenant) end)
+    origin = resolve_origin(strategy, tenant) || opts[:origin] || "https://#{rp_id}"
 
     [
       origin: origin,
