@@ -15,6 +15,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   if Code.ensure_loaded?(Wax) do
     alias Ash.{Changeset, Query}
     alias AshAuthentication.{Info, Jwt, Strategy.WebAuthn}
+    import Ash.Expr, only: [ref: 1]
     require Ash.Query
     require Logger
 
@@ -164,6 +165,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
            {:ok, authenticator_data} <- safe_url_decode64(params["authenticator_data"]),
            {:ok, signature} <- safe_url_decode64(params["signature"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
+           {:ok, credential, user} <- lookup_credential_and_user(strategy, raw_id, tenant),
            {:ok, auth_data} <-
              wax_authenticate(
                strategy,
@@ -171,14 +173,66 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
                authenticator_data,
                signature,
                client_data_json,
-               challenge
+               challenge,
+               [{raw_id, Map.get(credential, strategy.public_key_field)}]
              ),
-           {:ok, user} <- find_user_for_sign_in(strategy, params, opts),
+           :ok <- verify_identity_matches(strategy, params, user),
            :ok <- best_effort_update_sign_count(strategy, raw_id, auth_data.sign_count, tenant) do
         maybe_generate_token(user, strategy, opts)
       else
         :error -> base64_error(strategy, :sign_in)
         {:error, error} -> {:error, error}
+      end
+    end
+
+    # Look up the credential record (and its owning user) by credential_id.
+    # Used during the sign-in ceremony so we can supply Wax with the cose_key
+    # required to verify the assertion signature, and so we can issue a token
+    # for the right user without needing the identity field to be supplied
+    # (passwordless / discoverable flow).
+    defp lookup_credential_and_user(strategy, raw_id, tenant) do
+      ash_opts = build_ash_opts(strategy, [], tenant)
+
+      strategy.credential_resource
+      |> Query.new()
+      |> Query.set_context(auth_context())
+      |> Query.filter(^ref(strategy.credential_id_field) == ^raw_id)
+      |> Query.load(strategy.user_relationship_name)
+      |> Ash.read_one(ash_opts)
+      |> case do
+        {:ok, nil} ->
+          {:error, auth_failed(strategy, :sign_in, "Unknown credential")}
+
+        {:ok, credential} ->
+          case Map.get(credential, strategy.user_relationship_name) do
+            nil ->
+              {:error, auth_failed(strategy, :sign_in, "Credential is not linked to a user")}
+
+            user ->
+              {:ok, credential, user}
+          end
+
+        {:error, error} ->
+          {:error, auth_failed(strategy, :sign_in, inspect(error))}
+      end
+    end
+
+    # If the caller supplied an identity value (i.e. the form's identity field
+    # was filled in), make sure the credential we resolved actually belongs to
+    # that user. For the fully-discoverable flow (no identity submitted) we
+    # trust the credential's own ownership.
+    defp verify_identity_matches(strategy, params, user) do
+      identity_value = params[to_string(strategy.identity_field)]
+
+      cond do
+        is_nil(identity_value) or identity_value == "" ->
+          :ok
+
+        Map.get(user, strategy.identity_field) |> to_string() == to_string(identity_value) ->
+          :ok
+
+        true ->
+          {:error, auth_failed(strategy, :sign_in, "Identity does not match credential owner")}
       end
     end
 
@@ -290,9 +344,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
            authenticator_data,
            signature,
            client_data_json,
-           challenge
+           challenge,
+           credentials
          ) do
-      case Wax.authenticate(raw_id, authenticator_data, signature, client_data_json, challenge) do
+      case Wax.authenticate(
+             raw_id,
+             authenticator_data,
+             signature,
+             client_data_json,
+             challenge,
+             credentials
+           ) do
         {:ok, _} = success ->
           success
 
@@ -328,40 +390,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       cred_data = auth_data.attested_credential_data
       store_credential(strategy, user, cred_data, auth_data.sign_count, params["label"], tenant)
     end
-
-    defp find_user_for_sign_in(strategy, params, opts) do
-      tenant = Keyword.get(opts, :tenant)
-      identity_value = params[to_string(strategy.identity_field)]
-      ash_opts = build_ash_opts(strategy, opts, tenant)
-
-      strategy.resource
-      |> Query.new()
-      |> Query.set_context(auth_context())
-      |> Query.for_read(
-        strategy.sign_in_action_name,
-        %{strategy.identity_field => identity_value},
-        ash_opts
-      )
-      |> Ash.read()
-      |> handle_user_query_result(strategy)
-    end
-
-    defp handle_user_query_result({:ok, [user]}, _strategy), do: {:ok, user}
-
-    defp handle_user_query_result({:ok, []}, strategy),
-      do: {:error, auth_failed(strategy, :sign_in, "Query returned no users")}
-
-    defp handle_user_query_result({:ok, _}, strategy),
-      do: {:error, auth_failed(strategy, :sign_in, "Query returned too many users")}
-
-    defp handle_user_query_result({:error, %AuthenticationFailed{} = error}, _strategy),
-      do: {:error, error}
-
-    defp handle_user_query_result({:error, error}, strategy) when is_exception(error),
-      do: {:error, AuthenticationFailed.exception(strategy: strategy, caused_by: error)}
-
-    defp handle_user_query_result({:error, _}, strategy),
-      do: {:error, auth_failed(strategy, :sign_in, "Authentication failed")}
 
     defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do
       update_sign_count(strategy, credential_id, new_count, tenant)
