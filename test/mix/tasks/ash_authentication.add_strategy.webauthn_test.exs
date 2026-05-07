@@ -171,4 +171,25 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
       |    end
     """)
   end
+
+  test "in `--mode 2fa` disables registration and sign-in on the strategy", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", ["--mode", "2fa"])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    assert diff =~ "webauthn :webauthn"
+    assert diff =~ "registration_enabled?(false)"
+    assert diff =~ "sign_in_enabled?(false)"
+  end
+
+  test "default mode (`primary`) leaves the new flags at their defaults", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    refute diff =~ "registration_enabled?(false)"
+    refute diff =~ "sign_in_enabled?(false)"
+  end
 end

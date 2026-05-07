@@ -36,6 +36,13 @@ if Code.ensure_loaded?(Igniter) do
     * `--identity-field`, `-i` - The field on the user resource that
       identifies the user (typically email). Defaults to `email`.
     * `--name`, `-n` - The strategy name. Defaults to `webauthn`.
+    * `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `primary`.
+
+      * `primary` (default) — passkeys are the primary credential. The
+        strategy enables registration, sign-in, and verify.
+      * `2fa` — passkeys act only as a second factor on top of another
+        primary credential (e.g. password). Disables registration and
+        sign-in; keeps verify enabled.
     """
 
     def info(_argv, _composing_task) do
@@ -49,16 +56,19 @@ if Code.ensure_loaded?(Igniter) do
           accounts: :string,
           user: :string,
           identity_field: :string,
+          mode: :string,
           name: :string
         ],
         aliases: [
           a: :accounts,
           u: :user,
           i: :identity_field,
+          m: :mode,
           n: :name
         ],
         defaults: [
           identity_field: "email",
+          mode: "primary",
           name: "webauthn"
         ]
       }
@@ -66,6 +76,21 @@ if Code.ensure_loaded?(Igniter) do
 
     def igniter(igniter) do
       options = parse_options(igniter)
+
+      if options[:mode] not in [:primary, :"2fa"] do
+        Mix.shell().error("""
+        Invalid `--mode` value: `#{inspect(options[:mode])}`.
+
+        Available modes:
+
+          * `primary` (default) — passkeys are the primary credential.
+          * `2fa` — passkeys are a second factor on top of another primary
+            credential.
+        """)
+
+        exit({:shutdown, 1})
+      end
+
       secrets_module = Igniter.Project.Module.module_name(igniter, "Secrets")
 
       case Igniter.Project.Module.module_exists(igniter, options[:user]) do
@@ -97,6 +122,7 @@ if Code.ensure_loaded?(Igniter) do
         Module.concat(options[:accounts], User)
       end)
       |> Keyword.update(:identity_field, :email, &String.to_atom/1)
+      |> Keyword.update(:mode, :primary, &String.to_atom/1)
       |> Keyword.update(:name, :webauthn, &String.to_atom/1)
       |> Keyword.update!(:accounts, &AshAuthentication.Igniter.maybe_parse_module/1)
       |> Keyword.update!(:user, &AshAuthentication.Igniter.maybe_parse_module/1)
@@ -274,6 +300,18 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp strategy_block(credential_resource, secrets_module, options) do
+      mode_lines =
+        case options[:mode] do
+          :"2fa" ->
+            """
+              registration_enabled? false
+              sign_in_enabled? false
+            """
+
+          _ ->
+            ""
+        end
+
       """
       webauthn #{inspect(options[:name])} do
         credential_resource #{inspect(credential_resource)}
@@ -281,7 +319,7 @@ if Code.ensure_loaded?(Igniter) do
         rp_name #{inspect(secrets_module)}
         origin #{inspect(secrets_module)}
         identity_field #{inspect(options[:identity_field])}
-      end
+      #{mode_lines}end
       """
     end
 
