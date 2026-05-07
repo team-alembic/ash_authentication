@@ -190,8 +190,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     # required to verify the assertion signature, and so we can issue a token
     # for the right user without needing the identity field to be supplied
     # (passwordless / discoverable flow).
+    #
+    # Uses `authorize?: false` (rather than relying on the
+    # `AshAuthenticationInteraction` policy bypass) because the loaded `:user`
+    # relationship triggers a separate `Ash.Query` for the user resource that
+    # doesn't inherit our context, and the WebAuthn ceremony has already
+    # established the caller's identity by virtue of the assertion signature.
     defp lookup_credential_and_user(strategy, raw_id, tenant) do
-      ash_opts = build_ash_opts(strategy, [], tenant)
+      ash_opts =
+        [authorize?: false, domain: Info.domain!(strategy.resource)]
+        |> then(fn opts -> if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts end)
 
       strategy.credential_resource
       |> Query.new()
