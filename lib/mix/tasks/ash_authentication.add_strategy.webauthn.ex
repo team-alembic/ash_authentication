@@ -142,18 +142,22 @@ if Code.ensure_loaded?(Igniter) do
 
       {exists?, igniter} = Igniter.Project.Module.module_exists(igniter, credential_resource)
 
-      if exists? do
-        Igniter.add_issue(
-          igniter,
-          "WebAuthn credential resource already exists: #{inspect(credential_resource)}."
-        )
-      else
-        igniter
-        |> generate_credential_resource(credential_resource, options)
-        |> add_user_attributes_and_relationship(credential_resource, options)
-        |> add_strategy_to_user(credential_resource, secrets_module, options)
-      end
+      igniter
+      |> maybe_generate_credential_resource(credential_resource, options, exists?)
+      |> add_user_attributes_and_relationship(credential_resource, options)
+      |> add_strategy_to_user(credential_resource, secrets_module, options)
     end
+
+    # The credential resource generation is the one step that isn't itself
+    # idempotent — `ash.gen.resource` would re-create the file. The other
+    # steps (attribute / identity / relationship / strategy additions) are
+    # all already no-ops if the target is in place, so re-running the task
+    # against a half-configured project just fills in whatever's missing.
+    defp maybe_generate_credential_resource(igniter, _credential_resource, _options, true),
+      do: igniter
+
+    defp maybe_generate_credential_resource(igniter, credential_resource, options, false),
+      do: generate_credential_resource(igniter, credential_resource, options)
 
     defp generate_credential_resource(igniter, credential_resource, options) do
       extensions = data_layer_extension()

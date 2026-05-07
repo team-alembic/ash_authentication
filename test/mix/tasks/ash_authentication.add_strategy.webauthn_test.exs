@@ -192,4 +192,17 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     refute diff =~ "registration_enabled?(false)"
     refute diff =~ "sign_in_enabled?(false)"
   end
+
+  test "is idempotent — running twice doesn't error or duplicate config", %{igniter: igniter} do
+    igniter =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+      |> apply_igniter!()
+
+    second_run = Igniter.compose_task(igniter, "ash_authentication.add_strategy.webauthn", [])
+
+    assert second_run.issues == []
+
+    refute diff(second_run, only: "lib/test/accounts/user.ex") =~ "webauthn :webauthn"
+  end
 end
