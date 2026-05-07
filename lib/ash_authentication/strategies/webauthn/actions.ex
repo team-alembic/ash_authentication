@@ -318,7 +318,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
       strategy.resource
       |> Changeset.new()
-      |> Changeset.set_context(auth_context())
+      |> Changeset.set_context(Map.put(auth_context(), :token_type, :sign_in))
       |> Changeset.for_create(strategy.register_action_name, action_params, ash_opts)
       |> Ash.create()
     end
@@ -484,7 +484,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp maybe_generate_token(user, strategy, opts) do
       if Info.authentication_tokens_enabled?(strategy.resource) do
-        case Jwt.token_for_user(user, %{"purpose" => "user"}, Keyword.take(opts, [:tenant])) do
+        case Jwt.token_for_user(user, %{"purpose" => "sign_in"}, Keyword.take(opts, [:tenant])) do
           {:ok, token, _claims} ->
             {:ok, Ash.Resource.put_metadata(user, :token, token)}
 
