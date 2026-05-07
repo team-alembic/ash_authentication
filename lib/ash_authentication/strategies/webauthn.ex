@@ -20,6 +20,25 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   auto-generates actions on both the user resource and the credential resource for
   registration, sign-in, credential management, and challenge generation.
 
+  ## Modes
+
+  The strategy can be configured for two roles via the `registration_enabled?`,
+  `sign_in_enabled?`, and `verify_enabled?` flags:
+
+  - **Primary** (default; all three flags `true`) — passkeys are the primary
+    credential. Users register and sign in directly with their authenticator.
+  - **Second factor** (`registration_enabled? false`, `sign_in_enabled? false`,
+    `verify_enabled? true`) — passkeys are only used as a second factor on top
+    of another primary credential (e.g. password). The strategy doesn't
+    register or sign in users directly; it only verifies an assertion against
+    the *currently authenticated* user. On successful verification, a
+    `webauthn_verified_at` claim is added to the user's authentication token
+    so protected routes can require it.
+
+  See the
+  [Passkeys as 2FA](https://hexdocs.pm/ash_authentication_phoenix/webauthn-2fa.html)
+  guide for the second-factor flow end to end.
+
   ## Quick Start
 
   ```elixir
