@@ -25,7 +25,9 @@ if Code.ensure_loaded?(Wax.Challenge) do
     @spec registration_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
     def registration_challenge(conn, strategy) do
       tenant = get_tenant(conn)
-      {:ok, challenge} = WebAuthn.Actions.registration_challenge(strategy, tenant)
+
+      {:ok, challenge} =
+        WebAuthn.Actions.registration_challenge(strategy, tenant, origin: origin_from_conn(conn))
 
       rp_id = WebAuthn.Helpers.resolve_rp_id(strategy, tenant)
       rp_name = WebAuthn.Helpers.resolve_rp_name(strategy, tenant)
@@ -92,7 +94,9 @@ if Code.ensure_loaded?(Wax.Challenge) do
         end
 
       {:ok, challenge} =
-        WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant)
+        WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
+          origin: origin_from_conn(conn)
+        )
 
       response = %{
         challenge: Base.url_encode64(challenge.bytes, padding: false),
@@ -269,6 +273,17 @@ if Code.ensure_loaded?(Wax.Challenge) do
     defp opts(conn) do
       [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn)]
       |> Enum.reject(&is_nil(elem(&1, 1)))
+    end
+
+    defp origin_from_conn(%Conn{scheme: scheme, host: host, port: port}) do
+      port_segment =
+        cond do
+          scheme == :http and port == 80 -> ""
+          scheme == :https and port == 443 -> ""
+          true -> ":#{port}"
+        end
+
+      "#{scheme}://#{host}#{port_segment}"
     end
 
     # FIXED: Look up credentials for a SPECIFIC user by identity field.

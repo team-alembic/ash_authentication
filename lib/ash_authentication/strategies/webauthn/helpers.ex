@@ -55,11 +55,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
     end
   end
 
-  @doc "Build Wax options from the strategy, resolving dynamic values for the given tenant."
-  @spec wax_opts(WebAuthn.t(), any) :: keyword
-  def wax_opts(strategy, tenant) do
+  @doc """
+  Build Wax options from the strategy, resolving dynamic values for the given tenant.
+
+  Pass `origin: "..."` in `opts` to override the strategy's configured origin
+  (e.g. when serving from a Plug or LiveView, you can pass the request's actual
+  origin instead of the statically configured one).
+  """
+  @spec wax_opts(WebAuthn.t(), any, keyword) :: keyword
+  def wax_opts(strategy, tenant, opts \\ []) do
     rp_id = resolve_rp_id(strategy, tenant)
-    origin = resolve_origin(strategy, tenant)
+    origin = Keyword.get_lazy(opts, :origin, fn -> resolve_origin(strategy, tenant) end)
 
     [
       origin: origin,

@@ -18,23 +18,34 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     require Ash.Query
     require Logger
 
-    @doc "Generate a registration challenge."
-    @spec registration_challenge(WebAuthn.t(), any) :: {:ok, Wax.Challenge.t()}
-    def registration_challenge(strategy, tenant) do
-      opts = WebAuthn.Helpers.wax_opts(strategy, tenant)
-      challenge = Wax.new_registration_challenge(opts)
+    @doc """
+    Generate a registration challenge.
+
+    Pass `origin: "..."` in `opts` to override the strategy's configured origin
+    (e.g. with the request's actual origin when serving from a Plug or
+    LiveView).
+    """
+    @spec registration_challenge(WebAuthn.t(), any, keyword) :: {:ok, Wax.Challenge.t()}
+    def registration_challenge(strategy, tenant, opts \\ []) do
+      wax_opts = WebAuthn.Helpers.wax_opts(strategy, tenant, opts)
+      challenge = Wax.new_registration_challenge(wax_opts)
       {:ok, challenge}
     end
 
-    @doc "Generate an authentication challenge."
-    @spec authentication_challenge(WebAuthn.t(), list, any) :: {:ok, Wax.Challenge.t()}
-    def authentication_challenge(strategy, allow_credentials, tenant) do
-      opts =
+    @doc """
+    Generate an authentication challenge.
+
+    Pass `origin: "..."` in `opts` to override the strategy's configured origin.
+    """
+    @spec authentication_challenge(WebAuthn.t(), list, any, keyword) ::
+            {:ok, Wax.Challenge.t()}
+    def authentication_challenge(strategy, allow_credentials, tenant, opts \\ []) do
+      wax_opts =
         strategy
-        |> WebAuthn.Helpers.wax_opts(tenant)
+        |> WebAuthn.Helpers.wax_opts(tenant, opts)
         |> Keyword.put(:allow_credentials, allow_credentials)
 
-      challenge = Wax.new_authentication_challenge(opts)
+      challenge = Wax.new_authentication_challenge(wax_opts)
       {:ok, challenge}
     end
 
@@ -438,10 +449,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp safe_url_decode64(_), do: :error
   else
-    def registration_challenge(strategy, _tenant),
+    def registration_challenge(strategy, _tenant, _opts \\ []),
       do: missing_wax_dependency(strategy, :registration_challenge)
 
-    def authentication_challenge(strategy, _allow_credentials, _tenant),
+    def authentication_challenge(strategy, _allow_credentials, _tenant, _opts \\ []),
       do: missing_wax_dependency(strategy, :authentication_challenge)
 
     def register(strategy, _params, _opts \\ []),
