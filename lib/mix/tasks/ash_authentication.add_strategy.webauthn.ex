@@ -201,9 +201,46 @@ if Code.ensure_loaded?(Igniter) do
       end
       """)
       |> add_credential_resource_authorizer(credential_resource)
+      |> add_credential_resource_timestamps(credential_resource)
       |> Ash.Resource.Igniter.add_new_identity(credential_resource, :unique_credential_id, """
       identity :unique_credential_id, [:credential_id]
       """)
+    end
+
+    defp add_credential_resource_timestamps(igniter, credential_resource) do
+      Igniter.Project.Module.find_and_update_module!(
+        igniter,
+        credential_resource,
+        &ensure_timestamps/1
+      )
+    end
+
+    defp ensure_timestamps(zipper) do
+      with {:ok, do_zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
+           {:ok, attrs_zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               do_zipper,
+               :attributes,
+               1
+             ),
+           {:ok, attrs_block} <- Igniter.Code.Common.move_to_do_block(attrs_zipper) do
+        block_source = attrs_block |> Sourceror.Zipper.node() |> Macro.to_string()
+
+        cond do
+          String.contains?(block_source, "create_timestamp") and
+              String.contains?(block_source, "update_timestamp") ->
+            {:ok, zipper}
+
+          true ->
+            {:ok,
+             Igniter.Code.Common.add_code(attrs_block, """
+             create_timestamp :inserted_at
+             update_timestamp :updated_at
+             """)}
+        end
+      else
+        _ -> {:ok, zipper}
+      end
     end
 
     defp add_credential_resource_authorizer(igniter, credential_resource) do

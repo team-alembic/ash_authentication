@@ -341,8 +341,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       |> Query.set_context(auth_context())
       |> Query.for_read(:read, %{}, ash_opts)
       |> Query.filter(user_id == ^user.id)
-      |> Query.sort(inserted_at: :asc)
+      |> maybe_sort_by_inserted_at(strategy)
       |> Ash.read()
+    end
+
+    # Sort by `:inserted_at` when the credential resource has it (the default
+    # for fresh installs). Older / hand-rolled credential resources without
+    # timestamps fall back to whatever order the data layer produces.
+    defp maybe_sort_by_inserted_at(query, strategy) do
+      if Ash.Resource.Info.attribute(strategy.credential_resource, :inserted_at) do
+        Query.sort(query, inserted_at: :asc)
+      else
+        query
+      end
     end
 
     @doc "Delete a credential, refusing to delete the last one."
