@@ -28,6 +28,7 @@ defmodule AshAuthentication.Strategy.ApiKey do
   """
 
   defstruct name: nil,
+            provider: :api_key,
             resource: nil,
             sign_in_action_name: nil,
             api_key_hash_attribute: nil,
@@ -41,6 +42,7 @@ defmodule AshAuthentication.Strategy.ApiKey do
 
   @type t :: %ApiKey{
           name: atom(),
+          provider: :api_key,
           resource: Ash.Resource.t(),
           sign_in_action_name: atom(),
           api_key_hash_attribute: atom(),
