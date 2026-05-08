@@ -501,4 +501,12 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategyTest do
       """)
     end
   end
+
+  describe "webauthn" do
+    test "dispatches to the webauthn add_strategy task", %{igniter: igniter} do
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", ["webauthn"])
+      |> assert_creates("lib/test/accounts/web_authn_credential.ex")
+    end
+  end
 end

@@ -20,6 +20,25 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   auto-generates actions on both the user resource and the credential resource for
   registration, sign-in, credential management, and challenge generation.
 
+  ## Modes
+
+  The strategy can be configured for two roles via the `registration_enabled?`,
+  `sign_in_enabled?`, and `verify_enabled?` flags:
+
+  - **Primary** (default; all three flags `true`) — passkeys are the primary
+    credential. Users register and sign in directly with their authenticator.
+  - **Second factor** (`registration_enabled? false`, `sign_in_enabled? false`,
+    `verify_enabled? true`) — passkeys are only used as a second factor on top
+    of another primary credential (e.g. password). The strategy doesn't
+    register or sign in users directly; it only verifies an assertion against
+    the *currently authenticated* user. On successful verification, a
+    `webauthn_verified_at` claim is added to the user's authentication token
+    so protected routes can require it.
+
+  See the
+  [Passkeys as 2FA](https://hexdocs.pm/ash_authentication_phoenix/webauthn-2fa.html)
+  guide for the second-factor flow end to end.
+
   ## Quick Start
 
   ```elixir
@@ -252,35 +271,44 @@ defmodule AshAuthentication.Strategy.WebAuthn do
     happens outside the Ash action pipeline.
   """
 
-  defstruct name: nil,
-            resource: nil,
-            credential_resource: nil,
-            rp_id: nil,
-            rp_name: nil,
-            origin: nil,
-            identity_field: :email,
-            authenticator_attachment: nil,
-            user_verification: "preferred",
-            attestation: "none",
-            timeout: 60_000,
-            resident_key: :required,
-            credential_id_field: :credential_id,
-            public_key_field: :public_key,
-            sign_count_field: :sign_count,
-            label_field: :label,
-            last_used_at_field: :last_used_at,
-            user_relationship_name: :user,
-            credentials_relationship_name: :webauthn_credentials,
-            registration_enabled?: true,
-            register_action_name: nil,
-            sign_in_action_name: nil,
-            store_credential_action_name: nil,
-            update_sign_count_action_name: nil,
-            list_credentials_action_name: nil,
-            delete_credential_action_name: nil,
-            update_credential_label_action_name: nil,
-            add_credential_action_name: nil,
-            __spark_metadata__: nil
+  @struct_fields [
+    name: nil,
+    provider: :webauthn,
+    resource: nil,
+    credential_resource: nil,
+    rp_id: nil,
+    rp_name: nil,
+    origin: nil,
+    identity_field: :email,
+    authenticator_attachment: nil,
+    user_verification: "preferred",
+    attestation: "none",
+    timeout: 60_000,
+    resident_key: :required,
+    credential_id_field: :credential_id,
+    public_key_field: :public_key,
+    sign_count_field: :sign_count,
+    label_field: :label,
+    last_used_at_field: :last_used_at,
+    user_relationship_name: :user,
+    credentials_relationship_name: :webauthn_credentials,
+    registration_enabled?: true,
+    sign_in_enabled?: true,
+    verify_enabled?: true,
+    register_action_name: nil,
+    sign_in_action_name: nil,
+    sign_in_with_token_action_name: nil,
+    verify_action_name: nil,
+    store_credential_action_name: nil,
+    update_sign_count_action_name: nil,
+    list_credentials_action_name: nil,
+    delete_credential_action_name: nil,
+    update_credential_label_action_name: nil,
+    add_credential_action_name: nil,
+    __spark_metadata__: nil
+  ]
+
+  defstruct @struct_fields
 
   alias AshAuthentication.Strategy.{Custom, WebAuthn}
 
@@ -288,11 +316,12 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
   @type t :: %WebAuthn{
           name: atom,
+          provider: :webauthn,
           resource: module,
           credential_resource: module,
-          rp_id: String.t() | {module, atom, list},
-          rp_name: String.t() | {module, atom, list},
-          origin: String.t() | {module, atom, list} | nil,
+          rp_id: String.t() | {module, atom, list} | {module, keyword},
+          rp_name: String.t() | {module, atom, list} | {module, keyword},
+          origin: String.t() | {module, atom, list} | {module, keyword} | nil,
           identity_field: atom,
           authenticator_attachment: nil | :platform | :cross_platform,
           user_verification: String.t(),
@@ -307,8 +336,12 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           user_relationship_name: atom,
           credentials_relationship_name: atom,
           registration_enabled?: boolean,
+          sign_in_enabled?: boolean,
+          verify_enabled?: boolean,
           register_action_name: atom | nil,
           sign_in_action_name: atom | nil,
+          sign_in_with_token_action_name: atom | nil,
+          verify_action_name: atom | nil,
           store_credential_action_name: atom | nil,
           update_sign_count_action_name: atom | nil,
           list_credentials_action_name: atom | nil,

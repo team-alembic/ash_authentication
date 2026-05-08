@@ -1,0 +1,202 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
+defmodule AshAuthentication.Strategy.WebAuthn.SignInWithTokenPreparation do
+  @moduledoc """
+  Prepare a query for sign in via short-lived token after a WebAuthn ceremony.
+
+  Mirrors `AshAuthentication.Strategy.Password.SignInWithTokenPreparation` but
+  is wired to the WebAuthn strategy struct (which doesn't have a
+  `sign_in_tokens_enabled?` field — sign-in tokens are always emitted by the
+  ceremony).
+  """
+  use Ash.Resource.Preparation
+  alias Ash.{Query, Resource, Resource.Preparation}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
+  require Ash.Query
+
+  @doc false
+  @impl true
+  @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
+  def prepare(query, options, context) do
+    {:ok, strategy} = Info.find_strategy(query, context, options)
+
+    query
+    |> Query.before_action(&verify_token_and_constrain_query(&1, strategy, context))
+    |> Query.after_action(&revoke_sign_in_token(&1, &2, strategy, context))
+    |> Query.after_action(&verify_result(&1, &2, strategy, context))
+  end
+
+  defp verify_token_and_constrain_query(query, strategy, context) do
+    token = Query.get_argument(query, :token)
+
+    with {:ok, claims, _} <-
+           Jwt.verify(token, strategy.resource, Ash.Context.to_opts(context)),
+         :ok <- verify_sign_in_token_purpose(claims),
+         {:ok, primary_keys} <- extract_primary_keys_from_subject(claims, strategy.resource) do
+      query
+      |> Query.filter(^primary_keys)
+      |> Query.put_context(:token_claims, claims)
+    else
+      :error ->
+        Query.add_error(
+          query,
+          [:token],
+          AuthenticationFailed.exception(
+            strategy: strategy,
+            query: query,
+            caused_by: %{
+              module: __MODULE__,
+              action: query.action,
+              resource: query.resource,
+              message: "The token is invalid"
+            }
+          )
+        )
+
+      {:error, reason} ->
+        Query.add_error(
+          query,
+          AuthenticationFailed.exception(
+            strategy: strategy,
+            query: query,
+            caused_by: %{
+              module: __MODULE__,
+              action: query.action,
+              resource: query.resource,
+              message: reason
+            }
+          )
+        )
+    end
+  end
+
+  defp revoke_sign_in_token(query, [user], strategy, context) do
+    token_resource = Info.authentication_tokens_token_resource!(strategy.resource)
+    token = Query.get_argument(query, :token)
+    store_all_tokens? = Info.authentication_tokens_store_all_tokens?(strategy.resource)
+
+    opts =
+      context
+      |> Ash.Context.to_opts()
+      |> Keyword.put(:store_all_tokens?, store_all_tokens?)
+
+    case TokenResource.revoke(token_resource, token, opts) do
+      :ok ->
+        {:ok, [user]}
+
+      {:error, reason} ->
+        {:error,
+         AuthenticationFailed.exception(
+           strategy: strategy,
+           query: query,
+           caused_by: reason
+         )}
+    end
+  end
+
+  defp revoke_sign_in_token(query, [], strategy, _context),
+    do: no_users_returned(query, strategy)
+
+  defp revoke_sign_in_token(query, users, strategy, _context) when is_list(users),
+    do: too_many_users_returned(query, strategy)
+
+  defp verify_result(query, [user], _strategy, context) do
+    extra_claims = query.context[:extra_token_claims] || %{}
+
+    inherited =
+      query.context
+      |> Map.get(:token_claims, %{})
+      |> Map.take(["tenant", "webauthn_verified_at"])
+
+    claims = Map.merge(inherited, extra_claims)
+
+    case Jwt.token_for_user(user, claims, Ash.Context.to_opts(context)) do
+      {:ok, token, _claims} ->
+        user =
+          user
+          |> Resource.put_metadata(:token, token)
+          |> maybe_put_webauthn_verified_at_metadata(inherited)
+
+        {:ok, [user]}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  defp verify_result(query, [], strategy, _context),
+    do: no_users_returned(query, strategy)
+
+  defp verify_result(query, users, strategy, _context) when is_list(users),
+    do: too_many_users_returned(query, strategy)
+
+  defp maybe_put_webauthn_verified_at_metadata(user, %{"webauthn_verified_at" => iso}) do
+    case DateTime.from_iso8601(iso) do
+      {:ok, dt, _} -> Resource.put_metadata(user, :webauthn_verified_at, dt)
+      _ -> user
+    end
+  end
+
+  defp maybe_put_webauthn_verified_at_metadata(user, _), do: user
+
+  defp verify_sign_in_token_purpose(%{"purpose" => "sign_in"}), do: :ok
+  defp verify_sign_in_token_purpose(_), do: {:error, "The token purpose is not valid"}
+
+  defp extract_primary_keys_from_subject(%{"sub" => sub}, resource) do
+    primary_key_fields =
+      resource
+      |> Resource.Info.primary_key()
+      |> Enum.map(&to_string/1)
+      |> MapSet.new()
+
+    key_parts =
+      sub
+      |> URI.parse()
+      |> Map.get(:query, "")
+      |> URI.decode_query()
+
+    provided_key_fields =
+      key_parts
+      |> Map.keys()
+      |> MapSet.new()
+
+    if MapSet.equal?(primary_key_fields, provided_key_fields) do
+      {:ok, Enum.to_list(key_parts)}
+    else
+      {:error, "token subject doesn't contain correct keys"}
+    end
+  end
+
+  defp extract_primary_keys_from_subject(_, _),
+    do: {:error, "The token does not contain a subject"}
+
+  defp no_users_returned(query, strategy) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       query: query,
+       caused_by: %{
+         module: __MODULE__,
+         action: query.action,
+         resource: query.resource,
+         message: "Query returned no users"
+       }
+     )}
+  end
+
+  defp too_many_users_returned(query, strategy) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       query: query,
+       caused_by: %{
+         module: __MODULE__,
+         action: query.action,
+         resource: query.resource,
+         message: "Query returned too many users"
+       }
+     )}
+  end
+end

@@ -50,6 +50,7 @@ defmodule AshAuthentication.Plug.Helpers do
     :token,
     :authentication_strategies,
     :totp_verified_at,
+    :webauthn_verified_at,
     :recovery_code_used_at
   ]
 

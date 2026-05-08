@@ -182,6 +182,7 @@ defmodule AshAuthentication.Strategy.RememberMe do
   defstruct identity_field: :username,
             cookie_name: :remember_me,
             name: nil,
+            provider: :remember_me,
             registration_enabled?: false,
             resource: nil,
             token_lifetime: {30, :days},
@@ -196,6 +197,7 @@ defmodule AshAuthentication.Strategy.RememberMe do
   @type t :: %__MODULE__{
           identity_field: atom,
           name: atom,
+          provider: :remember_me,
           registration_enabled?: boolean,
           resource: module,
           identity_field: atom,

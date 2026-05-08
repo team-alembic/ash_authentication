@@ -15,26 +15,38 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   if Code.ensure_loaded?(Wax) do
     alias Ash.{Changeset, Query}
     alias AshAuthentication.{Info, Jwt, Strategy.WebAuthn}
+    import Ash.Expr, only: [ref: 1]
     require Ash.Query
     require Logger
 
-    @doc "Generate a registration challenge."
-    @spec registration_challenge(WebAuthn.t(), any) :: {:ok, Wax.Challenge.t()}
-    def registration_challenge(strategy, tenant) do
-      opts = WebAuthn.Helpers.wax_opts(strategy, tenant)
-      challenge = Wax.new_registration_challenge(opts)
+    @doc """
+    Generate a registration challenge.
+
+    Pass `origin: "..."` in `opts` to override the strategy's configured origin
+    (e.g. with the request's actual origin when serving from a Plug or
+    LiveView).
+    """
+    @spec registration_challenge(WebAuthn.t(), any, keyword) :: {:ok, Wax.Challenge.t()}
+    def registration_challenge(strategy, tenant, opts \\ []) do
+      wax_opts = WebAuthn.Helpers.wax_opts(strategy, tenant, opts)
+      challenge = Wax.new_registration_challenge(wax_opts)
       {:ok, challenge}
     end
 
-    @doc "Generate an authentication challenge."
-    @spec authentication_challenge(WebAuthn.t(), list, any) :: {:ok, Wax.Challenge.t()}
-    def authentication_challenge(strategy, allow_credentials, tenant) do
-      opts =
+    @doc """
+    Generate an authentication challenge.
+
+    Pass `origin: "..."` in `opts` to override the strategy's configured origin.
+    """
+    @spec authentication_challenge(WebAuthn.t(), list, any, keyword) ::
+            {:ok, Wax.Challenge.t()}
+    def authentication_challenge(strategy, allow_credentials, tenant, opts \\ []) do
+      wax_opts =
         strategy
-        |> WebAuthn.Helpers.wax_opts(tenant)
+        |> WebAuthn.Helpers.wax_opts(tenant, opts)
         |> Keyword.put(:allow_credentials, allow_credentials)
 
-      challenge = Wax.new_authentication_challenge(opts)
+      challenge = Wax.new_authentication_challenge(wax_opts)
       {:ok, challenge}
     end
 
@@ -89,31 +101,232 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       end
     end
 
+    @doc """
+    Sign in a user using a short-lived sign-in token issued by a successful
+    WebAuthn ceremony.
+
+    The token is verified, the matching user is loaded, and a fresh
+    authentication token is placed in `user.__metadata__.token` for use as a
+    session credential.
+    """
+    @spec sign_in_with_token(WebAuthn.t(), map, keyword) ::
+            {:ok, Ash.Resource.record()} | {:error, any}
+    def sign_in_with_token(strategy, params, opts \\ []) do
+      opts =
+        opts
+        |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
+        |> Keyword.put_new(:skip_unknown_inputs, [:*])
+
+      strategy.resource
+      |> Query.new()
+      |> Query.set_context(%{private: %{ash_authentication?: true}})
+      |> Query.for_read(strategy.sign_in_with_token_action_name, params, opts)
+      |> Ash.read()
+      |> case do
+        {:ok, [user]} ->
+          {:ok, user}
+
+        {:error, error} when is_struct(error, AuthenticationFailed) ->
+          {:error, error}
+
+        {:error, error} when is_exception(error) ->
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             caused_by: %{
+               module: __MODULE__,
+               strategy: strategy,
+               action: strategy.sign_in_with_token_action_name,
+               message: Exception.message(error)
+             }
+           )}
+
+        {:error, reason} ->
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             caused_by: %{
+               module: __MODULE__,
+               strategy: strategy,
+               action: strategy.sign_in_with_token_action_name,
+               message: reason
+             }
+           )}
+      end
+    end
+
     @doc "Sign in a user with a WebAuthn credential."
     @spec sign_in(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.record()} | {:error, any}
     def sign_in(strategy, params, opts \\ []) do
       challenge = Keyword.fetch!(opts, :challenge)
       tenant = Keyword.get(opts, :tenant)
 
+      with {:ok, _credential, user} <-
+             run_assertion_ceremony(
+               strategy,
+               :sign_in,
+               params,
+               challenge,
+               tenant,
+               &lookup_credential_and_user(strategy, &1, tenant)
+             ),
+           :ok <- verify_identity_matches(strategy, :sign_in, params, user) do
+        maybe_generate_token(user, strategy, opts)
+      end
+    end
+
+    @doc """
+    Verify that the caller can produce a valid WebAuthn assertion using one of
+    `actor`'s registered credentials.
+
+    Used as a second factor on top of another primary credential. On success,
+    stamps `:webauthn_verified_at` onto the user metadata and (if tokens are
+    enabled) issues a fresh JWT carrying the same value as a `webauthn_verified_at`
+    claim — both are picked up by `RequireWebauthn` on subsequent requests.
+    """
+    @spec verify(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.record()} | {:error, any}
+    def verify(strategy, params, opts \\ []) do
+      actor = Keyword.fetch!(opts, :actor)
+      challenge = Keyword.fetch!(opts, :challenge)
+      tenant = Keyword.get(opts, :tenant)
+
+      with {:ok, _credential, _user} <-
+             run_assertion_ceremony(
+               strategy,
+               :verify,
+               params,
+               challenge,
+               tenant,
+               &lookup_credential_for_actor(strategy, &1, actor, tenant)
+             ) do
+        verified_at = DateTime.utc_now()
+        actor = Ash.Resource.put_metadata(actor, :webauthn_verified_at, verified_at)
+        maybe_generate_verified_token(actor, strategy, opts, verified_at)
+      end
+    end
+
+    # Decode the assertion params, look up the credential via the supplied
+    # `lookup_fn`, ask Wax to verify the signature, and best-effort update the
+    # sign count. Returns `{:ok, credential, user}` so callers can proceed
+    # with their action-specific work.
+    defp run_assertion_ceremony(strategy, action_name, params, challenge, tenant, lookup_fn) do
       with {:ok, raw_id} <- safe_url_decode64(params["raw_id"]),
            {:ok, authenticator_data} <- safe_url_decode64(params["authenticator_data"]),
            {:ok, signature} <- safe_url_decode64(params["signature"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
+           {:ok, credential, user} <- lookup_fn.(raw_id),
            {:ok, auth_data} <-
              wax_authenticate(
                strategy,
+               action_name,
                raw_id,
                authenticator_data,
                signature,
                client_data_json,
-               challenge
+               challenge,
+               [{raw_id, Map.get(credential, strategy.public_key_field)}]
              ),
-           {:ok, user} <- find_user_for_sign_in(strategy, params, opts),
            :ok <- best_effort_update_sign_count(strategy, raw_id, auth_data.sign_count, tenant) do
-        maybe_generate_token(user, strategy, opts)
+        {:ok, credential, user}
       else
-        :error -> base64_error(strategy, :sign_in)
+        :error -> base64_error(strategy, action_name)
         {:error, error} -> {:error, error}
+      end
+    end
+
+    # Look up the credential record (and its owning user) by credential_id.
+    # Used during the sign-in ceremony so we can supply Wax with the cose_key
+    # required to verify the assertion signature, and so we can issue a token
+    # for the right user without needing the identity field to be supplied
+    # (passwordless / discoverable flow).
+    #
+    # Uses `authorize?: false` (rather than relying on the
+    # `AshAuthenticationInteraction` policy bypass) because the loaded `:user`
+    # relationship triggers a separate `Ash.Query` for the user resource that
+    # doesn't inherit our context, and the WebAuthn ceremony has already
+    # established the caller's identity by virtue of the assertion signature.
+    defp lookup_credential_and_user(strategy, raw_id, tenant) do
+      ash_opts = lookup_ash_opts(strategy, tenant)
+
+      strategy.credential_resource
+      |> Query.new()
+      |> Query.set_context(auth_context())
+      |> Query.filter(^ref(strategy.credential_id_field) == ^raw_id)
+      |> Query.load(strategy.user_relationship_name)
+      |> Ash.read_one(ash_opts)
+      |> case do
+        {:ok, nil} ->
+          {:error, auth_failed(strategy, :sign_in, "Unknown credential")}
+
+        {:ok, credential} ->
+          case Map.get(credential, strategy.user_relationship_name) do
+            nil ->
+              {:error, auth_failed(strategy, :sign_in, "Credential is not linked to a user")}
+
+            user ->
+              {:ok, credential, user}
+          end
+
+        {:error, error} ->
+          {:error, auth_failed(strategy, :sign_in, inspect(error))}
+      end
+    end
+
+    # 2FA verify lookup: requires the credential to belong to `actor`. Prevents
+    # an attacker from presenting a different user's credential during the
+    # second-factor step.
+    defp lookup_credential_for_actor(strategy, raw_id, actor, tenant) do
+      ash_opts = lookup_ash_opts(strategy, tenant)
+      [primary_key] = Ash.Resource.Info.primary_key(strategy.resource)
+      actor_id = Map.fetch!(actor, primary_key)
+
+      relationship =
+        Ash.Resource.Info.relationship(
+          strategy.credential_resource,
+          strategy.user_relationship_name
+        )
+
+      foreign_key = relationship.source_attribute
+
+      strategy.credential_resource
+      |> Query.new()
+      |> Query.set_context(auth_context())
+      |> Query.filter(^ref(strategy.credential_id_field) == ^raw_id)
+      |> Query.filter(^ref(foreign_key) == ^actor_id)
+      |> Ash.read_one(ash_opts)
+      |> case do
+        {:ok, nil} ->
+          {:error, auth_failed(strategy, :verify, "Unknown credential for this user")}
+
+        {:ok, credential} ->
+          {:ok, credential, actor}
+
+        {:error, error} ->
+          {:error, auth_failed(strategy, :verify, inspect(error))}
+      end
+    end
+
+    defp lookup_ash_opts(strategy, tenant) do
+      [authorize?: false, domain: Info.domain!(strategy.resource)]
+      |> then(fn opts -> if tenant, do: Keyword.put(opts, :tenant, tenant), else: opts end)
+    end
+
+    # If the caller supplied an identity value (i.e. the form's identity field
+    # was filled in), make sure the credential we resolved actually belongs to
+    # that user. For the fully-discoverable flow (no identity submitted) we
+    # trust the credential's own ownership.
+    defp verify_identity_matches(strategy, action_name, params, user) do
+      identity_value = params[to_string(strategy.identity_field)]
+
+      cond do
+        is_nil(identity_value) or identity_value == "" ->
+          :ok
+
+        Map.get(user, strategy.identity_field) |> to_string() == to_string(identity_value) ->
+          :ok
+
+        true ->
+          {:error, auth_failed(strategy, action_name, "Identity does not match credential owner")}
       end
     end
 
@@ -128,8 +341,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       |> Query.set_context(auth_context())
       |> Query.for_read(:read, %{}, ash_opts)
       |> Query.filter(user_id == ^user.id)
-      |> Query.sort(inserted_at: :asc)
+      |> maybe_sort_by_inserted_at(strategy)
       |> Ash.read()
+    end
+
+    # Sort by `:inserted_at` when the credential resource has it (the default
+    # for fresh installs). Older / hand-rolled credential resources without
+    # timestamps fall back to whatever order the data layer produces.
+    defp maybe_sort_by_inserted_at(query, strategy) do
+      if Ash.Resource.Info.attribute(strategy.credential_resource, :inserted_at) do
+        Query.sort(query, inserted_at: :asc)
+      else
+        query
+      end
     end
 
     @doc "Delete a credential, refusing to delete the last one."
@@ -221,18 +445,27 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp wax_authenticate(
            strategy,
+           action_name,
            raw_id,
            authenticator_data,
            signature,
            client_data_json,
-           challenge
+           challenge,
+           credentials
          ) do
-      case Wax.authenticate(raw_id, authenticator_data, signature, client_data_json, challenge) do
+      case Wax.authenticate(
+             raw_id,
+             authenticator_data,
+             signature,
+             client_data_json,
+             challenge,
+             credentials
+           ) do
         {:ok, _} = success ->
           success
 
         {:error, error} ->
-          {:error, auth_failed(strategy, :sign_in, inspect(error))}
+          {:error, auth_failed(strategy, action_name, inspect(error))}
       end
     end
 
@@ -253,7 +486,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
       strategy.resource
       |> Changeset.new()
-      |> Changeset.set_context(auth_context())
+      |> Changeset.set_context(Map.put(auth_context(), :token_type, :sign_in))
       |> Changeset.for_create(strategy.register_action_name, action_params, ash_opts)
       |> Ash.create()
     end
@@ -263,40 +496,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       cred_data = auth_data.attested_credential_data
       store_credential(strategy, user, cred_data, auth_data.sign_count, params["label"], tenant)
     end
-
-    defp find_user_for_sign_in(strategy, params, opts) do
-      tenant = Keyword.get(opts, :tenant)
-      identity_value = params[to_string(strategy.identity_field)]
-      ash_opts = build_ash_opts(strategy, opts, tenant)
-
-      strategy.resource
-      |> Query.new()
-      |> Query.set_context(auth_context())
-      |> Query.for_read(
-        strategy.sign_in_action_name,
-        %{strategy.identity_field => identity_value},
-        ash_opts
-      )
-      |> Ash.read()
-      |> handle_user_query_result(strategy)
-    end
-
-    defp handle_user_query_result({:ok, [user]}, _strategy), do: {:ok, user}
-
-    defp handle_user_query_result({:ok, []}, strategy),
-      do: {:error, auth_failed(strategy, :sign_in, "Query returned no users")}
-
-    defp handle_user_query_result({:ok, _}, strategy),
-      do: {:error, auth_failed(strategy, :sign_in, "Query returned too many users")}
-
-    defp handle_user_query_result({:error, %AuthenticationFailed{} = error}, _strategy),
-      do: {:error, error}
-
-    defp handle_user_query_result({:error, error}, strategy) when is_exception(error),
-      do: {:error, AuthenticationFailed.exception(strategy: strategy, caused_by: error)}
-
-    defp handle_user_query_result({:error, _}, strategy),
-      do: {:error, auth_failed(strategy, :sign_in, "Authentication failed")}
 
     defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do
       update_sign_count(strategy, credential_id, new_count, tenant)
@@ -419,7 +618,29 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp maybe_generate_token(user, strategy, opts) do
       if Info.authentication_tokens_enabled?(strategy.resource) do
-        case Jwt.token_for_user(user, %{"purpose" => "user"}, Keyword.take(opts, [:tenant])) do
+        case Jwt.token_for_user(user, %{"purpose" => "sign_in"}, Keyword.take(opts, [:tenant])) do
+          {:ok, token, _claims} ->
+            {:ok, Ash.Resource.put_metadata(user, :token, token)}
+
+          {:error, error} ->
+            {:error, error}
+        end
+      else
+        {:ok, user}
+      end
+    end
+
+    # Like `maybe_generate_token/3`, but bakes the verification timestamp into
+    # the token's claims so headless / API clients can prove second-factor
+    # status without relying on session metadata.
+    defp maybe_generate_verified_token(user, strategy, opts, verified_at) do
+      if Info.authentication_tokens_enabled?(strategy.resource) do
+        claims = %{
+          "purpose" => "sign_in",
+          "webauthn_verified_at" => DateTime.to_iso8601(verified_at)
+        }
+
+        case Jwt.token_for_user(user, claims, Keyword.take(opts, [:tenant])) do
           {:ok, token, _claims} ->
             {:ok, Ash.Resource.put_metadata(user, :token, token)}
 
@@ -438,17 +659,23 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp safe_url_decode64(_), do: :error
   else
-    def registration_challenge(strategy, _tenant),
+    def registration_challenge(strategy, _tenant, _opts \\ []),
       do: missing_wax_dependency(strategy, :registration_challenge)
 
-    def authentication_challenge(strategy, _allow_credentials, _tenant),
+    def authentication_challenge(strategy, _allow_credentials, _tenant, _opts \\ []),
       do: missing_wax_dependency(strategy, :authentication_challenge)
 
     def register(strategy, _params, _opts \\ []),
       do: missing_wax_dependency(strategy, :register)
 
+    def sign_in_with_token(strategy, _params, _opts \\ []),
+      do: missing_wax_dependency(strategy, :sign_in_with_token)
+
     def sign_in(strategy, _params, _opts \\ []),
       do: missing_wax_dependency(strategy, :sign_in)
+
+    def verify(strategy, _params, _opts \\ []),
+      do: missing_wax_dependency(strategy, :verify)
 
     def list_credentials(strategy, _user, _opts),
       do: missing_wax_dependency(strategy, :list_credentials)
