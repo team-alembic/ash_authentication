@@ -226,17 +226,15 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, attrs_block} <- Igniter.Code.Common.move_to_do_block(attrs_zipper) do
         block_source = attrs_block |> Sourceror.Zipper.node() |> Macro.to_string()
 
-        cond do
-          String.contains?(block_source, "create_timestamp") and
-              String.contains?(block_source, "update_timestamp") ->
-            {:ok, zipper}
-
-          true ->
-            {:ok,
-             Igniter.Code.Common.add_code(attrs_block, """
-             create_timestamp :inserted_at
-             update_timestamp :updated_at
-             """)}
+        if String.contains?(block_source, "create_timestamp") and
+             String.contains?(block_source, "update_timestamp") do
+          {:ok, zipper}
+        else
+          {:ok,
+           Igniter.Code.Common.add_code(attrs_block, """
+           create_timestamp :inserted_at
+           update_timestamp :updated_at
+           """)}
         end
       else
         _ -> {:ok, zipper}
