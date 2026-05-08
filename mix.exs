@@ -135,6 +135,7 @@ defmodule AshAuthentication.MixProject do
         "documentation/tutorials/audit-log.md",
         "documentation/tutorials/auth0.md",
         "documentation/tutorials/confirmation.md",
+        {"documentation/tutorials/dynamic-oidc.md", title: "Dynamic OIDC"},
         "documentation/tutorials/get-started.md",
         "documentation/tutorials/github.md",
         "documentation/tutorials/google.md",
