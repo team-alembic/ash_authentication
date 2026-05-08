@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [5.0.0-rc.8](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.7...5.0.0-rc.8) (2026-05-08)
+
+
+
+
+### Features:
+
+* register webauthn in `ash_authentication.add_strategy` dispatcher (#1167) by James Harton
+
 ## [v5.0.0-rc.7](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.6...v5.0.0-rc.7) (2026-05-04)
 
 
