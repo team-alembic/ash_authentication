@@ -28,8 +28,7 @@ This generates an `OidcConnection` resource alongside your user resource, wires
 a `dynamic_oidc :sso` strategy in, adds a `register_with_sso` action, and
 prints follow-up instructions. The rest of this tutorial covers what's
 happening — and the bits that the generator deliberately leaves to you
-(multitenancy, secret encryption, swapping in the dynamic-aware
-`IdentityChange`).
+(multitenancy and secret encryption).
 
 ## Manual setup
 
@@ -134,14 +133,14 @@ actions do
 end
 ```
 
-> #### Generator output {: .info}
+> #### Why the dynamic-aware change? {: .info}
 >
-> `mix ash_authentication.add_strategy.dynamic_oidc` shares the OAuth2
-> register-action helper with the static OIDC tasks, so it currently emits
-> `AshAuthentication.Strategy.OAuth2.IdentityChange`. **Swap it for
-> `AshAuthentication.Strategy.DynamicOidc.IdentityChange`** in the generated
-> action — otherwise multiple connections issuing colliding `sub` values will
-> trip the `{user_id, uid, strategy}` unique constraint on `UserIdentity`.
+> `OAuth2.IdentityChange` writes the strategy name verbatim into the identity's
+> `strategy` field. With multiple `dynamic_oidc` connections that all share
+> one strategy name, two IdPs issuing the same `sub` would collide on the
+> `{user_id, uid, strategy}` unique constraint. `DynamicOidc.IdentityChange`
+> namespaces the value as `"<strategy_name>/<connection_id>"`, keeping
+> per-IdP identities distinct.
 
 If you also use the password strategy, ensure `hashed_password` is nullable:
 

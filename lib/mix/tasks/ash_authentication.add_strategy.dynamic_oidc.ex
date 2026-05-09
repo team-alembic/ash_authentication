@@ -94,7 +94,8 @@ if Code.ensure_loaded?(Igniter) do
             options[:user],
             strategy_name,
             identity_field: options[:identity_field],
-            identity_resource: identity_resource
+            identity_resource: identity_resource,
+            identity_change: AshAuthentication.Strategy.DynamicOidc.IdentityChange
           )
           |> AshAuthentication.Igniter.add_new_strategy(
             options[:user],
