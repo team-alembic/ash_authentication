@@ -16,7 +16,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   Attempt to sign in a user.
   """
   @spec sign_in(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
-  def sign_in(%OAuth2{} = strategy, _params, _options) when strategy.registration_enabled?,
+  def sign_in(strategy, _params, _options) when strategy.registration_enabled?,
     do:
       {:error,
        NoSuchAction.exception(
@@ -25,7 +25,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
          type: :read
        )}
 
-  def sign_in(%OAuth2{} = strategy, params, options) do
+  def sign_in(strategy, params, options) do
     options =
       options
       |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
@@ -95,7 +95,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   Attempt to register a new user.
   """
   @spec register(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
-  def register(%OAuth2{} = strategy, params, options) when strategy.registration_enabled? do
+  def register(strategy, params, options) when strategy.registration_enabled? do
     action = Resource.Info.action(strategy.resource, strategy.register_action_name, :create)
 
     options =

@@ -415,9 +415,12 @@ if Code.ensure_loaded?(Igniter) do
       identity_field = Keyword.get(opts, :identity_field, :email)
       identity_resource = Keyword.get(opts, :identity_resource)
 
+      identity_change =
+        Keyword.get(opts, :identity_change, AshAuthentication.Strategy.OAuth2.IdentityChange)
+
       identity_change_line =
         if identity_resource do
-          "change AshAuthentication.Strategy.OAuth2.IdentityChange"
+          "change #{inspect(identity_change)}"
         else
           ""
         end
