@@ -11,6 +11,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [5.0.0-rc.9](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.8...5.0.0-rc.9) (2026-05-11)
+
+
+
+
+### Features:
+
+* igniter: add ash_authentication.add_strategy.dynamic_oidc installer by Zach Daniel
+
+* add dynamic_oidc strategy + OidcConnection resource extension by Zach Daniel
+
+* register webauthn in `ash_authentication.add_strategy` dispatcher (#1167) by James Harton
+
 ## [5.0.0-rc.8](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.7...5.0.0-rc.8) (2026-05-08)
 
 
