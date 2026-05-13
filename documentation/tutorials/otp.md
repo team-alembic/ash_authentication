@@ -8,6 +8,11 @@ SPDX-License-Identifier: MIT
 
 The OTP strategy provides passwordless authentication where users receive a short code (e.g. `"XKPTMH"`) via email or SMS, then submit it to sign in. This is similar to the magic link strategy but uses a short code instead of a URL.
 
+> #### Time-based one-time passwords {: .tip}
+>
+> If you're looking for the six-digit numeric codes which periodically change - sometimes
+> called Google Authenticator - you almost certainly want [TOTP](tutorials/totp.md) instead.
+
 ## Security requirements
 
 > #### Brute force protection {: .warning}
