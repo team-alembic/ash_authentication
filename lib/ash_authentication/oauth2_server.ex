@@ -36,7 +36,8 @@ defmodule AshAuthentication.Oauth2Server do
 
   | Key | Default | Notes |
   |---|---|---|
-  | `:scopes` | `["mcp"]` | List of scope strings advertised in metadata |
+  | `:scopes` | `[]` | Scope catalogue advertised in metadata and accepted at `/authorize`. Can be a static list (`["read", "write"]`), a 0-arity function (`fn -> [...] end`), or an MFA tuple (`{Module, :function, [args]}`) — use the function/MFA forms for dynamically-computed catalogues. The library default is empty, which combined with `:enforce_scopes?` (also default) means *no scope works out of the box* — the installer scaffolds a placeholder you're meant to replace. |
+  | `:enforce_scopes?` | `true` | When `true`, requested scopes at `/authorize` MUST be a subset of `:scopes`. Set to `false` only if you have a dynamic / runtime-generated scope catalogue and intend to validate downstream. |
   | `:access_token_lifetime` | `{1, :hour}` | `{integer, unit}` where unit is `:second`, `:minute`, `:hour`, or `:day` |
   | `:refresh_token_lifetime` | `{30, :days}` | |
   | `:authorization_code_lifetime` | `{10, :minutes}` | |
@@ -99,7 +100,8 @@ defmodule AshAuthentication.Oauth2Server do
   @doc false
   def __default_opts__ do
     [
-      scopes: ["mcp"],
+      scopes: [],
+      enforce_scopes?: true,
       access_token_lifetime: {1, :hour},
       refresh_token_lifetime: {30, :days},
       authorization_code_lifetime: {10, :minutes},
@@ -127,7 +129,14 @@ defmodule AshAuthentication.Oauth2Server do
         do: Keyword.fetch!(@oauth2_server_opts, :refresh_token_resource)
 
       def consent_resource, do: Keyword.fetch!(@oauth2_server_opts, :consent_resource)
-      def scopes, do: Keyword.fetch!(@oauth2_server_opts, :scopes)
+
+      def scopes do
+        @oauth2_server_opts
+        |> Keyword.fetch!(:scopes)
+        |> Oauth2Server.__resolve_scopes__!(__MODULE__)
+      end
+
+      def enforce_scopes?, do: Keyword.fetch!(@oauth2_server_opts, :enforce_scopes?)
       def sign_in_path, do: Keyword.fetch!(@oauth2_server_opts, :sign_in_path)
 
       def dcr_always_return_client_secret?,
@@ -140,8 +149,7 @@ defmodule AshAuthentication.Oauth2Server do
         do: Oauth2Server.__lifetime_seconds__(@oauth2_server_opts[:refresh_token_lifetime])
 
       def authorization_code_lifetime,
-        do:
-          Oauth2Server.__lifetime_seconds__(@oauth2_server_opts[:authorization_code_lifetime])
+        do: Oauth2Server.__lifetime_seconds__(@oauth2_server_opts[:authorization_code_lifetime])
 
       def issuer_url do
         @oauth2_server_opts
@@ -196,16 +204,30 @@ defmodule AshAuthentication.Oauth2Server do
     end
 
     case Keyword.fetch!(opts, :otp_app) do
-      atom when is_atom(atom) -> :ok
-      other -> raise CompileError, description: "expected `:otp_app` to be an atom, got: #{inspect(other)}"
+      atom when is_atom(atom) ->
+        :ok
+
+      other ->
+        raise CompileError,
+          description: "expected `:otp_app` to be an atom, got: #{inspect(other)}"
     end
 
     Enum.each(
-      [:user_resource, :client_resource, :authorization_code_resource, :refresh_token_resource, :consent_resource],
+      [
+        :user_resource,
+        :client_resource,
+        :authorization_code_resource,
+        :refresh_token_resource,
+        :consent_resource
+      ],
       fn key ->
         case Keyword.fetch!(opts, key) do
-          atom when is_atom(atom) and not is_nil(atom) -> :ok
-          other -> raise CompileError, description: "expected `#{inspect(key)}` to be a module, got: #{inspect(other)}"
+          atom when is_atom(atom) and not is_nil(atom) ->
+            :ok
+
+          other ->
+            raise CompileError,
+              description: "expected `#{inspect(key)}` to be a module, got: #{inspect(other)}"
         end
       end
     )
@@ -237,9 +259,14 @@ defmodule AshAuthentication.Oauth2Server do
   @doc false
   def __resolve_secret__!(value, module, path) do
     case resolve_secret(value, module, path) do
-      {:ok, resolved} -> resolved
-      :error -> raise "Oauth2Server: failed to resolve secret at #{inspect(path)} on #{inspect(module)}"
-      {:error, reason} -> raise "Oauth2Server: failed to resolve secret at #{inspect(path)}: #{inspect(reason)}"
+      {:ok, resolved} ->
+        resolved
+
+      :error ->
+        raise "Oauth2Server: failed to resolve secret at #{inspect(path)} on #{inspect(module)}"
+
+      {:error, reason} ->
+        raise "Oauth2Server: failed to resolve secret at #{inspect(path)}: #{inspect(reason)}"
     end
   end
 
@@ -273,6 +300,42 @@ defmodule AshAuthentication.Oauth2Server do
   end
 
   defp resolve_secret(other, _module, _path), do: {:error, {:invalid_secret, other}}
+
+  @doc false
+  # Resolve the `:scopes` option, which may be a static list, a 0-arity
+  # function, or an MFA tuple. Returns the list of scope strings.
+  def __resolve_scopes__!(value, module) do
+    case value do
+      list when is_list(list) ->
+        list
+
+      fun when is_function(fun, 0) ->
+        case fun.() do
+          list when is_list(list) -> list
+          other -> raise "scopes function returned #{inspect(other)}, expected a list"
+        end
+
+      {mod, fun, args} when is_atom(mod) and is_atom(fun) and is_list(args) ->
+        case apply(mod, fun, args) do
+          list when is_list(list) ->
+            list
+
+          other ->
+            raise "#{inspect({mod, fun, args})} returned #{inspect(other)}, expected a list"
+        end
+
+      other ->
+        raise """
+        Invalid `:scopes` value on #{inspect(module)}: #{inspect(other)}.
+
+        Expected one of:
+
+          * a list of scope strings — `["read", "write"]`
+          * a 0-arity function — `fn -> ["read", "write"] end`
+          * an MFA tuple — `{Module, :function, [args]}`
+        """
+    end
+  end
 
   @doc """
   Canonicalize a URL for redirect_uri / resource / issuer comparison.

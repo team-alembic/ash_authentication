@@ -81,9 +81,7 @@ defmodule AshAuthentication.Oauth2Server.Token do
            |> Ash.update(authorize?: false)
            |> code_or_error(),
          {:ok, client} <-
-           code_or_error(
-             Ash.get(server.client_resource(), code.client_id, authorize?: false)
-           ) do
+           code_or_error(Ash.get(server.client_resource(), code.client_id, authorize?: false)) do
       {:ok, code, client}
     end
   end

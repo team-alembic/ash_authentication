@@ -268,3 +268,47 @@ defmodule Oauth2ServerTest.GatedServer do
     initial_access_token: {Oauth2ServerTest.Secrets, []},
     scopes: ["mcp"]
 end
+
+defmodule Oauth2ServerTest.UnenforcedScopesServer do
+  @moduledoc """
+  Identical to `Oauth2ServerTest.Server` but with `enforce_scopes?: false`,
+  so any requested scope is accepted at `/authorize`.
+  """
+
+  use AshAuthentication.Oauth2Server,
+    otp_app: :ash_authentication,
+    user_resource: Oauth2ServerTest.User,
+    issuer_url: {Oauth2ServerTest.Secrets, []},
+    resource_url: {Oauth2ServerTest.Secrets, []},
+    signing_secret: {Oauth2ServerTest.Secrets, []},
+    client_resource: Oauth2ServerTest.OAuthClient,
+    authorization_code_resource: Oauth2ServerTest.OAuthAuthorizationCode,
+    refresh_token_resource: Oauth2ServerTest.OAuthRefreshToken,
+    consent_resource: Oauth2ServerTest.OAuthConsent,
+    scopes: ["mcp"],
+    enforce_scopes?: false
+end
+
+defmodule Oauth2ServerTest.ScopeProvider do
+  @moduledoc false
+  def list_scopes, do: ["mcp", "dynamic.scope"]
+end
+
+defmodule Oauth2ServerTest.DynamicScopesServer do
+  @moduledoc """
+  Uses an MFA tuple for `:scopes`, so the catalogue is computed by
+  calling `Oauth2ServerTest.ScopeProvider.list_scopes/0`.
+  """
+
+  use AshAuthentication.Oauth2Server,
+    otp_app: :ash_authentication,
+    user_resource: Oauth2ServerTest.User,
+    issuer_url: {Oauth2ServerTest.Secrets, []},
+    resource_url: {Oauth2ServerTest.Secrets, []},
+    signing_secret: {Oauth2ServerTest.Secrets, []},
+    client_resource: Oauth2ServerTest.OAuthClient,
+    authorization_code_resource: Oauth2ServerTest.OAuthAuthorizationCode,
+    refresh_token_resource: Oauth2ServerTest.OAuthRefreshToken,
+    consent_resource: Oauth2ServerTest.OAuthConsent,
+    scopes: {Oauth2ServerTest.ScopeProvider, :list_scopes, []}
+end

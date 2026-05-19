@@ -72,7 +72,9 @@ if Code.ensure_loaded?(Igniter) do
         Default: `http://localhost:4000`.
       * `--resource-url` — Resource URL written to `config/dev.exs`.
         Default: same as `--issuer-url`.
-      * `--scope` — Scope advertised in metadata. Default: `mcp`.
+      * `--scope` — Scope advertised in metadata. Default: `example.scope`
+        (a placeholder to replace with whatever your protected resource
+        actually uses).
     """
 
     def info(_argv, _composing_task) do
@@ -98,7 +100,7 @@ if Code.ensure_loaded?(Igniter) do
         ],
         defaults: [
           issuer_url: "http://localhost:4000",
-          scope: "mcp"
+          scope: "example.scope"
         ]
       }
     end

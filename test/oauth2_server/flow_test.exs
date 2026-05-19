@@ -186,6 +186,79 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
       end
     end
 
+    test "accepts a scope that's a subset of the server's catalogue" do
+      # Server is configured with scopes: ["mcp"]; requesting "mcp" alone is fine.
+      {client, _} = register_client()
+      {_, challenge} = pkce_pair()
+      params = authorize_params(client, challenge, "https://chat.example.com/cb")
+
+      assert {:ok, _} = Authorize.validate_request(Server, params)
+    end
+
+    test "rejects a scope that includes a value outside the server's catalogue" do
+      {client, _} = register_client()
+      {_, challenge} = pkce_pair()
+
+      params =
+        client
+        |> authorize_params(challenge, "https://chat.example.com/cb")
+        |> Map.put("scope", "mcp admin")
+
+      assert {:error, "invalid_scope", desc} = Authorize.validate_request(Server, params)
+      assert desc =~ "admin"
+    end
+
+    test "resolves a scope catalogue from an MFA tuple" do
+      # DynamicScopesServer's :scopes is {ScopeProvider, :list_scopes, []}.
+      # The catalogue is ["mcp", "dynamic.scope"]; "dynamic.scope" alone
+      # should be acceptable.
+      {:ok, client, _} =
+        Register.register(Oauth2ServerTest.DynamicScopesServer, %{
+          "client_name" => "X",
+          "redirect_uris" => ["https://chat.example.com/cb"]
+        })
+
+      {_, challenge} = pkce_pair()
+
+      params =
+        client
+        |> authorize_params(challenge, "https://chat.example.com/cb")
+        |> Map.put("scope", "dynamic.scope")
+
+      assert {:ok, _} =
+               Authorize.validate_request(Oauth2ServerTest.DynamicScopesServer, params)
+
+      # And a scope OUTSIDE the dynamically-resolved list still gets rejected.
+      bad =
+        client
+        |> authorize_params(challenge, "https://chat.example.com/cb")
+        |> Map.put("scope", "not.in.catalogue")
+
+      assert {:error, "invalid_scope", _} =
+               Authorize.validate_request(Oauth2ServerTest.DynamicScopesServer, bad)
+    end
+
+    test "with enforce_scopes?: false, accepts scopes outside the catalogue" do
+      # Register against the unenforced server using its own client resource
+      # (same resource — multiple servers can share the OAuthClient table in
+      # tests).
+      {:ok, client, _body} =
+        Register.register(Oauth2ServerTest.UnenforcedScopesServer, %{
+          "client_name" => "X",
+          "redirect_uris" => ["https://chat.example.com/cb"]
+        })
+
+      {_, challenge} = pkce_pair()
+
+      params =
+        client
+        |> authorize_params(challenge, "https://chat.example.com/cb")
+        |> Map.put("scope", "mcp admin custom:foo")
+
+      assert {:ok, %{scope: "mcp admin custom:foo"}} =
+               Authorize.validate_request(Oauth2ServerTest.UnenforcedScopesServer, params)
+    end
+
     test "rejects code_challenge_method=plain (S256 only)" do
       {client, _} = register_client()
       {_, challenge} = pkce_pair()
@@ -388,15 +461,19 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
         }
       end
 
-      assert {:ok, second} = Token.exchange_refresh_token(Server, refresh_params.(first.refresh_token))
+      assert {:ok, second} =
+               Token.exchange_refresh_token(Server, refresh_params.(first.refresh_token))
+
       assert second.refresh_token != first.refresh_token
 
       # Reuse of the original refresh token after rotation is detected and
       # revokes the chain.
-      assert {:error, :reuse} = Token.exchange_refresh_token(Server, refresh_params.(first.refresh_token))
+      assert {:error, :reuse} =
+               Token.exchange_refresh_token(Server, refresh_params.(first.refresh_token))
 
       # The new refresh token is now also revoked because of chain revocation.
-      assert {:error, :revoked} = Token.exchange_refresh_token(Server, refresh_params.(second.refresh_token))
+      assert {:error, :revoked} =
+               Token.exchange_refresh_token(Server, refresh_params.(second.refresh_token))
     end
   end
 end

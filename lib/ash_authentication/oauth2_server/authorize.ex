@@ -53,6 +53,7 @@ defmodule AshAuthentication.Oauth2Server.Authorize do
          {:ok, resource} <- resolve_resource(server, params),
          {:ok, code_challenge} <- require_present(params, "code_challenge"),
          {:ok, scope} <- require_present(params, "scope"),
+         :ok <- check_scopes(server, scope),
          {:ok, redirect_uri} <- require_present(params, "redirect_uri"),
          {:ok, state} <- require_present(params, "state") do
       {:ok,
@@ -170,6 +171,24 @@ defmodule AshAuthentication.Oauth2Server.Authorize do
   end
 
   defp check_redirect_uri(_, _), do: {:error, :bad_redirect_uri}
+
+  # When `enforce_scopes?` is true (the default), every requested scope
+  # must be in the server's advertised catalogue. When false, scopes are
+  # passed through unchecked — for apps with a dynamic catalogue that
+  # validate scopes downstream.
+  defp check_scopes(server, scope) when is_binary(scope) do
+    if server.enforce_scopes?() do
+      allowed = MapSet.new(server.scopes())
+      requested = scope |> String.split(" ", trim: true) |> MapSet.new()
+
+      case MapSet.difference(requested, allowed) |> MapSet.to_list() do
+        [] -> :ok
+        [unknown | _] -> {:error, "invalid_scope", "scope #{inspect(unknown)} not allowed"}
+      end
+    else
+      :ok
+    end
+  end
 
   # `resource` is optional per RFC 8707 §2 — when absent, default to the
   # server's configured resource_url. When present, it MUST match.
