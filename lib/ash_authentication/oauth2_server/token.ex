@@ -192,29 +192,29 @@ defmodule AshAuthentication.Oauth2Server.Token do
   end
 
   defp check_refresh_validity(server, row, client_id, resource) do
-    expected_resource = server.resource_url()
-
-    resource_ok? =
-      case resource do
-        nil ->
-          true
-
-        "" ->
-          true
-
-        bin when is_binary(bin) ->
-          AshAuthentication.Oauth2Server.__normalize_url__(bin) == expected_resource
-      end
-
     cond do
       row.client_id != client_id -> {:error, :client_mismatch}
-      row.resource_uri != expected_resource -> {:error, :resource_mismatch}
-      not resource_ok? -> {:error, :resource_mismatch}
+      not resources_match?(server, row, resource) -> {:error, :resource_mismatch}
       row.revoked_at -> {:error, :revoked}
       row.rotated_to_id -> {:error, :reuse}
       DateTime.compare(DateTime.utc_now(), row.expires_at) == :gt -> {:error, :expired}
       true -> :ok
     end
+  end
+
+  defp resources_match?(server, row, requested) do
+    expected = server.resource_url()
+    row.resource_uri == expected and requested_resource_ok?(requested, expected)
+  end
+
+  # `resource` is optional per RFC 8707 §2 — when absent (`nil` or empty
+  # string) we don't enforce, otherwise it must canonicalize to the
+  # server's resource URL.
+  defp requested_resource_ok?(nil, _expected), do: true
+  defp requested_resource_ok?("", _expected), do: true
+
+  defp requested_resource_ok?(bin, expected) when is_binary(bin) do
+    AshAuthentication.Oauth2Server.__normalize_url__(bin) == expected
   end
 
   # Issue the new row first; if that succeeds, mark the old row rotated to it.

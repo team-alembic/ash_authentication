@@ -304,38 +304,31 @@ defmodule AshAuthentication.Oauth2Server do
   @doc false
   # Resolve the `:scopes` option, which may be a static list, a 0-arity
   # function, or an MFA tuple. Returns the list of scope strings.
-  def __resolve_scopes__!(value, module) do
-    case value do
-      list when is_list(list) ->
-        list
+  def __resolve_scopes__!(list, _module) when is_list(list), do: list
 
-      fun when is_function(fun, 0) ->
-        case fun.() do
-          list when is_list(list) -> list
-          other -> raise "scopes function returned #{inspect(other)}, expected a list"
-        end
+  def __resolve_scopes__!(fun, _module) when is_function(fun, 0),
+    do: ensure_scopes_list!(fun.(), fun)
 
-      {mod, fun, args} when is_atom(mod) and is_atom(fun) and is_list(args) ->
-        case apply(mod, fun, args) do
-          list when is_list(list) ->
-            list
+  def __resolve_scopes__!({mod, fun, args} = mfa, _module)
+      when is_atom(mod) and is_atom(fun) and is_list(args),
+      do: ensure_scopes_list!(apply(mod, fun, args), mfa)
 
-          other ->
-            raise "#{inspect({mod, fun, args})} returned #{inspect(other)}, expected a list"
-        end
+  def __resolve_scopes__!(other, module) do
+    raise """
+    Invalid `:scopes` value on #{inspect(module)}: #{inspect(other)}.
 
-      other ->
-        raise """
-        Invalid `:scopes` value on #{inspect(module)}: #{inspect(other)}.
+    Expected one of:
 
-        Expected one of:
-
-          * a list of scope strings — `["read", "write"]`
-          * a 0-arity function — `fn -> ["read", "write"] end`
-          * an MFA tuple — `{Module, :function, [args]}`
-        """
-    end
+      * a list of scope strings — `["read", "write"]`
+      * a 0-arity function — `fn -> ["read", "write"] end`
+      * an MFA tuple — `{Module, :function, [args]}`
+    """
   end
+
+  defp ensure_scopes_list!(list, _source) when is_list(list), do: list
+
+  defp ensure_scopes_list!(other, source),
+    do: raise("#{inspect(source)} returned #{inspect(other)}, expected a list of scopes")
 
   @doc """
   Canonicalize a URL for redirect_uri / resource / issuer comparison.

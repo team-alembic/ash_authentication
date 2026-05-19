@@ -12,7 +12,7 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
   """
   use ExUnit.Case, async: false
 
-  alias AshAuthentication.Oauth2Server.{Authorize, PKCE, Register, Token}
+  alias AshAuthentication.Oauth2Server.{Authorize, Jwt, PKCE, Register, Token}
   alias Oauth2ServerTest.Server
 
   alias Oauth2ServerTest.{
@@ -324,8 +324,7 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
       assert response.expires_in == Server.access_token_lifetime()
 
       # access token verifies under the audience
-      assert {:ok, claims} =
-               AshAuthentication.Oauth2Server.Jwt.verify(Server, response.access_token)
+      assert {:ok, claims} = Jwt.verify(Server, response.access_token)
 
       assert claims["sub"] == user.id
       assert claims["client_id"] == client.id
