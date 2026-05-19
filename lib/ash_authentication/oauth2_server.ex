@@ -42,10 +42,25 @@ defmodule AshAuthentication.Oauth2Server do
   | `:authorization_code_lifetime` | `{10, :minutes}` | |
   | `:dcr_always_return_client_secret?` | `false` | Workaround for clients that misbehave when `client_secret` is absent for `auth_method: none`. See https://community.openai.com/t/1366118 |
   | `:sign_in_path` | `nil` | Path to redirect unauthenticated `/oauth/authorize` requests to. When `nil`, returns 401. |
+  | `:initial_access_token` | `nil` | When set, `POST /oauth/register` requires the request to present a matching `Authorization: Bearer …` token (RFC 7591 §3). When `nil` (default), dynamic client registration is open — see the trust-model note below. |
+
+  ## Dynamic client registration
+
+  By default, `POST /oauth/register` is open — any client can register
+  itself with its desired `redirect_uris`. This is the standard mode for
+  OAuth dynamic client registration (RFC 7591) and matches what MCP and
+  most similar flows expect; user-facing protection lives further down
+  in the consent screen and the audience-bound access tokens.
+
+  If you'd rather gate registration (e.g. only your own deployment
+  infrastructure can register clients), set `:initial_access_token` and
+  require requests to present a matching `Authorization: Bearer …`
+  header (RFC 7591 §3).
 
   ### Secret values
 
-  `:issuer_url`, `:resource_url`, and `:signing_secret` accept any of:
+  `:issuer_url`, `:resource_url`, `:signing_secret`, and
+  `:initial_access_token` accept any of:
 
     * a literal string — resolved at compile time
     * a `{Module, opts}` tuple where `Module` implements
@@ -89,7 +104,8 @@ defmodule AshAuthentication.Oauth2Server do
       refresh_token_lifetime: {30, :days},
       authorization_code_lifetime: {10, :minutes},
       dcr_always_return_client_secret?: false,
-      sign_in_path: nil
+      sign_in_path: nil,
+      initial_access_token: nil
     ]
   end
 
@@ -145,6 +161,23 @@ defmodule AshAuthentication.Oauth2Server do
         @oauth2_server_opts
         |> Keyword.fetch!(:signing_secret)
         |> Oauth2Server.__resolve_secret__!(__MODULE__, [:signing_secret])
+      end
+
+      @doc """
+      The configured initial access token, or `nil` if dynamic client
+      registration is open.
+
+      When non-nil, `POST /oauth/register` requires the request to present
+      the matching token in `Authorization: Bearer …`. See RFC 7591 §3.
+      """
+      def initial_access_token do
+        case @oauth2_server_opts[:initial_access_token] do
+          nil ->
+            nil
+
+          spec ->
+            Oauth2Server.__resolve_secret__!(spec, __MODULE__, [:initial_access_token])
+        end
       end
 
       def __oauth2_server__, do: true

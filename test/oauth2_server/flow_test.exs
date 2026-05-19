@@ -98,6 +98,47 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
                  "redirect_uris" => ["http://localhost:4000/cb"]
                })
     end
+
+    test "open server ignores any presented initial access token" do
+      # Server has no initial_access_token configured — presenting one
+      # is a no-op rather than an error.
+      assert {:ok, _, _} =
+               Register.register(
+                 Server,
+                 %{"client_name" => "X", "redirect_uris" => ["https://app.example.com/cb"]},
+                 initial_access_token: "anything"
+               )
+    end
+
+    test "gated server rejects registration without an initial access token" do
+      assert {:error, "invalid_client_metadata", desc} =
+               Register.register(Oauth2ServerTest.GatedServer, %{
+                 "client_name" => "X",
+                 "redirect_uris" => ["https://app.example.com/cb"]
+               })
+
+      assert desc =~ "initial access token"
+    end
+
+    test "gated server rejects a wrong initial access token" do
+      assert {:error, "invalid_client_metadata", _} =
+               Register.register(
+                 Oauth2ServerTest.GatedServer,
+                 %{"client_name" => "X", "redirect_uris" => ["https://app.example.com/cb"]},
+                 initial_access_token: "wrong-token"
+               )
+    end
+
+    test "gated server accepts registration with the correct initial access token" do
+      assert {:ok, _client, body} =
+               Register.register(
+                 Oauth2ServerTest.GatedServer,
+                 %{"client_name" => "Trusted", "redirect_uris" => ["https://app.example.com/cb"]},
+                 initial_access_token: "test-initial-access-token-shhh"
+               )
+
+      assert body["client_name"] == "Trusted"
+    end
   end
 
   describe "Authorize.validate_request/2" do

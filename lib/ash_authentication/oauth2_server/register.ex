@@ -9,6 +9,11 @@ defmodule AshAuthentication.Oauth2Server.Register do
 
   v1 supports public clients only (PKCE, `token_endpoint_auth_method: "none"`).
   Confidential clients (`client_secret_basic`) are deferred.
+
+  Registration is open by default — the standard RFC 7591 mode. To gate
+  it, set `:initial_access_token` on your `Oauth2Server` module and pass
+  the request's bearer token via `opts[:initial_access_token]` when
+  calling `register/3` (RFC 7591 §3).
   """
 
   @valid_grant_types ~w(authorization_code refresh_token)
@@ -18,17 +23,22 @@ defmodule AshAuthentication.Oauth2Server.Register do
   @doc """
   Register a new OAuth client from RFC 7591-shaped parameters.
 
+  `opts` may include:
+
+    * `:initial_access_token` — the bearer token the request presented
+      (or `nil`). When the server has `:initial_access_token` configured,
+      this MUST match (constant-time) or registration is rejected.
+
   Returns `{:ok, client_record, response_body}` on success or
   `{:error, code, description}` on a validation failure suitable for a
   400 DCR error response.
-
-  `response_body` is the map the controller should JSON-encode and return.
   """
-  @spec register(server :: module(), params :: map()) ::
+  @spec register(server :: module(), params :: map(), opts :: keyword()) ::
           {:ok, Ash.Resource.record(), map()}
           | {:error, String.t(), String.t()}
-  def register(server, params) do
-    with :ok <- validate_redirect_uris(params),
+  def register(server, params, opts \\ []) do
+    with :ok <- check_initial_access_token(server, opts),
+         :ok <- validate_redirect_uris(params),
          :ok <- validate_grant_types(params),
          :ok <- validate_response_types(params),
          :ok <- validate_auth_method(params),
@@ -37,6 +47,22 @@ defmodule AshAuthentication.Oauth2Server.Register do
     else
       {:error, code, desc} -> {:error, code, desc}
       {:error, _other} -> {:error, "invalid_client_metadata", "client could not be registered"}
+    end
+  end
+
+  defp check_initial_access_token(server, opts) do
+    case server.initial_access_token() do
+      nil ->
+        :ok
+
+      expected when is_binary(expected) ->
+        presented = Keyword.get(opts, :initial_access_token)
+
+        if is_binary(presented) and Plug.Crypto.secure_compare(expected, presented),
+          do: :ok,
+          else:
+            {:error, "invalid_client_metadata",
+             "registration requires a valid initial access token"}
     end
   end
 
