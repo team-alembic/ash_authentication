@@ -99,6 +99,16 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
                })
     end
 
+    test "rejects non-string client_name with a clean DCR error" do
+      assert {:error, "invalid_client_metadata", desc} =
+               Register.register(Server, %{
+                 "client_name" => 1234,
+                 "redirect_uris" => ["https://app.example.com/cb"]
+               })
+
+      assert desc =~ "client_name"
+    end
+
     test "open server ignores any presented initial access token" do
       # Server has no initial_access_token configured — presenting one
       # is a no-op rather than an error.
@@ -280,7 +290,11 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
         |> authorize_params(challenge, "https://chat.example.com/cb")
         |> Map.put("resource", "https://attacker.example.com/")
 
-      assert {:error, "invalid_target", _} = Authorize.validate_request(Server, params)
+      assert {:error, "invalid_target", desc} = Authorize.validate_request(Server, params)
+      # Echoes the expected URL (server-controlled) so clients can debug;
+      # does NOT echo the user-supplied resource value back.
+      assert desc =~ Server.resource_url()
+      refute desc =~ "attacker.example.com"
     end
   end
 

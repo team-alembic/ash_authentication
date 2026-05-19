@@ -192,10 +192,18 @@ defmodule AshAuthentication.Oauth2Server.Authorize do
 
   # `resource` is optional per RFC 8707 §2 — when absent, default to the
   # server's configured resource_url. When present, it MUST match.
+  # We echo the *expected* URL (server-controlled) in the error description
+  # rather than the user-supplied value, so the message is useful without
+  # creating a "reflect user input" surface.
   defp resolve_resource(server, %{"resource" => res}) when is_binary(res) and res != "" do
-    if Oauth2Server.__normalize_url__(res) == server.resource_url(),
-      do: {:ok, server.resource_url()},
-      else: {:error, "invalid_target", "resource does not match this authorization server"}
+    expected = server.resource_url()
+
+    if Oauth2Server.__normalize_url__(res) == expected,
+      do: {:ok, expected},
+      else:
+        {:error, "invalid_target",
+         "resource parameter does not match this authorization server " <>
+           "(expected: #{expected})"}
   end
 
   defp resolve_resource(server, _), do: {:ok, server.resource_url()}

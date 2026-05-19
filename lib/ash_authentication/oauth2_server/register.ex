@@ -39,6 +39,7 @@ defmodule AshAuthentication.Oauth2Server.Register do
   def register(server, params, opts \\ []) do
     with :ok <- check_initial_access_token(server, opts),
          :ok <- validate_redirect_uris(params),
+         :ok <- validate_client_name(params),
          :ok <- validate_grant_types(params),
          :ok <- validate_response_types(params),
          :ok <- validate_auth_method(params),
@@ -87,6 +88,16 @@ defmodule AshAuthentication.Oauth2Server.Register do
 
   defp validate_redirect_uris(_),
     do: {:error, "invalid_client_metadata", "redirect_uris is required"}
+
+  # `client_name` is optional in RFC 7591. When present, must be a string;
+  # we don't impose length limits but reject obviously bogus shapes so they
+  # turn into a clean DCR error rather than a 500 in the changeset.
+  defp validate_client_name(%{"client_name" => name}) when is_binary(name), do: :ok
+
+  defp validate_client_name(%{"client_name" => _}),
+    do: {:error, "invalid_client_metadata", "client_name must be a string"}
+
+  defp validate_client_name(_), do: :ok
 
   defp validate_grant_types(%{"grant_types" => grants}) when is_list(grants) do
     if Enum.all?(grants, &(&1 in @valid_grant_types)),
