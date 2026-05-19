@@ -186,5 +186,35 @@ defmodule AshAuthentication.Oauth2Server.SmokeTest do
       assert Oauth2Server.__normalize_url__("https://APP.example.com:4001/Mcp") ==
                "https://app.example.com:4001/Mcp"
     end
+
+    test "elides default ports (RFC 8252 §7.3 / RFC 3986 §6)" do
+      assert Oauth2Server.__normalize_url__("https://app.example.com:443/cb") ==
+               "https://app.example.com/cb"
+
+      assert Oauth2Server.__normalize_url__("http://app.example.com:80/cb") ==
+               "http://app.example.com/cb"
+
+      # Non-default ports are preserved.
+      assert Oauth2Server.__normalize_url__("https://app.example.com:8443/cb") ==
+               "https://app.example.com:8443/cb"
+
+      # Default port on the wrong scheme is preserved (it's not default for http).
+      assert Oauth2Server.__normalize_url__("http://app.example.com:443/cb") ==
+               "http://app.example.com:443/cb"
+    end
+
+    test "trailing-slash + default port + case all canonicalize to the same form" do
+      forms = [
+        "https://app.example.com/cb",
+        "https://app.example.com/cb/",
+        "HTTPS://APP.EXAMPLE.COM/cb",
+        "https://app.example.com:443/cb",
+        "https://APP.EXAMPLE.COM:443/cb/",
+        "https://app.example.com/cb#fragment"
+      ]
+
+      [first | rest] = Enum.map(forms, &Oauth2Server.__normalize_url__/1)
+      assert Enum.all?(rest, &(&1 == first))
+    end
   end
 end

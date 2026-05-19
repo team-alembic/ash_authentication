@@ -161,8 +161,12 @@ defmodule AshAuthentication.Oauth2Server.Authorize do
 
   defp load_client(_server, _params), do: {:error, "invalid_request", "client_id required"}
 
-  defp check_redirect_uri(%{"redirect_uri" => uri}, %{redirect_uris: uris}) when is_list(uris) do
-    if uri in uris, do: :ok, else: {:error, :bad_redirect_uri}
+  defp check_redirect_uri(%{"redirect_uri" => uri}, %{redirect_uris: uris})
+       when is_binary(uri) and is_list(uris) do
+    normalized = Oauth2Server.__normalize_url__(uri)
+    registered = Enum.map(uris, &Oauth2Server.__normalize_url__/1)
+
+    if normalized in registered, do: :ok, else: {:error, :bad_redirect_uri}
   end
 
   defp check_redirect_uri(_, _), do: {:error, :bad_redirect_uri}

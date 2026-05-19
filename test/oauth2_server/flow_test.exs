@@ -129,6 +129,22 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
       assert {:error, :bad_redirect_uri} = Authorize.validate_request(Server, params)
     end
 
+    test "accepts an equivalent redirect_uri (case / default port / trailing slash)" do
+      {client, _} = register_client("https://chat.example.com/cb")
+      {_, challenge} = pkce_pair()
+
+      # All of these should canonicalize to the registered form.
+      for incoming <- [
+            "https://chat.example.com/cb/",
+            "HTTPS://CHAT.EXAMPLE.COM/cb",
+            "https://chat.example.com:443/cb",
+            "https://chat.example.com/cb#frag"
+          ] do
+        params = authorize_params(client, challenge, incoming)
+        assert {:ok, _validated} = Authorize.validate_request(Server, params)
+      end
+    end
+
     test "rejects code_challenge_method=plain (S256 only)" do
       {client, _} = register_client()
       {_, challenge} = pkce_pair()
@@ -267,6 +283,31 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
                  "grant_type" => "authorization_code",
                  "code" => code.id,
                  "redirect_uri" => "https://other.example.com/cb",
+                 "code_verifier" => verifier,
+                 "client_id" => client.id,
+                 "resource" => Server.resource_url()
+               })
+    end
+
+    test "accepts an equivalent redirect_uri at token time", %{user: user} do
+      {client, _} = register_client("https://chat.example.com/cb")
+      {verifier, challenge} = pkce_pair()
+
+      {:ok, validated} =
+        Authorize.validate_request(
+          Server,
+          authorize_params(client, challenge, "https://chat.example.com/cb")
+        )
+
+      code = Authorize.issue_code!(Server, user, validated)
+
+      # Different surface form than what was stored on the code — must still
+      # be accepted because they canonicalize to the same URL.
+      assert {:ok, _response} =
+               Token.exchange_authorization_code(Server, %{
+                 "grant_type" => "authorization_code",
+                 "code" => code.id,
+                 "redirect_uri" => "HTTPS://CHAT.EXAMPLE.COM:443/cb/",
                  "code_verifier" => verifier,
                  "client_id" => client.id,
                  "resource" => Server.resource_url()

@@ -241,14 +241,23 @@ defmodule AshAuthentication.Oauth2Server do
 
   defp resolve_secret(other, _module, _path), do: {:error, {:invalid_secret, other}}
 
-  @doc false
+  @doc """
+  Canonicalize a URL for redirect_uri / resource / issuer comparison.
+
+  Per RFC 8252 §7.3 and RFC 3986 §6 — lowercase scheme + host, elide
+  default ports (80 for http, 443 for https), strip trailing slash off
+  an empty path, drop the fragment. Two URLs that compare equal after
+  this canonicalization are considered equivalent.
+  """
   def __normalize_url__(url) when is_binary(url) do
     uri = URI.parse(url)
+    scheme = uri.scheme && String.downcase(uri.scheme)
 
     %{
       uri
-      | scheme: uri.scheme && String.downcase(uri.scheme),
+      | scheme: scheme,
         host: uri.host && String.downcase(uri.host),
+        port: normalize_port(scheme, uri.port),
         path: normalize_path(uri.path),
         fragment: nil
     }
@@ -259,4 +268,8 @@ defmodule AshAuthentication.Oauth2Server do
   defp normalize_path(nil), do: nil
   defp normalize_path("/"), do: nil
   defp normalize_path(path), do: path
+
+  defp normalize_port("http", 80), do: nil
+  defp normalize_port("https", 443), do: nil
+  defp normalize_port(_, port), do: port
 end

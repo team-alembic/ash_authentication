@@ -133,8 +133,12 @@ defmodule AshAuthentication.Oauth2Server.Token do
     end
   end
 
-  defp check_redirect_match(%{"redirect_uri" => uri}, %{redirect_uri: code_uri}) do
-    if uri == code_uri, do: :ok, else: {:error, :redirect_mismatch}
+  defp check_redirect_match(%{"redirect_uri" => uri}, %{redirect_uri: code_uri})
+       when is_binary(uri) and is_binary(code_uri) do
+    if AshAuthentication.Oauth2Server.__normalize_url__(uri) ==
+         AshAuthentication.Oauth2Server.__normalize_url__(code_uri),
+       do: :ok,
+       else: {:error, :redirect_mismatch}
   end
 
   defp check_redirect_match(_, _), do: {:error, :redirect_mismatch}
