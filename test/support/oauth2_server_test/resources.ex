@@ -290,7 +290,13 @@ defmodule Oauth2ServerTest.UnenforcedScopesServer do
 end
 
 defmodule Oauth2ServerTest.ScopeProvider do
-  @moduledoc false
+  @moduledoc """
+  Test stub used by `Oauth2ServerTest.DynamicScopesServer` to exercise
+  the `{Module, function, args}` form of the `:scopes` option.
+  """
+
+  @doc "Returns the dynamically-computed scope catalogue."
+  @spec list_scopes() :: [String.t()]
   def list_scopes, do: ["mcp", "dynamic.scope"]
 end
 
