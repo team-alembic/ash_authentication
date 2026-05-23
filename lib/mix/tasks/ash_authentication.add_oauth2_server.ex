@@ -84,12 +84,6 @@ if Code.ensure_loaded?(Igniter) do
         extra_args?: false,
         only: nil,
         positional: [],
-        # `installs:` adds the dep AND composes `ash_rate_limiter.install`,
-        # which generates the app's Hammer module and adds it to the
-        # supervision tree. We then attach a `rate_limit` block to the
-        # generated OAuthClient resource keyed by client IP. See the
-        # "Rate limiting" section of `AshAuthentication.Oauth2Server`.
-        installs: [{:ash_rate_limiter, "~> 1.0"}],
         schema: [
           accounts: :string,
           user: :string,
@@ -117,6 +111,7 @@ if Code.ensure_loaded?(Igniter) do
       case Igniter.Project.Module.module_exists(igniter, options[:user]) do
         {true, igniter} ->
           igniter
+          |> install_rate_limiter()
           |> generate_resources(options)
           |> add_resources_to_domain(options)
           |> generate_server_module(options)
@@ -251,6 +246,19 @@ if Code.ensure_loaded?(Igniter) do
     # AAP `ProtocolRouter` plug fills it in from `conn.remote_ip`. When
     # an IP isn't present (tests, internal callers) the limit falls
     # back to a single bucket so the protection still applies.
+    # Adds `ash_rate_limiter` to mix.exs, fetches/compiles deps, then
+    # composes `ash_rate_limiter.install` so the user gets the Hammer
+    # module + supervision-tree wiring set up. The task's `installs:`
+    # field can't be used here because this task is invoked directly
+    # (not via `mix igniter.install`), and that path is the only one
+    # that honors `installs:`.
+    defp install_rate_limiter(igniter) do
+      igniter
+      |> Igniter.Project.Deps.add_dep({:ash_rate_limiter, "~> 1.0"}, on_exists: :skip)
+      |> Igniter.apply_and_fetch_dependencies(yes: true)
+      |> Igniter.compose_task("ash_rate_limiter.install", [])
+    end
+
     defp add_rate_limit(igniter, mod) do
       hammer = Igniter.Project.Module.module_name(igniter, "Hammer")
 
