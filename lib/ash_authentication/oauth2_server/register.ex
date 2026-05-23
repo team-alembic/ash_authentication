@@ -28,11 +28,6 @@ defmodule AshAuthentication.Oauth2Server.Register do
     * `:initial_access_token` — the bearer token the request presented
       (or `nil`). When the server has `:initial_access_token` configured,
       this MUST match (constant-time) or registration is rejected.
-    * `:remote_ip` — the client's IP (as returned by `conn.remote_ip`).
-      Surfaced on the changeset context so per-IP rate-limit keys
-      (`AshAuthentication.Oauth2Server.RateLimit.key_by_ip/2`) can read
-      it. The HTTP layer fills this in; callers from tests or internal
-      code can omit it.
 
   Returns:
 
@@ -44,9 +39,6 @@ defmodule AshAuthentication.Oauth2Server.Register do
       missing or didn't match. Per RFC 7591 §3.2.2 this is a Bearer-auth
       failure — controllers should emit `401` with
       `WWW-Authenticate: Bearer error="invalid_token"`, not 400.
-    * `{:error, :rate_limited}` when the configured `AshRateLimiter`
-      block on the client resource's `:register` action rejected the
-      call. Controllers should emit `429 Too Many Requests`.
     * `{:error, code, description}` for any other validation failure —
       a 400 DCR error response per RFC 7591 §3.2.2.
   """
@@ -54,7 +46,6 @@ defmodule AshAuthentication.Oauth2Server.Register do
           {:ok, Ash.Resource.record(), map()}
           | {:error, :dcr_disabled}
           | {:error, :invalid_initial_access_token}
-          | {:error, :rate_limited}
           | {:error, String.t(), String.t()}
   def register(server, params, opts \\ []) do
     with :ok <- check_dcr_enabled(server),
@@ -64,12 +55,11 @@ defmodule AshAuthentication.Oauth2Server.Register do
          :ok <- validate_grant_types(params),
          :ok <- validate_response_types(params),
          :ok <- validate_auth_method(params),
-         {:ok, client} <- create_client(server, params, opts) do
+         {:ok, client} <- create_client(server, params) do
       {:ok, client, response_body(server, client)}
     else
       {:error, :dcr_disabled} = err -> err
       {:error, :invalid_initial_access_token} = err -> err
-      {:error, :rate_limited} = err -> err
       {:error, code, desc} -> {:error, code, desc}
       {:error, _other} -> {:error, "invalid_client_metadata", "client could not be registered"}
     end
@@ -149,7 +139,7 @@ defmodule AshAuthentication.Oauth2Server.Register do
 
   defp validate_auth_method(_), do: :ok
 
-  defp create_client(server, params, opts) do
+  defp create_client(server, params) do
     attrs = %{
       client_name: Map.get(params, "client_name", "Unnamed Client"),
       redirect_uris: Map.fetch!(params, "redirect_uris"),
@@ -159,38 +149,10 @@ defmodule AshAuthentication.Oauth2Server.Register do
       scope: Enum.join(server.scopes(), " ")
     }
 
-    # Surface `remote_ip` (when present) on the changeset context so the
-    # `rate_limit` block's key function can read it. The HTTP layer fills
-    # it from `conn.remote_ip`; internal callers may omit it.
-    context = remote_ip_context(opts)
-
     server.client_resource()
-    |> Ash.Changeset.for_create(:register, attrs, context: context)
+    |> Ash.Changeset.for_create(:register, attrs)
     |> Ash.create(authorize?: false)
-    |> translate_rate_limit_error()
   end
-
-  defp remote_ip_context(opts) do
-    case Keyword.get(opts, :remote_ip) do
-      nil -> %{}
-      ip -> %{remote_ip: ip}
-    end
-  end
-
-  defp translate_rate_limit_error({:ok, _} = ok), do: ok
-
-  defp translate_rate_limit_error({:error, %{errors: errors}} = err) when is_list(errors) do
-    if Enum.any?(errors, &rate_limit_exceeded?/1),
-      do: {:error, :rate_limited},
-      else: err
-  end
-
-  defp translate_rate_limit_error(other), do: other
-
-  # `AshRateLimiter` is an optional integration — referenced by name so
-  # the compiler doesn't need its struct loaded.
-  defp rate_limit_exceeded?(%{__struct__: AshRateLimiter.LimitExceeded}), do: true
-  defp rate_limit_exceeded?(_), do: false
 
   defp response_body(server, client) do
     base = %{

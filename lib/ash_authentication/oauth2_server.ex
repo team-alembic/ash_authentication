@@ -68,65 +68,34 @@ defmodule AshAuthentication.Oauth2Server do
 
   ## Rate limiting
 
-  `POST /oauth/register` is unauthenticated by design (clients haven't
-  finished authenticating yet) and so is a reasonable DoS target. RFC
-  7591 §5 calls this out specifically: the endpoint "MAY be
-  rate-limited or otherwise limited to prevent a denial-of-service
-  attack on the client registration endpoint."
+  The protocol endpoints — `/oauth/register`, `/oauth/token`,
+  `/oauth/revoke` — are unauthenticated by design (clients haven't
+  finished authenticating yet) and so are reasonable DoS targets. RFC
+  7591 §5 explicitly notes that `/register` "MAY be rate-limited or
+  otherwise limited to prevent a denial-of-service attack on the
+  client registration endpoint."
 
-  The installer wires this up using
-  [`AshRateLimiter`](https://hexdocs.pm/ash_rate_limiter): the
-  generated `OAuthClient` resource carries the extension and a
-  `rate_limit` block limiting `:register` to 20/minute **per client
-  IP**, via an ETS-backed Hammer backend. The limit lives on the Ash
-  action — applied via the `key_by_ip/2` helper in
-  `AshAuthentication.Oauth2Server.RateLimit` — so the protection
-  attaches uniformly however the action is reached (HTTP, internal
-  call, tests).
+  We recommend implementing this at the router level rather than in
+  the library — the right tool depends on your deployment (in-process
+  per-node, Redis-backed across nodes, CDN/edge), and any plug you
+  already use for the rest of your app will work here too. Some
+  options:
 
-  The HTTP layer fills the IP in: AAP's `ProtocolRouter` passes
-  `conn.remote_ip` into `Register.register/3` as `remote_ip:`, which
-  surfaces it on the changeset context.
+    * [`Hammer`](https://hex.pm/packages/hammer) — flexible counter
+      backends (ETS, Redis, Mnesia).
+    * [`PlugAttack`](https://hex.pm/packages/plug_attack) — composable
+      throttling/blocking rules as a plug pipeline.
+    * Edge/CDN-level limits (Cloudflare, Fastly, fly.io) — cheapest
+      and stops bad traffic before it reaches your app.
 
-  ### Behind a reverse proxy
-
-  `conn.remote_ip` is whatever Phoenix sees as the TCP peer. Behind a
-  proxy (nginx, Cloudflare, Fly's edge, an AWS ELB, etc.) that's the
-  proxy's IP — every request will hash to the same bucket and you've
-  essentially lost the IP-keying. To fix:
-
-    1. The proxy must set `X-Forwarded-For` (or `Forwarded`).
-    2. Add `RemoteIp` (https://hexdocs.pm/remote_ip) to your endpoint,
-       configured with the proxy's IP range as trusted, so it rewrites
-       `conn.remote_ip` to the real client.
-
-  ### Tuning the limit
-
-  Edit the generated `OAuthClient` resource:
-
-  ```elixir
-  rate_limit do
-    backend MyApp.Hammer
-    action :register,
-      limit: 100,
-      per: :timer.minutes(5),
-      key: &AshAuthentication.Oauth2Server.RateLimit.key_by_ip/2
-  end
-  ```
-
-  Use a custom `key` function for richer schemes (per-tenant,
-  per-IP-prefix, etc.) — the function gets `(changeset, context)` and
-  returns a string. The changeset context carries `:remote_ip` from
-  the HTTP layer.
-
-  ### Limiting other endpoints
-
-  `/oauth/token` carries similar exposure. Add an `action` entry to
-  the `OAuthRefreshToken` (for refresh rotation) and
-  `OAuthAuthorizationCode` (for code exchange) resources if your
-  deployment needs it — the installer doesn't add them by default
-  because the right ceiling depends heavily on legitimate client
-  volume, but the same `AshRateLimiter` extension applies.
+  If your app sits behind a reverse proxy or CDN, `conn.remote_ip`
+  defaults to the proxy's IP. Set up
+  [`remote_ip`](https://hexdocs.pm/remote_ip) (or your own
+  `X-Forwarded-For` plug) so Phoenix sees the real client before any
+  IP-based limiter runs. For deployments where DCR doesn't need to be
+  open, you can turn the registration endpoint off entirely with
+  `dcr_enabled?: false` (the library default), or gate it behind a
+  shared secret with `:initial_access_token`.
 
   ## Secret values
 
