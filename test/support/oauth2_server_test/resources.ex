@@ -118,10 +118,12 @@ defmodule Oauth2ServerTest.OAuthRefreshToken do
   @moduledoc false
   use Ash.Resource,
     domain: Oauth2ServerTest.Domain,
-    data_layer: Ash.DataLayer.Ets
+    data_layer: Ash.DataLayer.Ets,
+    extensions: [AshAuthentication.Oauth2Server.RefreshTokenResource]
 
   attributes do
-    uuid_v7_primary_key :id
+    # Writable so the Token core can rotate-with-pre-allocated-id atomically.
+    uuid_v7_primary_key :id, writable?: true
     attribute :token_hash, :string, allow_nil?: false, public?: true
     attribute :client_id, :uuid_v7, allow_nil?: false, public?: true
     attribute :user_id, :uuid_v7, allow_nil?: false, public?: true
@@ -136,7 +138,7 @@ defmodule Oauth2ServerTest.OAuthRefreshToken do
     defaults [:read, :destroy]
 
     create :issue do
-      accept [:token_hash, :client_id, :user_id, :scope, :resource_uri, :expires_at]
+      accept [:id, :token_hash, :client_id, :user_id, :scope, :resource_uri, :expires_at]
     end
 
     update :rotate do
@@ -144,19 +146,10 @@ defmodule Oauth2ServerTest.OAuthRefreshToken do
       accept []
       require_atomic? false
 
-      change fn changeset, _ ->
-        cond do
-          Ash.Changeset.get_data(changeset, :revoked_at) ->
-            Ash.Changeset.add_error(changeset, message: "refresh token revoked")
-
-          Ash.Changeset.get_data(changeset, :rotated_to_id) ->
-            Ash.Changeset.add_error(changeset, message: "refresh token already rotated")
-
-          true ->
-            new_id = Ash.Changeset.get_argument(changeset, :rotated_to_id)
-            Ash.Changeset.change_attribute(changeset, :rotated_to_id, new_id)
-        end
-      end
+      # The change attaches the atomic filter + sets the attribute. The
+      # `RefreshTokenResource` verifier checks for its presence so the
+      # contract can't silently be broken by editing the action.
+      change AshAuthentication.Oauth2Server.Changes.RotateRefreshToken
     end
 
     update :revoke do

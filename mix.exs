@@ -341,6 +341,8 @@ defmodule AshAuthentication.MixProject do
         "hex.audit",
         "test"
       ],
+      # this is used as a dev only dependency
+      "deps.audit": ["deps.audit --ignore-package-names cowlib"],
       "spark.formatter": "spark.formatter --extensions #{Enum.join(extensions, ",")}",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions #{Enum.join(extensions, ",")}",
       docs: [

@@ -297,8 +297,6 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> Igniter.compose_task("ash.gen.resource", [
         inspect(mod),
-        "--uuid-v7-primary-key",
-        "id",
         "--default-actions",
         "read,destroy",
         "--attribute",
@@ -320,30 +318,34 @@ if Code.ensure_loaded?(Igniter) do
         "--extend",
         data_layer_extension()
       ])
-      |> Ash.Resource.Igniter.add_new_action(mod, :issue, """
-      create :issue do
-        accept [:token_hash, :client_id, :user_id, :scope, :resource_uri, :expires_at]
+      # The library pre-allocates the new refresh row's `id` so the
+      # `:rotate` action can atomically set `rotated_to_id = ^new_id` in
+      # one filtered UPDATE. That requires the primary key to be
+      # writable, which `uuid_v7_primary_key` doesn't default to.
+      |> Ash.Resource.Igniter.add_new_attribute(mod, :id, """
+      attribute :id, :uuid_v7 do
+        primary_key? true
+        allow_nil? false
+        default &Ash.UUIDv7.generate/0
+        writable? true
+        public? true
       end
       """)
+      |> Ash.Resource.Igniter.add_new_action(mod, :issue, """
+      create :issue do
+        accept [:id, :token_hash, :client_id, :user_id, :scope, :resource_uri, :expires_at]
+      end
+      """)
+      # The change attaches the atomic filter + sets rotated_to_id. The
+      # RefreshTokenResource verifier checks for its presence so the
+      # race-safety contract can't silently be broken by editing the action.
       |> Ash.Resource.Igniter.add_new_action(mod, :rotate, """
       update :rotate do
         argument :rotated_to_id, :uuid_v7, allow_nil?: false
         accept []
         require_atomic? false
 
-        change fn changeset, _ ->
-          cond do
-            Ash.Changeset.get_data(changeset, :revoked_at) ->
-              Ash.Changeset.add_error(changeset, message: "refresh token revoked")
-
-            Ash.Changeset.get_data(changeset, :rotated_to_id) ->
-              Ash.Changeset.add_error(changeset, message: "refresh token already rotated")
-
-            true ->
-              new_id = Ash.Changeset.get_argument(changeset, :rotated_to_id)
-              Ash.Changeset.change_attribute(changeset, :rotated_to_id, new_id)
-          end
-        end
+        change AshAuthentication.Oauth2Server.Changes.RotateRefreshToken
       end
       """)
       |> Ash.Resource.Igniter.add_new_action(mod, :revoke, """
@@ -356,6 +358,13 @@ if Code.ensure_loaded?(Igniter) do
       |> Ash.Resource.Igniter.add_new_identity(mod, :by_token_hash, """
       identity :by_token_hash, [:token_hash]
       """)
+      # Compile-time check that the resource still meets the race-safety
+      # contract (writable :id, :rotate action carrying the rotation
+      # change module).
+      |> Igniter.compose_task("ash.extend", [
+        inspect(mod),
+        "AshAuthentication.Oauth2Server.RefreshTokenResource"
+      ])
       |> add_authn_bypass(mod)
     end
 
