@@ -255,6 +255,11 @@ if Code.ensure_loaded?(Igniter) do
     defp install_rate_limiter(igniter) do
       igniter
       |> Igniter.Project.Deps.add_dep({:ash_rate_limiter, "~> 1.0"}, on_exists: :skip)
+      # `ash_rate_limiter` declares `hammer` as optional, so we add it
+      # explicitly here. `ash_rate_limiter.install` lists it in
+      # `adds_deps:`, but that field only fires when the task is
+      # invoked via `mix igniter.install`, not when composed.
+      |> Igniter.Project.Deps.add_dep({:hammer, "~> 7.0"}, on_exists: :skip)
       |> Igniter.apply_and_fetch_dependencies(yes: true)
       |> Igniter.compose_task("ash_rate_limiter.install", [])
     end
