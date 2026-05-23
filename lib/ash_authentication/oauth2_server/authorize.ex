@@ -40,6 +40,25 @@ defmodule AshAuthentication.Oauth2Server.Authorize do
       redirect.
     * `{:error, error_code, description}` — any other validation error.
       Controllers redirect these errors back to `redirect_uri`.
+
+  ## A note on the `state` parameter
+
+  Clients MUST set `state` to a cryptographically random, unguessable
+  value (RFC 6749 §10.12 / RFC 9700 §4.7). The server echoes it back via
+  the redirect so the client can correlate the response with its
+  pending request — and verify the response didn't come from a CSRF or
+  injection attack.
+
+  This means **clients should NOT use `state` as a stash for
+  application-level data** like a "return-to" URL or routing hints. That
+  pattern is unsafe — the value travels through the user-agent and
+  query string and is reflected back by the server, so any data put in
+  it can be observed, replayed, or tampered with. Stash that data
+  server-side (keyed by a fresh `state`), or encode it in a signed
+  cookie.
+
+  We don't enforce a shape or entropy minimum here, but anything other
+  than a random per-request value defeats the purpose of `state`.
   """
   @spec validate_request(server :: module(), params :: map()) ::
           {:ok, validated()}
