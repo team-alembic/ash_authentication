@@ -239,7 +239,8 @@ defmodule Oauth2ServerTest.Server do
     authorization_code_resource: Oauth2ServerTest.OAuthAuthorizationCode,
     refresh_token_resource: Oauth2ServerTest.OAuthRefreshToken,
     consent_resource: Oauth2ServerTest.OAuthConsent,
-    scopes: ["mcp"]
+    scopes: ["mcp"],
+    dcr_enabled?: true
 end
 
 defmodule Oauth2ServerTest.GatedServer do
@@ -259,6 +260,27 @@ defmodule Oauth2ServerTest.GatedServer do
     refresh_token_resource: Oauth2ServerTest.OAuthRefreshToken,
     consent_resource: Oauth2ServerTest.OAuthConsent,
     initial_access_token: {Oauth2ServerTest.Secrets, []},
+    scopes: ["mcp"],
+    dcr_enabled?: true
+end
+
+defmodule Oauth2ServerTest.DcrDisabledServer do
+  @moduledoc """
+  Default configuration — `dcr_enabled?` defaults to false. Used to test
+  that `POST /oauth/register` is gated off and that the metadata document
+  omits `registration_endpoint`.
+  """
+
+  use AshAuthentication.Oauth2Server,
+    otp_app: :ash_authentication,
+    user_resource: Oauth2ServerTest.User,
+    issuer_url: {Oauth2ServerTest.Secrets, []},
+    resource_url: {Oauth2ServerTest.Secrets, []},
+    signing_secret: {Oauth2ServerTest.Secrets, []},
+    client_resource: Oauth2ServerTest.OAuthClient,
+    authorization_code_resource: Oauth2ServerTest.OAuthAuthorizationCode,
+    refresh_token_resource: Oauth2ServerTest.OAuthRefreshToken,
+    consent_resource: Oauth2ServerTest.OAuthConsent,
     scopes: ["mcp"]
 end
 
@@ -279,7 +301,8 @@ defmodule Oauth2ServerTest.UnenforcedScopesServer do
     refresh_token_resource: Oauth2ServerTest.OAuthRefreshToken,
     consent_resource: Oauth2ServerTest.OAuthConsent,
     scopes: ["mcp"],
-    enforce_scopes?: false
+    enforce_scopes?: false,
+    dcr_enabled?: true
 end
 
 defmodule Oauth2ServerTest.ScopeProvider do
@@ -309,5 +332,6 @@ defmodule Oauth2ServerTest.DynamicScopesServer do
     authorization_code_resource: Oauth2ServerTest.OAuthAuthorizationCode,
     refresh_token_resource: Oauth2ServerTest.OAuthRefreshToken,
     consent_resource: Oauth2ServerTest.OAuthConsent,
-    scopes: {Oauth2ServerTest.ScopeProvider, :list_scopes, []}
+    scopes: {Oauth2ServerTest.ScopeProvider, :list_scopes, []},
+    dcr_enabled?: true
 end

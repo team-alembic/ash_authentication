@@ -446,6 +446,13 @@ if Code.ensure_loaded?(Igniter) do
         refresh_token_resource: #{inspect(Module.concat(ns, OauthRefreshToken))},
         consent_resource: #{inspect(Module.concat(ns, OauthConsent))},
         scopes: [#{inspect(options[:scope])}],
+        # Dynamic client registration (RFC 7591). The library default is
+        # `false` for safety; the installer turns it on because most
+        # people setting up an OAuth server today need it for MCP-style
+        # flows (ChatGPT Apps SDK, Claude.ai connectors, etc.). Set to
+        # `false` if your auth server is for a fixed set of first-party
+        # clients only.
+        dcr_enabled?: true,
         sign_in_path: "/sign-in"
       """
 

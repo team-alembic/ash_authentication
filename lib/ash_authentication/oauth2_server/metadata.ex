@@ -37,11 +37,10 @@ defmodule AshAuthentication.Oauth2Server.Metadata do
   def authorization_server(server) do
     issuer = server.issuer_url()
 
-    %{
+    base = %{
       "issuer" => issuer,
       "authorization_endpoint" => issuer <> "/oauth/authorize",
       "token_endpoint" => issuer <> "/oauth/token",
-      "registration_endpoint" => issuer <> "/oauth/register",
       "revocation_endpoint" => issuer <> "/oauth/revoke",
       "response_types_supported" => ["code"],
       "grant_types_supported" => ["authorization_code", "refresh_token"],
@@ -49,5 +48,11 @@ defmodule AshAuthentication.Oauth2Server.Metadata do
       "token_endpoint_auth_methods_supported" => ["none"],
       "scopes_supported" => server.scopes()
     }
+
+    # Only advertise the DCR endpoint when it's actually enabled.
+    # Clients use this field to decide whether to attempt registration.
+    if server.dcr_enabled?(),
+      do: Map.put(base, "registration_endpoint", issuer <> "/oauth/register"),
+      else: base
   end
 end

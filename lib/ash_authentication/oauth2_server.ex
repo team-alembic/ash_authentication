@@ -42,22 +42,29 @@ defmodule AshAuthentication.Oauth2Server do
   | `:refresh_token_lifetime` | `{30, :days}` | |
   | `:authorization_code_lifetime` | `{10, :minutes}` | |
   | `:clock_skew_seconds` | `30` | Tolerance applied to `exp` and `nbf` JWT claim checks. Allows for small clock differences between the AS and resource server. RFC 7519 §4.1.4 — "MAY provide for some small leeway, usually no more than a few minutes." |
+  | `:dcr_enabled?` | `false` | Enable dynamic client registration (RFC 7591) at `POST /oauth/register`. Off by default — the safer posture for first-party-only apps. Turn on if you're hosting clients that self-register (MCP, ChatGPT Apps SDK, Claude.ai connectors). When off, the route 404s and the metadata document omits `registration_endpoint`. |
   | `:dcr_always_return_client_secret?` | `false` | Workaround for clients that misbehave when `client_secret` is absent for `auth_method: none`. See https://community.openai.com/t/1366118 |
   | `:sign_in_path` | `nil` | Path to redirect unauthenticated `/oauth/authorize` requests to. When `nil`, returns 401. |
   | `:initial_access_token` | `nil` | When set, `POST /oauth/register` requires the request to present a matching `Authorization: Bearer …` token (RFC 7591 §3). When `nil` (default), dynamic client registration is open — see the trust-model note below. |
 
   ## Dynamic client registration
 
-  By default, `POST /oauth/register` is open — any client can register
-  itself with its desired `redirect_uris`. This is the standard mode for
-  OAuth dynamic client registration (RFC 7591) and matches what MCP and
-  most similar flows expect; user-facing protection lives further down
-  in the consent screen and the audience-bound access tokens.
+  RFC 7591's `POST /oauth/register` endpoint is **off by default** —
+  the safer posture for first-party-only apps, where you have a fixed
+  set of clients and don't want a registration surface.
 
-  If you'd rather gate registration (e.g. only your own deployment
-  infrastructure can register clients), set `:initial_access_token` and
-  require requests to present a matching `Authorization: Bearer …`
-  header (RFC 7591 §3).
+  Turn it on (`dcr_enabled?: true`) when you're hosting an OAuth server
+  for clients that self-register: MCP servers (ChatGPT Apps SDK,
+  Claude.ai connectors, Claude Code, etc.) literally cannot work
+  without it — they fetch your discovery document, see the
+  `registration_endpoint`, and POST themselves into existence before
+  the user-facing flow can start. User-facing protection in that mode
+  lives further down in the consent screen and audience-bound tokens.
+
+  Even with DCR on, you can gate *who* can register by setting
+  `:initial_access_token` (RFC 7591 §3) and requiring the matching
+  `Authorization: Bearer …` header — useful when DCR exists for known
+  infrastructure rather than arbitrary internet clients.
 
   ### Secret values
 
@@ -107,6 +114,7 @@ defmodule AshAuthentication.Oauth2Server do
       refresh_token_lifetime: {30, :days},
       authorization_code_lifetime: {10, :minutes},
       clock_skew_seconds: 30,
+      dcr_enabled?: false,
       dcr_always_return_client_secret?: false,
       sign_in_path: nil,
       initial_access_token: nil
@@ -141,6 +149,8 @@ defmodule AshAuthentication.Oauth2Server do
       def enforce_scopes?, do: Keyword.fetch!(@oauth2_server_opts, :enforce_scopes?)
       def clock_skew_seconds, do: Keyword.fetch!(@oauth2_server_opts, :clock_skew_seconds)
       def sign_in_path, do: Keyword.fetch!(@oauth2_server_opts, :sign_in_path)
+
+      def dcr_enabled?, do: Keyword.fetch!(@oauth2_server_opts, :dcr_enabled?)
 
       def dcr_always_return_client_secret?,
         do: Keyword.fetch!(@oauth2_server_opts, :dcr_always_return_client_secret?)

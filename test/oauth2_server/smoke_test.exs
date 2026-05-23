@@ -39,7 +39,8 @@ defmodule AshAuthentication.Oauth2Server.SmokeTest do
       consent_resource: TestServerStubConsent,
       access_token_lifetime: {15, :minutes},
       refresh_token_lifetime: {7, :days},
-      scopes: ["mcp", "read"]
+      scopes: ["mcp", "read"],
+      dcr_enabled?: true
   end
 
   describe "configuration resolution" do
@@ -216,6 +217,15 @@ defmodule AshAuthentication.Oauth2Server.SmokeTest do
       assert doc["response_types_supported"] == ["code"]
       assert doc["grant_types_supported"] == ["authorization_code", "refresh_token"]
       assert doc["code_challenge_methods_supported"] == ["S256"]
+    end
+
+    test "authorization_server/1 omits registration_endpoint when DCR is disabled" do
+      doc = Metadata.authorization_server(Oauth2ServerTest.DcrDisabledServer)
+
+      refute Map.has_key?(doc, "registration_endpoint")
+      # Other endpoints still present.
+      assert is_binary(doc["authorization_endpoint"])
+      assert is_binary(doc["token_endpoint"])
     end
   end
 

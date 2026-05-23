@@ -140,6 +140,14 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
                )
     end
 
+    test "server with dcr_enabled?: false rejects all registrations" do
+      assert {:error, :dcr_disabled} =
+               Register.register(Oauth2ServerTest.DcrDisabledServer, %{
+                 "client_name" => "X",
+                 "redirect_uris" => ["https://app.example.com/cb"]
+               })
+    end
+
     test "gated server accepts registration with the correct initial access token" do
       assert {:ok, _client, body} =
                Register.register(

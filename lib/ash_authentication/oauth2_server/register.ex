@@ -32,6 +32,9 @@ defmodule AshAuthentication.Oauth2Server.Register do
   Returns:
 
     * `{:ok, client_record, response_body}` on success.
+    * `{:error, :dcr_disabled}` when the server has `dcr_enabled?: false`
+      (the library default). Controllers should treat this as a 404 —
+      the endpoint is not exposed.
     * `{:error, :invalid_initial_access_token}` when the bearer was
       missing or didn't match. Per RFC 7591 §3.2.2 this is a Bearer-auth
       failure — controllers should emit `401` with
@@ -41,10 +44,12 @@ defmodule AshAuthentication.Oauth2Server.Register do
   """
   @spec register(server :: module(), params :: map(), opts :: keyword()) ::
           {:ok, Ash.Resource.record(), map()}
+          | {:error, :dcr_disabled}
           | {:error, :invalid_initial_access_token}
           | {:error, String.t(), String.t()}
   def register(server, params, opts \\ []) do
-    with :ok <- check_initial_access_token(server, opts),
+    with :ok <- check_dcr_enabled(server),
+         :ok <- check_initial_access_token(server, opts),
          :ok <- validate_redirect_uris(params),
          :ok <- validate_client_name(params),
          :ok <- validate_grant_types(params),
@@ -53,10 +58,15 @@ defmodule AshAuthentication.Oauth2Server.Register do
          {:ok, client} <- create_client(server, params) do
       {:ok, client, response_body(server, client)}
     else
+      {:error, :dcr_disabled} = err -> err
       {:error, :invalid_initial_access_token} = err -> err
       {:error, code, desc} -> {:error, code, desc}
       {:error, _other} -> {:error, "invalid_client_metadata", "client could not be registered"}
     end
+  end
+
+  defp check_dcr_enabled(server) do
+    if server.dcr_enabled?(), do: :ok, else: {:error, :dcr_disabled}
   end
 
   defp check_initial_access_token(server, opts) do
