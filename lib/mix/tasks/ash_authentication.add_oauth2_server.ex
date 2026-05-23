@@ -84,6 +84,12 @@ if Code.ensure_loaded?(Igniter) do
         extra_args?: false,
         only: nil,
         positional: [],
+        # `installs:` adds the dep AND composes `ash_rate_limiter.install`,
+        # which generates the app's Hammer module and adds it to the
+        # supervision tree. We then attach a `rate_limit` block to the
+        # generated OAuthClient resource keyed by client IP. See the
+        # "Rate limiting" section of `AshAuthentication.Oauth2Server`.
+        installs: [{:ash_rate_limiter, "~> 1.0"}],
         schema: [
           accounts: :string,
           user: :string,
@@ -232,6 +238,41 @@ if Code.ensure_loaded?(Igniter) do
       end
       """)
       |> add_authn_bypass(mod)
+      |> add_rate_limit(mod)
+    end
+
+    # Wires the `AshRateLimiter` extension and a `rate_limit` block onto
+    # the OAuthClient resource. The default — 20 `:register` calls per
+    # minute, keyed by client IP — gives MCP-style self-registration
+    # plenty of headroom while taking the endpoint off the table as a
+    # DoS vector for any single source. Tune the limit in the resource.
+    #
+    # `key_by_ip/2` reads `:remote_ip` from the changeset context; the
+    # AAP `ProtocolRouter` plug fills it in from `conn.remote_ip`. When
+    # an IP isn't present (tests, internal callers) the limit falls
+    # back to a single bucket so the protection still applies.
+    defp add_rate_limit(igniter, mod) do
+      hammer = Igniter.Project.Module.module_name(igniter, "Hammer")
+
+      igniter
+      |> Igniter.compose_task("ash.extend", [inspect(mod), "AshRateLimiter"])
+      |> Ash.Resource.Igniter.add_block(mod, :rate_limit, """
+      backend #{inspect(hammer)}
+
+      # `key_by_ip/2` keys the limit by `conn.remote_ip`. If this app
+      # sits behind a load balancer, CDN, or reverse proxy, that's
+      # the proxy's IP — every registration request will hash to the
+      # same bucket and you'll have lost per-client limiting.
+      #
+      # To fix: trust `X-Forwarded-For` (or `Forwarded`) from your
+      # proxy and rewrite `conn.remote_ip` before this point in the
+      # pipeline. The `remote_ip` library handles this cleanly:
+      # https://hexdocs.pm/remote_ip
+      action :register,
+        limit: 20,
+        per: :timer.minutes(1),
+        key: &AshAuthentication.Oauth2Server.RateLimit.key_by_ip/2
+      """)
     end
 
     defp generate_authorization_code_resource(igniter, mod, options) do
@@ -592,7 +633,16 @@ if Code.ensure_loaded?(Igniter) do
 
       4. Run `mix ecto.migrate` to apply the new tables.
 
-      5. For production, set real values in `config/runtime.exs`:
+      5. `POST /oauth/register` is rate-limited per client IP via
+         `AshRateLimiter` (20/min, ETS-backed). Tune the limit in the
+         generated `OAuthClient` resource's `rate_limit` block. If your
+         app sits behind a reverse proxy, make sure the proxy sets a
+         forwarded-for header AND your Phoenix endpoint trusts it
+         (otherwise `conn.remote_ip` is your proxy's IP, not the
+         client's). See the "Rate limiting" section of
+         `AshAuthentication.Oauth2Server`.
+
+      6. For production, set real values in `config/runtime.exs`:
 
              config :#{otp_app},
                oauth2_issuer_url: System.get_env("OAUTH2_ISSUER_URL"),

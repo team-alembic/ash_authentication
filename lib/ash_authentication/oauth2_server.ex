@@ -66,7 +66,69 @@ defmodule AshAuthentication.Oauth2Server do
   `Authorization: Bearer …` header — useful when DCR exists for known
   infrastructure rather than arbitrary internet clients.
 
-  ### Secret values
+  ## Rate limiting
+
+  `POST /oauth/register` is unauthenticated by design (clients haven't
+  finished authenticating yet) and so is a reasonable DoS target. RFC
+  7591 §5 calls this out specifically: the endpoint "MAY be
+  rate-limited or otherwise limited to prevent a denial-of-service
+  attack on the client registration endpoint."
+
+  The installer wires this up using
+  [`AshRateLimiter`](https://hexdocs.pm/ash_rate_limiter): the
+  generated `OAuthClient` resource carries the extension and a
+  `rate_limit` block limiting `:register` to 20/minute **per client
+  IP**, via an ETS-backed Hammer backend. The limit lives on the Ash
+  action — applied via the `key_by_ip/2` helper in
+  `AshAuthentication.Oauth2Server.RateLimit` — so the protection
+  attaches uniformly however the action is reached (HTTP, internal
+  call, tests).
+
+  The HTTP layer fills the IP in: AAP's `ProtocolRouter` passes
+  `conn.remote_ip` into `Register.register/3` as `remote_ip:`, which
+  surfaces it on the changeset context.
+
+  ### Behind a reverse proxy
+
+  `conn.remote_ip` is whatever Phoenix sees as the TCP peer. Behind a
+  proxy (nginx, Cloudflare, Fly's edge, an AWS ELB, etc.) that's the
+  proxy's IP — every request will hash to the same bucket and you've
+  essentially lost the IP-keying. To fix:
+
+    1. The proxy must set `X-Forwarded-For` (or `Forwarded`).
+    2. Add `RemoteIp` (https://hexdocs.pm/remote_ip) to your endpoint,
+       configured with the proxy's IP range as trusted, so it rewrites
+       `conn.remote_ip` to the real client.
+
+  ### Tuning the limit
+
+  Edit the generated `OAuthClient` resource:
+
+  ```elixir
+  rate_limit do
+    backend MyApp.Hammer
+    action :register,
+      limit: 100,
+      per: :timer.minutes(5),
+      key: &AshAuthentication.Oauth2Server.RateLimit.key_by_ip/2
+  end
+  ```
+
+  Use a custom `key` function for richer schemes (per-tenant,
+  per-IP-prefix, etc.) — the function gets `(changeset, context)` and
+  returns a string. The changeset context carries `:remote_ip` from
+  the HTTP layer.
+
+  ### Limiting other endpoints
+
+  `/oauth/token` carries similar exposure. Add an `action` entry to
+  the `OAuthRefreshToken` (for refresh rotation) and
+  `OAuthAuthorizationCode` (for code exchange) resources if your
+  deployment needs it — the installer doesn't add them by default
+  because the right ceiling depends heavily on legitimate client
+  volume, but the same `AshRateLimiter` extension applies.
+
+  ## Secret values
 
   `:issuer_url`, `:resource_url`, `:signing_secret`, and
   `:initial_access_token` accept any of:

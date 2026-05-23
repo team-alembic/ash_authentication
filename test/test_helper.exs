@@ -12,4 +12,9 @@ Mimic.copy(AshAuthentication.Strategy.OAuth2.Plug)
 Mimic.copy(AshAuthentication.Strategy.Password.Actions)
 Mimic.copy(AshAuthentication.Strategy.Password.Plug)
 Mimic.copy(AshAuthentication.TokenResource)
+
+# Hammer backend for `AshAuthentication.Oauth2Server.RegisterRateLimitTest`.
+# Started here so the test process tree owns it.
+{:ok, _} = Oauth2ServerTest.Hammer.start_link(clean_period: :timer.minutes(1))
+
 ExUnit.start(capture_log: true)
