@@ -349,18 +349,20 @@ defmodule Oauth2ServerTest.RateLimitedOAuthClient do
   be exercised in a test.
   """
 
+  alias AshAuthentication.Oauth2Server.RateLimit
+
   use Ash.Resource,
     domain: Oauth2ServerTest.Domain,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshRateLimiter]
 
   rate_limit do
-    backend Oauth2ServerTest.Hammer
+    backend(Oauth2ServerTest.Hammer)
 
     action :register,
       limit: 2,
       per: :timer.minutes(1),
-      key: &AshAuthentication.Oauth2Server.RateLimit.key_by_ip/2
+      key: &RateLimit.key_by_ip/2
   end
 
   attributes do
