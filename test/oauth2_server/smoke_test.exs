@@ -133,20 +133,64 @@ defmodule AshAuthentication.Oauth2Server.SmokeTest do
       assert {:error, _} = Jwt.verify(TestServer, bad_token)
     end
 
-    test "expired tokens are rejected" do
-      {:ok, _, _} = Jwt.mint(TestServer, sub: "u1", client_id: "c1", scope: "mcp", ttl: -1)
-
+    test "tokens expired beyond the clock-skew window are rejected" do
+      # Beyond the default 30-second skew tolerance.
       claims = %{
         "iss" => TestServer.issuer_url(),
         "sub" => "u1",
         "aud" => TestServer.resource_url(),
-        "exp" => System.system_time(:second) - 1
+        "exp" => System.system_time(:second) - 120
       }
 
       signer = Joken.Signer.create("HS256", TestServer.signing_secret())
       {:ok, expired, _} = Joken.encode_and_sign(claims, signer)
 
       assert {:error, :expired} = Jwt.verify(TestServer, expired)
+    end
+
+    test "tokens expired within the clock-skew window still verify (RFC 7519 §4.1.4)" do
+      # 5 seconds past `exp` — within the default 30-second skew tolerance.
+      claims = %{
+        "iss" => TestServer.issuer_url(),
+        "sub" => "u1",
+        "aud" => TestServer.resource_url(),
+        "exp" => System.system_time(:second) - 5
+      }
+
+      signer = Joken.Signer.create("HS256", TestServer.signing_secret())
+      {:ok, slightly_expired, _} = Joken.encode_and_sign(claims, signer)
+
+      assert {:ok, _} = Jwt.verify(TestServer, slightly_expired)
+    end
+
+    test "tokens whose `nbf` is in the future beyond skew are rejected" do
+      claims = %{
+        "iss" => TestServer.issuer_url(),
+        "sub" => "u1",
+        "aud" => TestServer.resource_url(),
+        "nbf" => System.system_time(:second) + 120,
+        "exp" => System.system_time(:second) + 300
+      }
+
+      signer = Joken.Signer.create("HS256", TestServer.signing_secret())
+      {:ok, future_token, _} = Joken.encode_and_sign(claims, signer)
+
+      assert {:error, :not_yet_valid} = Jwt.verify(TestServer, future_token)
+    end
+
+    test "tokens with `nbf` slightly in the future verify within skew" do
+      claims = %{
+        "iss" => TestServer.issuer_url(),
+        "sub" => "u1",
+        "aud" => TestServer.resource_url(),
+        "nbf" => System.system_time(:second) + 5,
+        "exp" => System.system_time(:second) + 300
+      }
+
+      signer = Joken.Signer.create("HS256", TestServer.signing_secret())
+      {:ok, edge_token, _} = Joken.encode_and_sign(claims, signer)
+
+      assert {:ok, _} = Jwt.verify(TestServer, edge_token)
     end
   end
 

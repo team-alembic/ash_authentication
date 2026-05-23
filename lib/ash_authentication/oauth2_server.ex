@@ -41,6 +41,7 @@ defmodule AshAuthentication.Oauth2Server do
   | `:access_token_lifetime` | `{1, :hour}` | `{integer, unit}` where unit is `:second`, `:minute`, `:hour`, or `:day` |
   | `:refresh_token_lifetime` | `{30, :days}` | |
   | `:authorization_code_lifetime` | `{10, :minutes}` | |
+  | `:clock_skew_seconds` | `30` | Tolerance applied to `exp` and `nbf` JWT claim checks. Allows for small clock differences between the AS and resource server. RFC 7519 §4.1.4 — "MAY provide for some small leeway, usually no more than a few minutes." |
   | `:dcr_always_return_client_secret?` | `false` | Workaround for clients that misbehave when `client_secret` is absent for `auth_method: none`. See https://community.openai.com/t/1366118 |
   | `:sign_in_path` | `nil` | Path to redirect unauthenticated `/oauth/authorize` requests to. When `nil`, returns 401. |
   | `:initial_access_token` | `nil` | When set, `POST /oauth/register` requires the request to present a matching `Authorization: Bearer …` token (RFC 7591 §3). When `nil` (default), dynamic client registration is open — see the trust-model note below. |
@@ -105,6 +106,7 @@ defmodule AshAuthentication.Oauth2Server do
       access_token_lifetime: {1, :hour},
       refresh_token_lifetime: {30, :days},
       authorization_code_lifetime: {10, :minutes},
+      clock_skew_seconds: 30,
       dcr_always_return_client_secret?: false,
       sign_in_path: nil,
       initial_access_token: nil
@@ -137,6 +139,7 @@ defmodule AshAuthentication.Oauth2Server do
       end
 
       def enforce_scopes?, do: Keyword.fetch!(@oauth2_server_opts, :enforce_scopes?)
+      def clock_skew_seconds, do: Keyword.fetch!(@oauth2_server_opts, :clock_skew_seconds)
       def sign_in_path, do: Keyword.fetch!(@oauth2_server_opts, :sign_in_path)
 
       def dcr_always_return_client_secret?,

@@ -29,12 +29,19 @@ defmodule AshAuthentication.Oauth2Server.Register do
       (or `nil`). When the server has `:initial_access_token` configured,
       this MUST match (constant-time) or registration is rejected.
 
-  Returns `{:ok, client_record, response_body}` on success or
-  `{:error, code, description}` on a validation failure suitable for a
-  400 DCR error response.
+  Returns:
+
+    * `{:ok, client_record, response_body}` on success.
+    * `{:error, :invalid_initial_access_token}` when the bearer was
+      missing or didn't match. Per RFC 7591 §3.2.2 this is a Bearer-auth
+      failure — controllers should emit `401` with
+      `WWW-Authenticate: Bearer error="invalid_token"`, not 400.
+    * `{:error, code, description}` for any other validation failure —
+      a 400 DCR error response per RFC 7591 §3.2.2.
   """
   @spec register(server :: module(), params :: map(), opts :: keyword()) ::
           {:ok, Ash.Resource.record(), map()}
+          | {:error, :invalid_initial_access_token}
           | {:error, String.t(), String.t()}
   def register(server, params, opts \\ []) do
     with :ok <- check_initial_access_token(server, opts),
@@ -46,6 +53,7 @@ defmodule AshAuthentication.Oauth2Server.Register do
          {:ok, client} <- create_client(server, params) do
       {:ok, client, response_body(server, client)}
     else
+      {:error, :invalid_initial_access_token} = err -> err
       {:error, code, desc} -> {:error, code, desc}
       {:error, _other} -> {:error, "invalid_client_metadata", "client could not be registered"}
     end
@@ -61,9 +69,7 @@ defmodule AshAuthentication.Oauth2Server.Register do
 
         if is_binary(presented) and Plug.Crypto.secure_compare(expected, presented),
           do: :ok,
-          else:
-            {:error, "invalid_client_metadata",
-             "registration requires a valid initial access token"}
+          else: {:error, :invalid_initial_access_token}
     end
   end
 

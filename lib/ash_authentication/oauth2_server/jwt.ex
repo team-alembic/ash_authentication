@@ -63,18 +63,25 @@ defmodule AshAuthentication.Oauth2Server.Jwt do
   end
 
   @doc """
-  Verify a token's signature, issuer, audience, and expiry.
+  Verify a token's signature, issuer, audience, expiry, and not-before.
+
+  Per RFC 7519 §4.1.4 we allow a small leeway on `exp` and `nbf` (the
+  server-configured `clock_skew_seconds`, default 30s) so tokens minted
+  by an AS whose clock is slightly off from the resource server still
+  verify.
 
   Returns `{:ok, claims}` on success or `{:error, reason}` on failure.
   """
   @spec verify(server :: module(), String.t()) :: {:ok, map()} | {:error, term()}
   def verify(server, token) when is_binary(token) do
     signer = Joken.Signer.create(@signer_alg, server.signing_secret())
+    skew = server.clock_skew_seconds()
 
     with {:ok, claims} <- Joken.verify(token, signer),
          :ok <- check_iss(claims, server),
          :ok <- check_aud(claims, server),
-         :ok <- check_exp(claims) do
+         :ok <- check_nbf(claims, skew),
+         :ok <- check_exp(claims, skew) do
       {:ok, claims}
     end
   end
@@ -99,11 +106,18 @@ defmodule AshAuthentication.Oauth2Server.Jwt do
 
   defp check_aud(_, _), do: {:error, :invalid_audience}
 
-  defp check_exp(%{"exp" => exp}) when is_integer(exp) do
-    if System.system_time(:second) < exp, do: :ok, else: {:error, :expired}
+  defp check_exp(%{"exp" => exp}, skew) when is_integer(exp) do
+    if System.system_time(:second) < exp + skew, do: :ok, else: {:error, :expired}
   end
 
-  defp check_exp(_), do: {:error, :missing_exp}
+  defp check_exp(_, _), do: {:error, :missing_exp}
+
+  # `nbf` is optional per RFC 7519 §4.1.5 — only verify when present.
+  defp check_nbf(%{"nbf" => nbf}, skew) when is_integer(nbf) do
+    if System.system_time(:second) + skew >= nbf, do: :ok, else: {:error, :not_yet_valid}
+  end
+
+  defp check_nbf(_, _), do: :ok
 
   defp generate_jti do
     if Code.ensure_loaded?(Ash.UUIDv7) and function_exported?(Ash.UUIDv7, :generate, 0) do

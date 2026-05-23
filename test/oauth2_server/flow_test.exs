@@ -121,17 +121,18 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
     end
 
     test "gated server rejects registration without an initial access token" do
-      assert {:error, "invalid_client_metadata", desc} =
+      # RFC 7591 §3.2.2 — this is a Bearer-auth failure (the
+      # controller must emit 401 with WWW-Authenticate), not a
+      # `invalid_client_metadata` 400.
+      assert {:error, :invalid_initial_access_token} =
                Register.register(Oauth2ServerTest.GatedServer, %{
                  "client_name" => "X",
                  "redirect_uris" => ["https://app.example.com/cb"]
                })
-
-      assert desc =~ "initial access token"
     end
 
     test "gated server rejects a wrong initial access token" do
-      assert {:error, "invalid_client_metadata", _} =
+      assert {:error, :invalid_initial_access_token} =
                Register.register(
                  Oauth2ServerTest.GatedServer,
                  %{"client_name" => "X", "redirect_uris" => ["https://app.example.com/cb"]},
@@ -180,11 +181,12 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
       assert {:error, :bad_redirect_uri} = Authorize.validate_request(Server, params)
     end
 
-    test "accepts an equivalent redirect_uri (case / default port / trailing slash)" do
+    test "redirect_uri must match the registered value byte-for-byte (RFC 9700 §4.1)" do
       {client, _} = register_client("https://chat.example.com/cb")
       {_, challenge} = pkce_pair()
 
-      # All of these should canonicalize to the registered form.
+      # Equivalent-but-not-identical URIs are rejected — no trailing-slash,
+      # case, default-port, or fragment equivalence.
       for incoming <- [
             "https://chat.example.com/cb/",
             "HTTPS://CHAT.EXAMPLE.COM/cb",
@@ -192,8 +194,12 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
             "https://chat.example.com/cb#frag"
           ] do
         params = authorize_params(client, challenge, incoming)
-        assert {:ok, _validated} = Authorize.validate_request(Server, params)
+        assert {:error, :bad_redirect_uri} = Authorize.validate_request(Server, params)
       end
+
+      # The exact registered value passes.
+      params = authorize_params(client, challenge, "https://chat.example.com/cb")
+      assert {:ok, _} = Authorize.validate_request(Server, params)
     end
 
     test "accepts a scope that's a subset of the server's catalogue" do
@@ -416,7 +422,9 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
                })
     end
 
-    test "accepts an equivalent redirect_uri at token time", %{user: user} do
+    test "rejects an equivalent-but-not-identical redirect_uri at token time (RFC 9700 §4.1)", %{
+      user: user
+    } do
       {client, _} = register_client("https://chat.example.com/cb")
       {verifier, challenge} = pkce_pair()
 
@@ -428,9 +436,9 @@ defmodule AshAuthentication.Oauth2Server.FlowTest do
 
       code = Authorize.issue_code!(Server, user, validated)
 
-      # Different surface form than what was stored on the code — must still
-      # be accepted because they canonicalize to the same URL.
-      assert {:ok, _response} =
+      # Same URI with different surface form (case + default port +
+      # trailing slash) — RFC 9700 requires byte-exact match.
+      assert {:error, :redirect_mismatch} =
                Token.exchange_authorization_code(Server, %{
                  "grant_type" => "authorization_code",
                  "code" => code.id,

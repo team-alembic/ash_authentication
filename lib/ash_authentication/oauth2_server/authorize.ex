@@ -162,12 +162,12 @@ defmodule AshAuthentication.Oauth2Server.Authorize do
 
   defp load_client(_server, _params), do: {:error, "invalid_request", "client_id required"}
 
+  # RFC 9700 §4.1 — exact byte-equal match. No normalization, no
+  # default-port elision, no trailing-slash equivalence. The client MUST
+  # use the same redirect URI string it registered with.
   defp check_redirect_uri(%{"redirect_uri" => uri}, %{redirect_uris: uris})
        when is_binary(uri) and is_list(uris) do
-    normalized = Oauth2Server.__normalize_url__(uri)
-    registered = Enum.map(uris, &Oauth2Server.__normalize_url__/1)
-
-    if normalized in registered, do: :ok, else: {:error, :bad_redirect_uri}
+    if uri in uris, do: :ok, else: {:error, :bad_redirect_uri}
   end
 
   defp check_redirect_uri(_, _), do: {:error, :bad_redirect_uri}
