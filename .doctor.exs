@@ -8,6 +8,7 @@
     ~r/.Plug$/,
     ~r/^Example/,
     AshAuthentication.InfoGenerator,
+    AshAuthentication.Oauth2Server,
     AshAuthentication.Plug.Macros
   ],
   ignore_paths: [],
