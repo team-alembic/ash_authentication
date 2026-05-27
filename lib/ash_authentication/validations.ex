@@ -208,6 +208,25 @@ defmodule AshAuthentication.Validations do
   end
 
   @doc """
+  Validate that exactly one of the given "secret" fields is configured.
+  """
+  @spec validate_exclusive_secret(struct, [atom]) :: :ok | {:error, Exception.t()}
+  def validate_exclusive_secret(strategy, options) do
+    case Enum.filter(options, &Map.get(strategy, &1)) do
+      [option] ->
+        validate_secret(strategy, option)
+
+      _ ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, strategy.name],
+           message: "Exactly one of #{Enum.map_join(options, " or ", &"`#{&1}`")} must be set.",
+           module: strategy.resource
+         )}
+    end
+  end
+
+  @doc """
   Emit a `Logger.warning` if the given resource's data layer does not support
   the `{:lock, :for_update}` capability.
 
