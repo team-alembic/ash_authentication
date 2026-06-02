@@ -75,7 +75,7 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
                Jwt.peek(signed_in_user.__metadata__.token)
     end
 
-    test "it signs in an existing user when registration and identity are disabled" do
+    test "it signs in an existing user with a registration-disabled strategy" do
       {:ok, strategy} = Info.strategy(Example.User, :oauth2_without_identity)
       user = build_user()
 

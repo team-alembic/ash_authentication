@@ -52,6 +52,7 @@ defmodule MyApp.Accounts.User do
         client_id MyApp.Secrets
         redirect_uri MyApp.Secrets
         client_secret MyApp.Secrets
+        identity_resource MyApp.Accounts.UserIdentity
       end
     end
   end
@@ -95,6 +96,46 @@ The values for this configuration should be:
   (eg `http://localhost:4000/auth`).
 - `client_secret` the client secret copied from the GitHub settings page.
 
+## The user identity resource
+
+OAuth2-based strategies require an `identity_resource` - a resource that stores
+the provider's `iss` (issuer) and `sub` (subject) claims for each linked
+account. Matching a returning user by their email address (or any other claim)
+is **not** safe: per the OpenID Connect specification only the `iss`/`sub`
+combination uniquely and stably identifies an end-user. The identity resource is
+where those values live.
+
+Add a `UserIdentity` resource using the `AshAuthentication.UserIdentity`
+extension. There is no need to define any attributes - the extension generates
+them for you.
+
+```elixir
+defmodule MyApp.Accounts.UserIdentity do
+  use Ash.Resource,
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshAuthentication.UserIdentity],
+    domain: MyApp.Accounts
+
+  user_identity do
+    user_resource MyApp.Accounts.User
+  end
+
+  # Configure your data layer as appropriate for your application.
+  postgres do
+    table "user_identities"
+    repo MyApp.Repo
+  end
+end
+```
+
+Don't forget to add it to your domain, and to generate and run migrations for
+the new resource.
+
+```bash
+mix ash.codegen add_user_identities
+mix ash.migrate
+```
+
 Lastly, we need to add a register action to your user resource. This is defined
 as an upsert so that it can register new users, or update information for
 returning users. The default name of the action is `register_with_` followed by
@@ -129,7 +170,7 @@ defmodule MyApp.Accounts.User do
       # Required if you have token generation enabled.
       change AshAuthentication.GenerateTokenChange
 
-      # Required if you have the `identity_resource` configuration enabled.
+      # Required: persists the provider's `iss`/`sub` identity claims.
       change AshAuthentication.Strategy.OAuth2.IdentityChange
 
       change fn changeset, _ ->

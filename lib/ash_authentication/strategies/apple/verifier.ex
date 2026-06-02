@@ -16,8 +16,9 @@ defmodule AshAuthentication.Strategy.Apple.Verifier do
     with :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :team_id),
          :ok <- validate_secret(strategy, :private_key_id),
-         :ok <- validate_secret(strategy, :private_key_path) do
-      validate_secret(strategy, :redirect_uri)
+         :ok <- validate_secret(strategy, :private_key_path),
+         :ok <- validate_secret(strategy, :redirect_uri) do
+      validate_identity_resource(strategy)
     end
   end
 end

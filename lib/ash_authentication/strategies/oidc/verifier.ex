@@ -16,12 +16,14 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
     with :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :client_secret, [nil]),
          :ok <- validate_secret(strategy, :base_url),
-         :ok <- validate_secret(strategy, :nonce, [true, false]) do
-      if strategy.auth_method == :private_key_jwt do
-        validate_secret(strategy, :private_key)
-      else
-        :ok
-      end
+         :ok <- validate_secret(strategy, :nonce, [true, false]),
+         :ok <- validate_private_key(strategy) do
+      validate_identity_resource(strategy)
     end
   end
+
+  defp validate_private_key(%{auth_method: :private_key_jwt} = strategy),
+    do: validate_secret(strategy, :private_key)
+
+  defp validate_private_key(_strategy), do: :ok
 end

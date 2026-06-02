@@ -16,7 +16,7 @@ SPDX-License-Identifier: MIT
 ## Key Principles
 - Always use secrets management - never hardcode credentials
 - Enable tokens for magic_link, confirmation, OAuth2
-- UserIdentity resource optional for OAuth2 (required for multiple providers per user)
+- UserIdentity resource required for all OAuth2/OIDC strategies (stores the provider's `iss`/`sub` claims; matching users by email is unsafe)
 - API keys require strict policy controls and expiration management
 - Use prefixes for API keys to enable secret scanning compliance
 - Check existing strategies: `AshAuthentication.Info.strategies/1`
@@ -33,8 +33,7 @@ SPDX-License-Identifier: MIT
 - Requires: API key resource, relationship to user, sign-in action
 
 **OAuth2** - Social/enterprise login (GitHub, Google, Auth0, Apple, OIDC, Slack)
-- Requires: custom actions, secrets
-- Optional: UserIdentity resource (for multiple providers per user)
+- Requires: custom actions, secrets, UserIdentity resource
 
 ## Password Strategy
 
@@ -168,9 +167,7 @@ end
 - Custom `register_with_[provider]` action
 - Secrets management
 - Tokens enabled
-
-**Optional for all OAuth2:**
-- UserIdentity resource (for multiple providers per user)
+- UserIdentity resource (stores the provider's `iss`/`sub` identity claims - matching users by email or other claims is unsafe)
 
 ### OAuth2 Configuration Pattern
 ```elixir
@@ -198,8 +195,8 @@ actions do
     upsert_identity :unique_email
 
     change AshAuthentication.GenerateTokenChange
-    
-    # If UserIdentity resource is being used
+
+    # Required: persists the provider's `iss`/`sub` identity claims
     change AshAuthentication.Strategy.OAuth2.IdentityChange
 
     change fn changeset, _ctx ->
@@ -320,6 +317,8 @@ actions do
     upsert_identity :email
 
     change AshAuthentication.GenerateTokenChange
+    # Required: persists the provider's `iss`/`sub` identity claims
+    change AshAuthentication.Strategy.OAuth2.IdentityChange
     change fn changeset, _ctx ->
       user_info = Ash.Changeset.get_argument(changeset, :user_info)
 

@@ -409,4 +409,250 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
       assert_unchanged(igniter, "lib/test/accounts/user.ex")
     end
   end
+
+  describe "require_identity_resource/2" do
+    test "wires up the identity resource when one exists conventionally" do
+      igniter =
+        oauth2_project(
+          strategy: """
+          oauth2 :oauth2 do
+            client_id fn _, _ -> {:ok, "client_id"} end
+            client_secret fn _, _ -> {:ok, "client_secret"} end
+            redirect_uri fn _, _ -> {:ok, "https://example.com"} end
+            base_url fn _, _ -> {:ok, "https://example.com"} end
+            authorize_url fn _, _ -> {:ok, "https://example.com/authorize"} end
+            token_url fn _, _ -> {:ok, "https://example.com/token"} end
+            user_url fn _, _ -> {:ok, "https://example.com/userinfo"} end
+          end
+          """,
+          identity_resource?: true
+        )
+
+      igniter = Mix.Tasks.AshAuthentication.Upgrade.require_identity_resource(igniter, [])
+
+      igniter
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |        identity_resource(Test.Accounts.UserIdentity)
+      """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |        change(AshAuthentication.Strategy.OAuth2.IdentityChange)
+      """)
+    end
+
+    test "warns when no conventional identity resource exists" do
+      igniter =
+        oauth2_project(
+          strategy: """
+          github :github do
+            client_id fn _, _ -> {:ok, "client_id"} end
+            client_secret fn _, _ -> {:ok, "client_secret"} end
+            redirect_uri fn _, _ -> {:ok, "https://example.com"} end
+          end
+          """,
+          identity_resource?: false
+        )
+
+      igniter = Mix.Tasks.AshAuthentication.Upgrade.require_identity_resource(igniter, [])
+
+      igniter
+      |> assert_unchanged("lib/test/accounts/user.ex")
+      |> assert_has_warning(fn warning ->
+        warning =~ "Test.Accounts.UserIdentity"
+      end)
+    end
+
+    test "does not modify a strategy that already has an identity resource" do
+      # Written pre-formatted: the upgrader re-renders any module it visits, so a
+      # no-op only compares equal if the source is already in formatted style.
+      user_resource = """
+      defmodule Test.Accounts.User do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key(:id)
+          attribute(:email, :ci_string, allow_nil?: false, public?: true)
+        end
+
+        identities do
+          identity(:unique_email, [:email])
+        end
+
+        actions do
+          defaults([:read])
+
+          create :register_with_oauth2 do
+            argument(:user_info, :map, allow_nil?: false)
+            argument(:oauth_tokens, :map, allow_nil?: false)
+            upsert?(true)
+            upsert_identity(:unique_email)
+
+            change(AshAuthentication.GenerateTokenChange)
+            change(AshAuthentication.Strategy.OAuth2.IdentityChange)
+          end
+        end
+
+        authentication do
+          tokens do
+            enabled?(true)
+            token_resource(Test.Accounts.Token)
+            signing_secret(fn _, _ -> {:ok, "test_secret_that_is_at_least_32_bytes_long"} end)
+          end
+
+          strategies do
+            oauth2 :oauth2 do
+              client_id(fn _, _ -> {:ok, "client_id"} end)
+              client_secret(fn _, _ -> {:ok, "client_secret"} end)
+              redirect_uri(fn _, _ -> {:ok, "https://example.com"} end)
+              base_url(fn _, _ -> {:ok, "https://example.com"} end)
+              authorize_url(fn _, _ -> {:ok, "https://example.com/authorize"} end)
+              token_url(fn _, _ -> {:ok, "https://example.com/token"} end)
+              user_url(fn _, _ -> {:ok, "https://example.com/userinfo"} end)
+              identity_resource(Test.Accounts.UserIdentity)
+            end
+          end
+        end
+      end
+      """
+
+      token_resource = """
+      defmodule Test.Accounts.Token do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication.TokenResource],
+          data_layer: Ash.DataLayer.Ets
+
+        token do
+          api(Test.Accounts)
+        end
+      end
+      """
+
+      identity_resource = """
+      defmodule Test.Accounts.UserIdentity do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication.UserIdentity],
+          data_layer: Ash.DataLayer.Ets
+
+        user_identity do
+          user_resource(Test.Accounts.User)
+        end
+      end
+      """
+
+      igniter =
+        test_project(
+          files: %{
+            "lib/test/accounts/user.ex" => user_resource,
+            "lib/test/accounts/token.ex" => token_resource,
+            "lib/test/accounts/user_identity.ex" => identity_resource
+          }
+        )
+
+      igniter = Mix.Tasks.AshAuthentication.Upgrade.require_identity_resource(igniter, [])
+
+      assert_unchanged(igniter, "lib/test/accounts/user.ex")
+    end
+  end
+
+  defp oauth2_project(opts) do
+    strategy = Keyword.fetch!(opts, :strategy)
+    identity_resource? = Keyword.get(opts, :identity_resource?, false)
+
+    user_resource = """
+    defmodule Test.Accounts.User do
+      use Ash.Resource,
+        domain: Test.Accounts,
+        extensions: [AshAuthentication],
+        data_layer: Ash.DataLayer.Ets
+
+      attributes do
+        uuid_primary_key :id
+        attribute :email, :ci_string, allow_nil?: false, public?: true
+      end
+
+      identities do
+        identity :unique_email, [:email]
+      end
+
+      actions do
+        defaults [:read]
+
+        create :register_with_oauth2 do
+          argument :user_info, :map, allow_nil?: false
+          argument :oauth_tokens, :map, allow_nil?: false
+          upsert? true
+          upsert_identity :unique_email
+
+          change AshAuthentication.GenerateTokenChange
+        end
+
+        create :register_with_github do
+          argument :user_info, :map, allow_nil?: false
+          argument :oauth_tokens, :map, allow_nil?: false
+          upsert? true
+          upsert_identity :unique_email
+
+          change AshAuthentication.GenerateTokenChange
+        end
+      end
+
+      authentication do
+        tokens do
+          enabled? true
+          token_resource Test.Accounts.Token
+          signing_secret fn _, _ -> {:ok, "test_secret_that_is_at_least_32_bytes_long"} end
+        end
+
+        strategies do
+          #{strategy}
+        end
+      end
+    end
+    """
+
+    token_resource = """
+    defmodule Test.Accounts.Token do
+      use Ash.Resource,
+        domain: Test.Accounts,
+        extensions: [AshAuthentication.TokenResource],
+        data_layer: Ash.DataLayer.Ets
+
+      token do
+        api Test.Accounts
+      end
+    end
+    """
+
+    identity_resource = """
+    defmodule Test.Accounts.UserIdentity do
+      use Ash.Resource,
+        domain: Test.Accounts,
+        extensions: [AshAuthentication.UserIdentity],
+        data_layer: Ash.DataLayer.Ets
+
+      user_identity do
+        user_resource Test.Accounts.User
+      end
+    end
+    """
+
+    files =
+      %{
+        "lib/test/accounts/user.ex" => user_resource,
+        "lib/test/accounts/token.ex" => token_resource
+      }
+      |> then(fn files ->
+        if identity_resource? do
+          Map.put(files, "lib/test/accounts/user_identity.ex", identity_resource)
+        else
+          files
+        end
+      end)
+
+    test_project(files: files)
+  end
 end

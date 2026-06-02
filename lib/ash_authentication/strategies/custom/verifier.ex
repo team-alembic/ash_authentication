@@ -23,17 +23,22 @@ defmodule AshAuthentication.Strategy.Custom.Verifier do
     dsl_state
     |> Info.authentication_strategies()
     |> Stream.concat(Info.authentication_add_ons(dsl_state))
-    |> Enum.reduce_while(:ok, fn
-      strategy, :ok ->
-        strategy_module = strategy_module(strategy)
+    |> Enum.reduce_while({:ok, []}, fn strategy, {:ok, warnings} ->
+      strategy_module = strategy_module(strategy)
 
-        strategy
-        |> strategy_module.verify(dsl_state)
-        |> case do
-          :ok -> {:cont, :ok}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
+      strategy
+      |> strategy_module.verify(dsl_state)
+      |> case do
+        :ok -> {:cont, {:ok, warnings}}
+        {:warn, warning} -> {:cont, {:ok, warnings ++ List.wrap(warning)}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
     end)
+    |> case do
+      {:ok, []} -> :ok
+      {:ok, warnings} -> {:warn, warnings}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   # This is needed by some strategies which re-use another strategy's entity (ie everything based on oauth2).

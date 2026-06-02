@@ -206,4 +206,36 @@ defmodule AshAuthentication.Validations do
          )}
     end
   end
+
+  @doc """
+  Warn when an OAuth2-style strategy is not configured with an identity resource.
+
+  Matching a local user by their email address (or any other provider-supplied
+  claim) is not safe: per the OpenID Connect Core specification only the
+  combination of the `iss` and `sub` claims uniquely and stably identifies an
+  end-user. The `identity_resource` is where those values are persisted, so it
+  should be configured for every OAuth2/OIDC strategy and will become a hard
+  requirement in a future release.
+
+  Returns `{:warn, message}` so that the configuration still compiles, giving
+  existing applications a window to migrate via `mix ash_authentication.upgrade`.
+  """
+  def validate_identity_resource(%{identity_resource: identity_resource} = strategy)
+      when is_falsy(identity_resource) do
+    {:warn,
+     """
+     The `#{inspect(strategy.name)}` strategy on `#{inspect(strategy.resource)}` has no `identity_resource` configured.
+
+     OAuth2 and OIDC strategies should store the provider's `iss`/`sub` claims in
+     a user identity resource. Matching a local user by their email address (or
+     any other provider claim) is unsafe - only the `iss`/`sub` combination
+     uniquely and stably identifies an end-user. This will become a hard
+     requirement in a future release.
+
+     Run `mix ash_authentication.upgrade` to generate and wire up the required
+     resource, or see the "User Identities" section of the strategy documentation.
+     """}
+  end
+
+  def validate_identity_resource(_strategy), do: :ok
 end

@@ -156,7 +156,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
         identity_resource: [
           type: {:or, [{:behaviour, Ash.Resource}, {:in, [false]}]},
           doc:
-            "The resource used to store user identities, or `false` to disable. See the User Identities section of the strategy docs for more.",
+            "The resource used to store user identities. Required: matching users by email or other provider claims is unsafe, so the provider's `iss`/`sub` claims must be persisted. See the User Identities section of the strategy docs for more.",
           default: false
         ],
         identity_relationship_name: [

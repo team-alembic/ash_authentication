@@ -21,14 +21,16 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
          :ok <- validate_secret(strategy, :base_url),
          :ok <- validate_secret(strategy, :token_url),
          :ok <- validate_secret(strategy, :user_url),
-         :ok <- prevent_hijacking(dsl_state, strategy) do
-      if strategy.auth_method == :private_key_jwt do
-        validate_secret(strategy, :private_key)
-      else
-        :ok
-      end
+         :ok <- prevent_hijacking(dsl_state, strategy),
+         :ok <- validate_private_key(strategy) do
+      validate_identity_resource(strategy)
     end
   end
+
+  defp validate_private_key(%{auth_method: :private_key_jwt} = strategy),
+    do: validate_secret(strategy, :private_key)
+
+  defp validate_private_key(_strategy), do: :ok
 
   defp prevent_hijacking(_dsl_state, %{prevent_hijacking?: false}), do: :ok
   defp prevent_hijacking(_dsl_state, %{registration_enabled?: false}), do: :ok
