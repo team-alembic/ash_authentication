@@ -103,6 +103,11 @@ is **not** safe: per the OpenID Connect specification only the `iss`/`sub`
 combination uniquely and stably identifies an end-user. The identity resource is
 where those values live.
 
+Returning users are matched by their `iss`/`sub`. Because Auth0 reliably
+verifies email ownership, `trust_email_verified?` defaults to `true` for this
+strategy, so a new Auth0 identity whose verified email matches an existing
+local account is linked to it automatically.
+
 Add a `UserIdentity` resource using the `AshAuthentication.UserIdentity`
 extension. There is no need to define any attributes - the extension generates
 them for you.

@@ -169,6 +169,12 @@ end
 - Tokens enabled
 - UserIdentity resource (stores the provider's `iss`/`sub` identity claims - matching users by email or other claims is unsafe)
 
+**How users are matched (sign-in and registration):**
+- Users are resolved by the `(strategy, sub)` identity, never by email. A provider identity belongs to exactly one local user, permanently.
+- A `sub` that has been seen before signs that user in.
+- A new `sub` whose email matches an existing account is only linked automatically when the provider's `email_verified` claim is trusted (`trust_email_verified?`). Otherwise the sign-in is rejected and the user must sign in with their existing method to link the provider.
+- `trust_email_verified?` defaults to `true` for GitHub/Google/Auth0 and `false` elsewhere. Only enable it for providers that reliably assert email ownership.
+
 ### OAuth2 Configuration Pattern
 ```elixir
 # Strategy configuration

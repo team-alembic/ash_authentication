@@ -159,6 +159,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
             "The resource used to store user identities. Required: matching users by email or other provider claims is unsafe, so the provider's `iss`/`sub` claims must be persisted. See the User Identities section of the strategy docs for more.",
           default: false
         ],
+        trust_email_verified?: [
+          type: :boolean,
+          doc:
+            "Whether the provider's `email_verified` claim can be trusted to attach an OAuth2 sign-in to a pre-existing local account with the same email. Only enable this for providers that reliably assert email ownership. When `false`, a sign-in whose `iss`/`sub` is not yet known will never be matched to an existing account by email.",
+          default: false
+        ],
         identity_relationship_name: [
           type: :atom,
           doc: "Name of the relationship to the provider identities resource",

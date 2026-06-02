@@ -12,13 +12,13 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
 
   @doc false
   @spec verify(OAuth2.t(), map) :: :ok | {:error, Exception.t()}
-  def verify(strategy, _dsl_state) do
+  def verify(strategy, dsl_state) do
     with :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :client_secret, [nil]),
          :ok <- validate_secret(strategy, :base_url),
          :ok <- validate_secret(strategy, :nonce, [true, false]),
          :ok <- validate_private_key(strategy) do
-      validate_identity_resource(strategy)
+      oauth2_strategy_warnings(strategy, dsl_state)
     end
   end
 

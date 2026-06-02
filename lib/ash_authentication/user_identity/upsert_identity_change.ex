@@ -21,6 +21,7 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Resource.Change}
+  alias AshAuthentication.Strategy.OAuth2
   alias AshAuthentication.UserIdentity.Info
 
   @doc false
@@ -33,16 +34,7 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
     oauth_tokens = Changeset.get_argument(changeset, :oauth_tokens)
     user_id = Changeset.get_argument(changeset, cfg.user_id_attribute_name)
 
-    uid =
-      user_info
-      # uid is a convention
-      # sub is supposedly from the spec
-      # id is from what has been seen from Google
-      |> Map.take(["uid", "sub", "id", :uid, :sub, :id])
-      |> Map.values()
-      |> Enum.reject(&is_nil/1)
-      |> List.first()
-      |> to_string()
+    uid = OAuth2.uid_from_user_info(user_info)
 
     changeset
     |> Changeset.change_attribute(cfg.user_id_attribute_name, user_id)

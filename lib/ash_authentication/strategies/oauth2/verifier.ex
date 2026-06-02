@@ -23,7 +23,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
          :ok <- validate_secret(strategy, :user_url),
          :ok <- prevent_hijacking(dsl_state, strategy),
          :ok <- validate_private_key(strategy) do
-      validate_identity_resource(strategy)
+      oauth2_strategy_warnings(strategy, dsl_state)
     end
   end
 

@@ -302,7 +302,23 @@ if Code.ensure_loaded?(Igniter) do
           igniter
 
         {igniter, resources} ->
-          Enum.reduce(resources, igniter, &ensure_identity_resource/2)
+          resources
+          |> Enum.reduce(igniter, &ensure_identity_resource/2)
+          |> Igniter.add_notice("""
+          The user identity resource's unique key changed from
+          `(strategy, uid, user_id)` to `(strategy, uid)`, so that a provider's
+          `iss`/`sub` resolves to exactly one local user.
+
+          Run `mix ash.codegen require_user_identity_unique_key` (and then
+          `mix ash.migrate`) to generate the migration that swaps the unique
+          index.
+
+          IMPORTANT: the new index will fail to create if your data contains the
+          same `(strategy, uid)` linked to more than one user. That should not
+          happen under normal use, but if it does you must reconcile those rows
+          before migrating - it indicates a provider identity was linked to
+          multiple accounts.
+          """)
       end
     end
 

@@ -18,8 +18,8 @@ defmodule AshAuthentication.Strategy.OAuth2.VerifierTest do
   end
 
   test "an oauth2 strategy without an identity resource warns but still compiles" do
-    {message, _location} =
-      assert_dsl_warning {_, _} do
+    warnings =
+      dsl_warnings do
         defmodule NoIdentityUser do
           @moduledoc false
           use Ash.Resource,
@@ -71,7 +71,16 @@ defmodule AshAuthentication.Strategy.OAuth2.VerifierTest do
         end
       end
 
-    assert message =~ "identity_resource"
-    assert message =~ "mix ash_authentication.upgrade"
+    messages =
+      Enum.flat_map(warnings, fn {_module, payloads} ->
+        Enum.map(payloads, fn {message, _location} -> message end)
+      end)
+
+    assert Enum.any?(messages, &(&1 =~ "identity_resource"))
+    assert Enum.any?(messages, &(&1 =~ "mix ash_authentication.upgrade"))
+
+    # The generic oauth2 strategy does not trust `email_verified` and there is no
+    # confirmation add-on, so we also warn that emails cannot be verified.
+    assert Enum.any?(messages, &(&1 =~ "email_verified"))
   end
 end
