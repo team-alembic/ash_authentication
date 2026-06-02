@@ -29,10 +29,10 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
 
   @doc false
   @impl true
-  def change(changeset, _context, _opts) do
+  def change(changeset, _opts, context) do
     case Info.strategy_for_action(changeset.resource, changeset.action.name) do
       {:ok, strategy} ->
-        do_change(changeset, strategy)
+        do_change(changeset, strategy, context)
 
       :error ->
         raise AssumptionFailed,
@@ -40,7 +40,7 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
     end
   end
 
-  defp do_change(changeset, strategy) do
+  defp do_change(changeset, strategy, context) do
     changeset
     |> Changeset.set_context(%{private: %{ash_authentication?: true}})
     |> Changeset.before_action(fn changeset ->
@@ -48,7 +48,7 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
       code = Changeset.get_argument(changeset, :code)
 
       with :ok <- validate_code_format(code, strategy),
-           {:ok, secret} <- verify_token_and_get_secret(setup_token, strategy),
+           {:ok, secret} <- verify_token_and_get_secret(setup_token, strategy, context),
            :ok <- verify_code(secret, code, strategy) do
         changeset
         |> Changeset.force_change_attribute(strategy.secret_field, secret)
@@ -58,19 +58,19 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
           Changeset.add_error(changeset, reason)
       end
     end)
-    |> Changeset.after_action(&maybe_revoke_setup_token(&1, &2, strategy))
+    |> Changeset.after_action(&maybe_revoke_setup_token(&1, &2, strategy, context))
     |> Changeset.after_action(&preserve_authentication_metadata/2)
   end
 
-  defp maybe_revoke_setup_token(changeset, result, strategy) do
+  defp maybe_revoke_setup_token(changeset, result, strategy, context) do
     case changeset.context[:setup_token_to_revoke] do
       nil -> {:ok, result}
-      setup_token -> revoke_token_for_result(setup_token, result, strategy)
+      setup_token -> revoke_token_for_result(setup_token, result, strategy, context)
     end
   end
 
-  defp revoke_token_for_result(setup_token, result, strategy) do
-    case revoke_token(setup_token, strategy) do
+  defp revoke_token_for_result(setup_token, result, strategy, context) do
+    case revoke_token(setup_token, strategy, context) do
       :ok -> {:ok, result}
       {:error, reason} -> {:error, reason}
     end
@@ -83,14 +83,15 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
     end
   end
 
-  defp verify_token_and_get_secret(setup_token, strategy) do
-    with {:ok, %{"jti" => jti}, _resource} <- Jwt.verify(setup_token, strategy.resource),
+  defp verify_token_and_get_secret(setup_token, strategy, context) do
+    with {:ok, %{"jti" => jti}, _resource} <-
+           Jwt.verify(setup_token, strategy.resource, Ash.Context.to_opts(context), context),
          {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
          {:ok, [token_record]} <-
            TokenResource.Actions.get_token(
              token_resource,
              %{"jti" => jti, "purpose" => "totp_setup"},
-             []
+             Ash.Context.to_opts(context)
            ),
          {:ok, encoded_secret} <- get_extra_data_secret(token_record) do
       case Base.decode64(encoded_secret) do
@@ -130,12 +131,16 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
     end
   end
 
-  defp revoke_token(setup_token, strategy) do
+  defp revoke_token(setup_token, strategy, context) do
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource) do
       # TOTP setup tokens are always stored (with the pending secret in
       # `extra_data`) regardless of the `store_all_tokens?` flag, so we always
       # take the lock-and-update revocation path.
-      TokenResource.Actions.revoke(token_resource, setup_token, store_all_tokens?: true)
+      TokenResource.Actions.revoke(
+        token_resource,
+        setup_token,
+        Keyword.merge(Ash.Context.to_opts(context), store_all_tokens?: true)
+      )
     end
   end
 
