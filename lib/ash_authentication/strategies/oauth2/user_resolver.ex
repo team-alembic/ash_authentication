@@ -40,8 +40,8 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   require Ash.Query
 
   @doc false
-  @spec resolve(Changeset.t(), OAuth2.t()) :: Changeset.t()
-  def resolve(changeset, strategy) do
+  @spec resolve(Changeset.t(), OAuth2.t(), keyword) :: Changeset.t()
+  def resolve(changeset, strategy, opts \\ []) do
     user_info = Changeset.get_argument(changeset, :user_info)
 
     case OAuth2.uid_from_user_info(user_info) do
@@ -49,22 +49,22 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
         reject(changeset, strategy, "Provider did not return a stable `sub`/`uid` claim")
 
       uid ->
-        case fetch_identity(strategy, uid) do
-          {:ok, identity} -> coerce_to_existing_user(changeset, strategy, identity)
-          :error -> resolve_new_identity(changeset, strategy, user_info)
+        case fetch_identity(strategy, uid, opts) do
+          {:ok, identity} -> coerce_to_existing_user(changeset, strategy, identity, opts)
+          :error -> resolve_new_identity(changeset, strategy, user_info, opts)
         end
     end
   end
 
-  defp resolve_new_identity(changeset, strategy, user_info) do
-    case fetch_user_by_upsert_identity(changeset, strategy) do
+  defp resolve_new_identity(changeset, strategy, user_info, opts) do
+    case fetch_user_by_upsert_identity(changeset, strategy, opts) do
       :error ->
         # No local account has this email - allow the upsert to create one.
         changeset
 
       {:ok, user} ->
         cond do
-          has_identity_for_strategy?(strategy, user) ->
+          has_identity_for_strategy?(strategy, user, opts) ->
             reject(
               changeset,
               strategy,
@@ -86,8 +86,8 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
     end
   end
 
-  defp coerce_to_existing_user(changeset, strategy, identity) do
-    case load_identity_user(strategy, identity) do
+  defp coerce_to_existing_user(changeset, strategy, identity, opts) do
+    case load_identity_user(strategy, identity, opts) do
       {:ok, user} ->
         Enum.reduce(upsert_identity_keys(changeset), changeset, fn key, changeset ->
           Changeset.force_change_attribute(changeset, key, Map.get(user, key))
@@ -100,30 +100,30 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   end
 
   @doc false
-  @spec fetch_identity(OAuth2.t(), String.t()) :: {:ok, Ash.Resource.record()} | :error
-  def fetch_identity(strategy, uid) do
+  @spec fetch_identity(OAuth2.t(), String.t(), keyword) :: {:ok, Ash.Resource.record()} | :error
+  def fetch_identity(strategy, uid, opts \\ []) do
     cfg = UserIdentity.Info.user_identity_options(strategy.identity_resource)
 
     strategy.identity_resource
-    |> base_query()
+    |> base_query(opts)
     |> Ash.Query.do_filter([
       {cfg.strategy_attribute_name, to_string(strategy.name)},
       {cfg.uid_attribute_name, uid}
     ])
-    |> read_one(identity_domain(strategy))
+    |> read_one(identity_domain(strategy), opts)
   end
 
-  defp load_identity_user(strategy, identity) do
+  defp load_identity_user(strategy, identity, opts) do
     cfg = UserIdentity.Info.user_identity_options(strategy.identity_resource)
     user_id = Map.get(identity, cfg.user_id_attribute_name)
 
     strategy.resource
-    |> base_query()
+    |> base_query(opts)
     |> Ash.Query.do_filter([{user_pk(strategy), user_id}])
-    |> read_one(Info.domain!(strategy.resource))
+    |> read_one(Info.domain!(strategy.resource), opts)
   end
 
-  defp fetch_user_by_upsert_identity(changeset, strategy) do
+  defp fetch_user_by_upsert_identity(changeset, strategy, opts) do
     keys = upsert_identity_keys(changeset)
     values = Enum.map(keys, &{&1, Changeset.get_attribute(changeset, &1)})
 
@@ -131,24 +131,24 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
       :error
     else
       strategy.resource
-      |> base_query()
+      |> base_query(opts)
       |> Ash.Query.do_filter(values)
-      |> read_one(Info.domain!(strategy.resource))
+      |> read_one(Info.domain!(strategy.resource), opts)
     end
   end
 
   @doc false
-  @spec has_identity_for_strategy?(OAuth2.t(), Ash.Resource.record()) :: boolean
-  def has_identity_for_strategy?(strategy, user) do
+  @spec has_identity_for_strategy?(OAuth2.t(), Ash.Resource.record(), keyword) :: boolean
+  def has_identity_for_strategy?(strategy, user, opts \\ []) do
     cfg = UserIdentity.Info.user_identity_options(strategy.identity_resource)
 
     strategy.identity_resource
-    |> base_query()
+    |> base_query(opts)
     |> Ash.Query.do_filter([
       {cfg.strategy_attribute_name, to_string(strategy.name)},
       {cfg.user_id_attribute_name, Map.get(user, user_pk(strategy))}
     ])
-    |> read_one(identity_domain(strategy))
+    |> read_one(identity_domain(strategy), opts)
     |> case do
       {:ok, _identity} -> true
       :error -> false
@@ -183,14 +183,18 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
     domain
   end
 
-  defp base_query(resource) do
+  defp base_query(resource, opts) do
     resource
     |> Ash.Query.new()
     |> Ash.Query.set_context(%{private: %{ash_authentication?: true}})
+    |> maybe_set_tenant(opts[:tenant])
   end
 
-  defp read_one(query, domain) do
-    case Ash.read(query, domain: domain) do
+  defp maybe_set_tenant(query, nil), do: query
+  defp maybe_set_tenant(query, tenant), do: Ash.Query.set_tenant(query, tenant)
+
+  defp read_one(query, domain, opts) do
+    case Ash.read(query, domain: domain, actor: opts[:actor]) do
       {:ok, [record | _]} -> {:ok, record}
       _ -> :error
     end

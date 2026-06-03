@@ -39,11 +39,13 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
          )}
 
       {:ok, strategy} ->
+        opts = [tenant: context.tenant, actor: context.actor]
+
         query
         |> Query.after_action(fn
           query, [user] ->
-            with :ok <- verify_identity(user, query, strategy),
-                 {:ok, user} <- maybe_update_identity(user, query, strategy) do
+            with :ok <- verify_identity(user, query, strategy, opts),
+                 {:ok, user} <- maybe_update_identity(user, query, strategy, opts) do
               {:ok, [maybe_generate_token(user, context)]}
             end
 
@@ -63,10 +65,10 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
     end
   end
 
-  defp verify_identity(_user, _query, strategy) when is_falsy(strategy.identity_resource),
+  defp verify_identity(_user, _query, strategy, _opts) when is_falsy(strategy.identity_resource),
     do: :ok
 
-  defp verify_identity(user, query, strategy) do
+  defp verify_identity(user, query, strategy, opts) do
     user_info = Query.get_argument(query, :user_info)
 
     case OAuth2.uid_from_user_info(user_info) do
@@ -74,12 +76,12 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
         identity_error(query, strategy, "Provider did not return a stable `sub`/`uid` claim")
 
       uid ->
-        verify_resolved_identity(user, query, strategy, user_info, uid)
+        verify_resolved_identity(user, query, strategy, user_info, uid, opts)
     end
   end
 
-  defp verify_resolved_identity(user, query, strategy, user_info, uid) do
-    case UserResolver.fetch_identity(strategy, uid) do
+  defp verify_resolved_identity(user, query, strategy, user_info, uid, opts) do
+    case UserResolver.fetch_identity(strategy, uid, opts) do
       {:ok, identity} ->
         if identity_belongs_to?(identity, user, strategy) do
           :ok
@@ -89,7 +91,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
 
       :error ->
         cond do
-          UserResolver.has_identity_for_strategy?(strategy, user) ->
+          UserResolver.has_identity_for_strategy?(strategy, user, opts) ->
             identity_error(
               query,
               strategy,
@@ -132,17 +134,21 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
      )}
   end
 
-  defp maybe_update_identity(user, _query, strategy) when is_falsy(strategy.identity_resource),
-    do: {:ok, user}
+  defp maybe_update_identity(user, _query, strategy, _opts)
+       when is_falsy(strategy.identity_resource),
+       do: {:ok, user}
 
-  defp maybe_update_identity(user, query, strategy) do
+  defp maybe_update_identity(user, query, strategy, opts) do
     strategy.identity_resource
-    |> UserIdentity.Actions.upsert(%{
-      user_info: Query.get_argument(query, :user_info),
-      oauth_tokens: Query.get_argument(query, :oauth_tokens),
-      strategy: strategy.name,
-      user_id: user.id
-    })
+    |> UserIdentity.Actions.upsert(
+      %{
+        user_info: Query.get_argument(query, :user_info),
+        oauth_tokens: Query.get_argument(query, :oauth_tokens),
+        strategy: strategy.name,
+        user_id: user.id
+      },
+      opts
+    )
     |> case do
       {:ok, _identity} ->
         user
@@ -156,7 +162,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
                }
              })}
           ],
-          domain: Info.domain!(strategy.resource)
+          Keyword.put(opts, :domain, Info.domain!(strategy.resource))
         )
 
       {:error, reason} ->
