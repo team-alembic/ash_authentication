@@ -34,6 +34,7 @@ defmodule AshAuthentication.Strategy.Slack.Dsl do
       auto_set_fields: [icon: :slack, assent_strategy: Slack]
     })
     |> Custom.set_defaults(Slack.default_config([]))
+    |> Custom.set_defaults(trust_email_verified?: true)
     |> Map.update!(
       :schema,
       fn schema ->

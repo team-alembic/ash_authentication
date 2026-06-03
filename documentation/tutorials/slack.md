@@ -114,10 +114,10 @@ is **not** safe: per the OpenID Connect specification only the `iss`/`sub`
 combination uniquely and stably identifies an end-user. The identity resource is
 where those values live.
 
-Returning users are matched by their `iss`/`sub`. Slack does not reliably
-verify email ownership, so `trust_email_verified?` defaults to `false`: a Slack
-sign-in with a new `sub` whose email matches an existing local account is
-rejected, and the user must sign in with their existing method to link Slack.
+Returning users are matched by their `iss`/`sub`. Because Slack verifies email
+ownership and asserts it via the `email_verified` claim, `trust_email_verified?`
+defaults to `true` for this strategy, so a new Slack identity whose verified
+email matches an existing local account is linked to it automatically.
 
 Add a `UserIdentity` resource using the `AshAuthentication.UserIdentity`
 extension. There is no need to define any attributes - the extension generates
