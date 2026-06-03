@@ -30,7 +30,7 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
 
       #{strategy_override_docs(Google)}
       """,
-      auto_set_fields: [icon: :google, assent_strategy: Google]
+      auto_set_fields: [icon: :google, assent_strategy: Google, require_email_verified?: true]
     })
     |> Custom.set_defaults(Google.default_config([]))
   end

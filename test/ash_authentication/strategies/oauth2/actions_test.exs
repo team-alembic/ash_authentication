@@ -8,6 +8,115 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
 
   alias AshAuthentication.{Info, Jwt, Strategy.OAuth2.Actions}
 
+  describe "sign_in/2 email_verified check" do
+    test "it rejects sign in when email_verified is false" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | registration_enabled?: false, require_email_verified?: true}
+      user = build_user()
+
+      assert {:error, error} =
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => user.username,
+                     "uid" => user.id,
+                     "sub" => "user:#{user.id}",
+                     "email_verified" => false
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+
+      assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+
+    test "it rejects sign in when email_verified is absent" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | registration_enabled?: false, require_email_verified?: true}
+      user = build_user()
+
+      assert {:error, error} =
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => user.username,
+                     "uid" => user.id,
+                     "sub" => "user:#{user.id}"
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+
+      assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+
+    test "it allows sign in when email_verified is true" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | registration_enabled?: false, require_email_verified?: true}
+      user = build_user()
+
+      assert {:ok, signed_in_user} =
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => user.username,
+                     "uid" => user.id,
+                     "sub" => "user:#{user.id}",
+                     "email_verified" => true
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+
+      assert signed_in_user.id == user.id
+    end
+
+    test "it allows sign in when email_verified is false but require_email_verified? is false" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | registration_enabled?: false, require_email_verified?: false}
+      user = build_user()
+
+      assert {:ok, signed_in_user} =
+               Actions.sign_in(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => user.username,
+                     "uid" => user.id,
+                     "sub" => "user:#{user.id}",
+                     "email_verified" => false
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+
+      assert signed_in_user.id == user.id
+    end
+  end
+
   describe "sign_in/2" do
     test "it returns an error when registration is enabled" do
       {:ok, strategy} = Info.strategy(Example.User, :oauth2)
@@ -125,6 +234,111 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
                )
 
       assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+  end
+
+  describe "register/2 email_verified check" do
+    test "it rejects registration when email_verified is false" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | require_email_verified?: true}
+      id = Ecto.UUID.generate()
+
+      assert {:error, error} =
+               Actions.register(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => username(),
+                     "uid" => id,
+                     "sub" => "user:#{id}",
+                     "email_verified" => false
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+
+      assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+
+    test "it allows registration when email_verified is true" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | require_email_verified?: true}
+      id = Ecto.UUID.generate()
+
+      assert {:ok, _user} =
+               Actions.register(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => username(),
+                     "uid" => id,
+                     "sub" => "user:#{id}",
+                     "email_verified" => true
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+    end
+
+    test "it rejects registration when email_verified is absent" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | require_email_verified?: true}
+      id = Ecto.UUID.generate()
+
+      assert {:error, error} =
+               Actions.register(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => username(),
+                     "uid" => id,
+                     "sub" => "user:#{id}"
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
+
+      assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+
+    test "it allows registration when email_verified is false but require_email_verified? is false" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | require_email_verified?: false}
+      id = Ecto.UUID.generate()
+
+      assert {:ok, _user} =
+               Actions.register(
+                 strategy,
+                 %{
+                   user_info: %{
+                     "nickname" => username(),
+                     "uid" => id,
+                     "sub" => "user:#{id}",
+                     "email_verified" => false
+                   },
+                   oauth_tokens: %{
+                     "access_token" => Ecto.UUID.generate(),
+                     "expires_in" => 86_400,
+                     "refresh_token" => Ecto.UUID.generate()
+                   }
+                 },
+                 []
+               )
     end
   end
 

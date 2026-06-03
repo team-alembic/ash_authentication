@@ -184,6 +184,17 @@ defmodule Example.User do
       change AshAuthentication.Strategy.OAuth2.IdentityChange
     end
 
+    create :register_with_google do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+    end
+
     create :register_with_slack do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
@@ -324,6 +335,12 @@ defmodule Example.User do
         redirect_uri &get_config/2
         client_secret &get_config/2
         authorization_params scope: "openid profile email"
+      end
+
+      google do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
       end
 
       only_marty do

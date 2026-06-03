@@ -66,6 +66,22 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           doc:
             "Requires a confirmation add_on to be present if the password strategy is used with the same identity_field."
         ],
+        require_email_verified?: [
+          type: :boolean,
+          default: false,
+          doc: """
+          When `true`, authentication is rejected unless the OAuth2 provider explicitly
+          returns `email_verified: true` in the user info response.
+
+          This guards against account-hijacking attacks where a provider (e.g. Google
+          Workspace) can issue tokens for an email address that the account owner has
+          not verified. Without this check, an attacker could upsert into an existing
+          confirmed account by presenting an unverified email claim.
+
+          Defaults to `true` for the Google strategy and `false` for all others.
+          Enable it for any provider that reliably returns `email_verified`.
+          """
+        ],
         auth_method: [
           type:
             {:in,

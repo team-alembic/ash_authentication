@@ -33,6 +33,11 @@ config :ash_authentication,
         token_url: "https://example.com/oauth/token",
         user_url: "https://example.com/userinfo",
         trusted_audiences: ["01234", "56789"]
+      ],
+      google: [
+        client_id: "pretend google client id",
+        redirect_uri: "http://localhost:4000/auth",
+        client_secret: "pretend google client secret"
       ]
     ],
     tokens: [

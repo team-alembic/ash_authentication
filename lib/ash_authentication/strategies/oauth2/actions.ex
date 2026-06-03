@@ -25,6 +25,25 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
          type: :read
        )}
 
+  def sign_in(
+        %{require_email_verified?: true} = strategy,
+        %{user_info: user_info},
+        _options
+      )
+      when not (is_map_key(user_info, "email_verified") and
+                  :erlang.map_get("email_verified", user_info) == true) do
+    {:error,
+     Errors.AuthenticationFailed.exception(
+       strategy: strategy,
+       caused_by: %{
+         module: __MODULE__,
+         strategy: strategy,
+         action: :sign_in,
+         message: "Email has not been verified by the OAuth2 provider"
+       }
+     )}
+  end
+
   def sign_in(strategy, params, options) do
     options =
       options
@@ -95,6 +114,26 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   Attempt to register a new user.
   """
   @spec register(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  def register(
+        %{require_email_verified?: true} = strategy,
+        %{user_info: user_info},
+        _options
+      )
+      when strategy.registration_enabled? and
+             not (is_map_key(user_info, "email_verified") and
+                    :erlang.map_get("email_verified", user_info) == true) do
+    {:error,
+     Errors.AuthenticationFailed.exception(
+       strategy: strategy,
+       caused_by: %{
+         module: __MODULE__,
+         strategy: strategy,
+         action: :register,
+         message: "Email has not been verified by the OAuth2 provider"
+       }
+     )}
+  end
+
   def register(strategy, params, options) when strategy.registration_enabled? do
     action = Resource.Info.action(strategy.resource, strategy.register_action_name, :create)
 
