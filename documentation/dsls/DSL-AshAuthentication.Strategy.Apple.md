@@ -13,7 +13,7 @@ In order to use Apple Sign In you need to provide the following minimum configur
   - `client_id`
   - `team_id`
   - `private_key_id`
-  - `private_key_path`
+  - `private_key_path` or `private_key`
   - `redirect_uri`
 
 ## More documentation:
@@ -66,7 +66,6 @@ The following defaults are applied:
 | [`redirect_uri`](#authentication-strategies-apple-redirect_uri){: #authentication-strategies-apple-redirect_uri .spark-required} | `(any, any -> any) \| module \| String.t` |  | The callback URI *base*. Not the whole URI back to the callback endpoint, but the URI to your `AuthPlug`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`team_id`](#authentication-strategies-apple-team_id){: #authentication-strategies-apple-team_id .spark-required} | `(any, any -> any) \| module \| String.t` |  | The Apple team ID associated with the application. |
 | [`private_key_id`](#authentication-strategies-apple-private_key_id){: #authentication-strategies-apple-private_key_id .spark-required} | `(any, any -> any) \| module \| String.t` |  | The private key ID used for signing the JWT token. |
-| [`private_key_path`](#authentication-strategies-apple-private_key_path){: #authentication-strategies-apple-private_key_path .spark-required} | `(any, any -> any) \| module \| String.t` |  | The path to the private key file used for signing the JWT token. |
 | [`site`](#authentication-strategies-apple-site){: #authentication-strategies-apple-site } | `(any, any -> any) \| module \| String.t` |  | Deprecated: Use `base_url` instead. |
 | [`prevent_hijacking?`](#authentication-strategies-apple-prevent_hijacking?){: #authentication-strategies-apple-prevent_hijacking? } | `boolean` | `true` | Requires a confirmation add_on to be present if the password strategy is used with the same identity_field. |
 | [`auth_method`](#authentication-strategies-apple-auth_method){: #authentication-strategies-apple-auth_method } | `nil \| :client_secret_basic \| :client_secret_post \| :client_secret_jwt \| :private_key_jwt` | `:client_secret_post` | The authentication strategy used, optional. If not set, no authentication will be used during the access token request. |
@@ -87,6 +86,7 @@ The following defaults are applied:
 | [`id_token_signed_response_alg`](#authentication-strategies-apple-id_token_signed_response_alg){: #authentication-strategies-apple-id_token_signed_response_alg } | `"HS256" \| "HS384" \| "HS512" \| "RS256" \| "RS384" \| "RS512" \| "ES256" \| "ES384" \| "ES512" \| "PS256" \| "PS384" \| "PS512" \| "Ed25519" \| "Ed25519ph" \| "Ed448" \| "Ed448ph" \| "EdDSA"` | `"RS256"` | The `id_token_signed_response_alg` parameter sent by the Client during Registration. |
 | [`id_token_ttl_seconds`](#authentication-strategies-apple-id_token_ttl_seconds){: #authentication-strategies-apple-id_token_ttl_seconds } | `nil \| pos_integer` |  | The number of seconds from `iat` that an ID Token will be considered valid. |
 | [`nonce`](#authentication-strategies-apple-nonce){: #authentication-strategies-apple-nonce } | `boolean \| (any, any -> any) \| module \| String.t` | `true` | A function for generating the session nonce, `true` to automatically generate it with `AshAuthentication.Strategy.Oidc.NonceGenerator`, or `false` to disable. |
+| [`private_key_path`](#authentication-strategies-apple-private_key_path){: #authentication-strategies-apple-private_key_path } | `(any, any -> any) \| module \| String.t` |  | The path to the private key file used for signing the JWT token. Required if `private_key` is not set. |
 
 
 

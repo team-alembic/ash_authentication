@@ -136,8 +136,20 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
            add_secret_value(
              config,
              strategy,
+             :private_key,
+             strategy.assent_strategy != Assent.Strategy.Apple ||
+               (strategy.assent_strategy == Assent.Strategy.Apple &&
+                  !!strategy.private_key_path),
+             context
+           ),
+         {:ok, config} <-
+           add_secret_value(
+             config,
+             strategy,
              :private_key_path,
-             strategy.assent_strategy != Assent.Strategy.Apple,
+             strategy.assent_strategy != Assent.Strategy.Apple ||
+               (strategy.assent_strategy == Assent.Strategy.Apple &&
+                  !!strategy.private_key),
              context
            ),
          {:ok, config} <-
