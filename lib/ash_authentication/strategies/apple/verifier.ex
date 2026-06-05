@@ -16,8 +16,21 @@ defmodule AshAuthentication.Strategy.Apple.Verifier do
     with :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :team_id),
          :ok <- validate_secret(strategy, :private_key_id),
-         :ok <- validate_secret(strategy, :private_key_path) do
-      validate_secret(strategy, :redirect_uri)
+         :ok <- validate_secret(strategy, :redirect_uri) do
+      if Map.get(strategy, :private_key) do
+        if Map.get(strategy, :private_key_path) do
+          {:error,
+           Spark.Error.DslError.exception(
+             path: [:authentication, :strategies, strategy.name],
+             message: "Either `private_key_path` or `private_key` must be configured, not both.",
+             module: strategy.resource
+           )}
+        else
+          validate_secret(strategy, :private_key)
+        end
+      else
+        validate_secret(strategy, :private_key_path)
+      end
     end
   end
 end
