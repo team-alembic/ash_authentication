@@ -50,7 +50,7 @@ defmodule AshAuthentication.Strategy.Apple.Dsl do
         required: true
       ],
       private_key_path: [
-        type: {:or, [nil, secret_type]},
+        type: secret_type,
         doc:
           "The path to the private key file used for signing the JWT token. Required if `private_key` is not set.",
         required: false
