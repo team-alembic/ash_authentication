@@ -121,6 +121,17 @@ defmodule Example.User do
       change AshAuthentication.Strategy.OAuth2.IdentityChange
     end
 
+    create :register_with_oauth2_confirm_link do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+    end
+
     create :register_with_oidc do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false
@@ -227,11 +238,12 @@ defmodule Example.User do
         inhibit_updates? true
         require_interaction? true
 
-        sender fn _user, token, opts ->
+        sender fn user, token, opts ->
           username =
-            opts
-            |> Keyword.fetch!(:changeset)
-            |> Ash.Changeset.get_attribute(:username)
+            case Keyword.get(opts, :changeset) do
+              nil -> user.username
+              changeset -> Ash.Changeset.get_attribute(changeset, :username)
+            end
 
           Logger.debug("Confirmation request for user #{username}, token #{inspect(token)}")
         end
@@ -269,6 +281,21 @@ defmodule Example.User do
         authorization_params scope: "openid profile email"
         auth_method :client_secret_post
         identity_resource Example.UserIdentity
+      end
+
+      oauth2 :oauth2_confirm_link do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        base_url &get_config/2
+        authorize_url &get_config/2
+        token_url &get_config/2
+        trusted_audiences &get_config/2
+        user_url &get_config/2
+        authorization_params scope: "openid profile email"
+        auth_method :client_secret_post
+        identity_resource Example.UserIdentity
+        on_untrusted_email_match(:confirm)
       end
 
       oauth2 :oauth2_without_identity do

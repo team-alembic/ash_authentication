@@ -27,16 +27,28 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
        * If the strategy's `email_verified` claim can be trusted
          (`trust_email_verified?` and the claim is true) - link the sign-in to
          that account.
-       * Otherwise - reject. The email cannot be trusted to prove ownership, so
-         the user must sign in with their existing method and link the provider
-         explicitly.
+       * Otherwise the email cannot be trusted to prove ownership. With
+         `on_untrusted_email_match :reject` (the default) the sign-in is
+         rejected and the user must sign in with their existing method to link
+         the provider. With `on_untrusted_email_match :confirm` the upsert is
+         aborted with a `ConfirmationRequired` error so the caller can issue a
+         confirmation to the existing account's email and link the provider
+         only once the recipient proves ownership.
 
   Rejections are surfaced as a generic `AuthenticationFailed` error to avoid
   leaking which email addresses are registered.
   """
 
   alias Ash.Changeset
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Strategy.OAuth2, UserIdentity}
+
+  alias AshAuthentication.{
+    Errors.AuthenticationFailed,
+    Errors.ConfirmationRequired,
+    Info,
+    Strategy.OAuth2,
+    UserIdentity
+  }
+
   require Ash.Query
 
   @doc false
@@ -76,6 +88,9 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
             # already matches so the upsert resolves to this user.
             changeset
 
+          strategy.on_untrusted_email_match == :confirm ->
+            require_confirmation(changeset, strategy, user, user_info)
+
           true ->
             reject(
               changeset,
@@ -84,6 +99,21 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
             )
         end
     end
+  end
+
+  defp require_confirmation(changeset, strategy, user, user_info) do
+    # Abort the upsert without touching the existing account. The caller issues
+    # a confirmation to the existing account's email and links the provider only
+    # once the recipient proves ownership.
+    Changeset.add_error(
+      changeset,
+      ConfirmationRequired.exception(
+        strategy: strategy,
+        user: user,
+        user_info: user_info,
+        oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens)
+      )
+    )
   end
 
   defp coerce_to_existing_user(changeset, strategy, identity, opts) do
