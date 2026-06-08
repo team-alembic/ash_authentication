@@ -349,3 +349,81 @@ defmodule MyApp.Accounts.User do
   end
 end
 ```
+
+## Linking an OAuth2/OIDC provider via confirmation
+
+OAuth2/OIDC sign-ins are matched to a local user by the provider's `iss`/`sub`,
+never by email (see the relevant provider tutorial). When a *new* provider
+identity presents an email that matches an existing account, AshAuthentication
+will only link it automatically if the provider's `email_verified` claim is
+trusted (`trust_email_verified?`). Otherwise the email can't be trusted to prove
+ownership, and what happens is controlled by the strategy's
+`on_untrusted_email_match` option:
+
+  * `:reject` (the default) refuses the sign-in. The user must sign in with their
+    existing method to link the provider.
+  * `:confirm` issues a confirmation to the **existing account's** email address
+    and links the provider only once the recipient proves ownership by
+    confirming. This requires a `confirmation` add-on (enforced at compile time).
+
+```elixir
+authentication do
+  strategies do
+    github do
+      # ...
+      identity_resource MyApp.Accounts.UserIdentity
+      on_untrusted_email_match :confirm
+    end
+  end
+end
+```
+
+With `:confirm`, the OAuth sign-in returns an `AuthenticationFailed` error whose
+`caused_by` is an `AshAuthentication.Errors.ConfirmationRequired`. Your auth
+plug/controller can match on that to tell the user to check their email:
+
+```elixir
+case AshAuthentication.Strategy.action(strategy, :register, params) do
+  {:ok, user} ->
+    # signed in
+
+  {:error, %AshAuthentication.Errors.AuthenticationFailed{
+     caused_by: %AshAuthentication.Errors.ConfirmationRequired{}
+   }} ->
+    # "Confirmation is required before you can sign in via this provider.
+    #  Please check your email."
+
+  {:error, _} ->
+    # generic failure
+end
+```
+
+> #### Security: confirm-to-link is a confused-deputy risk {: .warning}
+>
+> Confirming binds **whatever provider identity initiated the flow** to the
+> account. The confirmation email lands in the real owner's inbox (good - an
+> attacker can't complete it), but a user can still be social-engineered into
+> confirming a link to an *attacker's* provider account, granting it access.
+>
+> The email copy is the mitigation. The sender receives
+> `opts[:confirmation_type] == :identity_link` and `opts[:provider]` so it can
+> say exactly which provider is being linked and that confirming grants it
+> access. The generated confirmation sender branches on this; keep that branch
+> and make the copy unambiguous:
+>
+> ```elixir
+> def send(user, token, opts) do
+>   case opts[:confirmation_type] do
+>     :identity_link ->
+>       # "Someone signed in with #{opts[:provider]} using your email and wants
+>       #  to link it to your account. Only confirm if this was you."
+>
+>     _ ->
+>       # normal "confirm your email address" copy
+>   end
+> end
+> ```
+>
+> Prefer `:reject` plus an authenticated "connect account" flow for
+> high-value accounts; `:confirm` trades that safety for not needing a second
+> sign-in method.

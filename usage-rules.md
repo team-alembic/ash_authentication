@@ -172,8 +172,10 @@ end
 **How users are matched (sign-in and registration):**
 - Users are resolved by the `(strategy, sub)` identity, never by email. A provider identity belongs to exactly one local user, permanently.
 - A `sub` that has been seen before signs that user in.
-- A new `sub` whose email matches an existing account is only linked automatically when the provider's `email_verified` claim is trusted (`trust_email_verified?`). Otherwise the sign-in is rejected and the user must sign in with their existing method to link the provider.
+- A new `sub` whose email matches an existing account is only linked automatically when the provider's `email_verified` claim is trusted (`trust_email_verified?`). Otherwise the behaviour depends on `on_untrusted_email_match`.
 - `trust_email_verified?` defaults to `true` for GitHub/Google/Auth0/Slack/Apple and `false` elsewhere. Only enable it for providers that reliably assert email ownership.
+- `on_untrusted_email_match` controls the untrusted-email-matches-existing-account case: `:reject` (the default) refuses the sign-in (the user must sign in with their existing method to link the provider); `:confirm` issues a confirmation to the existing account's email and links the provider only once the recipient proves ownership by confirming. `:confirm` requires a `confirmation` add-on (enforced at compile time).
+- **Security note for `:confirm`**: confirming binds whatever provider identity initiated the flow, so the confirmation email must make clear *which* provider is being linked and that confirming grants it access — otherwise a user can be social-engineered into linking an attacker's provider account. The generated confirmation sender branches on `opts[:confirmation_type] == :identity_link` to produce this copy.
 
 ### OAuth2 Configuration Pattern
 ```elixir
