@@ -21,4 +21,10 @@ defmodule ExampleMultiTenant.UserIdentity do
   relationships do
     belongs_to :organisation, ExampleMultiTenant.Organisation
   end
+
+  multitenancy do
+    strategy :attribute
+    attribute :organisation_id
+    global? true
+  end
 end
