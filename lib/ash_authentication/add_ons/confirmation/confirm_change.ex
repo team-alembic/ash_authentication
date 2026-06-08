@@ -8,7 +8,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{AddOn.Confirmation.Actions, Info, Jwt}
+  alias AshAuthentication.{AddOn.Confirmation.Actions, Info, Jwt, UserIdentity}
 
   alias Ash.{
     Changeset,
@@ -57,12 +57,47 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
       changeset
       |> Changeset.force_change_attributes(allowed_changes)
       |> Changeset.force_change_attribute(strategy.confirmed_at_field, DateTime.utc_now())
+      |> maybe_link_identity(strategy, jti, context)
     else
       _ ->
         Changeset.add_error(
           changeset,
           InvalidArgument.exception(field: :confirm, message: "is not valid")
         )
+    end
+  end
+
+  # `on_untrusted_email_match :confirm`: when the confirmed token carries a
+  # pending provider identity link, create it once the user is confirmed. The
+  # token itself is revoked by `Confirmation.Actions.confirm/3`, so the link
+  # cannot be replayed.
+  defp maybe_link_identity(changeset, strategy, jti, context) do
+    case Actions.get_identity_link(strategy, jti, Ash.Context.to_opts(context)) do
+      {:ok, payload} ->
+        Changeset.after_action(changeset, fn _changeset, user ->
+          link_identity(user, payload, context)
+        end)
+
+      :error ->
+        changeset
+    end
+  end
+
+  defp link_identity(user, payload, context) do
+    with {:ok, oauth_strategy} <-
+           Info.strategy(user.__struct__, String.to_existing_atom(payload["strategy"])),
+         {:ok, _identity} <-
+           UserIdentity.Actions.upsert(
+             oauth_strategy.identity_resource,
+             %{
+               user_info: payload["user_info"],
+               oauth_tokens: payload["oauth_tokens"],
+               strategy: oauth_strategy.name,
+               user_id: user.id
+             },
+             Ash.Context.to_opts(context)
+           ) do
+      {:ok, user}
     end
   end
 end

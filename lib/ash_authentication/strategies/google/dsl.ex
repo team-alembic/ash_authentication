@@ -33,6 +33,7 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
       auto_set_fields: [icon: :google, assent_strategy: Google]
     })
     |> Custom.set_defaults(Google.default_config([]))
+    |> Custom.set_defaults(trust_email_verified?: true)
   end
 
   defp strategy_override_docs(strategy) do

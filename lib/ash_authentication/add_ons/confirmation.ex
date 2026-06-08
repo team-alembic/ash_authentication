@@ -173,4 +173,35 @@ defmodule AshAuthentication.AddOn.Confirmation do
       {:ok, token}
     end
   end
+
+  @doc """
+  Generate a confirmation token that links an OAuth2/OIDC provider identity to an
+  existing account once confirmed.
+
+  Issued for `on_untrusted_email_match :confirm`. The token is bound to the
+  existing `user` (so the confirmation lands in their inbox and confirms against
+  their account), while `payload` (the provider strategy name, `user_info` and
+  `oauth_tokens`) is stored server-side and used to create the identity when the
+  token is confirmed.
+  """
+  @spec confirmation_token_for_link(
+          Confirmation.t(),
+          Resource.record(),
+          map,
+          opts :: Keyword.t()
+        ) ::
+          {:ok, String.t()} | :error | {:error, any}
+  def confirmation_token_for_link(strategy, user, payload, opts \\ []) do
+    claims = %{"act" => strategy.confirm_action_name}
+
+    with {:ok, token, _claims} <-
+           Jwt.token_for_user(
+             user,
+             claims,
+             Keyword.merge(opts, token_lifetime: strategy.token_lifetime)
+           ),
+         :ok <- Confirmation.Actions.store_identity_link(strategy, token, payload, opts) do
+      {:ok, token}
+    end
+  end
 end

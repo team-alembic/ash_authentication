@@ -22,8 +22,10 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Verifier do
   @spec verify(DynamicOidc.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
     with :ok <- validate_secret(strategy, :redirect_uri),
-         :ok <- validate_connection_resource(strategy) do
-      OAuth2.Verifier.prevent_hijacking(dsl_state, strategy)
+         :ok <- validate_connection_resource(strategy),
+         :ok <- OAuth2.Verifier.prevent_hijacking(dsl_state, strategy),
+         :ok <- OAuth2.Verifier.validate_confirmation_for_untrusted_match(dsl_state, strategy) do
+      oauth2_strategy_warnings(strategy, dsl_state)
     end
   end
 

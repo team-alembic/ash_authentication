@@ -51,7 +51,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, uid} <- UserIdentity.Info.user_identity_uid_attribute_name(dsl_state),
          {:ok, strategy} <-
            UserIdentity.Info.user_identity_strategy_attribute_name(dsl_state),
-         {:ok, user_id} <-
+         {:ok, _user_id} <-
            UserIdentity.Info.user_identity_user_id_attribute_name(dsl_state),
          {:ok, access_token} <-
            UserIdentity.Info.user_identity_access_token_attribute_name(dsl_state),
@@ -69,9 +69,9 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, uid, Type.String, allow_nil?: false, writable?: true),
          :ok <- validate_uid_field(dsl_state, uid),
-         {:ok, dsl_state} <- maybe_build_identity(dsl_state, [user_id, uid, strategy]),
+         {:ok, dsl_state} <- maybe_build_identity(dsl_state, [uid, strategy]),
          :ok <-
-           validate_attribute_unique_constraint(dsl_state, [user_id, uid, strategy], resource),
+           validate_attribute_unique_constraint(dsl_state, [uid, strategy], resource),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, access_token, Type.String,
              allow_nil?: true,
@@ -226,7 +226,13 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, uid} <- UserIdentity.Info.user_identity_uid_attribute_name(dsl_state),
          {:ok, strategy} <-
            UserIdentity.Info.user_identity_strategy_attribute_name(dsl_state),
-         {:ok, identity} <- find_identity(dsl_state, [user_id, uid, strategy]),
+         {:ok, identity} <- find_identity(dsl_state, [uid, strategy]),
+         {:ok, access_token} <-
+           UserIdentity.Info.user_identity_access_token_attribute_name(dsl_state),
+         {:ok, access_token_expires_at} <-
+           UserIdentity.Info.user_identity_access_token_expires_at_attribute_name(dsl_state),
+         {:ok, refresh_token} <-
+           UserIdentity.Info.user_identity_refresh_token_attribute_name(dsl_state),
          {:ok, user_resource} <- UserIdentity.Info.user_identity_user_resource(dsl_state),
          {:ok, user_resource_id} <- find_pk(user_resource) do
       arguments = [
@@ -257,6 +263,10 @@ defmodule AshAuthentication.UserIdentity.Transformer do
         name: action_name,
         upsert?: true,
         upsert_identity: identity.name,
+        # Only refresh the tokens on conflict. The `user_id` binding is set once,
+        # on insert, and is never re-pointed - a provider identity belongs to
+        # exactly one local user, permanently.
+        upsert_fields: [access_token, access_token_expires_at, refresh_token],
         arguments: arguments,
         changes: changes,
         accept: [strategy]
@@ -282,7 +292,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, uid} <- UserIdentity.Info.user_identity_uid_attribute_name(dsl_state),
          {:ok, strategy} <-
            UserIdentity.Info.user_identity_strategy_attribute_name(dsl_state),
-         {:ok, identity} <- find_identity(dsl_state, [uid, user_id, strategy]),
+         {:ok, identity} <- find_identity(dsl_state, [uid, strategy]),
          :ok <- validate_field_in_values(action, :upsert_identity, [identity.name]) do
       :ok
     else

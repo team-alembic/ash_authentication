@@ -21,12 +21,45 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
          :ok <- validate_secret(strategy, :base_url),
          :ok <- validate_secret(strategy, :token_url),
          :ok <- validate_secret(strategy, :user_url),
-         :ok <- prevent_hijacking(dsl_state, strategy) do
-      if strategy.auth_method == :private_key_jwt do
-        validate_secret(strategy, :private_key)
-      else
-        :ok
-      end
+         :ok <- prevent_hijacking(dsl_state, strategy),
+         :ok <- validate_confirmation_for_untrusted_match(dsl_state, strategy),
+         :ok <- validate_private_key(strategy) do
+      oauth2_strategy_warnings(strategy, dsl_state)
+    end
+  end
+
+  defp validate_private_key(%{auth_method: :private_key_jwt} = strategy),
+    do: validate_secret(strategy, :private_key)
+
+  defp validate_private_key(_strategy), do: :ok
+
+  @doc """
+  Verifies that a strategy using `on_untrusted_email_match :confirm` also has a
+  confirmation add-on, which is required to issue and apply the link.
+  """
+  @spec validate_confirmation_for_untrusted_match(map, OAuth2.t()) ::
+          :ok | {:error, Exception.t()}
+  def validate_confirmation_for_untrusted_match(_dsl_state, %{on_untrusted_email_match: :reject}),
+    do: :ok
+
+  def validate_confirmation_for_untrusted_match(dsl_state, strategy) do
+    if Enum.any?(
+         AshAuthentication.Info.authentication_add_ons(dsl_state),
+         &(&1.__struct__ == AshAuthentication.AddOn.Confirmation)
+       ) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies, strategy.name],
+         message: """
+         `on_untrusted_email_match` is set to `:confirm`, but no `confirmation` add-on is configured.
+
+         Linking a provider via confirmation requires a confirmation add-on to issue the confirmation
+         and apply the link once the recipient proves ownership. Add a `confirmation` add-on, or set
+         `on_untrusted_email_match :reject`.
+         """
+       )}
     end
   end
 

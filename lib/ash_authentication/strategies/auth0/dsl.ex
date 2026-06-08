@@ -32,6 +32,7 @@ defmodule AshAuthentication.Strategy.Auth0.Dsl do
       auto_set_fields: [assent_strategy: Auth0, icon: :auth0]
     })
     |> Custom.set_defaults(Auth0.default_config([]))
+    |> Custom.set_defaults(trust_email_verified?: true)
   end
 
   defp strategy_override_docs(strategy) do

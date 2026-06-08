@@ -33,6 +33,7 @@ defmodule AshAuthentication.Strategy.Apple.Dsl do
       auto_set_fields: strategy_fields(Assent.Strategy.Apple, icon: :apple),
       schema: patch_schema(secret_type)
     })
+    |> Custom.set_defaults(trust_email_verified?: true)
   end
 
   defp patch_schema(secret_type) do

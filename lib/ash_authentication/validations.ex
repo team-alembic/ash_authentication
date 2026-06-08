@@ -241,4 +241,73 @@ defmodule AshAuthentication.Validations do
       :ok
     end
   end
+
+  @doc """
+  Collect compile-time warnings for an OAuth2/OIDC strategy.
+
+  Returns `{:warn, messages}` (so the configuration still compiles) for the
+  following safety issues:
+
+    * No `identity_resource` is configured. Matching a local user by their email
+      address (or any other provider-supplied claim) is not safe: per the
+      OpenID Connect Core specification only the `iss`/`sub` claims uniquely and
+      stably identify an end-user, and the identity resource is where those are
+      persisted. This will become a hard requirement in a future release.
+
+    * The provider's `email_verified` claim is not trusted
+      (`trust_email_verified?` is `false`) and no confirmation add-on is
+      configured. Accounts created via this strategy would carry an unverified
+      email address with no way to verify ownership.
+  """
+  @spec oauth2_strategy_warnings(struct, Dsl.t() | map) :: :ok | {:warn, [String.t()]}
+  def oauth2_strategy_warnings(strategy, dsl_state) do
+    [
+      identity_resource_warning(strategy),
+      email_verification_warning(strategy, dsl_state)
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> :ok
+      warnings -> {:warn, warnings}
+    end
+  end
+
+  defp identity_resource_warning(%{identity_resource: identity_resource} = strategy)
+       when is_falsy(identity_resource) do
+    """
+    The `#{inspect(strategy.name)}` strategy on `#{inspect(strategy.resource)}` has no `identity_resource` configured.
+
+    OAuth2 and OIDC strategies should store the provider's `iss`/`sub` claims in
+    a user identity resource. Matching a local user by their email address (or
+    any other provider claim) is unsafe - only the `iss`/`sub` combination
+    uniquely and stably identifies an end-user. This will become a hard
+    requirement in a future release.
+
+    Run `mix ash_authentication.upgrade` to generate and wire up the required
+    resource, or see the "User Identities" section of the strategy documentation.
+    """
+  end
+
+  defp identity_resource_warning(_strategy), do: nil
+
+  defp email_verification_warning(%{trust_email_verified?: false} = strategy, dsl_state) do
+    unless has_confirmation_add_on?(dsl_state) do
+      """
+      The `#{inspect(strategy.name)}` strategy on `#{inspect(strategy.resource)}` does not trust the provider's `email_verified` claim (`trust_email_verified?` is `false`) and no confirmation add-on is configured.
+
+      Accounts created via this strategy will carry an unverified email address
+      and there is no way to verify ownership. Add a confirmation add-on that
+      monitors the email field, or - only for providers that reliably assert
+      email ownership - set `trust_email_verified? true`.
+      """
+    end
+  end
+
+  defp email_verification_warning(_strategy, _dsl_state), do: nil
+
+  defp has_confirmation_add_on?(dsl_state) do
+    dsl_state
+    |> AshAuthentication.Info.authentication_add_ons()
+    |> Enum.any?(&(&1.__struct__ == AshAuthentication.AddOn.Confirmation))
+  end
 end

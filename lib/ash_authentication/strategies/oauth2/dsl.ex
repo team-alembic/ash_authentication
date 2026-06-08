@@ -156,8 +156,20 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
         identity_resource: [
           type: {:or, [{:behaviour, Ash.Resource}, {:in, [false]}]},
           doc:
-            "The resource used to store user identities, or `false` to disable. See the User Identities section of the strategy docs for more.",
+            "The resource used to store user identities. Required: matching users by email or other provider claims is unsafe, so the provider's `iss`/`sub` claims must be persisted. See the User Identities section of the strategy docs for more.",
           default: false
+        ],
+        trust_email_verified?: [
+          type: :boolean,
+          doc:
+            "Whether the provider's `email_verified` claim can be trusted to attach an OAuth2 sign-in to a pre-existing local account with the same email. Only enable this for providers that reliably assert email ownership. When `false`, a sign-in whose `iss`/`sub` is not yet known will never be matched to an existing account by email.",
+          default: false
+        ],
+        on_untrusted_email_match: [
+          type: {:one_of, [:reject, :confirm]},
+          doc:
+            "What to do when a new `iss`/`sub` presents an email matching an existing account but the email can't be trusted (see `trust_email_verified?`). `:reject` (the default) refuses the sign-in. `:confirm` issues a confirmation to the existing account's email and links the provider only once the recipient proves ownership; requires a `confirmation` add-on. Note: confirming binds whatever provider identity initiated the flow, so the confirmation email must make clear which provider is being linked - otherwise a user can be tricked into linking an attacker's provider account.",
+          default: :reject
         ],
         identity_relationship_name: [
           type: :atom,
