@@ -129,6 +129,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
             token_url: nil,
             trusted_audiences: nil,
             user_url: nil,
+            warn_on_missing_identity_resource?: true,
             # Set by the plug at request/callback time. Carried on the
             # struct so `DynamicOidc.IdentityChange` can read it without
             # plumbing it through action arguments.
@@ -164,6 +165,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
           sign_in_action_name: atom,
           strategy_module: module,
           trusted_audiences: nil | [String.t()] | {module, keyword},
+          warn_on_missing_identity_resource?: boolean,
           __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 

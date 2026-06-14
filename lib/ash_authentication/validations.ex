@@ -272,6 +272,8 @@ defmodule AshAuthentication.Validations do
     end
   end
 
+  defp identity_resource_warning(%{warn_on_missing_identity_resource?: false}), do: nil
+
   defp identity_resource_warning(%{identity_resource: identity_resource} = strategy)
        when is_falsy(identity_resource) do
     """

@@ -260,6 +260,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     trusted_audiences: nil,
     user_url: nil,
     code_verifier: false,
+    warn_on_missing_identity_resource?: true,
     __spark_metadata__: nil
   ]
 
@@ -318,6 +319,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           trusted_audiences: secret_list,
           user_url: secret,
           code_verifier: secret,
+          warn_on_missing_identity_resource?: boolean,
           __spark_metadata__: Spark.Dsl.Entity.spark_meta()
         }
 

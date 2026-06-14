@@ -159,6 +159,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
             "The resource used to store user identities. Required: matching users by email or other provider claims is unsafe, so the provider's `iss`/`sub` claims must be persisted. See the User Identities section of the strategy docs for more.",
           default: false
         ],
+        warn_on_missing_identity_resource?: [
+          type: :boolean,
+          doc:
+            "Whether to emit a compile-time warning when no `identity_resource` is configured. Set to `false` only when you have deliberately chosen not to use an identity resource and accept that users are matched by provider claims such as email, which is unsafe and will become unsupported in a future release.",
+          default: true
+        ],
         trust_email_verified?: [
           type: :boolean,
           doc:
