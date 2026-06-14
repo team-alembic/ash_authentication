@@ -16,6 +16,8 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, UserIdentity}
+  alias AshAuthentication.Strategy.OAuth2
+  alias AshAuthentication.Strategy.OAuth2.UserResolver
   require Ash.Query
   import AshAuthentication.Utils, only: [is_falsy: 1]
 
@@ -37,10 +39,13 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
          )}
 
       {:ok, strategy} ->
+        opts = [tenant: context.tenant, actor: context.actor]
+
         query
         |> Query.after_action(fn
           query, [user] ->
-            with {:ok, user} <- maybe_update_identity(user, query, strategy) do
+            with :ok <- verify_identity(user, query, strategy, opts),
+                 {:ok, user} <- maybe_update_identity(user, query, strategy, opts) do
               {:ok, [maybe_generate_token(user, context)]}
             end
 
@@ -60,17 +65,90 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
     end
   end
 
-  defp maybe_update_identity(user, _query, strategy) when is_falsy(strategy.identity_resource),
-    do: {:ok, user}
+  defp verify_identity(_user, _query, strategy, _opts) when is_falsy(strategy.identity_resource),
+    do: :ok
 
-  defp maybe_update_identity(user, query, strategy) do
+  defp verify_identity(user, query, strategy, opts) do
+    user_info = Query.get_argument(query, :user_info)
+
+    case OAuth2.uid_from_user_info(user_info) do
+      nil ->
+        identity_error(query, strategy, "Provider did not return a stable `sub`/`uid` claim")
+
+      uid ->
+        verify_resolved_identity(user, query, strategy, user_info, uid, opts)
+    end
+  end
+
+  defp verify_resolved_identity(user, query, strategy, user_info, uid, opts) do
+    case UserResolver.fetch_identity(strategy, uid, opts) do
+      {:ok, identity} ->
+        if identity_belongs_to?(identity, user, strategy) do
+          :ok
+        else
+          identity_error(query, strategy, "Identity is linked to a different user")
+        end
+
+      :error ->
+        cond do
+          UserResolver.has_identity_for_strategy?(strategy, user, opts) ->
+            identity_error(
+              query,
+              strategy,
+              "A different #{strategy.name} identity is already linked to this account"
+            )
+
+          UserResolver.email_trusted?(strategy, user_info) ->
+            :ok
+
+          true ->
+            identity_error(
+              query,
+              strategy,
+              "Email could not be verified and an account with this email already exists"
+            )
+        end
+    end
+  end
+
+  defp identity_belongs_to?(identity, user, strategy) do
+    {:ok, user_id_attribute_name} =
+      UserIdentity.Info.user_identity_user_id_attribute_name(strategy.identity_resource)
+
+    [pk] = Ash.Resource.Info.primary_key(strategy.resource)
+
+    Map.get(identity, user_id_attribute_name) == Map.get(user, pk)
+  end
+
+  defp identity_error(query, strategy, message) do
+    {:error,
+     AuthenticationFailed.exception(
+       strategy: strategy,
+       query: query,
+       caused_by: %{
+         module: __MODULE__,
+         action: query.action,
+         strategy: strategy,
+         message: message
+       }
+     )}
+  end
+
+  defp maybe_update_identity(user, _query, strategy, _opts)
+       when is_falsy(strategy.identity_resource),
+       do: {:ok, user}
+
+  defp maybe_update_identity(user, query, strategy, opts) do
     strategy.identity_resource
-    |> UserIdentity.Actions.upsert(%{
-      user_info: Query.get_argument(query, :user_info),
-      oauth_tokens: Query.get_argument(query, :oauth_tokens),
-      strategy: strategy.name,
-      user_id: user.id
-    })
+    |> UserIdentity.Actions.upsert(
+      %{
+        user_info: Query.get_argument(query, :user_info),
+        oauth_tokens: Query.get_argument(query, :oauth_tokens),
+        strategy: strategy.name,
+        user_id: user.id
+      },
+      opts
+    )
     |> case do
       {:ok, _identity} ->
         user
@@ -84,7 +162,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
                }
              })}
           ],
-          domain: Info.domain!(strategy.resource)
+          Keyword.put(opts, :domain, Info.domain!(strategy.resource))
         )
 
       {:error, reason} ->

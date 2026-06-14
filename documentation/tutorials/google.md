@@ -33,6 +33,7 @@ defmodule MyApp.Accounts.User do
         client_id MyApp.Secrets
         redirect_uri MyApp.Secrets
         client_secret MyApp.Secrets
+        identity_resource MyApp.Accounts.UserIdentity
       end
     end
   end
@@ -40,6 +41,52 @@ end
 ```
 
 Please check the [guide](https://hexdocs.pm/ash_authentication/AshAuthentication.Secret.html) on how to properly configure your Secrets.
+
+## The user identity resource
+
+OAuth2-based strategies require an `identity_resource` - a resource that stores
+the provider's `iss` (issuer) and `sub` (subject) claims for each linked
+account. Matching a returning user by their email address (or any other claim)
+is **not** safe: per the OpenID Connect specification only the `iss`/`sub`
+combination uniquely and stably identifies an end-user. The identity resource is
+where those values live.
+
+Returning users are matched by their `iss`/`sub`. Because Google reliably
+verifies email ownership, `trust_email_verified?` defaults to `true` for this
+strategy, so a new Google identity whose verified email matches an existing
+local account is linked to it automatically.
+
+Add a `UserIdentity` resource using the `AshAuthentication.UserIdentity`
+extension. There is no need to define any attributes - the extension generates
+them for you.
+
+```elixir
+defmodule MyApp.Accounts.UserIdentity do
+  use Ash.Resource,
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshAuthentication.UserIdentity],
+    domain: MyApp.Accounts
+
+  user_identity do
+    user_resource MyApp.Accounts.User
+  end
+
+  # Configure your data layer as appropriate for your application.
+  postgres do
+    table "user_identities"
+    repo MyApp.Repo
+  end
+end
+```
+
+Don't forget to add it to your domain, and to generate and run migrations for
+the new resource.
+
+```bash
+mix ash.codegen add_user_identities
+mix ash.migrate
+```
+
 Then we need to define an action that will handle the oauth2 flow, for the google case it is `:register_with_google` it will handle both cases for our resource, user registration & login.
 
 ```elixir
@@ -59,7 +106,7 @@ defmodule MyApp.Accounts.User do
 
       change AshAuthentication.GenerateTokenChange
 
-      # Required if you have the `identity_resource` configuration enabled.
+      # Required: persists the provider's `iss`/`sub` identity claims.
       change AshAuthentication.Strategy.OAuth2.IdentityChange
 
       change fn changeset, _ ->

@@ -48,7 +48,8 @@ if Code.ensure_loaded?(Igniter) do
       upgrades =
         %{
           "4.4.9" => [&fix_token_is_revoked_action/2],
-          "4.13.4" => [&add_remember_me_to_magic_link_sign_in/2]
+          "4.13.4" => [&add_remember_me_to_magic_link_sign_in/2],
+          "4.14.0" => [&require_identity_resource/2]
         }
 
       # For each version that requires a change, add it to this map
@@ -291,6 +292,183 @@ if Code.ensure_loaded?(Igniter) do
       """
 
       Igniter.Code.Common.add_code(zipper, change_code)
+    end
+
+    @oauth2_family ~w[oauth2 oidc github google auth0 apple slack]a
+
+    def require_identity_resource(igniter, _opts) do
+      case find_resources_with_oauth2_strategies(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources} ->
+          resources
+          |> Enum.reduce(igniter, &ensure_identity_resource/2)
+          |> Igniter.add_notice("""
+          The user identity resource's unique key changed from
+          `(strategy, uid, user_id)` to `(strategy, uid)`, so that a provider's
+          `iss`/`sub` resolves to exactly one local user.
+
+          Run `mix ash.codegen require_user_identity_unique_key` (and then
+          `mix ash.migrate`) to generate the migration that swaps the unique
+          index.
+
+          IMPORTANT: the new index will fail to create if your data contains the
+          same `(strategy, uid)` linked to more than one user. That should not
+          happen under normal use, but if it does you must reconcile those rows
+          before migrating - it indicates a provider identity was linked to
+          multiple accounts.
+          """)
+      end
+    end
+
+    defp find_resources_with_oauth2_strategies(igniter) do
+      Igniter.Project.Module.find_all_matching_modules(igniter, fn _module, zipper ->
+        case enter_auth_strategies(zipper) do
+          {:ok, zipper} -> Enum.any?(@oauth2_family, &has_strategy?(zipper, &1))
+          _ -> false
+        end
+      end)
+    end
+
+    defp ensure_identity_resource(resource, igniter) do
+      identity_resource = conventional_identity_resource(resource)
+
+      case Igniter.Project.Module.module_exists(igniter, identity_resource) do
+        {true, igniter} ->
+          Enum.reduce(
+            @oauth2_family,
+            igniter,
+            &wire_identity_resource(&2, resource, &1, identity_resource)
+          )
+
+        {false, igniter} ->
+          Igniter.add_warning(
+            igniter,
+            missing_identity_resource_warning(resource, identity_resource)
+          )
+      end
+    end
+
+    defp wire_identity_resource(igniter, resource, type, identity_resource) do
+      case AshAuthentication.Igniter.defines_strategy_of_type(igniter, resource, type) do
+        {igniter, true} ->
+          igniter
+          |> add_identity_resource_to_strategy(resource, type, identity_resource)
+          |> ensure_register_action_has_identity_change(resource, type)
+
+        {igniter, false} ->
+          igniter
+      end
+    end
+
+    defp conventional_identity_resource(resource) do
+      resource
+      |> Module.split()
+      |> :lists.droplast()
+      |> Enum.concat(["UserIdentity"])
+      |> Module.concat()
+    end
+
+    defp add_identity_resource_to_strategy(igniter, resource, type, identity_resource) do
+      Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+        with {:ok, zipper} <- enter_auth_strategies(zipper),
+             {:ok, strategy_zipper} <-
+               Igniter.Code.Function.move_to_function_call_in_current_scope(zipper, type, [1, 2]),
+             {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(strategy_zipper),
+             :error <-
+               Igniter.Code.Function.move_to_function_call_in_current_scope(
+                 do_block_zipper,
+                 :identity_resource,
+                 1
+               ) do
+          {:ok,
+           Igniter.Code.Common.add_code(
+             do_block_zipper,
+             "identity_resource #{inspect(identity_resource)}"
+           )}
+        else
+          _ -> {:ok, zipper}
+        end
+      end)
+    end
+
+    # sobelow_skip ["DOS.BinToAtom"]
+    defp ensure_register_action_has_identity_change(igniter, resource, type) do
+      action_name = :"register_with_#{type}"
+
+      Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+        with {:ok, action_zipper} <- move_to_action(zipper, :create, action_name),
+             {:ok, do_block_zipper} <- Igniter.Code.Common.move_to_do_block(action_zipper),
+             false <- has_identity_change?(do_block_zipper) do
+          {:ok,
+           Igniter.Code.Common.add_code(
+             do_block_zipper,
+             "change AshAuthentication.Strategy.OAuth2.IdentityChange"
+           )}
+        else
+          _ -> {:ok, zipper}
+        end
+      end)
+    end
+
+    defp has_identity_change?(zipper) do
+      match?(
+        {:ok, _},
+        Igniter.Code.Function.move_to_function_call_in_current_scope(
+          zipper,
+          :change,
+          1,
+          fn change_zipper ->
+            case Igniter.Code.Function.move_to_nth_argument(change_zipper, 0) do
+              {:ok, arg_zipper} ->
+                arg_zipper
+                |> Sourceror.Zipper.node()
+                |> Sourceror.to_string()
+                |> String.contains?("IdentityChange")
+
+              _ ->
+                false
+            end
+          end
+        )
+      )
+    end
+
+    defp missing_identity_resource_warning(resource, identity_resource) do
+      """
+      #{inspect(resource)} has one or more OAuth2/OIDC strategies but no user
+      identity resource could be found at #{inspect(identity_resource)}.
+
+      As of this release, OAuth2 and OIDC strategies require an `identity_resource`.
+      Matching a local user by their email address (or any other provider claim)
+      is unsafe - only the provider's `iss`/`sub` claims uniquely and stably
+      identify an end-user, and those are persisted in the identity resource.
+
+      To resolve this manually:
+
+        1. Create a user identity resource (conventionally #{inspect(identity_resource)}):
+
+           defmodule #{inspect(identity_resource)} do
+             use Ash.Resource,
+               extensions: [AshAuthentication.UserIdentity],
+               domain: <your domain>
+
+             user_identity do
+               user_resource #{inspect(resource)}
+             end
+
+             # ... data layer, postgres/sqlite block, etc.
+           end
+
+        2. Add `identity_resource #{inspect(identity_resource)}` to each OAuth2/OIDC
+           strategy on #{inspect(resource)}.
+
+        3. Add `change AshAuthentication.Strategy.OAuth2.IdentityChange` to each
+           `register_with_*` action for those strategies.
+
+      See the "User Identities" section of the strategy documentation for details.
+      """
     end
   end
 else

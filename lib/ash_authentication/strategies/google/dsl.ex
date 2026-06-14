@@ -43,6 +43,7 @@ defmodule AshAuthentication.Strategy.Google.Dsl do
       ],
       auth_method: :client_secret_post
     )
+    |> Custom.set_defaults(trust_email_verified?: true)
   end
 
   defp strategy_override_docs(strategy) do

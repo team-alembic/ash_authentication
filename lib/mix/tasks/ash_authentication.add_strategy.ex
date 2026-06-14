@@ -852,23 +852,46 @@ if Code.ensure_loaded?(Igniter) do
             alias #{inspect(mailer)}
 
             @impl true
-            def send(user, token, _) do
+            def send(user, token, opts) do
               new()
               # TODO: Replace with your email
               |> from({"noreply", "noreply@example.com"})
               |> to(to_string(user.email))
-              |> subject("Confirm your email address")
-              |> html_body(body([token: token]))
+              |> subject(subject(opts))
+              |> html_body(body(token, opts))
               |> #{List.last(Module.split(mailer))}.deliver!()
             end
 
-            defp body(params) do
-              url = url(~p"/confirm_new_user/\#{params[:token]}")
+            # `opts[:confirmation_type]` is `:identity_link` when an OAuth2/OIDC
+            # sign-in whose email matches this already-registered account is asking
+            # to be linked (the strategy's `on_untrusted_email_match :confirm`).
+            # Confirming grants that provider login access to this account, so make
+            # the copy unambiguous about who is asking and what it does.
+            defp subject(opts) do
+              case opts[:confirmation_type] do
+                :identity_link -> "Confirm linking your \#{opts[:provider]} login"
+                _ -> "Confirm your email address"
+              end
+            end
 
-              """
-              <p>Click this link to confirm your email:</p>
-              <p><a href="\#{url}">\#{url}</a></p>
-              """
+            defp body(token, opts) do
+              url = url(~p"/confirm_new_user/\#{token}")
+
+              case opts[:confirmation_type] do
+                :identity_link ->
+                  """
+                  <p>Someone signed in with \#{opts[:provider]} using your email address
+                  and wants to link it to your account.</p>
+                  <p>If this was you, confirm here: <a href="\#{url}">\#{url}</a></p>
+                  <p>If it wasn't you, ignore this email - nothing has changed.</p>
+                  """
+
+                _ ->
+                  """
+                  <p>Click this link to confirm your email:</p>
+                  <p><a href="\#{url}">\#{url}</a></p>
+                  """
+              end
             end
             '''
           )
@@ -913,10 +936,24 @@ if Code.ensure_loaded?(Igniter) do
         #{use_web_module}
 
         @impl true
-        def send(_user, token, _) do
+        def send(_user, token, opts) do
           #{real_example}
+          # `opts[:confirmation_type]` is `:identity_link` when an OAuth2/OIDC
+          # sign-in whose email matches this already-registered account is asking
+          # to be linked (the strategy's `on_untrusted_email_match :confirm`).
+          # Confirming grants that provider login access to this account.
+          prompt =
+            case opts[:confirmation_type] do
+              :identity_link ->
+                "Someone signed in with \#{opts[:provider]} using your email address. " <>
+                  "If it was you, confirm to link it to your account:"
+
+              _ ->
+                "Click this link to confirm your email:"
+            end
+
           IO.puts("""
-          Click this link to confirm your email:
+          \#{prompt}
 
           #{url}
           """)

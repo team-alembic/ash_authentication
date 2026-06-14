@@ -12,12 +12,13 @@ defmodule AshAuthentication.Strategy.Apple.Verifier do
 
   @doc false
   @spec verify(OAuth2.t(), map) :: :ok | {:error, Exception.t()}
-  def verify(strategy, _dsl_state) do
+  def verify(strategy, dsl_state) do
     with :ok <- validate_secret(strategy, :client_id),
          :ok <- validate_secret(strategy, :team_id),
          :ok <- validate_secret(strategy, :private_key_id),
-         :ok <- validate_secret(strategy, :private_key_path) do
-      validate_secret(strategy, :redirect_uri)
+         :ok <- validate_secret(strategy, :private_key_path),
+         :ok <- validate_secret(strategy, :redirect_uri) do
+      oauth2_strategy_warnings(strategy, dsl_state)
     end
   end
 end

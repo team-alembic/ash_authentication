@@ -32,6 +32,7 @@ defmodule AshAuthentication.Strategy.Github.Dsl do
       auto_set_fields: [icon: :github, assent_strategy: Github]
     })
     |> Custom.set_defaults(Github.default_config([]))
+    |> Custom.set_defaults(trust_email_verified?: true)
   end
 
   defp strategy_override_docs(strategy) do
