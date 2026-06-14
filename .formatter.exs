@@ -58,6 +58,7 @@ spark_locals_without_parens = [
   confirmed_at_field: 1,
   connection_resource: 1,
   cookie_name: 1,
+  create_action_name: 1,
   created_at_attribute_name: 1,
   credential_id_field: 1,
   credential_resource: 1,
@@ -215,6 +216,7 @@ spark_locals_without_parens = [
   sign_in_token_lifetime: 1,
   sign_in_tokens_enabled?: 1,
   sign_in_with_token_action_name: 1,
+  require_identity?: 1,
   signing_algorithm: 1,
   signing_secret: 1,
   single_use_token?: 1,
@@ -244,10 +246,12 @@ spark_locals_without_parens = [
   trust_email_verified?: 1,
   trusted_audiences: 1,
   uid_attribute_name: 1,
+  update_action_name: 1,
   update_credential_label_action_name: 1,
   update_sign_count_action_name: 1,
   upsert_action_name: 1,
   user_id_attribute_name: 1,
+  user_id_field: 1,
   user_relationship_name: 1,
   user_resource: 1,
   user_url: 1,
@@ -257,7 +261,10 @@ spark_locals_without_parens = [
   warn_on_missing_identity_resource?: 1,
   webauthn: 0,
   webauthn: 1,
-  webauthn: 2
+  webauthn: 2,
+  webauthn_credential: 0,
+  webauthn_credential: 1,
+  webauthn_credential: 2
 ]
 
 [

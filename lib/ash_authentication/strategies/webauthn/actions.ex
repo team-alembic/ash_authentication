@@ -335,11 +335,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
             {:ok, [Ash.Resource.Record.t()]} | {:error, any}
     def list_credentials(strategy, user, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+      action = credential_action_name(strategy.credential_resource, :read_action_name, :read)
 
       strategy.credential_resource
       |> Query.new()
       |> Query.set_context(auth_context())
-      |> Query.for_read(:read, %{}, ash_opts)
+      |> Query.for_read(action, %{}, ash_opts)
       |> Query.filter(user_id == ^user.id)
       |> maybe_sort_by_inserted_at(strategy)
       |> Ash.read()
@@ -372,12 +373,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
             {:ok, Ash.Resource.Record.t()} | {:error, any}
     def update_credential_label(strategy, credential_id, new_label, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+      action = credential_action_name(strategy.credential_resource, :update_action_name, :update)
 
       with {:ok, credential} <- Ash.get(strategy.credential_resource, credential_id, ash_opts) do
         credential
         |> Changeset.new()
         |> Changeset.set_context(auth_context())
-        |> Changeset.for_update(:update, %{label: new_label}, ash_opts)
+        |> Changeset.for_update(action, %{label: new_label}, ash_opts)
         |> Ash.update()
       end
     end
@@ -472,15 +474,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     defp create_user_from_registration(strategy, auth_data, params, opts) do
       tenant = Keyword.get(opts, :tenant)
       cred_data = auth_data.attested_credential_data
-      identity_key = to_string(strategy.identity_field)
 
       action_params = %{
-        identity_key => params[identity_key],
         "credential_id" => cred_data.credential_id,
         "public_key" => cred_data.credential_public_key,
         "sign_count" => auth_data.sign_count,
         "label" => params["label"] || "Security Key"
       }
+
+      # In passkey-first mode the user resource has no identity attribute, so
+      # passing the identity key would be rejected as an unknown input.
+      action_params = maybe_put_identity_in_params(strategy, action_params, params)
 
       ash_opts = build_ash_opts(strategy, opts, tenant)
 
@@ -489,6 +493,15 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       |> Changeset.set_context(Map.put(auth_context(), :token_type, :sign_in))
       |> Changeset.for_create(strategy.register_action_name, action_params, ash_opts)
       |> Ash.create()
+    end
+
+    defp maybe_put_identity_in_params(%_{require_identity?: false}, action_params, _params) do
+      action_params
+    end
+
+    defp maybe_put_identity_in_params(%_{identity_field: identity_key}, action_params, params) do
+      identity_key = to_string(identity_key)
+      Map.put(action_params, identity_key, params[identity_key])
     end
 
     defp store_credential_from_auth(strategy, user, auth_data, params, opts) do
@@ -565,21 +578,26 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       }
 
       ash_opts = internal_ash_opts(tenant)
+      action = credential_action_name(strategy.credential_resource, :create_action_name, :create)
 
       strategy.credential_resource
       |> Changeset.new()
       |> Changeset.set_context(auth_context())
-      |> Changeset.for_create(:create, attrs, ash_opts)
+      |> Changeset.for_create(action, attrs, ash_opts)
       |> Ash.create()
     end
 
     defp update_sign_count(strategy, credential_id, new_count, tenant) do
       ash_opts = internal_ash_opts(tenant)
+      read_action = credential_action_name(strategy.credential_resource, :read_action_name, :read)
+
+      update_action =
+        credential_action_name(strategy.credential_resource, :update_action_name, :update)
 
       strategy.credential_resource
       |> Query.new()
       |> Query.set_context(auth_context())
-      |> Query.for_read(:read, %{}, ash_opts)
+      |> Query.for_read(read_action, %{}, ash_opts)
       |> Query.filter(credential_id == ^credential_id)
       |> Ash.read_one()
       |> case do
@@ -591,7 +609,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
           |> Changeset.new()
           |> Changeset.set_context(auth_context())
           |> Changeset.for_update(
-            :update,
+            update_action,
             %{sign_count: new_count, last_used_at: DateTime.utc_now()},
             ash_opts
           )
@@ -614,6 +632,18 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     defp internal_ash_opts(tenant) do
       ash_opts = [authorize?: false]
       if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+    end
+
+    # Look up a configured action name from the WebAuthnCredential extension,
+    # falling back to `default` for resources that don't use it.
+    defp credential_action_name(credential_resource, field, default) do
+      info_fun = :"webauthn_credential_#{field}"
+
+      case AshAuthentication.WebAuthnCredential.Info
+           |> apply(info_fun, [credential_resource]) do
+        {:ok, name} -> name
+        _ -> default
+      end
     end
 
     defp maybe_generate_token(user, strategy, opts) do

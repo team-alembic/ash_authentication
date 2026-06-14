@@ -8,6 +8,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
   alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.Helpers
 
+  @moduletag feature: :webauthn
+
   describe "resolve_rp_id/2" do
     test "returns static string directly" do
       strategy = %WebAuthn{rp_id: "example.com"}
