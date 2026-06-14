@@ -235,6 +235,7 @@ defmodule ExampleMultiTenant.User do
         authorization_params scope: "openid profile email"
         auth_method :client_secret_post
         registration_enabled? false
+        warn_on_missing_identity_resource? false
       end
 
       auth0 do
@@ -245,6 +246,7 @@ defmodule ExampleMultiTenant.User do
         authorize_url &get_config/2
         token_url &get_config/2
         user_url &get_config/2
+        identity_resource ExampleMultiTenant.UserIdentity
       end
 
       github do
@@ -252,6 +254,7 @@ defmodule ExampleMultiTenant.User do
         redirect_uri &get_config/2
         client_secret &get_config/2
         authorization_params scope: "openid profile email"
+        identity_resource ExampleMultiTenant.UserIdentity
       end
 
       only_marty do
@@ -274,6 +277,7 @@ defmodule ExampleMultiTenant.User do
         redirect_uri &get_config/2
         base_url &get_config/2
         trusted_audiences &get_config/2
+        identity_resource ExampleMultiTenant.UserIdentity
       end
 
       okta do
