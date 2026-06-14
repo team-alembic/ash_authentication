@@ -35,6 +35,10 @@ if Code.ensure_loaded?(Igniter) do
     * `--user`, `-u` - The user resource. Defaults to `YourApp.Accounts.User`.
     * `--identity-field`, `-i` - The field on the user resource that
       identifies the user (typically email). Defaults to `email`.
+    * `--passkey-only` - Passkey-first mode: sets `require_identity? false`
+      on the strategy and skips adding the identity attribute and unique
+      identity to the user resource. Users are resolved from the WebAuthn
+      credential id alone, so the user resource needs no email-style column.
     * `--name`, `-n` - The strategy name. Defaults to `webauthn`.
     * `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `primary`.
 
@@ -56,6 +60,7 @@ if Code.ensure_loaded?(Igniter) do
           accounts: :string,
           user: :string,
           identity_field: :string,
+          passkey_only: :boolean,
           mode: :string,
           name: :string
         ],
@@ -68,6 +73,7 @@ if Code.ensure_loaded?(Igniter) do
         ],
         defaults: [
           identity_field: "email",
+          passkey_only: false,
           mode: "primary",
           name: "webauthn"
         ]
@@ -167,44 +173,24 @@ if Code.ensure_loaded?(Igniter) do
         inspect(credential_resource),
         "--uuid-primary-key",
         "id",
-        "--default-actions",
-        "read,destroy",
-        "--attribute",
-        "credential_id:binary:required",
-        "--attribute",
-        "sign_count:integer",
-        "--attribute",
-        "label:string",
-        "--attribute",
-        "last_used_at:utc_datetime_usec",
         "--relationship",
         "belongs_to:user:#{inspect(options[:user])}:required",
         "--extend",
         extensions
       ])
-      |> Ash.Resource.Igniter.add_new_attribute(credential_resource, :public_key, """
-      attribute :public_key, AshAuthentication.Strategy.WebAuthn.CoseKey do
-        allow_nil? false
-        public? true
-      end
-      """)
-      |> Ash.Resource.Igniter.add_new_action(credential_resource, :create, """
-      create :create do
-        primary? true
-        accept [:credential_id, :public_key, :sign_count, :label, :user_id]
-      end
-      """)
-      |> Ash.Resource.Igniter.add_new_action(credential_resource, :update, """
-      update :update do
-        primary? true
-        accept [:sign_count, :label, :last_used_at]
-      end
-      """)
+      |> add_webauthn_credential_section(credential_resource, options[:user])
       |> add_credential_resource_authorizer(credential_resource)
       |> add_credential_resource_timestamps(credential_resource)
-      |> Ash.Resource.Igniter.add_new_identity(credential_resource, :unique_credential_id, """
-      identity :unique_credential_id, [:credential_id]
-      """)
+    end
+
+    defp add_webauthn_credential_section(igniter, credential_resource, user_resource) do
+      Spark.Igniter.set_option(
+        igniter,
+        credential_resource,
+        [:webauthn_credential],
+        :user_resource,
+        user_resource
+      )
     end
 
     defp add_credential_resource_timestamps(igniter, credential_resource) do
@@ -272,17 +258,9 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp add_user_attributes_and_relationship(igniter, credential_resource, options) do
-      identity_field = options[:identity_field]
-
       igniter
-      |> Ash.Resource.Igniter.add_new_attribute(options[:user], identity_field, """
-      attribute #{inspect(identity_field)}, :ci_string do
-        allow_nil? false
-        public? true
-      end
-      """)
+      |> maybe_add_identity_attribute(options)
       |> make_hashed_password_optional(options)
-      |> AshAuthentication.Igniter.ensure_identity(options[:user], identity_field)
       |> Ash.Resource.Igniter.add_new_relationship(
         options[:user],
         :webauthn_credentials,
@@ -290,6 +268,25 @@ if Code.ensure_loaded?(Igniter) do
         has_many :webauthn_credentials, #{inspect(credential_resource)}
         """
       )
+    end
+
+    # In passkey-only mode the user resource needs no identity column at all —
+    # users are resolved from the WebAuthn credential id.
+    defp maybe_add_identity_attribute(igniter, options) do
+      if options[:passkey_only] do
+        igniter
+      else
+        identity_field = options[:identity_field]
+
+        igniter
+        |> Ash.Resource.Igniter.add_new_attribute(options[:user], identity_field, """
+        attribute #{inspect(identity_field)}, :ci_string do
+          allow_nil? false
+          public? true
+        end
+        """)
+        |> AshAuthentication.Igniter.ensure_identity(options[:user], identity_field)
+      end
     end
 
     # WebAuthn registration creates users without a password. If the password
@@ -351,14 +348,25 @@ if Code.ensure_loaded?(Igniter) do
             ""
         end
 
+      identity_lines =
+        if options[:passkey_only] do
+          """
+            require_identity? false
+          """
+        else
+          """
+            identity_field #{inspect(options[:identity_field])}
+            require_identity? true
+          """
+        end
+
       """
       webauthn #{inspect(options[:name])} do
         credential_resource #{inspect(credential_resource)}
         rp_id #{inspect(secrets_module)}
         rp_name #{inspect(secrets_module)}
         origin #{inspect(secrets_module)}
-        identity_field #{inspect(options[:identity_field])}
-      #{mode_lines}end
+      #{identity_lines}#{mode_lines}end
       """
     end
 
@@ -443,9 +451,14 @@ if Code.ensure_loaded?(Igniter) do
 
     defp data_layer_extension do
       cond do
-        Code.ensure_loaded?(AshPostgres.DataLayer) -> "Ash.Policy.Authorizer,postgres"
-        Code.ensure_loaded?(AshSqlite.DataLayer) -> "Ash.Policy.Authorizer,sqlite"
-        true -> "Ash.Policy.Authorizer"
+        Code.ensure_loaded?(AshPostgres.DataLayer) ->
+          "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer,postgres"
+
+        Code.ensure_loaded?(AshSqlite.DataLayer) ->
+          "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer,sqlite"
+
+        true ->
+          "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer"
       end
     end
   end

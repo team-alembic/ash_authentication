@@ -63,6 +63,7 @@ defmodule MyApp.Accounts.User do
         rp_name "My App"
         origin "https://example.com"
         identity_field :email
+        require_identity? true
       end
     end
   end
@@ -106,24 +107,24 @@ browser includes the port in the origin and `Wax` will reject the mismatch.
 
 ## Credential Resource
 
-You must define a separate Ash resource to store WebAuthn credentials. It needs:
-
-- `credential_id` (`:binary`) - the raw credential ID from the authenticator
-- `public_key` (`AshAuthentication.Strategy.WebAuthn.CoseKey`) - the COSE public key
-- `sign_count` (`:integer`) - replay attack counter
-- `label` (`:string`) - user-facing name for the credential
-- `last_used_at` (`:utc_datetime_usec`, optional) - tracks last authentication time
-- A `belongs_to` relationship to your user resource
-- A policy bypass for `AshAuthentication.Checks.AshAuthenticationInteraction`
-
-### Full Example
+You must define a separate Ash resource to store WebAuthn credentials. Add the
+`AshAuthentication.WebAuthnCredential` extension and it will automatically scaffold
+the required attributes (`credential_id`, `public_key`, `sign_count`, `label`,
+`last_used_at`), the unique identity on `credential_id`, and all four CRUD actions.
+You only need to declare the `belongs_to` relationship manually (so Ash can derive
+the foreign key before validating action `accept` lists).
 
 ```elixir
 defmodule MyApp.Accounts.Credential do
   use Ash.Resource,
     domain: MyApp.Accounts,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshAuthentication.WebAuthnCredential]
+
+  webauthn_credential do
+    user_resource MyApp.Accounts.User
+  end
 
   postgres do
     table "webauthn_credentials"
@@ -142,38 +143,12 @@ defmodule MyApp.Accounts.Credential do
 
   attributes do
     uuid_primary_key :id
-    attribute :credential_id, :binary, allow_nil?: false, public?: true
-
-    attribute :public_key, AshAuthentication.Strategy.WebAuthn.CoseKey,
-      allow_nil?: false, public?: true
-
-    attribute :sign_count, :integer, default: 0, allow_nil?: false, public?: true
-    attribute :label, :string, default: "Security Key", public?: true
-    attribute :last_used_at, :utc_datetime_usec, public?: true
     create_timestamp :inserted_at
     update_timestamp :updated_at
   end
 
   relationships do
     belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
-  end
-
-  identities do
-    identity :unique_credential_id, [:credential_id]
-  end
-
-  actions do
-    defaults [:read, :destroy]
-
-    create :create do
-      primary? true
-      accept [:credential_id, :public_key, :sign_count, :label, :user_id]
-    end
-
-    update :update do
-      primary? true
-      accept [:sign_count, :label, :last_used_at]
-    end
   end
 end
 ```
@@ -236,6 +211,7 @@ webauthn :webauthn do
   rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []}
   origin {MyApp.WebAuthn, :origin_for_tenant, []}
   identity_field :email
+  require_identity? true
 end
 ```
 
@@ -248,6 +224,64 @@ defmodule MyApp.WebAuthn do
   def origin_for_tenant(tenant), do: "https://#{tenant}.example.com"
 end
 ```
+
+## Passkey-First (No Identity) Flow
+
+By default the strategy requires an `identity_field` attribute (e.g. `:email`)
+on the user resource. For passkey-only systems — internal admin apps, or apps
+where the user resource has no email-style column at all — set
+`require_identity? false` and the requirement is lifted entirely:
+
+```elixir
+defmodule MyApp.Accounts.User do
+  use Ash.Resource,
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
+
+  attributes do
+    uuid_primary_key :id
+  end
+
+  relationships do
+    has_many :webauthn_credentials, MyApp.Accounts.Credential
+  end
+
+  authentication do
+    tokens do
+      enabled? true
+      token_resource MyApp.Accounts.Token
+      signing_secret fn _, _ -> {:ok, Application.get_env(:my_app, :token_secret)} end
+    end
+
+    strategies do
+      webauthn :webauthn do
+        credential_resource MyApp.Accounts.Credential
+        rp_id "example.com"
+        rp_name "My App"
+        origin "https://example.com"
+        require_identity? false
+      end
+    end
+  end
+end
+```
+
+No `:email` attribute, no unique identity. At challenge time no identity is
+sent to the server, so the browser surfaces a discoverable credential
+(passkey); at verification time the credential id alone resolves the user.
+
+This composes with `resident_key: :required` (the default): `resident_key`
+controls whether the browser is asked to create a discoverable credential
+during registration, while `require_identity?` controls whether the
+user resource must expose an identity column. Set both for the full
+passkey-first experience.
+
+The companion package `ash_authentication_phoenix` needs to skip the email
+input in its sign-in components for this mode — see its documentation.
+
+**Gotcha:** registration creates a user with no identity, so this mode is
+unsuitable when paired with strategies that need an email on the same
+resource (e.g. password with resettable, magic link, or confirmation).
 
 ## Gotchas
 
@@ -287,6 +321,7 @@ webauthn :webauthn do
   rp_id "example.com"
   rp_name "My App"
   identity_field :email
+  require_identity? true
 end
 
 ```
@@ -301,8 +336,9 @@ end
 | [`credential_resource`](#authentication-strategies-webauthn-credential_resource){: #authentication-strategies-webauthn-credential_resource .spark-required} | `atom \| module` |  | The Ash resource used to store WebAuthn credentials. Must have `credential_id` (binary), `public_key` (binary), and `sign_count` (integer) attributes, plus a `belongs_to` relationship to the user resource. |
 | [`rp_id`](#authentication-strategies-webauthn-rp_id){: #authentication-strategies-webauthn-rp_id .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party ID - your domain name (e.g. "example.com"). For multi-tenant setups, pass an MFA tuple or 1-arity function that receives the tenant and returns the domain string:     rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_id MyApp.Secrets |
 | [`rp_name`](#authentication-strategies-webauthn-rp_name){: #authentication-strategies-webauthn-rp_name .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party display name shown to the user during registration. For multi-tenant setups, pass an MFA tuple or 1-arity function:     rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_name MyApp.Secrets |
+| [`require_identity?`](#authentication-strategies-webauthn-require_identity?){: #authentication-strategies-webauthn-require_identity? .spark-required} | `boolean` |  | Must be set explicitly. There is no default; the developer chooses the mode per resource. When `true` (identity-required mode), the user resource must expose an `identity_field` attribute (default `:email`) that is writable, public, and uniquely constrained. Users sign in by supplying this identity at challenge time; their credentials are returned via `allowCredentials`. When `false` (passkey-first mode), the user resource needs no identity column. Users sign in via a discoverable credential only; the credential id resolves the user at verification time. Pairs with `resident_key: :required`. Note: the runtime in `Actions.sign_in/3` and `Plug.authentication_challenge/2` supports both modes; this option only relaxes the compile-time checks in the transformer and the sign-in preparation. |
 | [`origin`](#authentication-strategies-webauthn-origin){: #authentication-strategies-webauthn-origin } | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | The expected origin for WebAuthn ceremonies. In WebAuthn, the **origin** is the scheme + domain + port that the browser reports during registration and authentication. It is distinct from `rp_id`: - `rp_id` = domain only (e.g. `"example.com"`) - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`) If not set, defaults to `"https://{rp_id}"`. This default **omits the port**, which works for production on port 443 but will cause Wax to reject ceremonies in development where the port is non-standard. **Production:**     origin "https://example.com" **Development (non-standard port):**     origin "https://localhost:4001" **Dynamic (multi-tenant):**     origin {MyApp.WebAuthn, :origin_for_tenant, []} **Application-environment-driven:**     origin MyApp.Secrets |
-| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. |
+| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. Ignored when `require_identity?` is `false`. |
 | [`authenticator_attachment`](#authentication-strategies-webauthn-authenticator_attachment){: #authentication-strategies-webauthn-authenticator_attachment } | `nil \| :platform \| :cross_platform` |  | Restricts authenticator type. `nil` allows any, `:platform` limits to built-in (Touch ID, Windows Hello), `:cross_platform` limits to USB/NFC keys (YubiKey). |
 | [`user_verification`](#authentication-strategies-webauthn-user_verification){: #authentication-strategies-webauthn-user_verification } | `"required" \| "preferred" \| "discouraged"` | `"preferred"` | Whether user verification (PIN/biometric) is required. Use `"required"` for highest security. |
 | [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "direct"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"direct"` requests the authenticator's attestation certificate. |

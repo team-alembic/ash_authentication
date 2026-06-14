@@ -25,6 +25,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           rp_id "example.com"
           rp_name "My App"
           identity_field :email
+          require_identity? true
         end
         """
       ],
@@ -134,8 +135,29 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         identity_field: [
           type: :atom,
           doc:
-            "The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication.",
+            "The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. Ignored when `require_identity?` is `false`.",
           default: :email
+        ],
+        require_identity?: [
+          type: :boolean,
+          required: true,
+          doc: """
+          Must be set explicitly. There is no default; the developer chooses the mode per resource.
+
+          When `true` (identity-required mode), the user resource must expose an
+          `identity_field` attribute (default `:email`) that is writable, public,
+          and uniquely constrained. Users sign in by supplying this identity at
+          challenge time; their credentials are returned via `allowCredentials`.
+
+          When `false` (passkey-first mode), the user resource needs no identity
+          column. Users sign in via a discoverable credential only; the
+          credential id resolves the user at verification time. Pairs with
+          `resident_key: :required`.
+
+          Note: the runtime in `Actions.sign_in/3` and `Plug.authentication_challenge/2`
+          supports both modes; this option only relaxes the compile-time checks
+          in the transformer and the sign-in preparation.
+          """
         ],
         authenticator_attachment: [
           type: {:in, [nil, :platform, :cross_platform]},

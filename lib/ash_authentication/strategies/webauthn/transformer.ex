@@ -22,7 +22,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
   @spec transform(WebAuthn.t(), map) :: {:ok, WebAuthn.t() | map} | {:error, Exception.t()}
   # sobelow_skip ["DOS.BinToAtom"]
   def transform(strategy, dsl_state) do
-    with :ok <- validate_identity_field(strategy.identity_field, dsl_state),
+    with :ok <- validate_identity(strategy, dsl_state),
          strategy <-
            maybe_set_field_lazy(strategy, :register_action_name, &:"register_with_#{&1.name}"),
          strategy <-
@@ -138,6 +138,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
     |> register_strategy_actions(dsl_state, strategy)
   end
 
+  # In passkey-first mode the user is resolved from the credential id alone,
+  # so the user resource doesn't need an identity attribute at all.
+  defp validate_identity(%{require_identity?: false}, _dsl_state), do: :ok
+
+  defp validate_identity(strategy, dsl_state),
+    do: validate_identity_field(strategy.identity_field, dsl_state)
+
   defp validate_identity_field(identity_field, dsl_state) do
     with {:ok, resource} <- persisted_option(dsl_state, :module),
          {:ok, attribute} <- find_attribute(dsl_state, identity_field),
@@ -199,7 +206,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
 
     Transformer.build_entity(Resource.Dsl, [:actions], :create,
       name: strategy.register_action_name,
-      accept: [strategy.identity_field],
+      accept: build_register_action_accept(strategy),
       arguments: arguments,
       changes: changes,
       metadata: metadata,
@@ -207,17 +214,33 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
     )
   end
 
-  defp build_sign_in_action(dsl_state, strategy) do
-    identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
+  defp build_register_action_accept(%_{require_identity?: false}) do
+    []
+  end
 
-    arguments = [
-      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
-        name: strategy.identity_field,
-        type: identity_attribute.type,
-        allow_nil?: false,
-        description: "The identity to use for retrieving the user."
-      )
-    ]
+  defp build_register_action_accept(%_{identity_field: identity_field}) do
+    [identity_field]
+  end
+
+  defp build_sign_in_action(dsl_state, strategy) do
+    arguments =
+      if strategy.require_identity? do
+        identity_attribute = Resource.Info.attribute(dsl_state, strategy.identity_field)
+        identity_type = if identity_attribute, do: identity_attribute.type, else: Ash.Type.String
+
+        [
+          Transformer.build_entity!(Resource.Dsl, [:actions, :read], :argument,
+            name: strategy.identity_field,
+            type: identity_type,
+            allow_nil?: false,
+            description: "The identity to use for retrieving the user."
+          )
+        ]
+      else
+        # In passkey-first mode the identity attribute may not exist on the
+        # resource; the user is resolved from the credential id in `Actions.sign_in/3`.
+        []
+      end
 
     preparations = [
       Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,

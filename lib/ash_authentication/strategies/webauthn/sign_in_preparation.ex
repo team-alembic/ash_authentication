@@ -17,17 +17,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
   require Ash.Query
 
   @doc false
-  @impl true
+  @impl Ash.Resource.Preparation
   @spec prepare(Query.t(), keyword, Preparation.Context.t()) :: Query.t()
   def prepare(query, options, context) do
-    {:ok, strategy} = Info.find_strategy(query, context, options)
-    identity_field = strategy.identity_field
-    identity = Query.get_argument(query, identity_field)
-
-    if is_nil(identity) do
-      Query.filter(query, false)
+    with {:ok,
+          %_{
+            identity_field: identity_field,
+            require_identity?: true
+          }} <- Info.find_strategy(query, context, options) do
+      case Query.get_argument(query, identity_field) do
+        nil -> Query.filter(query, false)
+        identity -> Query.filter(query, ^ref(identity_field) == ^identity)
+      end
     else
-      Query.filter(query, ^ref(identity_field) == ^identity)
+      _ -> query
     end
   end
 end
