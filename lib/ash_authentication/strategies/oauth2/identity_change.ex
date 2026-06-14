@@ -55,10 +55,10 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
            UserIdentity.Actions.upsert(
              strategy.identity_resource,
              %{
+               user_id_attribute_name => user.id,
                user_info: Changeset.get_argument(changeset, :user_info),
                oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens),
-               strategy: Strategy.name(strategy),
-               "#{user_id_attribute_name}": user.id
+               strategy: Strategy.name(strategy)
              },
              opts
            ) do
