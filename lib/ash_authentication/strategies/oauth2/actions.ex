@@ -9,8 +9,21 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   Provides the code interface for working with resources via an OAuth2 strategy.
   """
 
-  alias Ash.{Changeset, Error.Invalid.NoSuchAction, Query, Resource}
-  alias AshAuthentication.{Errors, Info, Strategy.OAuth2}
+  alias Ash.{
+    Changeset,
+    Error.Framework.AssumptionFailed,
+    Error.Invalid.NoSuchAction,
+    Query,
+    Resource
+  }
+
+  alias AshAuthentication.{
+    AddOn.Confirmation,
+    Errors,
+    Errors.ConfirmationRequired,
+    Info,
+    Strategy.OAuth2
+  }
 
   @doc """
   Attempt to sign in a user.
@@ -120,11 +133,17 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
     |> Ash.create()
     |> case do
       {:error, error} ->
-        {:error,
-         Errors.AuthenticationFailed.exception(
-           strategy: strategy,
-           caused_by: error
-         )}
+        case find_confirmation_required(error) do
+          {:ok, confirmation_required} ->
+            {:error, confirmation_required(strategy, confirmation_required, options)}
+
+          :error ->
+            {:error,
+             Errors.AuthenticationFailed.exception(
+               strategy: strategy,
+               caused_by: error
+             )}
+        end
 
       other ->
         other
@@ -139,4 +158,76 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
          action: strategy.register_action_name,
          type: :create
        )}
+
+  # `on_untrusted_email_match :confirm`: issue a confirmation to the existing
+  # account's email, then surface a generic `AuthenticationFailed` carrying a
+  # scrubbed `ConfirmationRequired` as its reason. The plug/controller can match
+  # on that reason to tell the user to check their email, without the user
+  # record or provider tokens riding downstream.
+  defp confirmation_required(strategy, %ConfirmationRequired{} = confirmation_required, opts) do
+    reason =
+      case issue_link_confirmation(strategy, confirmation_required, opts) do
+        :ok -> ConfirmationRequired.exception(strategy: strategy)
+        {:error, reason} -> reason
+      end
+
+    Errors.AuthenticationFailed.exception(strategy: strategy, caused_by: reason)
+  end
+
+  defp issue_link_confirmation(strategy, %ConfirmationRequired{} = confirmation_required, opts) do
+    payload = %{
+      "strategy" => to_string(strategy.name),
+      "user_info" => confirmation_required.user_info,
+      "oauth_tokens" => confirmation_required.oauth_tokens
+    }
+
+    with {:ok, confirmation} <- find_confirmation_add_on(strategy.resource),
+         {:ok, token} <-
+           Confirmation.confirmation_token_for_link(
+             confirmation,
+             confirmation_required.user,
+             payload,
+             opts
+           ) do
+      {sender, send_opts} = confirmation.sender
+
+      send_opts
+      |> Keyword.put(:tenant, Keyword.get(opts, :tenant))
+      |> Keyword.put(:confirmation_type, :identity_link)
+      |> Keyword.put(:provider, strategy.name)
+      |> then(&sender.send(confirmation_required.user, token, &1))
+
+      :ok
+    end
+  end
+
+  defp find_confirmation_add_on(resource) do
+    case Enum.find(Info.authentication_add_ons(resource), &match?(%Confirmation{}, &1)) do
+      nil ->
+        {:error,
+         AssumptionFailed.exception(
+           message:
+             "`on_untrusted_email_match :confirm` requires a confirmation add-on, but none was found"
+         )}
+
+      confirmation ->
+        {:ok, confirmation}
+    end
+  end
+
+  defp find_confirmation_required(%ConfirmationRequired{} = error), do: {:ok, error}
+
+  defp find_confirmation_required(%{errors: errors}) when is_list(errors),
+    do: find_confirmation_required(errors)
+
+  defp find_confirmation_required(errors) when is_list(errors) do
+    Enum.find_value(errors, :error, fn error ->
+      case find_confirmation_required(error) do
+        {:ok, _} = found -> found
+        :error -> false
+      end
+    end)
+  end
+
+  defp find_confirmation_required(_), do: :error
 end

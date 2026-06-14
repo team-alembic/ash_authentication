@@ -239,6 +239,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     identity_resource: false,
     name: nil,
     nonce: false,
+    on_untrusted_email_match: :reject,
     prevent_hijacking?: true,
     openid_configuration_uri: nil,
     openid_configuration: nil,
@@ -255,6 +256,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     strategy_module: __MODULE__,
     team_id: nil,
     token_url: nil,
+    trust_email_verified?: false,
     trusted_audiences: nil,
     user_url: nil,
     code_verifier: false,
@@ -296,6 +298,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           name: atom,
           prevent_hijacking?: boolean,
           nonce: boolean | secret,
+          on_untrusted_email_match: :reject | :confirm,
           openid_configuration_uri: nil | binary,
           openid_configuration: nil | map,
           private_key: secret,
@@ -311,6 +314,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           strategy_module: module,
           team_id: secret,
           token_url: secret,
+          trust_email_verified?: boolean,
           trusted_audiences: secret_list,
           user_url: secret,
           code_verifier: secret,
@@ -321,4 +325,47 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   defdelegate dsl, to: Dsl
   defdelegate transform(strategy, dsl_state), to: Transformer
   defdelegate verify(strategy, dsl_state), to: Verifier
+
+  @uid_keys ["uid", "sub", "id", :uid, :sub, :id]
+
+  @doc """
+  Extract the unique provider identifier (the OpenID Connect `sub` claim) from a
+  provider's `user_info` map.
+
+  `uid` is the AshAuthentication convention, `sub` is the OpenID Connect claim,
+  and `id` is what some providers (eg Google in the past) have returned. The
+  same extraction must be used both when looking a user up by their identity and
+  when persisting the identity, so this is the single source of truth.
+  """
+  @spec uid_from_user_info(map) :: String.t() | nil
+  def uid_from_user_info(user_info) do
+    user_info
+    |> Map.take(@uid_keys)
+    |> Map.values()
+    |> Enum.reject(&is_nil/1)
+    |> List.first()
+    |> case do
+      nil -> nil
+      uid -> to_string(uid)
+    end
+  end
+
+  @doc """
+  The value stored in (and matched against) the user identity resource's
+  `strategy` field for the given runtime strategy.
+
+  For most strategies this is the bare strategy name. For `dynamic_oidc` - whose
+  connection configuration is data-driven per tenant/customer - it is namespaced
+  with the matched connection id (`"<name>/<connection_id>"`) so that IdPs which
+  may issue colliding `sub` claims are disambiguated. This is the single source
+  of truth shared by the identity write (`IdentityChange`) and read
+  (`UserResolver`) paths.
+  """
+  @spec identity_strategy_name(t | map) :: String.t()
+  def identity_strategy_name(strategy) do
+    case Map.get(strategy, :__connection_id__) do
+      nil -> to_string(strategy.name)
+      connection_id -> "#{strategy.name}/#{connection_id}"
+    end
+  end
 end
