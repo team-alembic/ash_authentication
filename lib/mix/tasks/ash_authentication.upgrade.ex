@@ -315,20 +315,18 @@ if Code.ensure_loaded?(Igniter) do
     defp ensure_identity_resource(resource, igniter) do
       identity_resource = conventional_identity_resource(resource)
 
-      case Igniter.Project.Module.module_exists(igniter, identity_resource) do
-        {true, igniter} ->
-          Enum.reduce(
-            @oauth2_family,
-            igniter,
-            &wire_identity_resource(&2, resource, &1, identity_resource)
-          )
+      igniter =
+        AshAuthentication.Igniter.ensure_user_identity_resource(
+          igniter,
+          resource,
+          identity_resource
+        )
 
-        {false, igniter} ->
-          Igniter.add_warning(
-            igniter,
-            missing_identity_resource_warning(resource, identity_resource)
-          )
-      end
+      Enum.reduce(
+        @oauth2_family,
+        igniter,
+        &wire_identity_resource(&2, resource, &1, identity_resource)
+      )
     end
 
     defp wire_identity_resource(igniter, resource, type, identity_resource) do
@@ -414,42 +412,6 @@ if Code.ensure_loaded?(Igniter) do
           end
         )
       )
-    end
-
-    defp missing_identity_resource_warning(resource, identity_resource) do
-      """
-      #{inspect(resource)} has one or more OAuth2/OIDC strategies but no user
-      identity resource could be found at #{inspect(identity_resource)}.
-
-      As of this release, OAuth2 and OIDC strategies require an `identity_resource`.
-      Matching a local user by their email address (or any other provider claim)
-      is unsafe - only the provider's `iss`/`sub` claims uniquely and stably
-      identify an end-user, and those are persisted in the identity resource.
-
-      To resolve this manually:
-
-        1. Create a user identity resource (conventionally #{inspect(identity_resource)}):
-
-           defmodule #{inspect(identity_resource)} do
-             use Ash.Resource,
-               extensions: [AshAuthentication.UserIdentity],
-               domain: <your domain>
-
-             user_identity do
-               user_resource #{inspect(resource)}
-             end
-
-             # ... data layer, postgres/sqlite block, etc.
-           end
-
-        2. Add `identity_resource #{inspect(identity_resource)}` to each OAuth2/OIDC
-           strategy on #{inspect(resource)}.
-
-        3. Add `change AshAuthentication.Strategy.OAuth2.IdentityChange` to each
-           `register_with_*` action for those strategies.
-
-      See the "User Identities" section of the strategy documentation for details.
-      """
     end
 
     defp enter_auth_strategies(zipper) do
