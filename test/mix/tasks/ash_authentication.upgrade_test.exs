@@ -439,7 +439,7 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
       """)
     end
 
-    test "warns when no conventional identity resource exists" do
+    test "generates and wires the identity resource when none exists" do
       igniter =
         oauth2_project(
           strategy: """
@@ -455,10 +455,16 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
       igniter = Mix.Tasks.AshAuthentication.Upgrade.require_identity_resource(igniter, [])
 
       igniter
-      |> assert_unchanged("lib/test/accounts/user.ex")
-      |> assert_has_warning(fn warning ->
-        warning =~ "Test.Accounts.UserIdentity"
+      |> assert_creates("lib/test/accounts/user_identity.ex", fn content ->
+        assert content =~ "extensions: [AshAuthentication.UserIdentity]"
+        assert content =~ "user_resource(Test.Accounts.User)"
       end)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |        identity_resource(Test.Accounts.UserIdentity)
+      """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      + |        change(AshAuthentication.Strategy.OAuth2.IdentityChange)
+      """)
     end
 
     test "does not modify a strategy that already has an identity resource" do
@@ -654,5 +660,6 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
       end)
 
     test_project(files: files)
+    |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
   end
 end

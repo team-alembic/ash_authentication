@@ -270,6 +270,69 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    Generates a user identity resource for the given user resource, unless it
+    already exists.
+
+    The resource is extended with `AshAuthentication.UserIdentity` and
+    `Ash.Policy.Authorizer`, has its `user_resource` set, and is given a bypass
+    so AshAuthentication can interact with it.
+    """
+    @spec ensure_user_identity_resource(
+            Igniter.t(),
+            user_resource :: Ash.Resource.t(),
+            identity_resource :: module()
+          ) :: Igniter.t()
+    def ensure_user_identity_resource(igniter, user_resource, identity_resource) do
+      {exists?, igniter} = Igniter.Project.Module.module_exists(igniter, identity_resource)
+
+      if exists? do
+        igniter
+      else
+        igniter
+        |> Igniter.compose_task(
+          "ash.gen.resource",
+          [inspect(identity_resource), "--default-actions", "read"] ++
+            data_layer_extension_args()
+        )
+        |> Igniter.compose_task(
+          "ash.extend",
+          [inspect(identity_resource), "AshAuthentication.UserIdentity,Ash.Policy.Authorizer"]
+        )
+        |> Spark.Igniter.set_option(
+          identity_resource,
+          [:user_identity, :user_resource],
+          user_resource
+        )
+        |> maybe_set_postgres_table(identity_resource)
+        |> Ash.Resource.Igniter.add_bypass(
+          identity_resource,
+          quote do
+            AshAuthentication.Checks.AshAuthenticationInteraction
+          end,
+          quote do
+            authorize_if always()
+          end
+        )
+      end
+    end
+
+    defp maybe_set_postgres_table(igniter, resource) do
+      if Code.ensure_loaded?(AshPostgres.DataLayer) do
+        Spark.Igniter.set_option(igniter, resource, [:postgres, :table], "user_identities")
+      else
+        igniter
+      end
+    end
+
+    defp data_layer_extension_args do
+      cond do
+        Code.ensure_loaded?(AshPostgres.DataLayer) -> ["--extend", "postgres"]
+        Code.ensure_loaded?(AshSqlite.DataLayer) -> ["--extend", "sqlite"]
+        true -> []
+      end
+    end
+
     defp enter_section(zipper, name) do
       with {:ok, zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(
