@@ -11,6 +11,125 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.11](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.10...v5.0.0-rc.11) (2026-06-15)
+### Breaking Changes:
+
+* require an `identity_resource` and resolve OAuth2/OIDC users by `iss`/`sub` by James Harton
+
+* propagate sender failures as action errors (#1126) by James Harton
+
+* convert request actions from read to generic action (#1125)
+
+BREAKING CHANGE: Password reset request and magic link request actions
+
+are now generated as `:action` type instead of `:read`. Users with
+
+custom `:read` request actions must migrate to `:action` type.
+
+Changes:
+
+- Password and magic link transformers now generate `:action` type
+
+for request actions instead of `:read`
+
+- Both strategies now auto-generate a `get_by_<identity_field>` read
+
+action for user lookup
+
+- Request action implementations use the lookup action internally
+
+- Validators now only accept `:action` type with helpful error messages
+
+- Actions modules simplified to only handle `:action` type
+
+- Added upgrade function for 5.0.0 to help migrate custom actions
+
+Closes #837 by James Harton
+
+* Support Assent v0.3.0 OIDC-based Google strategy (#1098) by Josh Price
+
+* change token revoked action from read to generic action (#1124) by James Harton
+
+
+
+### Features:
+
+* igniter: add ash_authentication.add_strategy.dynamic_oidc installer by Zach Daniel
+
+* add dynamic_oidc strategy + OidcConnection resource extension by Zach Daniel
+
+* register webauthn in `ash_authentication.add_strategy` dispatcher (#1167) by James Harton
+
+* add Okta authentication strategy (#1163) by Zach Daniel
+
+* add Igniter generator for the WebAuthn strategy (#1160) by James Harton
+
+* add WebAuthn/Passkey authentication strategy (#1159) by James Harton
+
+* add igniter generator for OTP strategy (#1157) by James Harton
+
+* Add OTP strategy (#1141) by Torkild Gundersen Kjevik
+
+* brute-force protection for password and magic link sign-in (#1154) by James Harton
+
+* add Igniter generators for OAuth2/OIDC strategies (#1149) by James Harton
+
+* add recovery code authentication strategy (#1135) by adamtharani
+
+* add microsoft strategy (#1136) by MikaelFangel
+
+* Add TOTP authentication strategy. (#1086) by James Harton
+
+* add support for extra JWT claims (#1122) by James Harton
+
+* make auto signout possible in AshAuthentication.Phoenix  (#1070) by Abdessabour Moutik
+
+### Bug Fixes:
+
+* generate a user identity resource in the upgrader when one is missing by James Harton
+
+* pass `user_id` to identity upsert as a dynamic atom key by James Harton
+
+* register `Ash.Policy.Authorizer` on the WebAuthn credential resource (#1164) by James Harton
+
+* WebAuthn optional dependency compilation (#1162) by Jechol Lee
+
+* use `conn.remote_ip` over peer data for audit log (#1156) by quintinm-dev
+
+* gracefully degrade row locks on data layers without lock support (#1158) by James Harton
+
+* remove duplicate codegen in password strategy and standardize migration names (#1150) by Josh Price
+
+* skip destroy/read_expired actions when `log_lifetime` is `:infinity` by James Harton
+
+* error when `require_token_presence_for_authentication?` is set without `store_all_tokens?` by James Harton
+
+* use struct access for calculation context (#1133) by James Harton
+
+* improve TOTP documentation and calculation robustness (#1130) by James Harton
+
+* return `{:error, AuthenticationFailed.t}` from `Jwt.token_for_user/2` (#1123) by James Harton
+
+* preserve existing context when adding request context (#1121) by James Harton
+
+* add `token` to Phoenix filter_parameters during installation (#1120) by James Harton
+
+### Improvements:
+
+* add `warn_on_missing_identity_resource?` opt-out for OAuth2-family strategies by James Harton
+
+* generated confirmation sender demonstrates identity-link copy by James Harton
+
+* add `require_identity_resource` upgrade step for 5.0 by James Harton
+
+* move Phoenix concerns out of AA igniters (#1145) by James Harton
+
+* split igniter generators into per-strategy and per-add-on tasks (#1143) by James Harton
+
+* add `grace_period` option to TOTP strategy (#1134) by James Harton
+
+* add `remember_me` to password sign-in strategy by default (#1131) by Zach Daniel
+
 ## [v5.0.0-rc.10](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.9...v5.0.0-rc.10) (2026-06-14)
 ### Breaking Changes:
 
