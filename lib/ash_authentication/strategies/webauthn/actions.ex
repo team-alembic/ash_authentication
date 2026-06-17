@@ -634,17 +634,25 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
     end
 
-    # Look up a configured action name from the WebAuthnCredential extension,
-    # falling back to `default` for resources that don't use it.
     defp credential_action_name(credential_resource, field, default) do
-      info_fun = :"webauthn_credential_#{field}"
-
-      case AshAuthentication.WebAuthnCredential.Info
-           |> apply(info_fun, [credential_resource]) do
+      credential_resource
+      |> apply_credential_info(field)
+      |> case do
         {:ok, name} -> name
         _ -> default
       end
     end
+
+    defp apply_credential_info(resource, :read_action_name),
+      do: AshAuthentication.WebAuthnCredential.Info.webauthn_credential_read_action_name(resource)
+
+    defp apply_credential_info(resource, :create_action_name),
+      do:
+        AshAuthentication.WebAuthnCredential.Info.webauthn_credential_create_action_name(resource)
+
+    defp apply_credential_info(resource, :update_action_name),
+      do:
+        AshAuthentication.WebAuthnCredential.Info.webauthn_credential_update_action_name(resource)
 
     defp maybe_generate_token(user, strategy, opts) do
       if Info.authentication_tokens_enabled?(strategy.resource) do
