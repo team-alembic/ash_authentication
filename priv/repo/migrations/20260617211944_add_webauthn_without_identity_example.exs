@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule Example.Repo.Migrations.MigrateResources3 do
+defmodule Example.Repo.Migrations.AddWebauthnWithoutIdentityExample do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -27,12 +27,12 @@ defmodule Example.Repo.Migrations.MigrateResources3 do
     end
 
     create table(:webauthn_no_identity_credentials, primary_key: false) do
-      add(:id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true)
-      add(:credential_id, :binary, null: false)
-      add(:public_key, :binary, null: false)
-      add(:sign_count, :bigint, null: false, default: 0)
-      add(:label, :text, default: "Security Key")
       add(:last_used_at, :utc_datetime_usec)
+      add(:label, :text, default: "Security Key")
+      add(:sign_count, :bigint, null: false, default: 0)
+      add(:public_key, :binary, null: false)
+      add(:credential_id, :binary, null: false)
+      add(:id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true)
 
       add(:inserted_at, :utc_datetime_usec,
         null: false,
@@ -51,7 +51,9 @@ defmodule Example.Repo.Migrations.MigrateResources3 do
           name: "webauthn_no_identity_credentials_user_id_fkey",
           type: :uuid,
           prefix: "public"
-        ), null: false)
+        ),
+        null: false
+      )
     end
 
     create unique_index(:webauthn_no_identity_credentials, [:credential_id],

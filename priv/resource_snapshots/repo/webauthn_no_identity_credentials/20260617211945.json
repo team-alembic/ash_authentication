@@ -1,19 +1,7 @@
 {
   "attributes": [
     {
-      "allow_nil?": false,
-      "default": "fragment(\"gen_random_uuid()\")",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": true,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": false,
+      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -21,8 +9,32 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "credential_id",
-      "type": "binary"
+      "source": "last_used_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": true,
+      "default": "\"Security Key\"",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "label",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "0",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "sign_count",
+      "type": "bigint"
     },
     {
       "allow_nil?": false,
@@ -38,30 +50,6 @@
     },
     {
       "allow_nil?": false,
-      "default": "0",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "sign_count",
-      "type": "bigint"
-    },
-    {
-      "allow_nil?": true,
-      "default": "\"Security Key\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "label",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -69,8 +57,20 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "last_used_at",
-      "type": "utc_datetime_usec"
+      "source": "credential_id",
+      "type": "binary"
+    },
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"gen_random_uuid()\")",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": true,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "id",
+      "type": "uuid"
     },
     {
       "allow_nil?": false,
@@ -134,7 +134,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "8D3C3D93484559BBA6B814B6E643F1A9D08DBFA37A1F1A137A63B57D486B2437",
+  "hash": "7C40E90009E776F8E0FAFC32A297A44907066215ED639927D4434432A31EA25A",
   "identities": [
     {
       "all_tenants?": false,
