@@ -189,6 +189,7 @@ spark_locals_without_parens = [
   request_action_name: 1,
   request_password_reset_action_name: 1,
   require_confirmed_with: 1,
+  require_identity?: 1,
   require_interaction?: 1,
   require_token_presence_for_authentication?: 1,
   resettable: 0,
@@ -216,7 +217,6 @@ spark_locals_without_parens = [
   sign_in_token_lifetime: 1,
   sign_in_tokens_enabled?: 1,
   sign_in_with_token_action_name: 1,
-  require_identity?: 1,
   signing_algorithm: 1,
   signing_secret: 1,
   single_use_token?: 1,
@@ -261,10 +261,7 @@ spark_locals_without_parens = [
   warn_on_missing_identity_resource?: 1,
   webauthn: 0,
   webauthn: 1,
-  webauthn: 2,
-  webauthn_credential: 0,
-  webauthn_credential: 1,
-  webauthn_credential: 2
+  webauthn: 2
 ]
 
 [

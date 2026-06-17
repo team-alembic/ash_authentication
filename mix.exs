@@ -309,6 +309,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.AddOn.Confirmation",
       "AshAuthentication.AddOn.LogOutEverywhere",
       "AshAuthentication.AuditLogResource",
+      "AshAuthentication.OidcConnection",
       "AshAuthentication.Strategy.ApiKey",
       "AshAuthentication.Strategy.Apple",
       "AshAuthentication.Strategy.Auth0",
@@ -327,9 +328,9 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.Slack",
       "AshAuthentication.Strategy.Totp",
       "AshAuthentication.Strategy.WebAuthn",
-      "AshAuthentication.OidcConnection",
       "AshAuthentication.TokenResource",
-      "AshAuthentication.UserIdentity"
+      "AshAuthentication.UserIdentity",
+      "AshAuthentication.WebAuthnCredential"
     ]
 
     [
