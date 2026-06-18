@@ -16,7 +16,7 @@ defmodule AshAuthentication.Strategy.Apple do
     - `client_id`
     - `team_id`
     - `private_key_id`
-    - `private_key_path`
+    - `private_key_path` or `private_key`
     - `redirect_uri`
 
   ## More documentation:
