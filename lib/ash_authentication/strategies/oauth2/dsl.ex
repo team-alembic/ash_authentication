@@ -30,6 +30,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
         :client_secret,
         :identity_resource,
         :private_key,
+        :private_key_id,
+        :private_key_path,
         :redirect_uri,
         :site,
         :token_url,
@@ -115,6 +117,18 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
         private_key: [
           type: secret_type,
           doc: "The private key to use if `:auth_method` is `:private_key_jwt`. #{secret_doc}",
+          required: false
+        ],
+        private_key_id: [
+          type: secret_type,
+          doc:
+            "The identifier of the private key (sent as `kid` in the JWT header) if `:auth_method` is `:private_key_jwt`. #{secret_doc}",
+          required: false
+        ],
+        private_key_path: [
+          type: secret_type,
+          doc:
+            "Path to the private key PEM file (alternative to `:private_key`) if `:auth_method` is `:private_key_jwt`. #{secret_doc}",
           required: false
         ],
         redirect_uri: [

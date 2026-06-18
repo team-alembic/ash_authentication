@@ -29,7 +29,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Verifier do
   end
 
   defp validate_private_key(%{auth_method: :private_key_jwt} = strategy),
-    do: validate_secret(strategy, :private_key)
+    do: validate_exclusive_secret(strategy, [:private_key, :private_key_path])
 
   defp validate_private_key(_strategy), do: :ok
 
