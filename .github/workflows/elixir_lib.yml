@@ -19,6 +19,7 @@ jobs:
       community-files: false
       conventional-commit: false
       tenants: false
+      release: true
     permissions:
       id-token: write
       contents: write
