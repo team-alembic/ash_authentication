@@ -57,9 +57,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   def callback(conn, strategy) do
     with {:ok, session_key} <- session_key(strategy),
          {:ok, config} <- config_for(strategy, %{conn: conn}),
-         session_params when is_map(session_params) <- get_session(conn, session_key),
+         session_params <- get_session(conn, session_key),
          conn <- delete_session(conn, session_key),
-         config <- Keyword.put(config, :session_params, session_params),
+         config <- put_session_params(config, session_params),
          {:ok, %{user: user, token: token}} <-
            strategy.assent_strategy.callback(config, conn.params),
          action_opts <- action_opts(conn),
@@ -77,6 +77,23 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
       {:error, reason} ->
         store_authentication_result(conn, {:error, reason})
     end
+  end
+
+  # A callback with no stored session params is an IdP-initiated login (the
+  # user launched from the provider rather than starting at `request/2`, so
+  # no `state` was ever generated on our side). Pass an empty map through and
+  # disable state verification for this request, so the Assent strategy skips
+  # the CSRF `state` check instead of dereferencing a `nil` session
+  # (`session_params.state` would raise). A stored map is passed through
+  # unchanged, keeping `state` verification intact for SP-initiated flows.
+  defp put_session_params(config, session_params)
+       when is_map(session_params) and map_size(session_params) > 0,
+       do: Keyword.put(config, :session_params, session_params)
+
+  defp put_session_params(config, _empty_or_nil) do
+    config
+    |> Keyword.put(:session_params, %{})
+    |> Keyword.put(:state, false)
   end
 
   defp action_opts(conn) do
