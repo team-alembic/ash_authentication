@@ -1,0 +1,132 @@
+# SPDX-FileCopyrightText: 2026 Alembic Pty Ltd
+#
+# SPDX-License-Identifier: MIT
+
+defmodule AshAuthentication.WebAuthnCredential do
+  @moduledoc """
+  An Ash extension for WebAuthn credential resources.
+
+  Add this extension to your credential resource to have the required
+  attributes, relationship, and identity automatically scaffolded and
+  validated at compile time.
+
+  ## Usage
+
+  ```elixir
+  defmodule MyApp.Accounts.WebAuthnCredential do
+    use Ash.Resource,
+      domain: MyApp.Accounts,
+      extensions: [AshAuthentication.WebAuthnCredential]
+
+    webauthn_credential do
+      user_resource MyApp.Accounts.User
+    end
+
+    relationships do
+      belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
+    end
+  end
+  ```
+
+  The extension automatically adds:
+  - `credential_id` — binary, non-nullable, uniquely constrained
+  - `public_key` — `AshAuthentication.Strategy.WebAuthn.CoseKey`, non-nullable
+  - `sign_count` — integer, non-nullable, defaults to `0`
+  - `label` — string, defaults to `"Security Key"`
+  - `last_used_at` — UTC datetime, nullable
+  - A `unique_credential_id` identity on `credential_id`
+  - A primary `:create` action accepting all credential fields
+  - A primary `:update` action accepting `sign_count`, `label`, and `last_used_at`
+  - A primary `:read` action
+  - A primary `:destroy` action
+
+  The `belongs_to` relationship to the user resource must be defined manually
+  (so that Ash can derive the foreign key attribute before action validation runs).
+  The extension verifies at compile time that the relationship exists and points
+  to the configured `user_resource`.
+
+  All field and relationship names are configurable via the `webauthn_credential` section.
+  """
+
+  alias AshAuthentication.Strategy.WebAuthn.CoseKey
+
+  @dsl [
+    %Spark.Dsl.Section{
+      name: :webauthn_credential,
+      describe: "Configuration for this WebAuthn credential resource.",
+      no_depend_modules: [:user_resource],
+      schema: [
+        user_resource: [
+          type: {:behaviour, Ash.Resource},
+          doc: "The user resource to which this credential belongs.",
+          required: true
+        ],
+        credential_id_field: [
+          type: :atom,
+          doc: "The name of the attribute that stores the WebAuthn credential ID.",
+          default: :credential_id
+        ],
+        public_key_field: [
+          type: :atom,
+          doc: "The name of the attribute that stores the COSE public key.",
+          default: :public_key
+        ],
+        sign_count_field: [
+          type: :atom,
+          doc: "The name of the attribute that stores the authenticator sign count.",
+          default: :sign_count
+        ],
+        label_field: [
+          type: :atom,
+          doc: "The name of the attribute that stores the human-readable credential label.",
+          default: :label
+        ],
+        last_used_at_field: [
+          type: :atom,
+          doc:
+            "The name of the optional attribute that stores when the credential was last used.",
+          default: :last_used_at
+        ],
+        user_id_field: [
+          type: :atom,
+          doc:
+            "The name of the foreign key attribute referencing the user (from the belongs_to).",
+          default: :user_id
+        ],
+        user_relationship_name: [
+          type: :atom,
+          doc: "The name of the belongs-to relationship to the user resource.",
+          default: :user
+        ],
+        create_action_name: [
+          type: :atom,
+          doc: "The name of the action used to store a new credential.",
+          default: :create
+        ],
+        update_action_name: [
+          type: :atom,
+          doc: "The name of the action used to update sign count and label.",
+          default: :update
+        ],
+        read_action_name: [
+          type: :atom,
+          doc: "The name of the action used to query credentials.",
+          default: :read
+        ],
+        destroy_action_name: [
+          type: :atom,
+          doc: "The name of the action used to delete a credential.",
+          default: :destroy
+        ]
+      ]
+    }
+  ]
+
+  use Spark.Dsl.Extension,
+    sections: @dsl,
+    transformers: [AshAuthentication.WebAuthnCredential.Transformer],
+    verifiers: [AshAuthentication.WebAuthnCredential.Verifier]
+
+  @doc "The `AshAuthentication.Strategy.WebAuthn.CoseKey` type used for public keys."
+  def public_key_type, do: CoseKey
+end

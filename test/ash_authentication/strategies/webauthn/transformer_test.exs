@@ -7,6 +7,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
 
   alias Ash.Resource.Info, as: ResourceInfo
 
+  @moduletag feature: :webauthn
+
   describe "user resource action injection" do
     test "injects register_with_webauthn create action" do
       actions = ResourceInfo.actions(Example.UserWithWebAuthn)

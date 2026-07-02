@@ -5,6 +5,8 @@
 defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
   use ExUnit.Case, async: true
 
+  @moduletag feature: :webauthn
+
   describe "verify/2" do
     test "passes for valid configuration" do
       # Example.UserWithWebAuthn should compile without errors

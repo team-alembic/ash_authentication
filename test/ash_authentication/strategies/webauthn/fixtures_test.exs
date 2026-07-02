@@ -7,6 +7,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.FixturesTest do
 
   alias AshAuthentication.Test.WebAuthnFixtures
 
+  @moduletag feature: :webauthn
+
   describe "generate_registration/1" do
     test "produces data that Wax.register/3 accepts" do
       fixture = WebAuthnFixtures.generate_registration()

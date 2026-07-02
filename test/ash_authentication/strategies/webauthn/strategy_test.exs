@@ -8,6 +8,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.StrategyTest do
   alias AshAuthentication.Strategy
   alias AshAuthentication.Strategy.WebAuthn
 
+  @moduletag feature: :webauthn
+
   setup do
     strategy = %WebAuthn{
       name: :webauthn,

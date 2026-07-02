@@ -36,16 +36,17 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     |> assert_creates("lib/test/accounts/web_authn_credential.ex")
   end
 
-  test "credential resource has the WebAuthn-specific attributes", %{igniter: igniter} do
+  test "credential resource uses the AshAuthentication.WebAuthnCredential extension", %{
+    igniter: igniter
+  } do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
     diff = diff(result)
-    assert diff =~ "credential_id"
-    assert diff =~ "AshAuthentication.Strategy.WebAuthn.CoseKey"
-    assert diff =~ "sign_count"
-    assert diff =~ "label"
+    assert diff =~ "AshAuthentication.WebAuthnCredential"
+    assert diff =~ "webauthn_credential"
+    assert diff =~ "user_resource"
   end
 
   test "credential resource has a belongs_to user relationship", %{igniter: igniter} do
@@ -191,6 +192,40 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     diff = diff(result, only: "lib/test/accounts/user.ex")
     refute diff =~ "registration_enabled?(false)"
     refute diff =~ "sign_in_enabled?(false)"
+  end
+
+  test "default mode emits `require_identity? true`", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    assert diff =~ "require_identity?(true)"
+    assert diff =~ "identity_field(:email)"
+  end
+
+  test "`--passkey-only` emits a no-identity strategy block", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", ["--passkey-only"])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    assert diff =~ "webauthn :webauthn"
+    assert diff =~ "require_identity?(false)"
+    refute diff =~ "identity_field"
+  end
+
+  test "`--passkey-only` does not add an identity attribute or identity to the user", %{
+    igniter: igniter
+  } do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", ["--passkey-only"])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    refute diff =~ "attribute(:email"
+    refute diff =~ "identity(:unique_email"
+    assert diff =~ "has_many(:webauthn_credentials, Test.Accounts.WebAuthnCredential)"
   end
 
   test "is idempotent — running twice doesn't error or duplicate config", %{igniter: igniter} do

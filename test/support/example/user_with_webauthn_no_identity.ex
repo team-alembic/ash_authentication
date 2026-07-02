@@ -2,21 +2,22 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule Example.UserWithWebAuthn do
+defmodule Example.UserWithWebAuthnNoIdentity do
   @moduledoc false
+  # Passkey-first fixture: no email-style attribute, no unique identity.
+  # Users are resolved from the WebAuthn credential id alone.
   use Ash.Resource,
     domain: Example,
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAuthentication]
 
   postgres do
-    table "user_with_webauthn"
+    table "user_with_webauthn_no_identity"
     repo(Example.Repo)
   end
 
   attributes do
     uuid_primary_key :id
-    attribute :email, :ci_string, allow_nil?: false, writable?: true, public?: true
     create_timestamp :created_at
     update_timestamp :updated_at
   end
@@ -25,16 +26,12 @@ defmodule Example.UserWithWebAuthn do
     defaults [:read]
 
     create :create do
-      accept [:email]
     end
   end
 
   relationships do
-    has_many :webauthn_credentials, Example.WebAuthnCredential, destination_attribute: :user_id
-  end
-
-  identities do
-    identity :unique_email_webauthn, [:email]
+    has_many :webauthn_credentials, Example.WebAuthnNoIdentityCredential,
+      destination_attribute: :user_id
   end
 
   authentication do
@@ -49,12 +46,11 @@ defmodule Example.UserWithWebAuthn do
 
     strategies do
       webauthn :webauthn do
-        credential_resource(Example.WebAuthnCredential)
+        require_identity? false
+        credential_resource(Example.WebAuthnNoIdentityCredential)
         rp_id("example.com")
         rp_name("Test App")
         origin("https://example.com")
-        identity_field :email
-        require_identity? true
       end
     end
   end
