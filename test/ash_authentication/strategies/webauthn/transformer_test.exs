@@ -23,6 +23,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
       assert :email in action.accept
     end
 
+    test "register action manages the webauthn_credentials relationship" do
+      actions = ResourceInfo.actions(Example.UserWithWebAuthn)
+      action = Enum.find(actions, &(&1.name == :register_with_webauthn))
+
+      assert Enum.any?(action.changes, fn
+               %{change: {Ash.Resource.Change.ManageRelationship, opts}} ->
+                 opts[:relationship] == :webauthn_credentials
+
+               _ ->
+                 false
+             end)
+    end
+
     test "injects sign_in_with_webauthn read action" do
       actions = ResourceInfo.actions(Example.UserWithWebAuthn)
       action = Enum.find(actions, &(&1.name == :sign_in_with_webauthn))

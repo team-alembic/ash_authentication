@@ -69,6 +69,7 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
          {:ok, destroy_action_name} <- Info.webauthn_credential_destroy_action_name(dsl_state),
          {:ok, create_action_name} <- Info.webauthn_credential_create_action_name(dsl_state),
          {:ok, update_action_name} <- Info.webauthn_credential_update_action_name(dsl_state),
+         {:ok, dsl_state} <- maybe_build_primary_key(dsl_state),
          {:ok, dsl_state} <- maybe_build_unique_identity(dsl_state, credential_id_field),
          {:ok, dsl_state} <-
            maybe_build_action(dsl_state, read_action_name, fn _ ->
@@ -105,6 +106,22 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
           accept: [sign_count_field, label_field, last_used_at_field]
         )
       end)
+    end
+  end
+
+  defp maybe_build_primary_key(dsl_state) do
+    has_primary_key? =
+      dsl_state
+      |> Transformer.get_entities([:attributes])
+      |> Enum.any?(& &1.primary_key?)
+
+    if has_primary_key? do
+      {:ok, dsl_state}
+    else
+      {:ok, attr} =
+        Transformer.build_entity(Resource.Dsl, [:attributes], :uuid_primary_key, name: :id)
+
+      {:ok, Transformer.add_entity(dsl_state, [:attributes], attr)}
     end
   end
 

@@ -158,32 +158,22 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
     # identity_field is set via `accept`, not as an argument (matches Password pattern)
     arguments = [
       Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
-        name: :credential_id,
-        type: :binary,
-        allow_nil?: false,
-        description: "The WebAuthn credential ID from the authenticator."
-      ),
-      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
-        name: :public_key,
+        name: strategy.credentials_relationship_name,
         type: :map,
         allow_nil?: false,
-        description: "The COSE public key from the authenticator."
-      ),
-      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
-        name: :sign_count,
-        type: :integer,
-        allow_nil?: false,
-        description: "The initial sign count from the authenticator."
-      ),
-      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
-        name: :label,
-        type: :string,
-        default: "Security Key",
-        description: "A human-readable label for the credential."
+        description: "The WebAuthn credential to create for the newly registered user."
       )
     ]
 
     changes = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+        change:
+          {Ash.Resource.Change.ManageRelationship,
+           argument: strategy.credentials_relationship_name,
+           relationship: strategy.credentials_relationship_name,
+           opts: [type: :direct_control]},
+        description: "Create the WebAuthn credential as part of the same transaction as the user."
+      ),
       Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
         change: GenerateTokenChange,
         description: "Generate a JWT token for the newly registered user."

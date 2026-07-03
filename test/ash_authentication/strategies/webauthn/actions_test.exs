@@ -5,6 +5,8 @@
 defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
   use DataCase, async: false
 
+  require Ash.Query
+
   alias AshAuthentication.Info
   alias AshAuthentication.Strategy.WebAuthn.Actions
   alias AshAuthentication.Test.WebAuthnFixtures
@@ -60,6 +62,75 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert {:ok, user} = Actions.register(strategy, params, challenge: challenge)
       assert to_string(user.email) == "webauthn-user@example.com"
     end
+
+    test "rolls back user creation when credential creation fails", %{strategy: strategy} do
+      credential_id = WebAuthnFixtures.generate_credential_id()
+
+      first_fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com",
+          credential_id: credential_id
+        )
+
+      first_challenge = registration_challenge(first_fixture)
+
+      assert {:ok, _first_user} =
+               Actions.register(
+                 strategy,
+                 %{
+                   "email" => "first-webauthn-user@example.com",
+                   "attestation_object" => first_fixture.attestation_object,
+                   "client_data_json" => first_fixture.client_data_json,
+                   "raw_id" => first_fixture.raw_id
+                 },
+                 challenge: first_challenge
+               )
+
+      # Reusing the same credential_id violates the credential resource's
+      # `unique_credential_id` identity, causing the second create inside
+      # `manage_relationship` to fail. Because it now runs inside the same
+      # transaction as the user create, the user must not be persisted either.
+      colliding_fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com",
+          credential_id: credential_id
+        )
+
+      colliding_challenge = registration_challenge(colliding_fixture)
+
+      assert {:error, _error} =
+               Actions.register(
+                 strategy,
+                 %{
+                   "email" => "second-webauthn-user@example.com",
+                   "attestation_object" => colliding_fixture.attestation_object,
+                   "client_data_json" => colliding_fixture.client_data_json,
+                   "raw_id" => colliding_fixture.raw_id
+                 },
+                 challenge: colliding_challenge
+               )
+
+      assert {:ok, []} =
+               Example.UserWithWebAuthn
+               |> Ash.Query.filter(email == "second-webauthn-user@example.com")
+               |> Ash.read()
+    end
+  end
+
+  defp registration_challenge(fixture) do
+    %Wax.Challenge{
+      type: :attestation,
+      bytes: fixture.challenge_bytes,
+      origin: fixture.origin,
+      rp_id: fixture.rp_id,
+      attestation: "none",
+      trusted_attestation_types: [:none, :basic, :self, :uncertain],
+      verify_trust_root: false,
+      origin_verify_fun: {Wax, :origins_match?, []},
+      issued_at: System.system_time(:second)
+    }
   end
 
   describe "sign_in/3" do

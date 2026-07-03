@@ -58,46 +58,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       with {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
            {:ok, {auth_data, _}} <-
-             wax_register(strategy, attestation_object, client_data_json, challenge),
-           {:ok, user} <- create_user_from_registration(strategy, auth_data, params, opts) do
-        case store_credential_from_auth(strategy, user, auth_data, params, opts) do
-          {:ok, _credential} ->
-            {:ok, user}
-
-          {:error, error} ->
-            cleanup_orphaned_user(user, opts)
-            {:error, error}
-        end
+             wax_register(strategy, attestation_object, client_data_json, challenge) do
+        create_user_from_registration(strategy, auth_data, params, opts)
       else
         :error -> base64_error(strategy, :register)
         {:error, error} -> {:error, error}
-      end
-    end
-
-    # Compensating cleanup: if credential store fails after user creation, destroy
-    # the user to prevent orphans. Failure to clean up is logged loudly but does
-    # not mask the original error.
-    defp cleanup_orphaned_user(user, opts) do
-      ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
-
-      user
-      |> Changeset.new()
-      |> Changeset.set_context(auth_context())
-      |> Ash.destroy(ash_opts)
-      |> case do
-        :ok ->
-          :ok
-
-        {:ok, _} ->
-          :ok
-
-        {:error, error} ->
-          Logger.error(
-            "Failed to clean up orphaned user after WebAuthn credential store failure: " <>
-              inspect(error)
-          )
-
-          :error
       end
     end
 
@@ -475,12 +440,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       tenant = Keyword.get(opts, :tenant)
       cred_data = auth_data.attested_credential_data
 
-      action_params = %{
-        "credential_id" => cred_data.credential_id,
-        "public_key" => cred_data.credential_public_key,
-        "sign_count" => auth_data.sign_count,
-        "label" => params["label"] || "Security Key"
+      credential_input = %{
+        strategy.credential_id_field => cred_data.credential_id,
+        strategy.public_key_field => cred_data.credential_public_key,
+        strategy.sign_count_field => auth_data.sign_count,
+        strategy.label_field => params["label"] || "Security Key"
       }
+
+      action_params = %{strategy.credentials_relationship_name => credential_input}
 
       # In passkey-first mode the user resource has no identity attribute, so
       # passing the identity key would be rejected as an unknown input.
@@ -500,14 +467,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
 
     defp maybe_put_identity_in_params(%_{identity_field: identity_key}, action_params, params) do
-      identity_key = to_string(identity_key)
-      Map.put(action_params, identity_key, params[identity_key])
-    end
-
-    defp store_credential_from_auth(strategy, user, auth_data, params, opts) do
-      tenant = Keyword.get(opts, :tenant)
-      cred_data = auth_data.attested_credential_data
-      store_credential(strategy, user, cred_data, auth_data.sign_count, params["label"], tenant)
+      Map.put(action_params, identity_key, params[to_string(identity_key)])
     end
 
     defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do

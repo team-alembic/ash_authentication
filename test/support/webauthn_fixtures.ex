@@ -11,8 +11,17 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
   Uses "none" attestation format for simplicity.
   """
 
-  @default_origin "https://example.com"
-  @default_rp_id "example.com"
+  @default_rp_id "default-webauthn-domain.com"
+  @default_origin "https://#{@default_rp_id}"
+
+  @doc false
+  def default_origin, do: @default_origin
+
+  @doc false
+  def default_rp_id, do: @default_rp_id
+
+  @doc "Generate a random WebAuthn credential ID."
+  def generate_credential_id, do: :crypto.strong_rand_bytes(32)
 
   @doc """
   Generate a complete WebAuthn registration fixture.
@@ -38,7 +47,7 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
     cose_key = %{1 => 2, 3 => -7, -1 => 1, -2 => x, -3 => y}
 
     # Generate credential ID
-    credential_id = :crypto.strong_rand_bytes(32)
+    credential_id = Keyword.get_lazy(opts, :credential_id, &generate_credential_id/0)
 
     # Generate challenge
     challenge_bytes = :crypto.strong_rand_bytes(32)
