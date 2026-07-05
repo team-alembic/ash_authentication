@@ -102,7 +102,7 @@ defprotocol AshAuthentication.Strategy do
       :get
 
   """
-  @spec method_for_phase(t, phase) :: http_method
+  @spec method_for_phase(t, phase) :: http_method | [http_method]
   def method_for_phase(t, phase)
 
   @doc """

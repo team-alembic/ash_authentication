@@ -27,4 +27,63 @@ defmodule AshAuthentication.Strategy.OAuth2.PlugTest do
       assert session.state =~ ~r/.+/
     end
   end
+
+  describe "callback/2 with no session (cross-site form_post)" do
+    setup do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      {:ok, strategy: strategy}
+    end
+
+    test "a POST with no session renders an interstitial that re-POSTs same-origin", %{
+      strategy: strategy
+    } do
+      conn =
+        :post
+        |> conn("/user/oauth2/callback", %{"code" => "abc", "state" => "x<script>"})
+        |> SessionPipeline.call([])
+        |> Plug.callback(strategy)
+
+      assert conn.status == 200
+
+      assert {"content-type", "text/html" <> _} =
+               Enum.find(conn.resp_headers, &(elem(&1, 0) == "content-type"))
+
+      body = conn.resp_body
+      assert body =~ ~s(<form method="post" action="/user/oauth2/callback">)
+      assert body =~ ~s(name="code" value="abc")
+      # values are HTML-escaped
+      assert body =~ ~s(value="x&lt;script&gt;")
+      refute body =~ "x<script>"
+      # the loop guard marker is added
+      assert body =~ ~s(name="_ash_authentication_reflected" value="1")
+    end
+
+    test "an already-reflected POST with no session fails closed rather than looping", %{
+      strategy: strategy
+    } do
+      conn =
+        :post
+        |> conn("/user/oauth2/callback", %{
+          "code" => "abc",
+          "state" => "xyz",
+          "_ash_authentication_reflected" => "1"
+        })
+        |> SessionPipeline.call([])
+        |> Plug.callback(strategy)
+
+      refute conn.status == 200
+      assert conn.private[:authentication_result] == {:error, nil}
+    end
+
+    test "a GET with no session does not render an interstitial", %{strategy: strategy} do
+      conn =
+        :get
+        |> conn("/user/oauth2/callback", %{"code" => "abc"})
+        |> SessionPipeline.call([])
+        |> Plug.callback(strategy)
+
+      refute conn.status == 200
+      assert conn.private[:authentication_result] == {:error, nil}
+    end
+  end
 end

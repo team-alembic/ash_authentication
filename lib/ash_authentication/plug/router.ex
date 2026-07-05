@@ -48,7 +48,7 @@ defmodule AshAuthentication.Plug.Router do
         end)
 
       for {path, method, config} <- routes do
-        match(path, to: Dispatcher, via: [method], init_opts: [config])
+        match(path, to: Dispatcher, via: List.wrap(method), init_opts: [config])
       end
 
       match(_, to: Dispatcher, init_opts: [unquote(return_to)])
