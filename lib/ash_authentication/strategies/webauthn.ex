@@ -71,10 +71,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
       end
     end
 
-    relationships do
-      has_many :webauthn_credentials, MyApp.Accounts.Credential
-    end
-
     identities do
       identity :unique_email, [:email]
     end
@@ -113,9 +109,11 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   You must define a separate Ash resource to store WebAuthn credentials. Add the
   `AshAuthentication.WebAuthnCredential` extension and it will automatically scaffold
   the required attributes (`credential_id`, `public_key`, `sign_count`, `label`,
-  `last_used_at`), the unique identity on `credential_id`, and all four CRUD actions.
-  You only need to declare the `belongs_to` relationship manually (so Ash can derive
-  the foreign key before validating action `accept` lists).
+  `last_used_at`), the `belongs_to` relationship back to the user resource, the
+  unique identity on `credential_id`, and all four CRUD actions. The matching
+  `has_many :webauthn_credentials` relationship on the user resource is scaffolded
+  by the `webauthn` strategy itself. Either relationship can still be declared by
+  hand if you need non-default options — whatever you don't declare is built for you.
 
   ```elixir
   defmodule MyApp.Accounts.Credential do
@@ -148,10 +146,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
       uuid_primary_key :id
       create_timestamp :inserted_at
       update_timestamp :updated_at
-    end
-
-    relationships do
-      belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
     end
   end
   ```
@@ -243,10 +237,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
     attributes do
       uuid_primary_key :id
-    end
-
-    relationships do
-      has_many :webauthn_credentials, MyApp.Accounts.Credential
     end
 
     authentication do

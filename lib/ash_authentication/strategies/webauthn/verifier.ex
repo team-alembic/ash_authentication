@@ -19,7 +19,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
     with :ok <- validate_wax_dependency(),
          :ok <- validate_rp_id(strategy),
          :ok <- validate_credential_resource(strategy),
-         :ok <- validate_credentials_relationship(strategy, dsl_state),
          :ok <- validate_credential_resource_shape(strategy),
          :ok <- validate_tokens_enabled(dsl_state),
          :ok <- validate_verify_action(strategy, dsl_state),
@@ -84,37 +83,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   end
 
   defp validate_credential_resource(_), do: :ok
-
-  defp validate_credentials_relationship(strategy, dsl_state) do
-    case ResourceInfo.relationship(dsl_state, strategy.credentials_relationship_name) do
-      nil ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies, strategy.name],
-           message: """
-           The user resource is missing the `#{inspect(strategy.credentials_relationship_name)}` relationship.
-
-           Add a `has_many` relationship to the credential resource:
-
-               relationships do
-                 has_many :#{strategy.credentials_relationship_name}, #{inspect(strategy.credential_resource)}
-               end
-           """
-         )}
-
-      %{type: :has_many, destination: destination}
-      when destination == strategy.credential_resource ->
-        :ok
-
-      %{type: type} ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies, strategy.name],
-           message:
-             "The `#{inspect(strategy.credentials_relationship_name)}` relationship must be a `has_many` to `#{inspect(strategy.credential_resource)}` (found `#{type}`)."
-         )}
-    end
-  end
 
   # The credential resource may be in `no_depend_modules`, so it may not be
   # compiled when the user resource is verified. Skip shape checks if we

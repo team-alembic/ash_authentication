@@ -13,6 +13,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
   alias Ash.Resource
   alias AshAuthentication.{GenerateTokenChange, Strategy, Strategy.WebAuthn}
   alias Spark.Dsl.Transformer
+  alias Spark.Error.DslError
   import AshAuthentication.Strategy.Custom.Helpers
   import AshAuthentication.Utils
   import AshAuthentication.Validations
@@ -23,6 +24,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
   # sobelow_skip ["DOS.BinToAtom"]
   def transform(strategy, dsl_state) do
     with :ok <- validate_identity(strategy, dsl_state),
+         {:ok, dsl_state} <-
+           maybe_build_relationship(
+             dsl_state,
+             strategy.credentials_relationship_name,
+             &build_credentials_relationship(&1, strategy)
+           ),
+         :ok <- validate_credentials_relationship(strategy, dsl_state),
          strategy <-
            maybe_set_field_lazy(strategy, :register_action_name, &:"register_with_#{&1.name}"),
          strategy <-
@@ -151,6 +159,36 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
          :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
          :ok <- validate_attribute_option(attribute, resource, :public?, [true]) do
       validate_attribute_unique_constraint(dsl_state, [identity_field], resource)
+    end
+  end
+
+  # The credential resource is declared `no_depend_modules`, so it may not be
+  # compiled yet when this runs — we can only build against its module name,
+  # not introspect its attributes. `:user_id` matches
+  # `AshAuthentication.WebAuthnCredential`'s own default `user_id_field`; if a
+  # credential resource customises that field name, declare this relationship
+  # manually instead (it will be left untouched, per `maybe_build_relationship/3`).
+  defp build_credentials_relationship(_dsl_state, strategy) do
+    Transformer.build_entity(Resource.Dsl, [:relationships], :has_many,
+      name: strategy.credentials_relationship_name,
+      destination: strategy.credential_resource,
+      destination_attribute: :user_id
+    )
+  end
+
+  defp validate_credentials_relationship(strategy, dsl_state) do
+    case Resource.Info.relationship(dsl_state, strategy.credentials_relationship_name) do
+      %{type: :has_many, destination: destination}
+      when destination == strategy.credential_resource ->
+        :ok
+
+      %{type: type} ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, strategy.name],
+           message:
+             "The `#{inspect(strategy.credentials_relationship_name)}` relationship must be a `has_many` to `#{inspect(strategy.credential_resource)}` (found `#{type}`)."
+         )}
     end
   end
 
