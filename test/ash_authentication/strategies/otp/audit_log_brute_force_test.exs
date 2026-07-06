@@ -25,10 +25,15 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
       otp_code = request_and_extract_code(strategy, to_string(user.email))
 
       assert {:ok, signed_in_user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert signed_in_user.id == user.id
     end
@@ -42,10 +47,15 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
       create_failed_otp_attempts(user, 5)
 
       assert {:error, error} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert Exception.message(error) =~ "Authentication failed"
     end
@@ -59,10 +69,15 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
       otp_code = request_and_extract_code(strategy, to_string(user.email))
 
       assert {:ok, signed_in_user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert signed_in_user.id == user.id
     end
@@ -82,19 +97,29 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
       otp_code_b = request_and_extract_code(strategy, to_string(user_b.email))
 
       assert {:ok, signed_in_user_b} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user_b.email),
-                 "otp" => otp_code_b
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user_b.email),
+                   "otp" => otp_code_b
+                 },
+                 []
+               )
 
       assert signed_in_user_b.id == user_b.id
 
       # User A is blocked even with a valid OTP code.
       assert {:error, _} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user_a.email),
-                 "otp" => otp_code_a
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user_a.email),
+                   "otp" => otp_code_a
+                 },
+                 []
+               )
     end
 
     test "failures are counted across request_otp and sign_in_with_otp" do
@@ -107,10 +132,15 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
       create_failed_otp_attempts(user, 2, action_name: :sign_in_with_otp)
 
       assert {:error, error} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert Exception.message(error) =~ "Authentication failed"
     end
@@ -122,7 +152,7 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
       create_failed_otp_attempts(user, 5)
 
       assert {:error, error} =
-               Strategy.action(strategy, :request, %{"email" => to_string(user.email)})
+               Strategy.action(strategy, :request, %{"email" => to_string(user.email)}, [])
 
       assert Exception.message(error) =~ "Authentication failed"
     end
@@ -137,10 +167,15 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
 
       capture_log(fn ->
         assert {:error, _} =
-                 Strategy.action(strategy, :sign_in, %{
-                   "email" => to_string(user.email),
-                   "otp" => "ZZZZZZ"
-                 })
+                 Strategy.action(
+                   strategy,
+                   :sign_in,
+                   %{
+                     "email" => to_string(user.email),
+                     "otp" => "ZZZZZZ"
+                   },
+                   []
+                 )
       end)
 
       Batcher.flush()
@@ -154,9 +189,14 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
 
       capture_log(fn ->
         assert :ok =
-                 Strategy.action(strategy, :request, %{
-                   "email" => "ghost-#{System.unique_integer([:positive])}@example.com"
-                 })
+                 Strategy.action(
+                   strategy,
+                   :request,
+                   %{
+                     "email" => "ghost-#{System.unique_integer([:positive])}@example.com"
+                   },
+                   []
+                 )
       end)
 
       Batcher.flush()
@@ -171,10 +211,15 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
       capture_log(fn ->
         for _ <- 1..5 do
           {:error, _} =
-            Strategy.action(strategy, :sign_in, %{
-              "email" => to_string(user.email),
-              "otp" => "ZZZZZZ"
-            })
+            Strategy.action(
+              strategy,
+              :sign_in,
+              %{
+                "email" => to_string(user.email),
+                "otp" => "ZZZZZZ"
+              },
+              []
+            )
         end
       end)
 
@@ -182,7 +227,7 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
 
       capture_log(fn ->
         assert {:error, error} =
-                 Strategy.action(strategy, :request, %{"email" => to_string(user.email)})
+                 Strategy.action(strategy, :request, %{"email" => to_string(user.email)}, [])
 
         assert Exception.message(error) =~ "Authentication failed"
       end)
@@ -200,7 +245,7 @@ defmodule AshAuthentication.Strategy.Otp.AuditLogBruteForceTest do
   defp request_and_extract_code(strategy, email) do
     log =
       capture_log(fn ->
-        :ok = Strategy.action(strategy, :request, %{"email" => email})
+        :ok = Strategy.action(strategy, :request, %{"email" => email}, [])
       end)
 
     log

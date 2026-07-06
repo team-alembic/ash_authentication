@@ -30,9 +30,8 @@ defmodule AshAuthentication.SHA256Provider do
   def valid?(nil, _hash), do: false
 
   def valid?(input, hash) when is_binary(input) and is_binary(hash) do
-    case hash(input) do
-      {:ok, computed} -> Plug.Crypto.secure_compare(computed, hash)
-      :error -> false
+    with {:ok, computed} <- hash(input) do
+      Plug.Crypto.secure_compare(computed, hash)
     end
   end
 

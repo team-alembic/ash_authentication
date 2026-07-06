@@ -6,7 +6,6 @@ defmodule AshAuthentication.Strategy.Totp.AuditLogBruteForceTest do
   @moduledoc false
   use DataCase, async: false
   alias AshAuthentication.{AuditLogResource.Batcher, Info, Strategy}
-  require Ash.Query
 
   setup do
     start_supervised!({Batcher, otp_app: :ash_authentication})

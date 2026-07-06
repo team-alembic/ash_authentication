@@ -104,7 +104,8 @@ defmodule AshAuthentication.SenderTest do
                    "email" => "new_user_#{System.unique_integer([:positive])}@example.com",
                    "password" => password(),
                    "password_confirmation" => password()
-                 }
+                 },
+                 []
                )
 
       assert %SenderFailed{reason: :confirmation_email_blocked} = unwrap_error(error)
@@ -121,7 +122,8 @@ defmodule AshAuthentication.SenderTest do
                    "email" => "new_user_#{System.unique_integer([:positive])}@example.com",
                    "password" => password(),
                    "password_confirmation" => password()
-                 }
+                 },
+                 []
                )
 
       assert user.email

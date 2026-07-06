@@ -64,7 +64,7 @@ defmodule AshAuthentication.AddOn.Confirmation.StrategyTest do
     end
   end
 
-  describe "Strategy.action/3" do
+  describe "Strategy.action/4" do
     test "it delegates to `Confirmation.Actions.confirm/2` for the confirm action" do
       strategy = %Confirmation{}
       params = %{"confirm" => Ecto.UUID.generate()}
@@ -75,7 +75,7 @@ defmodule AshAuthentication.AddOn.Confirmation.StrategyTest do
         assert rx_params == params
       end)
 
-      Strategy.action(strategy, :confirm, params)
+      Strategy.action(strategy, :confirm, params, [])
     end
   end
 end

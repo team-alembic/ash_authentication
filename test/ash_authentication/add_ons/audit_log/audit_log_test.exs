@@ -47,7 +47,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:ok, signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
       assert signed_in_user.id == user.id
 
       Batcher.flush()
@@ -72,7 +72,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
         "token" => token
       }
 
-      assert {:ok, signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
       assert signed_in_user.id == user.id
 
       Batcher.flush()
@@ -95,7 +95,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:error, _} = Strategy.action(strategy, :sign_in, params)
+      assert {:error, _} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -118,7 +118,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
 
-      assert {:error, _} = Strategy.action(strategy, :sign_in, params)
+      assert {:error, _} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -143,7 +143,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
 
-      assert {:error, _} = Strategy.action(strategy, :sign_in, params)
+      assert {:error, _} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -218,7 +218,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
         "email" => user.email
       }
 
-      assert :ok = Strategy.action(strategy, :reset_request, params)
+      assert :ok = Strategy.action(strategy, :reset_request, params, [])
 
       Batcher.flush()
 
@@ -243,7 +243,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
         "email" => "nonexistent@example.com"
       }
 
-      assert :ok = Strategy.action(strategy, :reset_request, params)
+      assert :ok = Strategy.action(strategy, :reset_request, params, [])
 
       Batcher.flush()
 
@@ -274,7 +274,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
         "password_confirmation" => "new_password123"
       }
 
-      assert {:ok, updated_user} = Strategy.action(strategy, :reset, params)
+      assert {:ok, updated_user} = Strategy.action(strategy, :reset, params, [])
       assert updated_user.id == user.id
 
       Batcher.flush()
@@ -303,7 +303,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
         "password_confirmation" => "different_password"
       }
 
-      assert {:error, _} = Strategy.action(strategy, :reset, params)
+      assert {:error, _} = Strategy.action(strategy, :reset, params, [])
 
       Batcher.flush()
 
@@ -329,7 +329,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:ok, user} = Strategy.action(strategy, :register, params)
+      assert {:ok, user} = Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -354,7 +354,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:ok, _user} = Strategy.action(strategy, :register, params)
+      assert {:ok, _user} = Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -378,7 +378,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:ok, _user} = Strategy.action(strategy, :register, params)
+      assert {:ok, _user} = Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -401,7 +401,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:ok, _user} = Strategy.action(strategy, :register, params)
+      assert {:ok, _user} = Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -424,7 +424,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
 
       after_time = DateTime.utc_now()
 
@@ -441,7 +441,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       user = build_user_with_audit_log()
       strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
 
-      assert :ok = Strategy.action(strategy, :request, %{"email" => to_string(user.email)})
+      assert :ok = Strategy.action(strategy, :request, %{"email" => to_string(user.email)}, [])
 
       Batcher.flush()
 
@@ -458,7 +458,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
     test "it creates a failure audit log entry on magic link request for unknown email" do
       strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
 
-      assert :ok = Strategy.action(strategy, :request, %{"email" => "nobody@example.com"})
+      assert :ok = Strategy.action(strategy, :request, %{"email" => "nobody@example.com"}, [])
 
       Batcher.flush()
 
@@ -482,7 +482,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
-      assert {:error, _} = Strategy.action(strategy, :sign_in, params)
+      assert {:error, _} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -529,7 +529,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithExcludedStrategies, :password)
 
-      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -556,7 +556,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithExcludedActions, :password)
 
-      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -584,7 +584,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       strategy = Info.strategy!(Example.UserWithExplicitIncludes, :password)
 
       # Sign in should be logged (it's in include_actions)
-      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -631,7 +631,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       strategy = Info.strategy!(Example.UserWithWildcardAndExclusions, :password)
 
       # Sign in should NOT be logged (it's excluded)
-      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -673,7 +673,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
 
       strategy = Info.strategy!(Example.UserWithSelectiveStrategyIncludes, :password)
 
-      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params)
+      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -748,7 +748,7 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       }
 
       strategy = Info.strategy!(Example.UserWithEmptyIncludes, :password)
-      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, sign_in_params)
+      assert {:ok, _signed_in_user} = Strategy.action(strategy, :sign_in, sign_in_params, [])
 
       Batcher.flush()
 

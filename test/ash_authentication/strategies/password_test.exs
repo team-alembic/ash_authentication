@@ -92,7 +92,8 @@ defmodule AshAuthentication.Strategy.PasswordTest do
                  :sign_in_with_token,
                  %{
                    token: valid_user.__metadata__.token
-                 }
+                 },
+                 []
                )
 
       assert valid_user.id == valid_user2.id
@@ -103,7 +104,8 @@ defmodule AshAuthentication.Strategy.PasswordTest do
                  :sign_in_with_token,
                  %{
                    token: valid_user.__metadata__.token
-                 }
+                 },
+                 []
                )
     end
 
@@ -124,7 +126,8 @@ defmodule AshAuthentication.Strategy.PasswordTest do
                  %{
                    username: user.username,
                    password: password()
-                 }
+                 },
+                 []
                )
 
       assert error.__struct__ == AshAuthentication.Errors.AuthenticationFailed
@@ -158,7 +161,8 @@ defmodule AshAuthentication.Strategy.PasswordTest do
                  :sign_in_with_token,
                  %{
                    token: sign_in_token
-                 }
+                 },
+                 []
                )
 
       assert Exception.message(error) =~ ~r/authentication failed/i

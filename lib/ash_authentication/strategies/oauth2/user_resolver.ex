@@ -49,8 +49,6 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
     UserIdentity
   }
 
-  require Ash.Query
-
   @doc false
   @spec resolve(Changeset.t(), OAuth2.t(), keyword) :: Changeset.t()
   def resolve(changeset, strategy, opts \\ []) do

@@ -139,7 +139,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
     end
   end
 
-  describe "Strategy.action/3" do
+  describe "Strategy.action/4" do
     for action <- ~w[register sign_in reset_request reset]a do
       test "it delegates to `Password.Actions.#{action}/2` for the #{action} action" do
         strategy = %Password{}
@@ -151,7 +151,7 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
           assert rx_params == params
         end)
 
-        Strategy.action(strategy, unquote(action), params)
+        Strategy.action(strategy, unquote(action), params, [])
       end
     end
   end

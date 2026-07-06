@@ -6,7 +6,6 @@ defmodule AshAuthentication.AddOn.AuditLog.IdentityBruteForceTest do
   @moduledoc false
   use DataCase, async: false
   alias AshAuthentication.{AuditLogResource.Batcher, Info, Strategy}
-  require Ash.Query
 
   setup do
     start_supervised!({Batcher, otp_app: :ash_authentication})
@@ -66,7 +65,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IdentityBruteForceTest do
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
 
       assert {:error, error} =
-               Strategy.action(strategy, :reset_request, %{"email" => to_string(user.email)})
+               Strategy.action(strategy, :reset_request, %{"email" => to_string(user.email)}, [])
 
       assert Exception.message(error) =~ "Authentication failed"
     end
@@ -81,7 +80,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IdentityBruteForceTest do
       strategy = Info.strategy!(Example.UserWithAuditLog, :magic_link)
 
       assert {:error, error} =
-               Strategy.action(strategy, :request, %{"email" => to_string(user.email)})
+               Strategy.action(strategy, :request, %{"email" => to_string(user.email)}, [])
 
       assert Exception.message(error) =~ "Authentication failed"
     end
@@ -89,7 +88,13 @@ defmodule AshAuthentication.AddOn.AuditLog.IdentityBruteForceTest do
 
   defp sign_in_with_password(email, password) do
     strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-    Strategy.action(strategy, :sign_in, %{"email" => to_string(email), "password" => password})
+
+    Strategy.action(
+      strategy,
+      :sign_in,
+      %{"email" => to_string(email), "password" => password},
+      []
+    )
   end
 
   defp create_failed_attempts(identity, strategy_name, action_name, count, opts \\ []) do

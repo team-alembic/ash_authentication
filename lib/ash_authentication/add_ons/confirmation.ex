@@ -69,7 +69,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
   ### Example
 
       iex> strategy = Info.strategy!(Example.User, :confirm)
-      ...> {:ok, user} = Strategy.action(strategy, :confirm, %{"confirm" => confirmation_token()})
+      ...> {:ok, user} = Strategy.action(strategy, :confirm, %{"confirm" => confirmation_token()}, [])
       ...> user.confirmed_at >= one_second_ago()
       true
 
