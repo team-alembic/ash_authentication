@@ -63,6 +63,56 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert to_string(user.email) == "webauthn-user@example.com"
     end
 
+    test "persists register_action_accept fields from params", %{strategy: strategy} do
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      params = %{
+        "email" => "named-webauthn-user@example.com",
+        "name" => "Named User",
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "raw_id" => fixture.raw_id
+      }
+
+      assert {:ok, user} =
+               Actions.register(strategy, params, challenge: registration_challenge(fixture))
+
+      assert user.name == "Named User"
+    end
+
+    test "validates register_action_accept fields via the resource's constraints", %{
+      strategy: strategy
+    } do
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      params = %{
+        "email" => "invalid-name-user@example.com",
+        # violates the attribute's `min_length: 2` constraint
+        "name" => "x",
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "raw_id" => fixture.raw_id
+      }
+
+      assert {:error, error} =
+               Actions.register(strategy, params, challenge: registration_challenge(fixture))
+
+      assert Enum.any?(Ash.Error.to_error_class(error).errors, &(Map.get(&1, :field) == :name))
+
+      assert {:ok, []} =
+               Example.UserWithWebAuthn
+               |> Ash.Query.filter(email == "invalid-name-user@example.com")
+               |> Ash.read()
+    end
+
     test "rolls back user creation when credential creation fails", %{strategy: strategy} do
       credential_id = WebAuthnFixtures.generate_credential_id()
 

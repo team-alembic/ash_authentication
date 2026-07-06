@@ -84,6 +84,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
       assert :email in action.accept
     end
 
+    test "register action accepts the register_action_accept fields" do
+      actions = ResourceInfo.actions(Example.UserWithWebAuthn)
+      action = Enum.find(actions, &(&1.name == :register_with_webauthn))
+      assert :name in action.accept
+    end
+
     test "register action manages the webauthn_credentials relationship" do
       actions = ResourceInfo.actions(Example.UserWithWebAuthn)
       action = Enum.find(actions, &(&1.name == :register_with_webauthn))

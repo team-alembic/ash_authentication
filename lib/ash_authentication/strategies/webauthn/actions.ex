@@ -15,6 +15,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   if Code.ensure_loaded?(Wax) do
     alias Ash.{Changeset, Query}
     alias AshAuthentication.{Info, Jwt, Strategy.WebAuthn}
+    alias AshAuthentication.Strategy.CustomFields
     import Ash.Expr, only: [ref: 1]
     require Ash.Query
     require Logger
@@ -451,7 +452,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
       # In passkey-first mode the user resource has no identity attribute, so
       # passing the identity key would be rejected as an unknown input.
-      action_params = maybe_put_identity_in_params(strategy, action_params, params)
+      action_params =
+        strategy
+        |> maybe_put_identity_in_params(action_params, params)
+        |> put_accepted_fields_in_params(strategy, params)
 
       ash_opts = build_ash_opts(strategy, opts, tenant)
 
@@ -468,6 +472,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp maybe_put_identity_in_params(%_{identity_field: identity_key}, action_params, params) do
       Map.put(action_params, identity_key, params[to_string(identity_key)])
+    end
+
+    # Values for `register_action_accept` fields are forwarded verbatim; the
+    # register action validates them like any other accepted attribute.
+    defp put_accepted_fields_in_params(action_params, strategy, params) do
+      strategy.register_action_accept
+      |> List.wrap()
+      |> CustomFields.accept_names()
+      |> Enum.reduce(action_params, fn field, acc ->
+        case Map.fetch(params, to_string(field)) do
+          {:ok, value} -> Map.put(acc, field, value)
+          :error -> acc
+        end
+      end)
     end
 
     defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do

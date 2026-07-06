@@ -242,12 +242,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
     )
   end
 
-  defp build_register_action_accept(%_{require_identity?: false}) do
-    []
+  defp build_register_action_accept(%_{require_identity?: false} = strategy) do
+    strategy.register_action_accept
+    |> List.wrap()
+    |> Strategy.CustomFields.accept_names()
+    |> Enum.uniq()
   end
 
-  defp build_register_action_accept(%_{identity_field: identity_field}) do
-    [identity_field]
+  defp build_register_action_accept(strategy) do
+    [strategy.identity_field]
+    |> Enum.concat(Strategy.CustomFields.accept_names(List.wrap(strategy.register_action_accept)))
+    |> Enum.uniq()
   end
 
   defp build_sign_in_action(dsl_state, strategy) do

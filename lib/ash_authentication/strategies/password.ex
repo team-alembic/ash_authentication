@@ -149,7 +149,7 @@ defmodule AshAuthentication.Strategy.Password do
           password_confirmation_field: atom,
           password_field: atom,
           provider: atom,
-          register_action_accept: [atom],
+          register_action_accept: [atom | {atom, [secret?: boolean]}],
           register_action_name: atom,
           registration_enabled?: boolean,
           resettable: nil | Resettable.t(),

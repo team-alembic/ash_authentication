@@ -17,6 +17,16 @@ defmodule Example.UserWithWebAuthn do
   attributes do
     uuid_primary_key :id
     attribute :email, :ci_string, allow_nil?: false, writable?: true, public?: true
+
+    attribute :name, :string,
+      allow_nil?: true,
+      writable?: true,
+      public?: true,
+      constraints: [min_length: 2]
+
+    attribute :personal_number, :string, public?: true, sensitive?: true
+    attribute :not_accepted_extra_stuff, :string
+
     create_timestamp :created_at
     update_timestamp :updated_at
   end
@@ -55,6 +65,7 @@ defmodule Example.UserWithWebAuthn do
         origin("https://example.com")
         identity_field :email
         require_identity? true
+        register_action_accept [:name]
       end
     end
   end

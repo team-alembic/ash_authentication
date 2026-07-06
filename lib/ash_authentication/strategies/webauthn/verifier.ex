@@ -10,6 +10,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   """
 
   alias Ash.Resource.Info, as: ResourceInfo
+  alias AshAuthentication.Strategy.CustomFields
   alias AshAuthentication.Strategy.WebAuthn
   alias Spark.Error.DslError
 
@@ -22,7 +23,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
          :ok <- validate_credential_resource_shape(strategy),
          :ok <- validate_tokens_enabled(dsl_state),
          :ok <- validate_verify_action(strategy, dsl_state),
-         :ok <- validate_register_action_manages_credential(strategy, dsl_state) do
+         :ok <- validate_register_action_manages_credential(strategy, dsl_state),
+         :ok <- CustomFields.verify_secret_confirmations(strategy, dsl_state) do
       validate_hashed_password_optional(strategy, dsl_state)
     end
   end

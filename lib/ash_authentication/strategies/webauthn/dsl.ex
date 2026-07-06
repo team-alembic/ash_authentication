@@ -249,6 +249,15 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "The name of the register action on the user resource. Defaults to `register_with_<strategy_name>`.",
           required: false
         ],
+        register_action_accept: [
+          type:
+            {:list,
+             {:or, [:atom, {:tuple, [:atom, {:keyword_list, [secret?: [type: :boolean]]}]}]}},
+          default: [],
+          doc:
+            "A list of additional writable attributes to be accepted in the register action (e.g. `[:name]`). Their values are validated by the action as usual, so `allow_nil?`, constraints, and any validations on the resource apply. Attributes marked `sensitive?: true` must confirm whether they are secrets via a `{field, secret?: boolean}` entry (e.g. `[given_names: [secret?: false]]`); `secret?: true` renders a masked input, `secret?: false` a regular one.",
+          required: false
+        ],
         sign_in_action_name: [
           type: :atom,
           doc:
