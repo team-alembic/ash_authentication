@@ -99,6 +99,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
   defp reflected?(conn), do: Map.get(conn.params, @reflected_param) == "1"
 
+  # sobelow_skip ["XSS.SendResp"]
   defp render_interstitial(conn, strategy) do
     params = Map.drop(conn.params, [@reflected_param, "glob"])
 
