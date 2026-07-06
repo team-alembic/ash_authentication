@@ -133,6 +133,22 @@ The `password` and `magic_link` strategies now support a `brute_force_strategy` 
 
 Defaults to a 5 minute window with 5 allowed failures; tune `audit_log_window` and `audit_log_max_failures` on each strategy if you need different thresholds.
 
+#### Sign in with Apple and other `response_mode=form_post` providers
+
+OAuth2/OIDC callbacks now accept **`POST` as well as `GET`**. This supports providers that use `response_mode=form_post` — most importantly **Sign in with Apple**, which returns the callback as a `POST` whenever `name` or `email` scope is requested.
+
+That callback is a *cross-site* `POST` from the provider, so the browser does not send the `SameSite=Lax` session cookie with it — which is why the stored `state`/`nonce`/PKCE verifier couldn't be read and sign-in failed. To handle this **without** weakening your session cookie to `SameSite=None`, the callback now renders a small **"signing you in…" interstitial** that immediately re-`POST`s the parameters *same-origin* (kept in the request body, never the URL), where the session cookie *is* sent and sign-in completes. The page fails closed if it can't recover the session, and is a no-op for providers that use a normal `GET` callback.
+
+**Using `ash_authentication_phoenix`:** the installer and upgrader generate an editable interstitial for you — a `signing_in.html.eex` template, an `AuthInterstitialHTML` renderer module, and the `:oauth2_interstitial_renderer` config — but only when your resources define an OAuth/OIDC strategy. It's created automatically when you add one via `mix ash_authentication_phoenix.add_strategy apple` (or `google`, `github`, `oidc`, …), and the upgrader adds it to existing OAuth apps. Edit the generated `signing_in.html.eex` to customise the copy or branding.
+
+**Hand-rolled routers / non-Phoenix apps:** no code change is required to *route* the callback (it already accepts both methods), and the built-in default interstitial renders with zero configuration. Keep your session cookie on the default `SameSite=Lax`. To customise the page, set:
+
+```elixir
+config :ash_authentication, :oauth2_interstitial_renderer, {MyApp.SomeModule, :render}
+```
+
+where the function takes the render assigns (`:action`, `:params`, `:reflected_param`) and returns the HTML.
+
 ### Other Improvements
 
 - **Auto signout in AshAuthentication.Phoenix** - Automatic sign-out is now supported in the Phoenix integration
