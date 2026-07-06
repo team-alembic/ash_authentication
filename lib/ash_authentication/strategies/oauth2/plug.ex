@@ -111,7 +111,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
       conn: conn
     }
 
+    # Do NOT write the session on this response. Other plugs in the pipeline
+    # (e.g. flash) may have marked the session dirty; writing it here would send
+    # a fresh cookie that clobbers the real session in the browser, so the
+    # same-origin re-POST would arrive without it. `ignore: true` preserves the
+    # existing session cookie untouched.
     conn
+    |> configure_session(ignore: true)
     |> put_resp_content_type("text/html")
     |> send_resp(200, interstitial_html(assigns))
   end

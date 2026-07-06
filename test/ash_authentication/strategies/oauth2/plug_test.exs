@@ -56,6 +56,11 @@ defmodule AshAuthentication.Strategy.OAuth2.PlugTest do
       refute body =~ "x<script>"
       # the loop guard marker is added
       assert body =~ ~s(name="_ash_authentication_reflected" value="1")
+
+      # the interstitial must NOT rewrite the session cookie, or the fresh cookie
+      # would clobber the real session and the same-origin re-POST would arrive
+      # without it.
+      assert conn.private[:plug_session_info] == :ignore
     end
 
     test "an already-reflected POST with no session fails closed rather than looping", %{
