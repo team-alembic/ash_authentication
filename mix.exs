@@ -287,6 +287,7 @@ defmodule AshAuthentication.MixProject do
       {:ash_graphql, "~> 1.8", only: [:dev, :test]},
       {:ash_json_api, "~> 1.5", only: [:dev, :test]},
       {:ash_postgres, "~> 2.6 and >= 2.6.8", optional: true},
+      {:bandit, "~> 1.0", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
@@ -295,7 +296,6 @@ defmodule AshAuthentication.MixProject do
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
       {:mimic, "~> 2.0", only: [:dev, :test]},
       {:mix_audit, "~> 2.1", only: [:dev, :test]},
-      {:plug_cowboy, "~> 2.5", only: [:dev, :test]},
       {:simple_sat, "~> 0.1", only: [:dev, :test]},
       {:sobelow, "~> 0.12", only: [:dev, :test]},
       {:usage_rules, "~> 1.2", only: [:dev]}
