@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<%!--
+  Default "signing you in…" interstitial for OAuth2/OIDC providers that return
+  the callback as a cross-site form_post POST (e.g. Apple). The browser does not
+  send the SameSite=Lax session cookie on the cross-site POST, so this page
+  re-POSTs the response parameters SAME-ORIGIN, where the session cookie is sent
+  and the callback can verify state and complete sign-in.
+
+  Parameters are kept in the POST body (never the URL) and are HTML-escaped. The
+  form auto-submits; a manual button is provided for no-JS environments.
+--%>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Signing you in…</title>
+  </head>
+  <body onload="document.forms[0].submit()">
+    <form method="post" action="<%= Plug.HTML.html_escape(@action) %>">
+      <%= for {key, value} <- @params do %>
+        <input type="hidden" name="<%= Plug.HTML.html_escape(to_string(key)) %>" value="<%= Plug.HTML.html_escape(to_string(value)) %>" />
+      <% end %>
+      <input type="hidden" name="<%= @reflected_param %>" value="1" />
+      <noscript>
+        <p>Signing you in…</p>
+        <button type="submit">Continue</button>
+      </noscript>
+    </form>
+    <p>Signing you in…</p>
+  </body>
+</html>

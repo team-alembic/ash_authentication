@@ -32,9 +32,11 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.OAuth2 do
   def actions(%OAuth2{registration_enabled?: false}), do: [:sign_in]
 
   @doc false
-  @spec method_for_phase(OAuth2.t(), phase) :: Strategy.http_method()
+  @spec method_for_phase(OAuth2.t(), phase) :: Strategy.http_method() | [Strategy.http_method()]
   def method_for_phase(_, :request), do: :get
-  def method_for_phase(_, :callback), do: :get
+  # Accept POST as well as GET so providers using `response_mode=form_post`
+  # (e.g. Apple when name/email scope is requested) can reach the callback.
+  def method_for_phase(_, :callback), do: [:get, :post]
 
   @doc """
   Return a list of routes for use by the strategy.

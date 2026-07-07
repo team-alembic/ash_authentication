@@ -72,12 +72,71 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
       store_authentication_result(conn, {:ok, user})
     else
       nil ->
-        store_authentication_result(conn, {:error, nil})
+        maybe_reflect_or_fail(conn, strategy)
 
       {:error, reason} ->
         store_authentication_result(conn, {:error, reason})
     end
   end
+
+  # The session holding `session_params` is absent. This is expected when a
+  # provider using `response_mode=form_post` (e.g. Apple with name/email scope)
+  # POSTs the callback cross-site: the browser withholds the `SameSite=Lax`
+  # session cookie on a cross-site POST. Render an interstitial page that
+  # same-origin re-POSTs the params so the follow-up request carries the
+  # session. On the (same-origin) re-POST `session_params` is present and the
+  # `with` above succeeds; if it is *still* absent we've already bounced once,
+  # so fail closed rather than loop.
+  defp maybe_reflect_or_fail(conn, strategy) do
+    if conn.method == "POST" and not reflected?(conn) do
+      render_interstitial(conn, strategy)
+    else
+      store_authentication_result(conn, {:error, nil})
+    end
+  end
+
+  @reflected_param "_ash_authentication_reflected"
+
+  defp reflected?(conn), do: Map.get(conn.params, @reflected_param) == "1"
+
+  # sobelow_skip ["XSS.SendResp"]
+  defp render_interstitial(conn, strategy) do
+    params = Map.drop(conn.params, [@reflected_param, "glob"])
+
+    assigns = %{
+      action: conn.request_path,
+      params: params,
+      reflected_param: @reflected_param,
+      strategy: strategy,
+      conn: conn
+    }
+
+    # Do NOT write the session on this response. Other plugs in the pipeline
+    # (e.g. flash) may have marked the session dirty; writing it here would send
+    # a fresh cookie that clobbers the real session in the browser, so the
+    # same-origin re-POST would arrive without it. `ignore: true` preserves the
+    # existing session cookie untouched.
+    conn
+    |> configure_session(ignore: true)
+    |> put_resp_content_type("text/html")
+    |> send_resp(200, interstitial_html(assigns))
+  end
+
+  defp interstitial_html(assigns) do
+    case Application.get_env(:ash_authentication, :oauth2_interstitial_renderer) do
+      {module, function} -> apply(module, function, [assigns])
+      _ -> render_default_interstitial(assigns)
+    end
+  end
+
+  require EEx
+
+  EEx.function_from_file(
+    :defp,
+    :render_default_interstitial,
+    Path.join(__DIR__, "interstitial.html.eex"),
+    [:assigns]
+  )
 
   defp action_opts(conn) do
     [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn) || %{}]
