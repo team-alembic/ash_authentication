@@ -172,7 +172,7 @@ defmodule AshAuthentication.Strategy.Password do
 
   Used by `AshAuthentication.Strategy.Password.RequestPasswordReset`.
   """
-  @spec reset_token_for(t(), Resource.record()) ::
+  @spec reset_token_for(t(), Resource.Record.t()) ::
           {:ok, String.t()} | {:error, AuthenticationFailed.t()}
   def reset_token_for(
         %Password{resettable: %Resettable{} = resettable} = _strategy,

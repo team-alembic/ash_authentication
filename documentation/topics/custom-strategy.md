@@ -206,7 +206,7 @@ When generating routes or forms for this phase, what HTTP method should we use?
 
 Next up, we write our plug. We take the "name field" from the input params in
 the conn and pass them to our sign in action. As long as the action returns
-`{:ok, Ash.Resource.record}` or `{:error, any}` then we can just pass it
+`{:ok, Ash.Resource.Record.t()}` or `{:error, any}` then we can just pass it
 straight into `store_authentication_result/2` from
 `AshAuthentication.Plug.Helpers`.
 

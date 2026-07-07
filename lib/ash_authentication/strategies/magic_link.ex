@@ -178,7 +178,7 @@ defmodule AshAuthentication.Strategy.MagicLink do
 
   Used by `AshAuthentication.Strategy.MagicLink.Request`.
   """
-  @spec request_token_for(t, Resource.record(), opts :: Keyword.t(), context :: map()) ::
+  @spec request_token_for(t, Resource.Record.t(), opts :: Keyword.t(), context :: map()) ::
           {:ok, binary} | {:error, AshAuthentication.Errors.AuthenticationFailed.t()}
   def request_token_for(strategy, user, opts \\ [], context \\ %{})
       when is_struct(strategy, __MODULE__) and is_struct(user, strategy.resource) do

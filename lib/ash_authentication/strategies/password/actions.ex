@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   Attempt to sign in a user.
   """
   @spec sign_in(Password.t(), map, keyword) ::
-          {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
+          {:ok, Resource.Record.t()} | {:error, Errors.AuthenticationFailed.t()}
   def sign_in(strategy, params, options)
       when is_struct(strategy, Password) and strategy.sign_in_enabled? do
     {context, options} = Keyword.pop(options, :context, [])
@@ -136,7 +136,8 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   @doc """
   Attempt to sign in a previously-authenticated user with a short-lived sign in token.
   """
-  @spec sign_in_with_token(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec sign_in_with_token(Password.t(), map, keyword) ::
+          {:ok, Resource.Record.t()} | {:error, any}
   def sign_in_with_token(strategy, params, options) when is_struct(strategy, Password) do
     options =
       options
@@ -184,7 +185,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   @doc """
   Attempt to register a new user.
   """
-  @spec register(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec register(Password.t(), map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def register(strategy, params, options)
       when is_struct(strategy, Password) and strategy.registration_enabled? == true do
     options =
@@ -270,7 +271,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   @doc """
   Attempt to change a user's password using a reset token.
   """
-  @spec reset(Password.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec reset(Password.t(), map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def reset(
         %Password{resettable: %Password.Resettable{} = resettable} = strategy,
         params,

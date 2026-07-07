@@ -63,7 +63,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Totp do
 
   @doc false
   @spec action(Totp.t(), atom, map, keyword) ::
-          {:ok, Resource.record()} | {:ok, boolean} | {:error, any}
+          {:ok, Resource.Record.t()} | {:ok, boolean} | {:error, any}
   def action(strategy, :confirm_setup, params, options),
     do: Totp.Actions.confirm_setup(strategy, params, options)
 

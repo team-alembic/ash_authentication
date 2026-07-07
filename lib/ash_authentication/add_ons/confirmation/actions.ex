@@ -28,7 +28,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   @doc """
   Attempt to confirm a user.
   """
-  @spec confirm(Confirmation.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec confirm(Confirmation.t(), map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def confirm(strategy, params, opts \\ []) do
     with {:ok, token} <- Map.fetch(params, "confirm"),
          {:ok, %{"sub" => subject}, _} <- Jwt.verify(token, strategy.resource, opts),

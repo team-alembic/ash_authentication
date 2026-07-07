@@ -15,7 +15,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   require Logger
 
   @doc false
-  @spec read_expired(Resource.t(), keyword) :: {:ok, [Resource.record()]} | {:error, any}
+  @spec read_expired(Resource.t(), keyword) :: {:ok, [Resource.Record.t()]} | {:error, any}
   def read_expired(resource, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
          {:ok, domain} <- Info.token_domain(resource),
@@ -408,7 +408,7 @@ defmodule AshAuthentication.TokenResource.Actions do
   @doc """
   Retrieve a token by token or JTI optionally filtering by purpose.
   """
-  @spec get_token(Resource.t(), map, keyword) :: {:ok, [Resource.record()]} | {:error, any}
+  @spec get_token(Resource.t(), map, keyword) :: {:ok, [Resource.Record.t()]} | {:error, any}
   def get_token(resource, params, opts \\ []) do
     with :ok <- assert_resource_has_extension(resource, TokenResource),
          {:ok, domain} <- Info.token_domain(resource),

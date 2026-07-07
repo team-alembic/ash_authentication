@@ -156,7 +156,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
   @spec confirmation_token(
           Confirmation.t(),
           Changeset.t(),
-          Resource.record(),
+          Resource.Record.t(),
           opts :: Keyword.t()
         ) ::
           {:ok, String.t()} | {:error, any}
@@ -186,7 +186,7 @@ defmodule AshAuthentication.AddOn.Confirmation do
   """
   @spec confirmation_token_for_link(
           Confirmation.t(),
-          Resource.record(),
+          Resource.Record.t(),
           map,
           opts :: Keyword.t()
         ) ::

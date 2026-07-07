@@ -13,7 +13,7 @@ defmodule AshAuthentication.SenderFunction do
 
   @doc false
   @impl true
-  @spec send(Resource.record(), String.t(), keyword) :: :ok | {:error, term()}
+  @spec send(Resource.Record.t(), String.t(), keyword) :: :ok | {:error, term()}
   def send(user, token, opts) do
     result =
       case Keyword.pop(opts, :fun) do

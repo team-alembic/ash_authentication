@@ -42,7 +42,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Otp do
 
   @doc false
   @spec action(Otp.t(), Strategy.action(), map, keyword) ::
-          :ok | {:ok, Ash.Resource.record()} | {:error, any}
+          :ok | {:ok, Ash.Resource.Record.t()} | {:error, any}
   def action(strategy, :request, params, options),
     do: Otp.Actions.request(strategy, params, options)
 

@@ -17,7 +17,7 @@ defmodule AshAuthentication.UserIdentity.Actions do
   @doc """
   Upsert an identity for a user.
   """
-  @spec upsert(Resource.t(), map, keyword) :: {:ok, Resource.record()} | {:error, term}
+  @spec upsert(Resource.t(), map, keyword) :: {:ok, Resource.Record.t()} | {:error, term}
   def upsert(resource, attributes, opts \\ []) do
     with {:ok, domain} <- UserIdentity.Info.user_identity_domain(resource),
          {:ok, upsert_action_name} <-

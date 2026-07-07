@@ -30,7 +30,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   and the token is invalid, delete the cookie.
   """
   @spec sign_in_resource_with_remember_me(Plug.Conn.t(), Ash.Resource.t(), Keyword.t()) ::
-          Plug.Conn.t() | {Plug.Conn.t(), Resource.record()}
+          Plug.Conn.t() | {Plug.Conn.t(), Resource.Record.t()}
   def sign_in_resource_with_remember_me(%{cookies: %Plug.Conn.Unfetched{}} = conn, resource, opts) do
     sign_in_resource_with_remember_me(Conn.fetch_cookies(conn), resource, opts)
   end

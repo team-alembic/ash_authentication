@@ -64,7 +64,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.OAuth2 do
   @doc """
   Perform actions.
   """
-  @spec action(OAuth2.t(), action, map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec action(OAuth2.t(), action, map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def action(strategy, :register, params, options),
     do: OAuth2.Actions.register(strategy, params, options)
 

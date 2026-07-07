@@ -19,7 +19,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Actions do
   deletes the code on success, and returns the authenticated user.
   """
   @spec verify(RecoveryCode.t(), map, keyword) ::
-          {:ok, Ash.Resource.record()} | {:error, any}
+          {:ok, Ash.Resource.Record.t()} | {:error, any}
   def verify(strategy, params, options) do
     options =
       options
@@ -62,7 +62,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Actions do
   Returns the user with plaintext codes in `__metadata__.recovery_codes`.
   """
   @spec generate(RecoveryCode.t(), map, keyword) ::
-          {:ok, Ash.Resource.record()} | {:error, any}
+          {:ok, Ash.Resource.Record.t()} | {:error, any}
   def generate(strategy, params, options) do
     user = Map.get(params, :user) || Map.get(params, "user")
 

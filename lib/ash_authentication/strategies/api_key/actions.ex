@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.ApiKey.Actions do
   Attempt to sign a user in via API key.
   """
   @spec sign_in(ApiKey.t(), map, keyword) ::
-          {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
+          {:ok, Resource.Record.t()} | {:error, Errors.AuthenticationFailed.t()}
   def sign_in(strategy, params, options) do
     options =
       options

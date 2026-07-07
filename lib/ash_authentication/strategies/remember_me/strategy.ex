@@ -34,7 +34,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.RememberMe d
 
   @doc false
   @spec action(RememberMe.t(), Strategy.action(), map, keyword) ::
-          :ok | {:ok, Resource.record()} | {:error, any}
+          :ok | {:ok, Resource.Record.t()} | {:error, any}
   def action(_strategy, _action, _params, _options),
     do: :ok
 
