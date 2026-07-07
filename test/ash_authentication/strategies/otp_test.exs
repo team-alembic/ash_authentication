@@ -103,9 +103,14 @@ defmodule AshAuthentication.Strategy.OtpTest do
       log =
         capture_log(fn ->
           assert :ok =
-                   Strategy.action(strategy, :request, %{
-                     "email" => to_string(user.email)
-                   })
+                   Strategy.action(
+                     strategy,
+                     :request,
+                     %{
+                       "email" => to_string(user.email)
+                     },
+                     []
+                   )
         end)
 
       assert log =~ "OTP request for"
@@ -118,9 +123,14 @@ defmodule AshAuthentication.Strategy.OtpTest do
       log =
         capture_log(fn ->
           assert :ok =
-                   Strategy.action(strategy, :request, %{
-                     "email" => "nonexistent@example.com"
-                   })
+                   Strategy.action(
+                     strategy,
+                     :request,
+                     %{
+                       "email" => "nonexistent@example.com"
+                     },
+                     []
+                   )
         end)
 
       refute log =~ "OTP request for"
@@ -135,10 +145,15 @@ defmodule AshAuthentication.Strategy.OtpTest do
       otp_code = extract_otp_code(strategy, user)
 
       assert {:ok, signed_in_user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert signed_in_user.id == user.id
       assert signed_in_user.__metadata__[:token]
@@ -152,20 +167,30 @@ defmodule AshAuthentication.Strategy.OtpTest do
       _otp_code = extract_otp_code(strategy, user)
 
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => "ZZZZZZ"
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => "ZZZZZZ"
+                 },
+                 []
+               )
     end
 
     test "fails for non-existent user" do
       strategy = Info.strategy!(Example.UserWithOtp, :otp)
 
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => "nonexistent@example.com",
-                 "otp" => "ABCDEF"
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => "nonexistent@example.com",
+                   "otp" => "ABCDEF"
+                 },
+                 []
+               )
     end
 
     test "single use: second attempt with same OTP fails" do
@@ -175,16 +200,26 @@ defmodule AshAuthentication.Strategy.OtpTest do
       otp_code = extract_otp_code(strategy, user)
 
       assert {:ok, _user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => otp_code
+                 },
+                 []
+               )
     end
 
     test "case-insensitive: lowercase OTP matches uppercase" do
@@ -194,10 +229,15 @@ defmodule AshAuthentication.Strategy.OtpTest do
       otp_code = extract_otp_code(strategy, user)
 
       assert {:ok, signed_in_user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => to_string(user.email),
-                 "otp" => String.downcase(otp_code)
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => to_string(user.email),
+                   "otp" => String.downcase(otp_code)
+                 },
+                 []
+               )
 
       assert signed_in_user.id == user.id
     end
@@ -291,10 +331,15 @@ defmodule AshAuthentication.Strategy.OtpTest do
       otp_code = extract_otp_code_for_email(strategy, email)
 
       assert {:ok, user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => email,
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => email,
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert to_string(user.email) == email
       assert user.__metadata__[:token]
@@ -308,19 +353,29 @@ defmodule AshAuthentication.Strategy.OtpTest do
       otp_code = extract_otp_code_for_email(strategy, email)
 
       assert {:ok, user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => email,
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => email,
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       # Second sign-in finds the existing user (upsert)
       otp_code2 = extract_otp_code_for_email(strategy, email)
 
       assert {:ok, user2} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => email,
-                 "otp" => otp_code2
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => email,
+                   "otp" => otp_code2
+                 },
+                 []
+               )
 
       assert user2.id == user.id
     end
@@ -333,10 +388,15 @@ defmodule AshAuthentication.Strategy.OtpTest do
       _otp_code = extract_otp_code_for_email(strategy, email)
 
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => email,
-                 "otp" => "ZZZZZZ"
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => email,
+                   "otp" => "ZZZZZZ"
+                 },
+                 []
+               )
     end
 
     test "single use: second attempt with same OTP fails for registered user" do
@@ -346,16 +406,26 @@ defmodule AshAuthentication.Strategy.OtpTest do
       otp_code = extract_otp_code_for_email(strategy, email)
 
       assert {:ok, _user} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => email,
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => email,
+                   "otp" => otp_code
+                 },
+                 []
+               )
 
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
-               Strategy.action(strategy, :sign_in, %{
-                 "email" => email,
-                 "otp" => otp_code
-               })
+               Strategy.action(
+                 strategy,
+                 :sign_in,
+                 %{
+                   "email" => email,
+                   "otp" => otp_code
+                 },
+                 []
+               )
     end
 
     test "sends OTP for non-existent user when registration enabled" do
@@ -364,9 +434,14 @@ defmodule AshAuthentication.Strategy.OtpTest do
       log =
         capture_log(fn ->
           assert :ok =
-                   Strategy.action(strategy, :request, %{
-                     "email" => "brand_new@example.com"
-                   })
+                   Strategy.action(
+                     strategy,
+                     :request,
+                     %{
+                       "email" => "brand_new@example.com"
+                     },
+                     []
+                   )
         end)
 
       assert log =~ "OTP request for"
@@ -395,7 +470,7 @@ defmodule AshAuthentication.Strategy.OtpTest do
   defp extract_otp_code_for_email(strategy, email) do
     log =
       capture_log(fn ->
-        Strategy.action(strategy, :request, %{"email" => email})
+        Strategy.action(strategy, :request, %{"email" => email}, [])
       end)
 
     log

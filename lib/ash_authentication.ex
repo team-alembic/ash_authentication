@@ -219,7 +219,7 @@ defmodule AshAuthentication do
       "user?id=ce7969f9-afa5-474c-bc52-ac23a103cef6"
 
   """
-  @spec user_to_subject(Resource.record()) :: subject
+  @spec user_to_subject(Resource.Record.t()) :: subject
   def user_to_subject(record) do
     subject_name =
       record.__struct__
@@ -242,7 +242,7 @@ defmodule AshAuthentication do
   Any options passed will be passed to the underlying `Domain.read/2` callback.
   """
   @spec subject_to_user(subject | URI.t(), Resource.t(), keyword) ::
-          {:ok, Resource.record()} | {:error, any}
+          {:ok, Resource.Record.t()} | {:error, any}
 
   def subject_to_user(subject, resource, options \\ []) do
     with {:ok, action_name} <- Info.authentication_get_by_subject_action_name(resource),

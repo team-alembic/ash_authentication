@@ -19,7 +19,7 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
           jti
         end)
 
-      assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user})
+      assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user}, [])
 
       for jti <- jtis do
         assert TokenResource.jti_revoked?(Example.UserWithTokenRequired, jti)
@@ -43,11 +43,16 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
           jti
         end)
 
-      Strategy.action(strategy, :reset, %{
-        current_password: "foobarbaz",
-        password: "barfoobaz",
-        password_confirmation: "barfoobaz"
-      })
+      Strategy.action(
+        strategy,
+        :reset,
+        %{
+          current_password: "foobarbaz",
+          password: "barfoobaz",
+          password_confirmation: "barfoobaz"
+        },
+        []
+      )
 
       for jti <- jtis do
         assert TokenResource.jti_revoked?(Example.UserWithTokenRequired, jti)
@@ -66,7 +71,7 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
 
     strategy = Info.strategy!(Example.UserWithRememberMe, :log_out_everywhere)
 
-    assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user})
+    assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user}, [])
     assert TokenResource.token_revoked?(Example.Token, remember_me_token)
     assert TokenResource.jti_revoked?(Example.Token, session_jti)
   end

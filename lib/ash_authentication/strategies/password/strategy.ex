@@ -84,7 +84,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.Password do
   @doc """
   Perform actions.
   """
-  @spec action(Password.t(), phase, map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec action(Password.t(), phase, map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def action(strategy, :register, params, options),
     do: Password.Actions.register(strategy, params, options)
 

@@ -39,7 +39,7 @@ defmodule AshAuthentication.Strategy.Otp.Actions do
   Attempt to sign a user in via OTP code.
   """
   @spec sign_in(Otp.t(), map, keyword) ::
-          {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
+          {:ok, Resource.Record.t()} | {:error, Errors.AuthenticationFailed.t()}
   def sign_in(strategy, params, options) do
     if strategy.registration_enabled? do
       sign_in_with_registration(strategy, params, options)

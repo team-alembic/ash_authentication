@@ -28,7 +28,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   @doc """
   Attempt to sign in a user.
   """
-  @spec sign_in(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec sign_in(OAuth2.t(), map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def sign_in(strategy, _params, _options) when strategy.registration_enabled?,
     do:
       {:error,
@@ -107,7 +107,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   @doc """
   Attempt to register a new user.
   """
-  @spec register(OAuth2.t(), map, keyword) :: {:ok, Resource.record()} | {:error, any}
+  @spec register(OAuth2.t(), map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def register(strategy, params, options) when strategy.registration_enabled? do
     action = Resource.Info.action(strategy.resource, strategy.register_action_name, :create)
 

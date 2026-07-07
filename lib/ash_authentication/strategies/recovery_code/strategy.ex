@@ -50,7 +50,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.RecoveryCode
 
   @doc false
   @spec action(RecoveryCode.t(), atom, map, keyword) ::
-          {:ok, Resource.record()} | {:error, any}
+          {:ok, Resource.Record.t()} | {:error, any}
   def action(strategy, :verify, params, options),
     do: RecoveryCode.Actions.verify(strategy, params, options)
 

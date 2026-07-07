@@ -19,7 +19,7 @@ defmodule AshAuthentication.Plug.Defaults do
   Calls `AshAuthentication.Plug.Helpers.store_in_session/2` then sends a
   basic 200 response.
   """
-  @spec handle_success(Conn.t(), {atom, atom}, Resource.record() | nil, String.t() | nil) ::
+  @spec handle_success(Conn.t(), {atom, atom}, Resource.Record.t() | nil, String.t() | nil) ::
           Conn.t()
   def handle_success(conn, _activity, user, _token) do
     conn

@@ -61,11 +61,11 @@ defmodule AshAuthentication.Strategy.Password do
   Interacting with the actions directly:
 
       iex> strategy = Info.strategy!(Example.User, :password)
-      ...> {:ok, marty} = Strategy.action(strategy, :register, %{"username" => "marty", "password" => "outatime1985", "password_confirmation" => "outatime1985"})
+      ...> {:ok, marty} = Strategy.action(strategy, :register, %{"username" => "marty", "password" => "outatime1985", "password_confirmation" => "outatime1985"}, [])
       ...> marty.username |> to_string()
       "marty"
 
-      ...> {:ok, user} = Strategy.action(strategy, :sign_in, %{"username" => "marty", "password" => "outatime1985"})
+      ...> {:ok, user} = Strategy.action(strategy, :sign_in, %{"username" => "marty", "password" => "outatime1985"}, [])
       ...> user.username |> to_string()
       "marty"
 
@@ -172,7 +172,7 @@ defmodule AshAuthentication.Strategy.Password do
 
   Used by `AshAuthentication.Strategy.Password.RequestPasswordReset`.
   """
-  @spec reset_token_for(t(), Resource.record()) ::
+  @spec reset_token_for(t(), Resource.Record.t()) ::
           {:ok, String.t()} | {:error, AuthenticationFailed.t()}
   def reset_token_for(
         %Password{resettable: %Resettable{} = resettable} = _strategy,

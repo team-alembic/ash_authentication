@@ -51,7 +51,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
 
     @doc "Register a new user with a WebAuthn credential."
-    @spec register(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.record()} | {:error, any}
+    @spec register(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.Record.t()} | {:error, any}
     def register(strategy, params, opts \\ []) do
       challenge = Keyword.fetch!(opts, :challenge)
 
@@ -110,7 +110,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     session credential.
     """
     @spec sign_in_with_token(WebAuthn.t(), map, keyword) ::
-            {:ok, Ash.Resource.record()} | {:error, any}
+            {:ok, Ash.Resource.Record.t()} | {:error, any}
     def sign_in_with_token(strategy, params, opts \\ []) do
       opts =
         opts
@@ -156,7 +156,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
 
     @doc "Sign in a user with a WebAuthn credential."
-    @spec sign_in(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.record()} | {:error, any}
+    @spec sign_in(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.Record.t()} | {:error, any}
     def sign_in(strategy, params, opts \\ []) do
       challenge = Keyword.fetch!(opts, :challenge)
       tenant = Keyword.get(opts, :tenant)
@@ -184,7 +184,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     enabled) issues a fresh JWT carrying the same value as a `webauthn_verified_at`
     claim — both are picked up by `RequireWebauthn` on subsequent requests.
     """
-    @spec verify(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.record()} | {:error, any}
+    @spec verify(WebAuthn.t(), map, keyword) :: {:ok, Ash.Resource.Record.t()} | {:error, any}
     def verify(strategy, params, opts \\ []) do
       actor = Keyword.fetch!(opts, :actor)
       challenge = Keyword.fetch!(opts, :challenge)
@@ -331,8 +331,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
 
     @doc "List all credentials for a user."
-    @spec list_credentials(WebAuthn.t(), Ash.Resource.record(), keyword) ::
-            {:ok, [Ash.Resource.record()]} | {:error, any}
+    @spec list_credentials(WebAuthn.t(), Ash.Resource.Record.t(), keyword) ::
+            {:ok, [Ash.Resource.Record.t()]} | {:error, any}
     def list_credentials(strategy, user, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
 
@@ -357,7 +357,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
 
     @doc "Delete a credential, refusing to delete the last one."
-    @spec delete_credential(WebAuthn.t(), Ash.Resource.record(), any, keyword) ::
+    @spec delete_credential(WebAuthn.t(), Ash.Resource.Record.t(), any, keyword) ::
             :ok | {:error, any}
     def delete_credential(strategy, user, credential_id, opts) do
       with {:ok, credentials} <- list_credentials(strategy, user, opts),
@@ -369,7 +369,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     @doc "Update the label of a credential."
     @spec update_credential_label(WebAuthn.t(), any, String.t(), keyword) ::
-            {:ok, Ash.Resource.record()} | {:error, any}
+            {:ok, Ash.Resource.Record.t()} | {:error, any}
     def update_credential_label(strategy, credential_id, new_label, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
 
@@ -399,7 +399,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     - `user:` - The existing user to attach the credential to
     """
     @spec add_credential(WebAuthn.t(), map, keyword) ::
-            {:ok, Ash.Resource.record()} | {:error, any}
+            {:ok, Ash.Resource.Record.t()} | {:error, any}
     def add_credential(strategy, params, opts \\ []) do
       challenge = Keyword.fetch!(opts, :challenge)
       user = Keyword.fetch!(opts, :user)

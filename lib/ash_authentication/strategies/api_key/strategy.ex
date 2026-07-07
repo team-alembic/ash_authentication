@@ -30,7 +30,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.ApiKey do
 
   @doc false
   @spec action(ApiKey.t(), Strategy.action(), map, keyword) ::
-          :ok | {:ok, Resource.record()} | {:error, any}
+          :ok | {:ok, Resource.Record.t()} | {:error, any}
   def action(strategy, :sign_in, params, options),
     do: ApiKey.Actions.sign_in(strategy, params, options)
 

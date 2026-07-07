@@ -69,13 +69,13 @@ Requesting that a magic link token is sent for a user:
 
     iex> strategy = Info.strategy!(Example.User, :magic_link)
     ...> user = build_user()
-    ...> Strategy.action(strategy, :request, %{"username" => user.username})
+    ...> Strategy.action(strategy, :request, %{"username" => user.username}, [])
     :ok
 
 Signing in using a magic link token:
 
     ...> {:ok, token} = MagicLink.request_token_for(strategy, user)
-    ...> {:ok, signed_in_user} = Strategy.action(strategy, :sign_in, %{"token" => token})
+    ...> {:ok, signed_in_user} = Strategy.action(strategy, :sign_in, %{"token" => token}, [])
     ...> signed_in_user.id == user
     true
 

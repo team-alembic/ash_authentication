@@ -19,7 +19,6 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
   alias Ash.{Changeset, Error.Framework.AssumptionFailed, Resource.Change}
   alias AshAuthentication.{Info, Strategy, Strategy.OAuth2, UserIdentity}
   import AshAuthentication.Utils, only: [is_falsy: 1]
-  require Ash.Query
 
   @doc false
   @impl true

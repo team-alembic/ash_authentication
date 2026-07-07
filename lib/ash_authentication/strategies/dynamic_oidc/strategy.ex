@@ -81,7 +81,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.DynamicOidc 
   Perform actions.
   """
   @spec action(DynamicOidc.t(), action, map, keyword) ::
-          {:ok, Resource.record()} | {:error, any}
+          {:ok, Resource.Record.t()} | {:error, any}
   def action(strategy, :register, params, options),
     do: AshAuthentication.Strategy.OAuth2.Actions.register(strategy, params, options)
 

@@ -37,7 +37,7 @@ defmodule AshAuthentication.AuditLogResource.BatcherTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = Strategy.action(strategy, :sign_in, params)
+      {:ok, _user} = Strategy.action(strategy, :sign_in, params, [])
 
       # Don't flush yet - entry should be queued
       Process.sleep(50)
@@ -65,7 +65,7 @@ defmodule AshAuthentication.AuditLogResource.BatcherTest do
         }
 
         strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-        {:ok, _user} = Strategy.action(strategy, :sign_in, params)
+        {:ok, _user} = Strategy.action(strategy, :sign_in, params, [])
       end
 
       Batcher.flush()
@@ -92,7 +92,7 @@ defmodule AshAuthentication.AuditLogResource.BatcherTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = Strategy.action(strategy, :sign_in, params)
+      {:ok, _user} = Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -156,7 +156,7 @@ defmodule AshAuthentication.AuditLogResource.BatcherTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = Strategy.action(strategy, :sign_in, params)
+      {:ok, _user} = Strategy.action(strategy, :sign_in, params, [])
 
       assert :ok = Batcher.flush()
     end

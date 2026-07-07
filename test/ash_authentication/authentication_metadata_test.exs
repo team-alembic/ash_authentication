@@ -92,7 +92,8 @@ defmodule AshAuthentication.AuthenticationMetadataTest do
           %{
             username: user.username,
             password: user.__metadata__.password
-          }
+          },
+          []
         )
 
       assert signed_in_user.__metadata__.authentication_strategies == [:password]
@@ -109,7 +110,8 @@ defmodule AshAuthentication.AuthenticationMetadataTest do
           %{
             username: user.username,
             password: user.__metadata__.password
-          }
+          },
+          []
         )
 
       assert signed_in_user.__metadata__.token
@@ -172,7 +174,8 @@ defmodule AshAuthentication.AuthenticationMetadataTest do
           %{
             username: user.username,
             password: user.__metadata__.password
-          }
+          },
+          []
         )
 
       # Second sign-in with password
@@ -183,7 +186,8 @@ defmodule AshAuthentication.AuthenticationMetadataTest do
           %{
             username: user.username,
             password: user.__metadata__.password
-          }
+          },
+          []
         )
 
       # Each sign-in sets its own metadata independently

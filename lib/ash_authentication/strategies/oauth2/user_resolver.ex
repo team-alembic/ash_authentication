@@ -49,8 +49,6 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
     UserIdentity
   }
 
-  require Ash.Query
-
   @doc false
   @spec resolve(Changeset.t(), OAuth2.t(), keyword) :: Changeset.t()
   def resolve(changeset, strategy, opts \\ []) do
@@ -130,7 +128,7 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   end
 
   @doc false
-  @spec fetch_identity(OAuth2.t(), String.t(), keyword) :: {:ok, Ash.Resource.record()} | :error
+  @spec fetch_identity(OAuth2.t(), String.t(), keyword) :: {:ok, Ash.Resource.Record.t()} | :error
   def fetch_identity(strategy, uid, opts \\ []) do
     cfg = UserIdentity.Info.user_identity_options(strategy.identity_resource)
 
@@ -168,7 +166,7 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   end
 
   @doc false
-  @spec has_identity_for_strategy?(OAuth2.t(), Ash.Resource.record(), keyword) :: boolean
+  @spec has_identity_for_strategy?(OAuth2.t(), Ash.Resource.Record.t(), keyword) :: boolean
   def has_identity_for_strategy?(strategy, user, opts \\ []) do
     cfg = UserIdentity.Info.user_identity_options(strategy.identity_resource)
 

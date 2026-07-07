@@ -104,7 +104,7 @@ defmodule AshAuthentication.Sender do
 
   Should return `:ok` on success or `{:error, reason}` on failure.
   """
-  @callback send(user :: Resource.record() | String.t(), token :: String.t(), opts :: list) ::
+  @callback send(user :: Resource.Record.t() | String.t(), token :: String.t(), opts :: list) ::
               :ok | {:error, term()}
 
   @doc false

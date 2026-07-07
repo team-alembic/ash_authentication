@@ -40,7 +40,7 @@ defmodule AshAuthentication.Strategy.MagicLink.Actions do
   Attempt to sign a user in via magic link.
   """
   @spec sign_in(MagicLink.t(), map, keyword) ::
-          {:ok, Resource.record()} | {:error, Errors.AuthenticationFailed.t()}
+          {:ok, Resource.Record.t()} | {:error, Errors.AuthenticationFailed.t()}
   def sign_in(strategy, params, options) do
     if strategy.registration_enabled? do
       strategy.resource

@@ -194,7 +194,7 @@ defmodule AshAuthentication.Strategy.Otp do
   The generated JWT is for internal bookkeeping only (it is never sent to the user).
   The OTP code itself is sent to the user via the sender.
   """
-  @spec generate_otp_token_for(t, Ash.Resource.record(), String.t(), keyword, map) ::
+  @spec generate_otp_token_for(t, Ash.Resource.Record.t(), String.t(), keyword, map) ::
           {:ok, binary} | :error
   def generate_otp_token_for(strategy, user, otp_code, opts \\ [], context \\ %{}) do
     normalized = normalize_otp(strategy, otp_code)

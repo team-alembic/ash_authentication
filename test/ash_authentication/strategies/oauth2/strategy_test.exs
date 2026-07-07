@@ -78,7 +78,7 @@ defmodule AshAuthentication.Strategy.OAuth2.StrategyTest do
     end
   end
 
-  describe "Strategy.action/3" do
+  describe "Strategy.action/4" do
     for action <- ~w[register sign_in]a do
       test "it delegates to `OAuth2.Actions.#{action}/2` for the #{action} action" do
         strategy = %OAuth2{}
@@ -90,7 +90,7 @@ defmodule AshAuthentication.Strategy.OAuth2.StrategyTest do
           assert rx_params == params
         end)
 
-        Strategy.action(strategy, unquote(action), params)
+        Strategy.action(strategy, unquote(action), params, [])
       end
     end
   end

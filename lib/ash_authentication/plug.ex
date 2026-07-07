@@ -91,7 +91,7 @@ defmodule AshAuthentication.Plug do
   "Access granted" message to the user.  You almost definitely want to override
   this behaviour.
   """
-  @callback handle_success(Conn.t(), activity, Resource.record() | nil, token | nil) :: Conn.t()
+  @callback handle_success(Conn.t(), activity, Resource.Record.t() | nil, token | nil) :: Conn.t()
 
   @doc """
   When there is any failure during authentication this callback is called.

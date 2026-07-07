@@ -92,7 +92,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _signed_in_user} = AshAuthentication.Strategy.action(strategy, :sign_in, params)
+      {:ok, _signed_in_user} = AshAuthentication.Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -109,7 +109,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:error, _reason} = AshAuthentication.Strategy.action(strategy, :sign_in, params)
+      {:error, _reason} = AshAuthentication.Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -131,7 +131,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, user} = AshAuthentication.Strategy.action(strategy, :register, params)
+      {:ok, user} = AshAuthentication.Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -148,7 +148,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:error, _reason} = AshAuthentication.Strategy.action(strategy, :sign_in, params)
+      {:error, _reason} = AshAuthentication.Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 
@@ -170,7 +170,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params)
+      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -191,7 +191,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params)
+      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -212,7 +212,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params)
+      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -232,7 +232,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params)
+      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -271,7 +271,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params)
+      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -296,7 +296,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params)
+      {:ok, _user} = AshAuthentication.Strategy.action(strategy, :register, params, [])
 
       Batcher.flush()
 
@@ -315,7 +315,7 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
       }
 
       strategy = Info.strategy!(Example.UserWithAuditLog, :password)
-      {:ok, _signed_in_user} = AshAuthentication.Strategy.action(strategy, :sign_in, params)
+      {:ok, _signed_in_user} = AshAuthentication.Strategy.action(strategy, :sign_in, params, [])
 
       Batcher.flush()
 

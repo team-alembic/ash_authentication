@@ -225,11 +225,6 @@ if Code.ensure_loaded?(Wax.Challenge) do
       else
         nil ->
           store_authentication_result(conn, unauthenticated_error(strategy, :verify))
-
-        _ ->
-          conn
-          |> Conn.delete_session(@session_key)
-          |> store_authentication_result(missing_challenge_error(strategy, :verify))
       end
     end
 
@@ -268,11 +263,6 @@ if Code.ensure_loaded?(Wax.Challenge) do
       else
         nil ->
           store_authentication_result(conn, unauthenticated_error(strategy, :add_credential))
-
-        _ ->
-          conn
-          |> Conn.delete_session(@session_key)
-          |> store_authentication_result(missing_challenge_error(strategy, :add_credential))
       end
     end
 

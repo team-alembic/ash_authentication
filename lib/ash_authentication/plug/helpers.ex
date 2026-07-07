@@ -18,7 +18,7 @@ defmodule AshAuthentication.Plug.Helpers do
   authentication metadata from the user. The metadata is stored separately and
   will be restored onto the user when loading from the session.
   """
-  @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
+  @spec store_in_session(Conn.t(), Resource.Record.t()) :: Conn.t()
   def store_in_session(conn, user) when is_struct(user) do
     subject_name = Info.authentication_subject_name!(user.__struct__)
 
@@ -149,7 +149,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
   @doc false
   @spec authenticate_resource_from_session(Resource.t(), map(), atom(), keyword()) ::
-          {:ok, Resource.record()} | :error
+          {:ok, Resource.Record.t()} | :error
   def authenticate_resource_from_session(resource, session, otp_app, opts) do
     options = Info.authentication_options(resource)
 
@@ -544,7 +544,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
   @spec store_authentication_result(
           Conn.t(),
-          :ok | {:ok, Resource.record()} | :error | {:error, any}
+          :ok | {:ok, Resource.Record.t()} | :error | {:error, any}
         ) ::
           Conn.t()
   def store_authentication_result(conn, :ok),

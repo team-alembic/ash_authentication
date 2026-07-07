@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.Otp.SignInHelpers do
   caller is expected to invoke this inside a transaction.
   """
   @spec get_otp_token_locked(module, String.t(), keyword) ::
-          {:ok, [Ash.Resource.record()]} | {:error, any}
+          {:ok, [Ash.Resource.Record.t()]} | {:error, any}
   def get_otp_token_locked(token_resource, jti, context_opts) do
     with {:ok, domain} <- TokenInfo.token_domain(token_resource),
          {:ok, get_token_action_name} <- TokenInfo.token_get_token_action_name(token_resource) do

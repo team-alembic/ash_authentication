@@ -13,7 +13,8 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
   require Logger
 
   @type input :: Ash.ActionInput.t() | Ash.Changeset.t() | Ash.Query.t()
-  @type result :: {:ok, Ash.Resource.record()} | {:ok, [Ash.Resource.record()]} | {:error, any()}
+  @type result ::
+          {:ok, Ash.Resource.Record.t()} | {:ok, [Ash.Resource.Record.t()]} | {:error, any()}
 
   defmodule Change do
     @moduledoc "Implements the `Ash.Resource.Change` behaviour for audit logging"

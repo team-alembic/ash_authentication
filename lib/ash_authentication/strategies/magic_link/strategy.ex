@@ -51,7 +51,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.MagicLink do
 
   @doc false
   @spec action(MagicLink.t(), Strategy.action(), map, keyword) ::
-          :ok | {:ok, Resource.record()} | {:error, any}
+          :ok | {:ok, Resource.Record.t()} | {:error, any}
   def action(strategy, :request, params, options),
     do: MagicLink.Actions.request(strategy, params, options)
 
