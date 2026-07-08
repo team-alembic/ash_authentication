@@ -25,6 +25,13 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
   @impl true
   @spec before?(module) :: boolean
   def before?(Resource.Transformers.DefaultAccept), do: true
+  # Strategy transformers add auto-generated `get_by_<identity_field>` read
+  # actions (password, magic_link). Ash's GetByReadActions transformer is what
+  # turns their `get_by:` option into an actual filter — so it must run *after*
+  # the strategy transformers have added those actions, otherwise the actions
+  # stay unfiltered and `Ash.read_one` raises MultipleResults once more than
+  # one row exists.
+  def before?(Ash.Resource.Transformers.GetByReadActions), do: true
   def before?(_), do: false
 
   @doc false
