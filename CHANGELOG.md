@@ -11,6 +11,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.12](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.11...v5.0.0-rc.12) (2026-07-08)
+
+
+
+
+### Bug Fixes:
+
+* filter auto-generated get_by_<identity_field> lookup actions (#1186) by Tom Clarke
+
+* oauth2: wire up private_key_jwt for non-Apple OIDC strategies (#1180) by sidler92
+
+* propagate Ash context opts in TOTP setup confirmation changes (#1170) by Arjan Scherpenisse
+
+### Improvements:
+
+* OAuth2/OIDC POST callback + form_post interstitial (Sign in with Apple) (#1187) by James Harton
+
+* support `private_key` in Apple strategy (#1177) by schwarz
+
 ## [v5.0.0-rc.11](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.10...v5.0.0-rc.11) (2026-06-15)
 ### Breaking Changes:
 
