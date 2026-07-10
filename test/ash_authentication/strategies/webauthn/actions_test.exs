@@ -436,4 +436,94 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert DateTime.diff(DateTime.utc_now(), parsed, :second) < 5
     end
   end
+
+  describe "add_credential/3" do
+    test "attaches a credential to an existing user without creating a new user", %{
+      strategy: strategy
+    } do
+      user =
+        Ash.create!(Example.UserWithWebAuthn, %{email: "add-cred@example.com"}, action: :create)
+
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      params = %{
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "label" => "My Phone"
+      }
+
+      assert {:ok, credential} =
+               Actions.add_credential(strategy, params,
+                 user: user,
+                 challenge: registration_challenge(fixture)
+               )
+
+      # The credential is attached to the existing user, with the attested data.
+      assert credential.user_id == user.id
+      assert credential.credential_id == fixture.credential_id
+      assert credential.label == "My Phone"
+
+      # No new user was created — `add_credential` must not behave like `register`.
+      assert {:ok, [only_user]} = Ash.read(Example.UserWithWebAuthn)
+      assert only_user.id == user.id
+    end
+
+    test "adds an additional credential alongside an existing one", %{strategy: strategy} do
+      # Register a user, which gives them their first credential.
+      first_fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      {:ok, user} =
+        Actions.register(
+          strategy,
+          %{
+            "email" => "second-key@example.com",
+            "attestation_object" => first_fixture.attestation_object,
+            "client_data_json" => first_fixture.client_data_json,
+            "raw_id" => first_fixture.raw_id
+          },
+          challenge: registration_challenge(first_fixture)
+        )
+
+      # Enrol a second passkey on the same user (a distinct credential).
+      second_fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      assert {:ok, second_credential} =
+               Actions.add_credential(
+                 strategy,
+                 %{
+                   "attestation_object" => second_fixture.attestation_object,
+                   "client_data_json" => second_fixture.client_data_json,
+                   "label" => "Backup Key"
+                 },
+                 user: user,
+                 challenge: registration_challenge(second_fixture)
+               )
+
+      assert second_credential.user_id == user.id
+
+      # Both credentials belong to the user and are distinct.
+      assert {:ok, credentials} =
+               Example.WebAuthnCredential
+               |> Ash.Query.filter(user_id == ^user.id)
+               |> Ash.read()
+
+      assert length(credentials) == 2
+
+      credential_ids = Enum.map(credentials, & &1.credential_id)
+      assert first_fixture.credential_id in credential_ids
+      assert second_fixture.credential_id in credential_ids
+    end
+  end
 end

@@ -25,7 +25,6 @@ defmodule Example.UserWithWebAuthn do
       constraints: [min_length: 2]
 
     attribute :personal_number, :string, public?: true, sensitive?: true
-    attribute :not_accepted_extra_stuff, :string
 
     create_timestamp :created_at
     update_timestamp :updated_at

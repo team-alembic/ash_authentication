@@ -28,9 +28,11 @@ defmodule AshAuthentication.Strategy.CustomFieldsTest do
     test "excludes names which don't resolve to public writable attributes" do
       strategy = Info.strategy!(Example.UserWithWebAuthn, :webauthn)
 
+      # `:created_at` exists but is a non-public, non-writable timestamp;
+      # `:no_such_attribute` doesn't resolve at all. Both must be dropped.
       strategy = %{
         strategy
-        | register_action_accept: [:not_accepted_extra_stuff, :no_such_attribute, :name]
+        | register_action_accept: [:created_at, :no_such_attribute, :name]
       }
 
       assert [{%Attribute{name: :name}, false}] = CustomFields.register_fields(strategy)
