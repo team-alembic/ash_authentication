@@ -20,10 +20,6 @@ defmodule MyApp.Accounts.WebAuthnCredential do
   webauthn_credential do
     user_resource MyApp.Accounts.User
   end
-
-  relationships do
-    belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
-  end
 end
 ```
 
@@ -33,16 +29,24 @@ The extension automatically adds:
 - `sign_count` — integer, non-nullable, defaults to `0`
 - `label` — string, defaults to `"Security Key"`
 - `last_used_at` — UTC datetime, nullable
+- A `belongs_to` relationship to `user_resource` (named `:user` by default),
+  with its foreign key attribute
 - A `unique_credential_id` identity on `credential_id`
 - A primary `:create` action accepting all credential fields
 - A primary `:update` action accepting `sign_count`, `label`, and `last_used_at`
 - A primary `:read` action
 - A primary `:destroy` action
 
-The `belongs_to` relationship to the user resource must be defined manually
-(so that Ash can derive the foreign key attribute before action validation runs).
-The extension verifies at compile time that the relationship exists and points
-to the configured `user_resource`.
+Any of the above can also be declared manually instead — the extension only
+builds what's missing, and always validates the final shape (whether it
+built a field or the resource author declared it) at compile time. For
+example, to customise the relationship:
+
+```elixir
+  relationships do
+    belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
+  end
+```
 
 All field and relationship names are configurable via the `webauthn_credential` section.
 

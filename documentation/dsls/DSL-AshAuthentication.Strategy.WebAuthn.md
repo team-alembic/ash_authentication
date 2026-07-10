@@ -68,10 +68,6 @@ defmodule MyApp.Accounts.User do
     end
   end
 
-  relationships do
-    has_many :webauthn_credentials, MyApp.Accounts.Credential
-  end
-
   identities do
     identity :unique_email, [:email]
   end
@@ -110,9 +106,11 @@ browser includes the port in the origin and `Wax` will reject the mismatch.
 You must define a separate Ash resource to store WebAuthn credentials. Add the
 `AshAuthentication.WebAuthnCredential` extension and it will automatically scaffold
 the required attributes (`credential_id`, `public_key`, `sign_count`, `label`,
-`last_used_at`), the unique identity on `credential_id`, and all four CRUD actions.
-You only need to declare the `belongs_to` relationship manually (so Ash can derive
-the foreign key before validating action `accept` lists).
+`last_used_at`), the `belongs_to` relationship back to the user resource, the
+unique identity on `credential_id`, and all four CRUD actions. The matching
+`has_many :webauthn_credentials` relationship on the user resource is scaffolded
+by the `webauthn` strategy itself. Either relationship can still be declared by
+hand if you need non-default options — whatever you don't declare is built for you.
 
 ```elixir
 defmodule MyApp.Accounts.Credential do
@@ -145,10 +143,6 @@ defmodule MyApp.Accounts.Credential do
     uuid_primary_key :id
     create_timestamp :inserted_at
     update_timestamp :updated_at
-  end
-
-  relationships do
-    belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
   end
 end
 ```
@@ -240,10 +234,6 @@ defmodule MyApp.Accounts.User do
 
   attributes do
     uuid_primary_key :id
-  end
-
-  relationships do
-    has_many :webauthn_credentials, MyApp.Accounts.Credential
   end
 
   authentication do
@@ -355,6 +345,7 @@ end
 | [`sign_in_enabled?`](#authentication-strategies-webauthn-sign_in_enabled?){: #authentication-strategies-webauthn-sign_in_enabled? } | `boolean` | `true` | Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor. |
 | [`verify_enabled?`](#authentication-strategies-webauthn-verify_enabled?){: #authentication-strategies-webauthn-verify_enabled? } | `boolean` | `true` | Whether the strategy exposes a `:verify` phase that proves possession of a passkey for an already-authenticated user. Used for second-factor and step-up flows. |
 | [`register_action_name`](#authentication-strategies-webauthn-register_action_name){: #authentication-strategies-webauthn-register_action_name } | `atom` |  | The name of the register action on the user resource. Defaults to `register_with_<strategy_name>`. |
+| [`register_action_accept`](#authentication-strategies-webauthn-register_action_accept){: #authentication-strategies-webauthn-register_action_accept } | `list(atom \| {atom, [secret?: boolean]})` | `[]` | A list of additional writable attributes to be accepted in the register action (e.g. `[:name]`). Their values are validated by the action as usual, so `allow_nil?`, constraints, and any validations on the resource apply. Attributes marked `sensitive?: true` must confirm whether they are secrets via a `{field, secret?: boolean}` entry (e.g. `[given_names: [secret?: false]]`); `secret?: true` renders a masked input, `secret?: false` a regular one. |
 | [`sign_in_action_name`](#authentication-strategies-webauthn-sign_in_action_name){: #authentication-strategies-webauthn-sign_in_action_name } | `atom` |  | The name of the sign-in action on the user resource. Defaults to `sign_in_with_<strategy_name>`. |
 | [`sign_in_with_token_action_name`](#authentication-strategies-webauthn-sign_in_with_token_action_name){: #authentication-strategies-webauthn-sign_in_with_token_action_name } | `atom` |  | The name of the action used to sign in with a short-lived token issued by a successful WebAuthn ceremony. Defaults to `sign_in_with_<strategy_name>_token`. |
 | [`verify_action_name`](#authentication-strategies-webauthn-verify_action_name){: #authentication-strategies-webauthn-verify_action_name } | `atom` |  | The name of the second-factor verify action on the user resource. Defaults to `verify_<strategy_name>`. |

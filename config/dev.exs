@@ -22,7 +22,7 @@ config :ash_authentication,
   ash_domains: [
     AshAuthentication.Test.PermissiveDomain,
     Example,
-    ExampleMultiTenant,
+    ExampleMultiTenant
   ]
 
 config :ash_authentication, Example.Repo,
