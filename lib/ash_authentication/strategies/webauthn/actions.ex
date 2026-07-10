@@ -301,7 +301,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
             {:ok, [Ash.Resource.Record.t()]} | {:error, any}
     def list_credentials(strategy, user, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
-      action = credential_action_name(strategy.credential_resource, :read_action_name, :read)
+      action = credential_action_name(strategy.credential_resource, :read_action_name)
 
       strategy.credential_resource
       |> Query.new()
@@ -339,7 +339,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
             {:ok, Ash.Resource.Record.t()} | {:error, any}
     def update_credential_label(strategy, credential_id, new_label, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
-      action = credential_action_name(strategy.credential_resource, :update_action_name, :update)
+      action = credential_action_name(strategy.credential_resource, :update_action_name)
 
       with {:ok, credential} <- Ash.get(strategy.credential_resource, credential_id, ash_opts) do
         credential
@@ -556,7 +556,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       }
 
       ash_opts = internal_ash_opts(tenant)
-      action = credential_action_name(strategy.credential_resource, :create_action_name, :create)
+      action = credential_action_name(strategy.credential_resource, :create_action_name)
 
       strategy.credential_resource
       |> Changeset.new()
@@ -567,10 +567,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp update_sign_count(strategy, credential_id, new_count, tenant) do
       ash_opts = internal_ash_opts(tenant)
-      read_action = credential_action_name(strategy.credential_resource, :read_action_name, :read)
+      read_action = credential_action_name(strategy.credential_resource, :read_action_name)
 
       update_action =
-        credential_action_name(strategy.credential_resource, :update_action_name, :update)
+        credential_action_name(strategy.credential_resource, :update_action_name)
 
       strategy.credential_resource
       |> Query.new()
@@ -612,13 +612,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
     end
 
-    defp credential_action_name(credential_resource, field, default) do
-      credential_resource
-      |> apply_credential_info(field)
-      |> case do
-        {:ok, name} -> name
-        _ -> default
-      end
+    defp credential_action_name(credential_resource, field) do
+      # These action-name options are declared with defaults in the
+      # WebAuthnCredential DSL, so the getters always return `{:ok, name}`.
+      {:ok, name} = apply_credential_info(credential_resource, field)
+      name
     end
 
     defp apply_credential_info(resource, :read_action_name),
