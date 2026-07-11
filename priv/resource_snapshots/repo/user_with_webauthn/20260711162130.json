@@ -1,18 +1,6 @@
 {
   "attributes": [
     {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "confirmed_at",
-      "type": "utc_datetime_usec"
-    },
-    {
       "allow_nil?": false,
       "default": "fragment(\"gen_random_uuid()\")",
       "generated?": false,
@@ -33,7 +21,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "username",
+      "source": "email",
       "type": "citext"
     },
     {
@@ -45,19 +33,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "extra_stuff",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "not_accepted_extra_stuff",
+      "source": "name",
       "type": "text"
     },
     {
@@ -70,18 +46,6 @@
       "scale": null,
       "size": null,
       "source": "personal_number",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "hashed_password",
       "type": "text"
     },
     {
@@ -115,19 +79,19 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "C78023B782FF10A7F02C0F106E9FA8C0137EA291718B56DAE869E1BFAB3C394C",
+  "hash": "9F52278246C0EB83C0930EF190D038070E03FF0965367A02D493BFBCF8235A00",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "user_username_index",
+      "index_name": "user_with_webauthn_unique_email_webauthn_index",
       "keys": [
         {
           "type": "atom",
-          "value": "username"
+          "value": "email"
         }
       ],
-      "name": "username",
+      "name": "unique_email_webauthn",
       "nils_distinct?": true,
       "where": null
     }
@@ -139,5 +103,5 @@
   },
   "repo": "Elixir.Example.Repo",
   "schema": null,
-  "table": "user"
+  "table": "user_with_webauthn"
 }

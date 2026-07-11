@@ -33,6 +33,18 @@
       "references": null,
       "scale": null,
       "size": null,
+      "source": "discoverable",
+      "type": "boolean"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
       "source": "backed_up",
       "type": "boolean"
     },
@@ -185,7 +197,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "D9ECB9A785B7E4CBEB5EB34C116E792E350478549C8B7CFCCF29FA993B7DDE39",
+  "hash": "E55C1AF0ED474596B74AF1824A032A8F3B52A0054B5AFC74B9B64FB4DD9A5F1D",
   "identities": [
     {
       "all_tenants?": false,

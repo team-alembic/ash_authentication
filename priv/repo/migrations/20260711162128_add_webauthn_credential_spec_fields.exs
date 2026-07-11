@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule Example.Repo.Migrations.AddWebauthnWithoutIdentityExample do
+defmodule Example.Repo.Migrations.AddWebauthnCredentialSpecFields do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -12,6 +12,14 @@ defmodule Example.Repo.Migrations.AddWebauthnWithoutIdentityExample do
   use Ecto.Migration
 
   def up do
+    alter table(:webauthn_credentials) do
+      add(:discoverable, :boolean)
+      add(:backed_up, :boolean)
+      add(:backup_eligible, :boolean)
+      add(:transports, {:array, :text})
+      add(:user_handle, :binary)
+    end
+
     create table(:user_with_webauthn_no_identity, primary_key: false) do
       add(:id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true)
 
@@ -26,9 +34,19 @@ defmodule Example.Repo.Migrations.AddWebauthnWithoutIdentityExample do
       )
     end
 
+    alter table(:user_with_webauthn) do
+      add(:name, :text)
+      add(:personal_number, :text)
+    end
+
     create table(:webauthn_no_identity_credentials, primary_key: false) do
       add(:last_used_at, :utc_datetime_usec)
       add(:label, :text, default: "Security Key")
+      add(:discoverable, :boolean)
+      add(:backed_up, :boolean)
+      add(:backup_eligible, :boolean)
+      add(:transports, {:array, :text})
+      add(:user_handle, :binary)
       add(:sign_count, :bigint, null: false, default: 0)
       add(:public_key, :binary, null: false)
       add(:credential_id, :binary, null: false)
@@ -51,9 +69,7 @@ defmodule Example.Repo.Migrations.AddWebauthnWithoutIdentityExample do
           name: "webauthn_no_identity_credentials_user_id_fkey",
           type: :uuid,
           prefix: "public"
-        ),
-        null: false
-      )
+        ), null: false)
     end
 
     create unique_index(:webauthn_no_identity_credentials, [:credential_id],
@@ -77,6 +93,19 @@ defmodule Example.Repo.Migrations.AddWebauthnWithoutIdentityExample do
 
     drop(table(:webauthn_no_identity_credentials))
 
+    alter table(:user_with_webauthn) do
+      remove(:personal_number)
+      remove(:name)
+    end
+
     drop(table(:user_with_webauthn_no_identity))
+
+    alter table(:webauthn_credentials) do
+      remove(:user_handle)
+      remove(:transports)
+      remove(:backup_eligible)
+      remove(:backed_up)
+      remove(:discoverable)
+    end
   end
 end
