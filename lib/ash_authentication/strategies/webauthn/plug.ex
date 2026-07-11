@@ -87,6 +87,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
           userVerification: strategy.user_verification,
           residentKey: strategy.resident_key
         },
+        extensions: %{credProps: true},
         attestation: strategy.attestation,
         timeout: strategy.timeout
       }

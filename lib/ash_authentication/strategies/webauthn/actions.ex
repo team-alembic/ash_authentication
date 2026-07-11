@@ -496,8 +496,18 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         strategy.backed_up_field => auth_data.flag_credential_backed_up
       }
       |> maybe_put_transports(strategy, params["transports"])
+      |> maybe_put_discoverable(strategy, params["cred_props"])
       |> maybe_put_user_handle(strategy, user_handle)
     end
+
+    # The `credProps` client extension result, passed by the client as it
+    # came from `getClientExtensionResults()`. Client-reported (not
+    # signature-covered) and optional — browsers may omit it — so only an
+    # explicit boolean is stored.
+    defp maybe_put_discoverable(attrs, strategy, %{"rk" => rk}) when is_boolean(rk),
+      do: Map.put(attrs, strategy.discoverable_field, rk)
+
+    defp maybe_put_discoverable(attrs, _strategy, _cred_props), do: attrs
 
     @known_transports ~w(usb nfc ble smart-card hybrid internal)
 

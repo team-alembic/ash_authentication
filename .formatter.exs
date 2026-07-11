@@ -67,6 +67,7 @@ spark_locals_without_parens = [
   credentials_relationship_name: 1,
   delete_credential_action_name: 1,
   destroy_action_name: 1,
+  discoverable_field: 1,
   display_name_field: 1,
   domain: 1,
   dynamic_oidc: 0,

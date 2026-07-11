@@ -56,6 +56,7 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
          {:ok, backup_eligible_field} <-
            Info.webauthn_credential_backup_eligible_field(dsl_state),
          {:ok, backed_up_field} <- Info.webauthn_credential_backed_up_field(dsl_state),
+         {:ok, discoverable_field} <- Info.webauthn_credential_discoverable_field(dsl_state),
          {:ok, label_field} <- Info.webauthn_credential_label_field(dsl_state),
          {:ok, last_used_at_field} <- Info.webauthn_credential_last_used_at_field(dsl_state),
          {:ok, user_id_field} <- Info.webauthn_credential_user_id_field(dsl_state),
@@ -121,6 +122,13 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
            ),
          :ok <- validate_attribute(dsl_state, backed_up_field, :boolean, allow_nil?: true),
          {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, discoverable_field, :boolean,
+             allow_nil?: true,
+             writable?: true,
+             public?: true
+           ),
+         :ok <- validate_attribute(dsl_state, discoverable_field, :boolean, allow_nil?: true),
+         {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, label_field, :string,
              default: "Security Key",
              writable?: true,
@@ -166,6 +174,7 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
                  transports_field,
                  backup_eligible_field,
                  backed_up_field,
+                 discoverable_field,
                  label_field,
                  user_id_field
                ]

@@ -215,7 +215,7 @@ section is maintained as the implementation evolves.
 | `user` (id/name/displayName) | ✅ | Random ≤64-byte handle for new users (no PII, per spec); stable, shared handle when adding credentials to an existing user. Persisted on the credential as `user_handle` |
 | `pubKeyCredParams` | ✅ | ES256, EdDSA, ES384/512, PS256/384/512, RS256/384/512 in preference order |
 | `excludeCredentials` | ✅ | The actor's credentials when adding a passkey; identity-matched credentials on registration in identity mode |
-| `authenticatorSelection` (attachment, residentKey, userVerification) | ✅ | All configurable |
+| `authenticatorSelection` (attachment, residentKey, userVerification) | ✅ | All configurable. Whether a credential actually ended up discoverable is captured via `credProps` (see Extensions) |
 | Attestation conveyance | ✅ | `"none"`, `"indirect"`, `"direct"`, `"enterprise"`; accepted attestation types and trust-root verification configurable (see [Attestation](#attestation)) |
 | `timeout` | ✅ | Configurable |
 
@@ -236,7 +236,7 @@ section is maintained as the implementation evolves.
 
 | Extension | Status |
 |---|---|
-| `credProps` | ❌ Planned |
+| `credProps` | ✅ Requested at registration; the client-reported `rk` result is stored as `discoverable` on the credential (nullable — browsers may omit it) |
 | `appid` (U2F migration) | ❌ Not planned |
 | `prf`, `largeBlob`, `credProtect` | ❌ Not planned |
 

@@ -128,6 +128,50 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert credential.backed_up == true
     end
 
+    test "stores the client-reported credProps.rk result", %{strategy: strategy} do
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      params = %{
+        "email" => "credprops-user@example.com",
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "raw_id" => fixture.raw_id,
+        "cred_props" => %{"rk" => true}
+      }
+
+      assert {:ok, user} =
+               Actions.register(strategy, params, challenge: registration_challenge(fixture))
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.discoverable == true
+    end
+
+    test "leaves discoverable nil when credProps is absent or malformed", %{strategy: strategy} do
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      params = %{
+        "email" => "no-credprops@example.com",
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "raw_id" => fixture.raw_id,
+        "cred_props" => %{"rk" => "not-a-boolean"}
+      }
+
+      assert {:ok, user} =
+               Actions.register(strategy, params, challenge: registration_challenge(fixture))
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert is_nil(credential.discoverable)
+    end
+
     test "persists register_action_accept fields from params", %{strategy: strategy} do
       fixture =
         WebAuthnFixtures.generate_registration(

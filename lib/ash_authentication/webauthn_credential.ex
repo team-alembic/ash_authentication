@@ -37,6 +37,8 @@ defmodule AshAuthentication.WebAuthnCredential do
     (whether the credential can be synced/backed up)
   - `backed_up` — boolean, nullable; the authenticator data BS flag (whether
     the credential is currently backed up), refreshed on each assertion
+  - `discoverable` — boolean, nullable; the client-reported `credProps.rk`
+    value (whether the credential is a discoverable/resident key)
   - `label` — string, defaults to `"Security Key"`
   - `last_used_at` — UTC datetime, nullable
   - A `belongs_to` relationship to `user_resource` (named `:user` by default),
@@ -112,6 +114,12 @@ defmodule AshAuthentication.WebAuthnCredential do
           doc:
             "The name of the attribute that stores the authenticator data BS (backup state) flag.",
           default: :backed_up
+        ],
+        discoverable_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute that stores the client-reported `credProps.rk` extension result (whether the credential is discoverable).",
+          default: :discoverable
         ],
         label_field: [
           type: :atom,

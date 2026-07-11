@@ -36,6 +36,8 @@ The extension automatically adds:
   (whether the credential can be synced/backed up)
 - `backed_up` — boolean, nullable; the authenticator data BS flag (whether
   the credential is currently backed up), refreshed on each assertion
+- `discoverable` — boolean, nullable; the client-reported `credProps.rk`
+  value (whether the credential is a discoverable/resident key)
 - `label` — string, defaults to `"Security Key"`
 - `last_used_at` — UTC datetime, nullable
 - A `belongs_to` relationship to `user_resource` (named `:user` by default),
@@ -80,6 +82,7 @@ Configuration for this WebAuthn credential resource.
 | [`transports_field`](#webauthn_credential-transports_field){: #webauthn_credential-transports_field } | `atom` | `:transports` | The name of the attribute that stores the transports reported by the client at registration. |
 | [`backup_eligible_field`](#webauthn_credential-backup_eligible_field){: #webauthn_credential-backup_eligible_field } | `atom` | `:backup_eligible` | The name of the attribute that stores the authenticator data BE (backup eligible) flag. |
 | [`backed_up_field`](#webauthn_credential-backed_up_field){: #webauthn_credential-backed_up_field } | `atom` | `:backed_up` | The name of the attribute that stores the authenticator data BS (backup state) flag. |
+| [`discoverable_field`](#webauthn_credential-discoverable_field){: #webauthn_credential-discoverable_field } | `atom` | `:discoverable` | The name of the attribute that stores the client-reported `credProps.rk` extension result (whether the credential is discoverable). |
 | [`label_field`](#webauthn_credential-label_field){: #webauthn_credential-label_field } | `atom` | `:label` | The name of the attribute that stores the human-readable credential label. |
 | [`last_used_at_field`](#webauthn_credential-last_used_at_field){: #webauthn_credential-last_used_at_field } | `atom` | `:last_used_at` | The name of the optional attribute that stores when the credential was last used. |
 | [`user_id_field`](#webauthn_credential-user_id_field){: #webauthn_credential-user_id_field } | `atom` | `:user_id` | The name of the foreign key attribute referencing the user (from the belongs_to). |

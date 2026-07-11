@@ -258,6 +258,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "The name of the attribute on the credential resource storing the authenticator data BS (backup state) flag. Refreshed on each assertion.",
           default: :backed_up
         ],
+        discoverable_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute on the credential resource storing the client-reported `credProps.rk` extension result (whether the credential is discoverable).",
+          default: :discoverable
+        ],
         label_field: [
           type: :atom,
           doc: "The name of the label attribute on the credential resource.",

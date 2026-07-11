@@ -139,6 +139,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert body["excludeCredentials"] == []
     end
 
+    test "requests the credProps extension", %{strategy: strategy} do
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+      assert body["extensions"] == %{"credProps" => true}
+    end
+
     test "advertises pubKeyCredParams in preference order", %{strategy: strategy} do
       conn =
         :get
