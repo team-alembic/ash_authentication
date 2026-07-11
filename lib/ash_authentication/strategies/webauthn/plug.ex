@@ -31,10 +31,33 @@ if Code.ensure_loaded?(Wax.Challenge) do
     @doc "Generate and return a registration challenge."
     @spec registration_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
     def registration_challenge(conn, strategy) do
-      send_registration_challenge(conn, strategy, new_user_descriptor(conn, strategy))
+      send_registration_challenge(
+        conn,
+        strategy,
+        new_user_descriptor(conn, strategy),
+        registration_exclude_ids(conn, strategy)
+      )
     end
 
-    defp send_registration_challenge(conn, strategy, user_descriptor) do
+    # Credentials already registered to the identity being (re-)registered,
+    # so the authenticator refuses to enroll the same key twice. Only
+    # meaningful in identity-required mode when the form supplied an identity;
+    # in passkey-first mode there is nothing to look the user up by. This
+    # doesn't leak account existence beyond what the register action already
+    # reveals via its unique-identity error.
+    defp registration_exclude_ids(conn, strategy) do
+      identity_value = presence(conn.params[to_string(strategy.identity_field)])
+
+      if strategy.require_identity? && identity_value do
+        strategy
+        |> lookup_user_credentials(identity_value, get_tenant(conn))
+        |> Enum.map(fn {cred_id, _cose_key} -> cred_id end)
+      else
+        []
+      end
+    end
+
+    defp send_registration_challenge(conn, strategy, user_descriptor, exclude_credential_ids) do
       tenant = get_tenant(conn)
 
       {:ok, challenge} =
@@ -48,6 +71,11 @@ if Code.ensure_loaded?(Wax.Challenge) do
         rp: %{id: rp_id, name: rp_name},
         user: user_descriptor,
         pubKeyCredParams: @pub_key_cred_params,
+        excludeCredentials:
+          Enum.map(
+            exclude_credential_ids,
+            &%{id: Base.url_encode64(&1, padding: false), type: "public-key"}
+          ),
         authenticatorSelection: %{
           authenticatorAttachment: strategy.authenticator_attachment,
           userVerification: strategy.user_verification,
@@ -103,9 +131,12 @@ if Code.ensure_loaded?(Wax.Challenge) do
     # existing credential when there is one, otherwise fall back to the
     # primary key (stable, and what our discoverable-credential lookup
     # resolves anyway).
-    defp actor_user_descriptor(strategy, actor, tenant) do
+    defp actor_user_descriptor(strategy, actor, credentials) do
       [primary_key] = Ash.Resource.Info.primary_key(strategy.resource)
-      handle = existing_user_handle(strategy, actor, tenant) || pk_handle(actor, primary_key)
+
+      handle =
+        Enum.find_value(credentials, &Map.get(&1, strategy.user_handle_field)) ||
+          pk_handle(actor, primary_key)
 
       name =
         case Map.get(actor, strategy.identity_field) do
@@ -121,21 +152,6 @@ if Code.ensure_loaded?(Wax.Challenge) do
     end
 
     defp pk_handle(actor, primary_key), do: actor |> Map.fetch!(primary_key) |> to_string()
-
-    defp existing_user_handle(strategy, actor, tenant) do
-      ash_opts = [authorize?: false]
-      ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
-
-      case Ash.load(actor, [strategy.credentials_relationship_name], ash_opts) do
-        {:ok, loaded} ->
-          loaded
-          |> Map.get(strategy.credentials_relationship_name, [])
-          |> Enum.find_value(&Map.get(&1, strategy.user_handle_field))
-
-        _ ->
-          nil
-      end
-    end
 
     # Recover the user handle minted at challenge time so it can be stored
     # alongside the credential. Read before the session challenge is deleted.
@@ -332,8 +348,11 @@ if Code.ensure_loaded?(Wax.Challenge) do
           store_authentication_result(conn, unauthenticated_error(strategy, :add_credential))
 
         actor ->
-          user_descriptor = actor_user_descriptor(strategy, actor, get_tenant(conn))
-          send_registration_challenge(conn, strategy, user_descriptor)
+          credentials = load_actor_credentials(strategy, actor, get_tenant(conn))
+          user_descriptor = actor_user_descriptor(strategy, actor, credentials)
+          exclude_ids = Enum.map(credentials, &Map.get(&1, strategy.credential_id_field))
+
+          send_registration_challenge(conn, strategy, user_descriptor, exclude_ids)
       end
     end
 
@@ -459,17 +478,20 @@ if Code.ensure_loaded?(Wax.Challenge) do
     # FIXED: Look up credentials for a SPECIFIC user by identity field.
     # The original version read ALL credentials for ALL users.
     defp lookup_actor_credentials(strategy, actor, tenant) do
+      strategy
+      |> load_actor_credentials(actor, tenant)
+      |> Enum.map(fn cred ->
+        {Map.get(cred, strategy.credential_id_field), Map.get(cred, strategy.public_key_field)}
+      end)
+    end
+
+    defp load_actor_credentials(strategy, actor, tenant) do
       ash_opts = [authorize?: false]
       ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
 
       case Ash.load(actor, [strategy.credentials_relationship_name], ash_opts) do
         {:ok, loaded} ->
-          loaded
-          |> Map.get(strategy.credentials_relationship_name, [])
-          |> Enum.map(fn cred ->
-            {Map.get(cred, strategy.credential_id_field),
-             Map.get(cred, strategy.public_key_field)}
-          end)
+          Map.get(loaded, strategy.credentials_relationship_name, [])
 
         _ ->
           []

@@ -8,6 +8,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
   import Plug.Test
   alias AshAuthentication.Info
   alias AshAuthentication.Strategy.WebAuthn
+  alias AshAuthentication.Test.WebAuthnFixtures
 
   @moduletag feature: :webauthn
 
@@ -85,6 +86,59 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert body["user"]["displayName"] == "Simon"
     end
 
+    test "excludes existing credentials when the identity is known", %{strategy: strategy} do
+      user =
+        Example.UserWithWebAuthn
+        |> Ash.Changeset.for_create(:create, %{email: "exclude-test@example.com"})
+        |> Ash.create!()
+
+      fixture = WebAuthnFixtures.generate_registration()
+
+      build_webauthn_credential(user, %{
+        credential_id: fixture.credential_id,
+        public_key: fixture.cose_key
+      })
+
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{
+          "email" => "exclude-test@example.com"
+        })
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+
+      assert [%{"id" => encoded_id, "type" => "public-key"}] = body["excludeCredentials"]
+      assert Base.url_decode64!(encoded_id, padding: false) == fixture.credential_id
+    end
+
+    test "sends no exclusions when no identity is supplied", %{strategy: strategy} do
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+      assert body["excludeCredentials"] == []
+    end
+
+    test "sends no exclusions in passkey-first mode" do
+      strategy = Info.strategy!(Example.UserWithWebAuthnNoIdentity, :webauthn)
+
+      conn =
+        :get
+        |> conn("/user_with_webauthn_no_identity/webauthn/registration_challenge", %{
+          "email" => "irrelevant@example.com"
+        })
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+      assert body["excludeCredentials"] == []
+    end
+
     test "advertises pubKeyCredParams in preference order", %{strategy: strategy} do
       conn =
         :get
@@ -153,6 +207,36 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       # No prior credentials, so the handle falls back to the primary key
       assert handle == to_string(user.id)
       assert body["user"]["name"] == "handle@example.com"
+    end
+
+    test "reuses the stored handle and excludes existing credentials", %{strategy: strategy} do
+      user =
+        Example.UserWithWebAuthn
+        |> Ash.Changeset.for_create(:create, %{email: "exclude-add@example.com"})
+        |> Ash.create!()
+
+      fixture = WebAuthnFixtures.generate_registration()
+      stored_handle = :crypto.strong_rand_bytes(32)
+
+      build_webauthn_credential(user, %{
+        credential_id: fixture.credential_id,
+        public_key: fixture.cose_key,
+        user_handle: stored_handle
+      })
+
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/add_credential_challenge", %{})
+        |> SessionPipeline.call([])
+        |> Ash.PlugHelpers.set_actor(user)
+        |> WebAuthn.Plug.add_credential_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+
+      assert Base.url_decode64!(body["user"]["id"], padding: false) == stored_handle
+
+      assert [%{"id" => encoded_id, "type" => "public-key"}] = body["excludeCredentials"]
+      assert Base.url_decode64!(encoded_id, padding: false) == fixture.credential_id
     end
   end
 
