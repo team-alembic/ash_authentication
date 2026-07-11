@@ -234,6 +234,52 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
     end
   end
 
+  defp register_user(strategy, email) do
+    reg_fixture =
+      WebAuthnFixtures.generate_registration(
+        origin: "https://example.com",
+        rp_id: "example.com"
+      )
+
+    {:ok, user} =
+      Actions.register(
+        strategy,
+        %{
+          "email" => email,
+          "attestation_object" => reg_fixture.attestation_object,
+          "client_data_json" => reg_fixture.client_data_json,
+          "raw_id" => reg_fixture.raw_id
+        },
+        challenge: registration_challenge(reg_fixture)
+      )
+
+    {user, reg_fixture}
+  end
+
+  defp sign_in_with_count(strategy, reg_fixture, email, sign_count) do
+    auth_fixture = WebAuthnFixtures.generate_authentication(reg_fixture, sign_count: sign_count)
+
+    auth_challenge = %Wax.Challenge{
+      type: :authentication,
+      bytes: auth_fixture.challenge_bytes,
+      origin: "https://example.com",
+      rp_id: "example.com",
+      allow_credentials: [{reg_fixture.credential_id, reg_fixture.cose_key}],
+      origin_verify_fun: {Wax, :origins_match?, []},
+      issued_at: System.system_time(:second)
+    }
+
+    params = %{
+      "email" => email,
+      "raw_id" => Base.url_encode64(auth_fixture.raw_id, padding: false),
+      "authenticator_data" => auth_fixture.authenticator_data,
+      "signature" => auth_fixture.signature,
+      "client_data_json" => auth_fixture.client_data_json
+    }
+
+    Actions.sign_in(strategy, params, challenge: auth_challenge)
+  end
+
   defp registration_challenge(fixture) do
     %Wax.Challenge{
       type: :attestation,
@@ -358,6 +404,51 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
 
       {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
       assert credential.backed_up == true
+    end
+
+    test "rejects an assertion whose sign count did not increase", %{strategy: strategy} do
+      {user, reg_fixture} = register_user(strategy, "clone-detect@example.com")
+
+      # A legitimate assertion moves the counter to 5
+      assert {:ok, _} =
+               sign_in_with_count(strategy, reg_fixture, "clone-detect@example.com", 5)
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.sign_count == 5
+
+      # A regressed counter is the clone signal — rejected by default
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               sign_in_with_count(strategy, reg_fixture, "clone-detect@example.com", 3)
+
+      # The stored high-water mark is untouched
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.sign_count == 5
+    end
+
+    test "accepts constant-zero counters (synced passkeys)", %{strategy: strategy} do
+      {_user, reg_fixture} = register_user(strategy, "synced-passkey@example.com")
+
+      assert {:ok, _} =
+               sign_in_with_count(strategy, reg_fixture, "synced-passkey@example.com", 0)
+
+      assert {:ok, _} =
+               sign_in_with_count(strategy, reg_fixture, "synced-passkey@example.com", 0)
+    end
+
+    test "sign_count_policy :log allows the assertion but keeps the stored count", %{
+      strategy: strategy
+    } do
+      strategy = %{strategy | sign_count_policy: :log}
+      {user, reg_fixture} = register_user(strategy, "lenient-clone@example.com")
+
+      assert {:ok, _} =
+               sign_in_with_count(strategy, reg_fixture, "lenient-clone@example.com", 5)
+
+      assert {:ok, _} =
+               sign_in_with_count(strategy, reg_fixture, "lenient-clone@example.com", 3)
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.sign_count == 5
     end
 
     test "returns error for unknown identity", %{strategy: strategy} do

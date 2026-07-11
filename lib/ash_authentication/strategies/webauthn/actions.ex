@@ -192,7 +192,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
                challenge,
                [{raw_id, Map.get(credential, strategy.public_key_field)}]
              ),
-           :ok <- best_effort_update_assertion_state(strategy, raw_id, auth_data, tenant) do
+           :ok <- handle_sign_count(strategy, action_name, credential, auth_data, tenant) do
         {:ok, credential, user}
       else
         :error -> base64_error(strategy, action_name)
@@ -521,6 +521,51 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp maybe_put_user_handle(attrs, strategy, user_handle),
       do: Map.put(attrs, strategy.user_handle_field, user_handle)
+
+    # Sign count check per WebAuthn §6.1.1: when the authenticator implements
+    # a counter (either side nonzero), a count that hasn't increased over the
+    # stored value signals a possible clone. Synced passkeys report a constant
+    # 0 on both sides and never trip this. On success the stored state is
+    # refreshed; how an anomaly is handled depends on `sign_count_policy`.
+    defp handle_sign_count(strategy, action_name, credential, auth_data, tenant) do
+      credential_id = Map.get(credential, strategy.credential_id_field)
+      stored_count = Map.get(credential, strategy.sign_count_field) || 0
+      new_count = auth_data.sign_count
+      anomaly? = (stored_count != 0 or new_count != 0) and new_count <= stored_count
+
+      case {anomaly?, strategy.sign_count_policy} do
+        {false, _policy} ->
+          best_effort_update_assertion_state(strategy, credential_id, auth_data, tenant)
+
+        {true, :ignore} ->
+          best_effort_update_assertion_state(strategy, credential_id, auth_data, tenant)
+
+        {true, :log} ->
+          log_sign_count_anomaly(strategy, credential_id, stored_count, new_count)
+          # Deliberately skip the update: keeping the stored high-water mark
+          # means a cloned authenticator keeps tripping this check.
+          :ok
+
+        {true, :reject} ->
+          log_sign_count_anomaly(strategy, credential_id, stored_count, new_count)
+
+          {:error,
+           auth_failed(
+             strategy,
+             action_name,
+             "Sign count did not increase (stored #{stored_count}, got #{new_count}); " <>
+               "possible cloned authenticator"
+           )}
+      end
+    end
+
+    defp log_sign_count_anomaly(strategy, credential_id, stored_count, new_count) do
+      Logger.warning(
+        "WebAuthn sign count anomaly for credential #{Base.encode64(credential_id)} " <>
+          "(strategy #{inspect(strategy.name)}): stored #{stored_count}, got #{new_count} — " <>
+          "possible cloned authenticator"
+      )
+    end
 
     defp best_effort_update_assertion_state(strategy, credential_id, auth_data, tenant) do
       update_assertion_state(strategy, credential_id, auth_data, tenant)

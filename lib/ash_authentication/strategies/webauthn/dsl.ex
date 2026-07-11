@@ -188,6 +188,25 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication.",
           default: :required
         ],
+        sign_count_policy: [
+          type: {:in, [:reject, :log, :ignore]},
+          doc: """
+          How to react when an assertion's sign count has not increased over the
+          stored value — the WebAuthn signal that the authenticator may have been
+          cloned (§6.1.1).
+
+          The check only fires when the authenticator actually implements a
+          counter: synced passkeys report a constant `0` on both sides and are
+          never flagged.
+
+          - `:reject` (default) — fail the ceremony with an authentication error.
+          - `:log` — allow the ceremony but log a warning; the stored sign count
+            is deliberately **not** lowered, so a cloned authenticator keeps
+            tripping the check.
+          - `:ignore` — no check; the stored count is simply overwritten.
+          """,
+          default: :reject
+        ],
         credential_id_field: [
           type: :atom,
           doc: "The name of the credential ID attribute on the credential resource.",
