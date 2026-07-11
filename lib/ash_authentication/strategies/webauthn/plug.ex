@@ -51,7 +51,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
       if strategy.require_identity? && identity_value do
         strategy
         |> lookup_user_credentials(identity_value, get_tenant(conn))
-        |> Enum.map(fn {cred_id, _cose_key} -> cred_id end)
+        |> Enum.map(&Map.get(&1, strategy.credential_id_field))
       else
         []
       end
@@ -192,13 +192,15 @@ if Code.ensure_loaded?(Wax.Challenge) do
       identity_value = params[to_string(strategy.identity_field)]
 
       # FIXED: Look up credentials for a SPECIFIC user, not all credentials
-      allow_credentials =
+      credentials =
         if identity_value do
           lookup_user_credentials(strategy, identity_value, tenant)
         else
           # Discoverable credential flow (passkeys) - no allow_credentials needed
           []
         end
+
+      allow_credentials = wax_allow_credentials(strategy, credentials)
 
       {:ok, challenge} =
         WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
@@ -210,10 +212,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
         rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
         userVerification: strategy.user_verification,
         timeout: strategy.timeout,
-        allowCredentials:
-          Enum.map(allow_credentials, fn {cred_id, _key} ->
-            %{id: Base.url_encode64(cred_id, padding: false), type: "public-key"}
-          end)
+        allowCredentials: allow_credentials_entries(strategy, credentials)
       }
 
       # Store challenge as serializable map
@@ -277,7 +276,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
 
         actor ->
           tenant = get_tenant(conn)
-          allow_credentials = lookup_actor_credentials(strategy, actor, tenant)
+          credentials = load_actor_credentials(strategy, actor, tenant)
+          allow_credentials = wax_allow_credentials(strategy, credentials)
 
           {:ok, challenge} =
             WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
@@ -289,10 +289,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
             rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
             userVerification: strategy.user_verification,
             timeout: strategy.timeout,
-            allowCredentials:
-              Enum.map(allow_credentials, fn {cred_id, _key} ->
-                %{id: Base.url_encode64(cred_id, padding: false), type: "public-key"}
-              end)
+            allowCredentials: allow_credentials_entries(strategy, credentials)
           }
 
           challenge_data = %{
@@ -475,13 +472,28 @@ if Code.ensure_loaded?(Wax.Challenge) do
       "#{scheme}://#{host}#{port_segment}"
     end
 
-    # FIXED: Look up credentials for a SPECIFIC user by identity field.
-    # The original version read ALL credentials for ALL users.
-    defp lookup_actor_credentials(strategy, actor, tenant) do
-      strategy
-      |> load_actor_credentials(actor, tenant)
-      |> Enum.map(fn cred ->
+    # The {credential_id, cose_key} pairs Wax needs to verify an assertion
+    # against the challenge.
+    defp wax_allow_credentials(strategy, credentials) do
+      Enum.map(credentials, fn cred ->
         {Map.get(cred, strategy.credential_id_field), Map.get(cred, strategy.public_key_field)}
+      end)
+    end
+
+    # The allowCredentials entries sent to the browser. Transports hints (when
+    # captured at registration) let the client route straight to the right
+    # authenticator instead of prompting for every kind it supports.
+    defp allow_credentials_entries(strategy, credentials) do
+      Enum.map(credentials, fn cred ->
+        entry = %{
+          id: Base.url_encode64(Map.get(cred, strategy.credential_id_field), padding: false),
+          type: "public-key"
+        }
+
+        case Map.get(cred, strategy.transports_field) do
+          [_ | _] = transports -> Map.put(entry, :transports, transports)
+          _ -> entry
+        end
       end)
     end
 
@@ -508,6 +520,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
         []
     end
 
+    # FIXED: Look up credentials for a SPECIFIC user by identity field.
+    # The original version read ALL credentials for ALL users.
     defp lookup_user_credentials(strategy, identity_value, tenant) do
       context = %{private: %{ash_authentication?: true}}
       ash_opts = [authorize?: false]
@@ -526,11 +540,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
            # Then load their credentials via the relationship
            {:ok, user} <-
              Ash.load(user, [strategy.credentials_relationship_name], ash_opts) do
-        user
-        |> Map.get(strategy.credentials_relationship_name, [])
-        |> Enum.map(fn cred ->
-          {Map.get(cred, strategy.credential_id_field), Map.get(cred, strategy.public_key_field)}
-        end)
+        Map.get(user, strategy.credentials_relationship_name, [])
       else
         _ -> []
       end

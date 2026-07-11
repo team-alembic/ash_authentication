@@ -101,6 +101,33 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert credential.user_handle == user_handle
     end
 
+    test "stores transports and backup flags from the ceremony", %{strategy: strategy} do
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com",
+          # UP | BE | BS | AT — a synced passkey
+          flags: 0x59
+        )
+
+      params = %{
+        "email" => "flags-user@example.com",
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "raw_id" => fixture.raw_id,
+        "transports" => ["internal", "hybrid", "carrier-pigeon"]
+      }
+
+      assert {:ok, user} =
+               Actions.register(strategy, params, challenge: registration_challenge(fixture))
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      # Unknown transports are dropped, known ones stored in order
+      assert credential.transports == ["internal", "hybrid"]
+      assert credential.backup_eligible == true
+      assert credential.backed_up == true
+    end
+
     test "persists register_action_accept fields from params", %{strategy: strategy} do
       fixture =
         WebAuthnFixtures.generate_registration(
@@ -279,6 +306,58 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert to_string(user.email) == "signin-test@example.com"
       # Token should be generated (tokens are enabled on Example.UserWithWebAuthn)
       assert user.__metadata__[:token]
+    end
+
+    test "refreshes the backup state flag on assertion", %{strategy: strategy} do
+      # Register as backup-eligible but not yet backed up (UP | BE | AT)
+      reg_fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com",
+          flags: 0x49
+        )
+
+      {:ok, user} =
+        Actions.register(
+          strategy,
+          %{
+            "email" => "backup-state@example.com",
+            "attestation_object" => reg_fixture.attestation_object,
+            "client_data_json" => reg_fixture.client_data_json,
+            "raw_id" => reg_fixture.raw_id
+          },
+          challenge: registration_challenge(reg_fixture)
+        )
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.backup_eligible == true
+      assert credential.backed_up == false
+
+      # The credential has since been synced: assert with UP | UV | BE | BS
+      auth_fixture = WebAuthnFixtures.generate_authentication(reg_fixture, flags: 0x1D)
+
+      auth_challenge = %Wax.Challenge{
+        type: :authentication,
+        bytes: auth_fixture.challenge_bytes,
+        origin: "https://example.com",
+        rp_id: "example.com",
+        allow_credentials: [{reg_fixture.credential_id, reg_fixture.cose_key}],
+        origin_verify_fun: {Wax, :origins_match?, []},
+        issued_at: System.system_time(:second)
+      }
+
+      params = %{
+        "email" => "backup-state@example.com",
+        "raw_id" => Base.url_encode64(auth_fixture.raw_id, padding: false),
+        "authenticator_data" => auth_fixture.authenticator_data,
+        "signature" => auth_fixture.signature,
+        "client_data_json" => auth_fixture.client_data_json
+      }
+
+      assert {:ok, _user} = Actions.sign_in(strategy, params, challenge: auth_challenge)
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.backed_up == true
     end
 
     test "returns error for unknown identity", %{strategy: strategy} do

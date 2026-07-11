@@ -30,13 +30,20 @@ defmodule AshAuthentication.WebAuthnCredential do
   - `sign_count` — integer, non-nullable, defaults to `0`
   - `user_handle` — binary, nullable; the WebAuthn user handle (`user.id`)
     baked into the passkey at registration
+  - `transports` — array of strings, nullable; the transports reported by the
+    client at registration (`usb`, `nfc`, `ble`, `hybrid`, `internal`, …),
+    echoed back as `allowCredentials` hints
+  - `backup_eligible` — boolean, nullable; the authenticator data BE flag
+    (whether the credential can be synced/backed up)
+  - `backed_up` — boolean, nullable; the authenticator data BS flag (whether
+    the credential is currently backed up), refreshed on each assertion
   - `label` — string, defaults to `"Security Key"`
   - `last_used_at` — UTC datetime, nullable
   - A `belongs_to` relationship to `user_resource` (named `:user` by default),
     with its foreign key attribute
   - A `unique_credential_id` identity on `credential_id`
   - A primary `:create` action accepting all credential fields
-  - A primary `:update` action accepting `sign_count`, `label`, and `last_used_at`
+  - A primary `:update` action accepting `sign_count`, `label`, `last_used_at`, and `backed_up`
   - A primary `:read` action
   - A primary `:destroy` action
 
@@ -87,6 +94,24 @@ defmodule AshAuthentication.WebAuthnCredential do
           doc:
             "The name of the attribute that stores the WebAuthn user handle baked into the passkey at registration.",
           default: :user_handle
+        ],
+        transports_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute that stores the transports reported by the client at registration.",
+          default: :transports
+        ],
+        backup_eligible_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute that stores the authenticator data BE (backup eligible) flag.",
+          default: :backup_eligible
+        ],
+        backed_up_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute that stores the authenticator data BS (backup state) flag.",
+          default: :backed_up
         ],
         label_field: [
           type: :atom,

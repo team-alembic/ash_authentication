@@ -29,13 +29,20 @@ The extension automatically adds:
 - `sign_count` — integer, non-nullable, defaults to `0`
 - `user_handle` — binary, nullable; the WebAuthn user handle (`user.id`)
   baked into the passkey at registration
+- `transports` — array of strings, nullable; the transports reported by the
+  client at registration (`usb`, `nfc`, `ble`, `hybrid`, `internal`, …),
+  echoed back as `allowCredentials` hints
+- `backup_eligible` — boolean, nullable; the authenticator data BE flag
+  (whether the credential can be synced/backed up)
+- `backed_up` — boolean, nullable; the authenticator data BS flag (whether
+  the credential is currently backed up), refreshed on each assertion
 - `label` — string, defaults to `"Security Key"`
 - `last_used_at` — UTC datetime, nullable
 - A `belongs_to` relationship to `user_resource` (named `:user` by default),
   with its foreign key attribute
 - A `unique_credential_id` identity on `credential_id`
 - A primary `:create` action accepting all credential fields
-- A primary `:update` action accepting `sign_count`, `label`, and `last_used_at`
+- A primary `:update` action accepting `sign_count`, `label`, `last_used_at`, and `backed_up`
 - A primary `:read` action
 - A primary `:destroy` action
 
@@ -70,6 +77,9 @@ Configuration for this WebAuthn credential resource.
 | [`public_key_field`](#webauthn_credential-public_key_field){: #webauthn_credential-public_key_field } | `atom` | `:public_key` | The name of the attribute that stores the COSE public key. |
 | [`sign_count_field`](#webauthn_credential-sign_count_field){: #webauthn_credential-sign_count_field } | `atom` | `:sign_count` | The name of the attribute that stores the authenticator sign count. |
 | [`user_handle_field`](#webauthn_credential-user_handle_field){: #webauthn_credential-user_handle_field } | `atom` | `:user_handle` | The name of the attribute that stores the WebAuthn user handle baked into the passkey at registration. |
+| [`transports_field`](#webauthn_credential-transports_field){: #webauthn_credential-transports_field } | `atom` | `:transports` | The name of the attribute that stores the transports reported by the client at registration. |
+| [`backup_eligible_field`](#webauthn_credential-backup_eligible_field){: #webauthn_credential-backup_eligible_field } | `atom` | `:backup_eligible` | The name of the attribute that stores the authenticator data BE (backup eligible) flag. |
+| [`backed_up_field`](#webauthn_credential-backed_up_field){: #webauthn_credential-backed_up_field } | `atom` | `:backed_up` | The name of the attribute that stores the authenticator data BS (backup state) flag. |
 | [`label_field`](#webauthn_credential-label_field){: #webauthn_credential-label_field } | `atom` | `:label` | The name of the attribute that stores the human-readable credential label. |
 | [`last_used_at_field`](#webauthn_credential-last_used_at_field){: #webauthn_credential-last_used_at_field } | `atom` | `:last_used_at` | The name of the optional attribute that stores when the credential was last used. |
 | [`user_id_field`](#webauthn_credential-user_id_field){: #webauthn_credential-user_id_field } | `atom` | `:user_id` | The name of the foreign key attribute referencing the user (from the belongs_to). |

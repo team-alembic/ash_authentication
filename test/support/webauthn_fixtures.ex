@@ -63,8 +63,9 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
 
     # Build authenticator data
     rp_id_hash = :crypto.hash(:sha256, rp_id)
-    # flags: UP (0x01) | AT (0x40) = 0x41
-    flags = <<0x41>>
+    # flags: UP (0x01) | AT (0x40) = 0x41 by default; pass `flags:` to add
+    # e.g. BE (0x08) and BS (0x10) for synced-passkey scenarios
+    flags = <<Keyword.get(opts, :flags, 0x41)>>
     sign_count = <<0::unsigned-big-integer-size(32)>>
 
     # Attested credential data
@@ -129,8 +130,9 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
 
     # Build authenticator data (no attested credential data for authentication)
     rp_id_hash = :crypto.hash(:sha256, rp_id)
-    # flags: UP (0x01) | UV (0x04) = 0x05
-    flags = <<0x05>>
+    # flags: UP (0x01) | UV (0x04) = 0x05 by default; pass `flags:` to add
+    # e.g. BE (0x08) and BS (0x10) for synced-passkey scenarios
+    flags = <<Keyword.get(opts, :flags, 0x05)>>
     sign_count_bytes = <<sign_count::unsigned-big-integer-size(32)>>
     auth_data = rp_id_hash <> flags <> sign_count_bytes
 

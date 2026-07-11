@@ -209,6 +209,24 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "The name of the user handle attribute on the credential resource. Stores the WebAuthn user handle (`user.id`) baked into the passkey at registration.",
           default: :user_handle
         ],
+        transports_field: [
+          type: :atom,
+          doc:
+            "The name of the transports attribute on the credential resource. Stores the transports reported by the client at registration and echoes them back as `allowCredentials` hints.",
+          default: :transports
+        ],
+        backup_eligible_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute on the credential resource storing the authenticator data BE (backup eligible) flag.",
+          default: :backup_eligible
+        ],
+        backed_up_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute on the credential resource storing the authenticator data BS (backup state) flag. Refreshed on each assertion.",
+          default: :backed_up
+        ],
         label_field: [
           type: :atom,
           doc: "The name of the label attribute on the credential resource.",

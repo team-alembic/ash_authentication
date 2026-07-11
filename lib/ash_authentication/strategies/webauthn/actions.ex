@@ -192,7 +192,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
                challenge,
                [{raw_id, Map.get(credential, strategy.public_key_field)}]
              ),
-           :ok <- best_effort_update_sign_count(strategy, raw_id, auth_data.sign_count, tenant) do
+           :ok <- best_effort_update_assertion_state(strategy, raw_id, auth_data, tenant) do
         {:ok, credential, user}
       else
         :error -> base64_error(strategy, action_name)
@@ -377,15 +377,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
            {:ok, {auth_data, _}} <-
              wax_register_credential(strategy, attestation_object, client_data_json, challenge) do
-        store_credential(
-          strategy,
-          user,
-          auth_data.attested_credential_data,
-          auth_data.sign_count,
-          params["label"],
-          Keyword.get(opts, :user_handle),
-          tenant
-        )
+        attrs =
+          strategy
+          |> credential_attrs(auth_data, params, Keyword.get(opts, :user_handle))
+          |> Map.put(:user_id, user.id)
+
+        store_credential(strategy, attrs, tenant)
       else
         :error -> base64_error(strategy, :add_credential)
         {:error, error} -> {:error, error}
@@ -440,17 +437,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     defp create_user_from_registration(strategy, auth_data, params, opts) do
       tenant = Keyword.get(opts, :tenant)
-      cred_data = auth_data.attested_credential_data
-
-      credential_input = %{
-        strategy.credential_id_field => cred_data.credential_id,
-        strategy.public_key_field => cred_data.credential_public_key,
-        strategy.sign_count_field => auth_data.sign_count,
-        strategy.label_field => params["label"] || "Security Key"
-      }
 
       credential_input =
-        maybe_put_user_handle(credential_input, strategy, Keyword.get(opts, :user_handle))
+        credential_attrs(strategy, auth_data, params, Keyword.get(opts, :user_handle))
 
       action_params = %{strategy.credentials_relationship_name => credential_input}
 
@@ -492,6 +481,39 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       end)
     end
 
+    # Everything the ceremony tells us about the new credential, keyed by the
+    # strategy's configured field names. Shared by `register` (via the managed
+    # relationship) and `add_credential` (via the credential create action).
+    defp credential_attrs(strategy, auth_data, params, user_handle) do
+      cred_data = auth_data.attested_credential_data
+
+      %{
+        strategy.credential_id_field => cred_data.credential_id,
+        strategy.public_key_field => cred_data.credential_public_key,
+        strategy.sign_count_field => auth_data.sign_count,
+        strategy.label_field => params["label"] || "Security Key",
+        strategy.backup_eligible_field => auth_data.flag_backup_eligible,
+        strategy.backed_up_field => auth_data.flag_credential_backed_up
+      }
+      |> maybe_put_transports(strategy, params["transports"])
+      |> maybe_put_user_handle(strategy, user_handle)
+    end
+
+    @known_transports ~w(usb nfc ble smart-card hybrid internal)
+
+    # `transports` comes from the client's `getTransports()` and, unlike the
+    # flags above, is not covered by the ceremony's signature — sanitize to
+    # the transports registered with the spec rather than storing arbitrary
+    # client input.
+    defp maybe_put_transports(attrs, strategy, transports) when is_list(transports) do
+      case transports |> Enum.filter(&(&1 in @known_transports)) |> Enum.uniq() do
+        [] -> attrs
+        transports -> Map.put(attrs, strategy.transports_field, transports)
+      end
+    end
+
+    defp maybe_put_transports(attrs, _strategy, _transports), do: attrs
+
     # The user handle is only known when the ceremony went through a channel
     # that minted one (the Plug challenge endpoints); callers driving the
     # actions directly may not have one, and the attribute is nullable.
@@ -500,8 +522,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     defp maybe_put_user_handle(attrs, strategy, user_handle),
       do: Map.put(attrs, strategy.user_handle_field, user_handle)
 
-    defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do
-      update_sign_count(strategy, credential_id, new_count, tenant)
+    defp best_effort_update_assertion_state(strategy, credential_id, auth_data, tenant) do
+      update_assertion_state(strategy, credential_id, auth_data, tenant)
       :ok
     end
 
@@ -558,17 +580,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       {:error, auth_failed(strategy, action, "Invalid base64 encoding in request parameters")}
     end
 
-    defp store_credential(strategy, user, cred_data, sign_count, label, user_handle, tenant) do
-      attrs =
-        %{
-          credential_id: cred_data.credential_id,
-          public_key: cred_data.credential_public_key,
-          sign_count: sign_count,
-          label: label || "Security Key",
-          user_id: user.id
-        }
-        |> maybe_put_user_handle(strategy, user_handle)
-
+    defp store_credential(strategy, attrs, tenant) do
       ash_opts = internal_ash_opts(tenant)
       action = credential_action_name(strategy.credential_resource, :create_action_name)
 
@@ -579,7 +591,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       |> Ash.create()
     end
 
-    defp update_sign_count(strategy, credential_id, new_count, tenant) do
+    # Refresh what the assertion just told us about the credential: the new
+    # sign count, when it was used, and the current BS (backup state) flag —
+    # the spec recommends tracking BS on every authentication since a
+    # credential can become backed up after registration (e.g. the user
+    # enables passkey syncing).
+    defp update_assertion_state(strategy, credential_id, auth_data, tenant) do
       ash_opts = internal_ash_opts(tenant)
       read_action = credential_action_name(strategy.credential_resource, :read_action_name)
 
@@ -602,7 +619,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
           |> Changeset.set_context(auth_context())
           |> Changeset.for_update(
             update_action,
-            %{sign_count: new_count, last_used_at: DateTime.utc_now()},
+            %{
+              sign_count: auth_data.sign_count,
+              last_used_at: DateTime.utc_now(),
+              backed_up: auth_data.flag_credential_backed_up
+            },
             ash_opts
           )
           |> Ash.update()

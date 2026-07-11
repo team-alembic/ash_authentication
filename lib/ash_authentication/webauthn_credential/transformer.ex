@@ -52,6 +52,10 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
          {:ok, public_key_field} <- Info.webauthn_credential_public_key_field(dsl_state),
          {:ok, sign_count_field} <- Info.webauthn_credential_sign_count_field(dsl_state),
          {:ok, user_handle_field} <- Info.webauthn_credential_user_handle_field(dsl_state),
+         {:ok, transports_field} <- Info.webauthn_credential_transports_field(dsl_state),
+         {:ok, backup_eligible_field} <-
+           Info.webauthn_credential_backup_eligible_field(dsl_state),
+         {:ok, backed_up_field} <- Info.webauthn_credential_backed_up_field(dsl_state),
          {:ok, label_field} <- Info.webauthn_credential_label_field(dsl_state),
          {:ok, last_used_at_field} <- Info.webauthn_credential_last_used_at_field(dsl_state),
          {:ok, user_id_field} <- Info.webauthn_credential_user_id_field(dsl_state),
@@ -95,6 +99,28 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
            ),
          :ok <- validate_attribute(dsl_state, user_handle_field, :binary, allow_nil?: true),
          {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, transports_field, {:array, :string},
+             allow_nil?: true,
+             writable?: true,
+             public?: true
+           ),
+         :ok <-
+           validate_attribute(dsl_state, transports_field, {:array, :string}, allow_nil?: true),
+         {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, backup_eligible_field, :boolean,
+             allow_nil?: true,
+             writable?: true,
+             public?: true
+           ),
+         :ok <- validate_attribute(dsl_state, backup_eligible_field, :boolean, allow_nil?: true),
+         {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, backed_up_field, :boolean,
+             allow_nil?: true,
+             writable?: true,
+             public?: true
+           ),
+         :ok <- validate_attribute(dsl_state, backed_up_field, :boolean, allow_nil?: true),
+         {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, label_field, :string,
              default: "Security Key",
              writable?: true,
@@ -137,6 +163,9 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
                  public_key_field,
                  sign_count_field,
                  user_handle_field,
+                 transports_field,
+                 backup_eligible_field,
+                 backed_up_field,
                  label_field,
                  user_id_field
                ]
@@ -146,7 +175,7 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
         Transformer.build_entity(Resource.Dsl, [:actions], :update,
           name: update_action_name,
           primary?: true,
-          accept: [sign_count_field, label_field, last_used_at_field]
+          accept: [sign_count_field, label_field, last_used_at_field, backed_up_field]
         )
       end)
     end

@@ -158,6 +158,47 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     end
   end
 
+  describe "authentication_challenge/2" do
+    test "includes transports hints in allowCredentials when stored", %{strategy: strategy} do
+      user =
+        Example.UserWithWebAuthn
+        |> Ash.Changeset.for_create(:create, %{email: "transports@example.com"})
+        |> Ash.create!()
+
+      with_transports = WebAuthnFixtures.generate_registration()
+      without_transports = WebAuthnFixtures.generate_registration()
+
+      build_webauthn_credential(user, %{
+        credential_id: with_transports.credential_id,
+        public_key: with_transports.cose_key,
+        transports: ["internal", "hybrid"]
+      })
+
+      build_webauthn_credential(user, %{
+        credential_id: without_transports.credential_id,
+        public_key: without_transports.cose_key
+      })
+
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/authentication_challenge", %{
+          "email" => "transports@example.com"
+        })
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.authentication_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+      entries = Map.new(body["allowCredentials"], &{&1["id"], &1})
+
+      hinted = Base.url_encode64(with_transports.credential_id, padding: false)
+      unhinted = Base.url_encode64(without_transports.credential_id, padding: false)
+
+      assert entries[hinted]["transports"] == ["internal", "hybrid"]
+      refute Map.has_key?(entries[unhinted], "transports")
+      assert Enum.all?(Map.values(entries), &(&1["type"] == "public-key"))
+    end
+  end
+
   describe "add_credential_challenge/2" do
     test "returns 401-style failure when no actor is present", %{strategy: strategy} do
       conn =
