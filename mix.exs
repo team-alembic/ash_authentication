@@ -124,6 +124,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Totp)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.WebAuthn.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.WebAuthn)},
+        {"documentation/dsls/DSL-AshAuthentication.WebAuthnCredential.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.WebAuthnCredential)},
         {"documentation/dsls/DSL-AshAuthentication.AuditLogResource.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.AuditLogResource)},
         {"documentation/dsls/DSL-AshAuthentication.OidcConnection.md",
@@ -155,7 +157,8 @@ defmodule AshAuthentication.MixProject do
         {"documentation/tutorials/recovery-codes.md", title: "Recovery Codes"},
         {"documentation/tutorials/remember-me.md", title: "Remember Me"},
         {"documentation/tutorials/slack.md", title: "Slack"},
-        {"documentation/tutorials/totp.md", title: "Time-based One Time Password"}
+        {"documentation/tutorials/totp.md", title: "Time-based One Time Password"},
+        {"documentation/tutorials/webauthn.md", title: "WebAuthn (Passkeys)"}
       ],
       groups_for_extras: [
         "Start Here": [

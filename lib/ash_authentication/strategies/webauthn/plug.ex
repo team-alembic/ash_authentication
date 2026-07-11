@@ -19,7 +19,13 @@ if Code.ensure_loaded?(Wax.Challenge) do
     require Ash.Query
     require Logger
 
-    @session_key "webauthn_challenge"
+    # Challenges are stored per ceremony type and per strategy so concurrent
+    # ceremonies — a registration in one tab and a sign-in in another, or two
+    # differently-named strategies on the same resource — don't clobber each
+    # other's session entry. Two concurrent ceremonies of the *same* type and
+    # strategy still share a slot; the later challenge wins, which is the
+    # correct freshness behavior for a retried ceremony.
+    defp session_key(strategy, type), do: "webauthn_#{type}_challenge_#{strategy.name}"
 
     # COSE algorithms Wax can verify, in preference order. Deliberately
     # excludes RSASSA-PKCS1-v1_5 w/ SHA-1 (-65535) and ES256K (-47).
@@ -96,7 +102,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
       }
 
       conn
-      |> Conn.put_session(@session_key, challenge_data)
+      |> Conn.put_session(session_key(strategy, :attestation), challenge_data)
       |> Conn.put_resp_content_type("application/json")
       |> Conn.send_resp(200, Jason.encode!(response))
     end
@@ -155,8 +161,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
 
     # Recover the user handle minted at challenge time so it can be stored
     # alongside the credential. Read before the session challenge is deleted.
-    defp session_user_handle(conn) do
-      with %{} = data <- Conn.get_session(conn, @session_key),
+    defp session_user_handle(conn, strategy) do
+      with %{} = data <- Conn.get_session(conn, session_key(strategy, :attestation)),
            handle when is_binary(handle) <- data["user_handle"] || data[:user_handle],
            {:ok, bytes} <- Base.url_decode64(handle, padding: false) do
         bytes
@@ -171,12 +177,12 @@ if Code.ensure_loaded?(Wax.Challenge) do
       case reconstruct_challenge(conn, :attestation, strategy) do
         nil ->
           conn
-          |> Conn.delete_session(@session_key)
+          |> Conn.delete_session(session_key(strategy, :attestation))
           |> store_authentication_result(missing_challenge_error(strategy, :register))
 
         challenge ->
-          user_handle = session_user_handle(conn)
-          conn = Conn.delete_session(conn, @session_key)
+          user_handle = session_user_handle(conn, strategy)
+          conn = Conn.delete_session(conn, session_key(strategy, :attestation))
           params = subject_params(conn, strategy)
           opts = opts(conn) ++ [challenge: challenge, user_handle: user_handle]
           result = Strategy.action(strategy, :register, params, opts)
@@ -229,7 +235,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
       }
 
       conn
-      |> Conn.put_session(@session_key, challenge_data)
+      |> Conn.put_session(session_key(strategy, :authentication), challenge_data)
       |> Conn.put_resp_content_type("application/json")
       |> Conn.send_resp(200, Jason.encode!(response))
     end
@@ -249,11 +255,11 @@ if Code.ensure_loaded?(Wax.Challenge) do
       case reconstruct_challenge(conn, :authentication, strategy) do
         nil ->
           conn
-          |> Conn.delete_session(@session_key)
+          |> Conn.delete_session(session_key(strategy, :authentication))
           |> store_authentication_result(missing_challenge_error(strategy, :sign_in))
 
         challenge ->
-          conn = Conn.delete_session(conn, @session_key)
+          conn = Conn.delete_session(conn, session_key(strategy, :authentication))
           params = subject_params(conn, strategy)
           opts = opts(conn) ++ [challenge: challenge]
           result = Strategy.action(strategy, :sign_in, params, opts)
@@ -305,7 +311,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
           }
 
           conn
-          |> Conn.put_session(@session_key, challenge_data)
+          |> Conn.put_session(session_key(strategy, :authentication), challenge_data)
           |> Conn.put_resp_content_type("application/json")
           |> Conn.send_resp(200, Jason.encode!(response))
       end
@@ -321,7 +327,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
     def verify(conn, strategy) do
       with actor when not is_nil(actor) <- get_actor(conn),
            %Wax.Challenge{} = challenge <- reconstruct_challenge(conn, :authentication, strategy) do
-        conn = Conn.delete_session(conn, @session_key)
+        conn = Conn.delete_session(conn, session_key(strategy, :authentication))
         params = subject_params(conn, strategy)
         opts = opts(conn) ++ [challenge: challenge, actor: actor]
         result = Strategy.action(strategy, :verify, params, opts)
@@ -363,8 +369,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
     def add_credential(conn, strategy) do
       with actor when not is_nil(actor) <- get_actor(conn),
            %Wax.Challenge{} = challenge <- reconstruct_challenge(conn, :attestation, strategy) do
-        user_handle = session_user_handle(conn)
-        conn = Conn.delete_session(conn, @session_key)
+        user_handle = session_user_handle(conn, strategy)
+        conn = Conn.delete_session(conn, session_key(strategy, :attestation))
         params = subject_params(conn, strategy)
         opts = opts(conn) ++ [challenge: challenge, user: actor, user_handle: user_handle]
         result = WebAuthn.Actions.add_credential(strategy, params, opts)
@@ -405,7 +411,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
     # We store challenges as plain maps because cookie session stores
     # cannot serialize arbitrary Elixir structs.
     defp reconstruct_challenge(conn, type, strategy) do
-      with %{} = data <- Conn.get_session(conn, @session_key),
+      with %{} = data <- Conn.get_session(conn, session_key(strategy, type)),
            {:ok, bytes} <- Base.decode64(data["bytes"] || data[:bytes]) do
         build_challenge(data, bytes, type, strategy)
       else

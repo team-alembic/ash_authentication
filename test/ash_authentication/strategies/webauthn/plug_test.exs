@@ -51,7 +51,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert body["user"]["displayName"] == "test@example.com"
 
       # The handle is retained in the session so registration can store it
-      session = Plug.Conn.get_session(conn, "webauthn_challenge")
+      session = Plug.Conn.get_session(conn, "webauthn_attestation_challenge_webauthn")
       assert session["user_handle"] || session[:user_handle] == body["user"]["id"]
     end
 
@@ -155,6 +155,58 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       # SHA-1 RSA and ES256K are supported by Wax but deliberately not advertised
       refute -65_535 in algs
       refute -47 in algs
+    end
+  end
+
+  describe "challenge session scoping" do
+    test "attestation and authentication challenges use distinct session keys", %{
+      strategy: strategy
+    } do
+      reg_conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      auth_conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/authentication_challenge", %{})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.authentication_challenge(strategy)
+
+      assert %{} = Plug.Conn.get_session(reg_conn, "webauthn_attestation_challenge_webauthn")
+      assert %{} = Plug.Conn.get_session(auth_conn, "webauthn_authentication_challenge_webauthn")
+
+      refute Plug.Conn.get_session(reg_conn, "webauthn_authentication_challenge_webauthn")
+      refute Plug.Conn.get_session(auth_conn, "webauthn_attestation_challenge_webauthn")
+    end
+
+    test "sign_in neither consumes nor accepts a pending registration challenge", %{
+      strategy: strategy
+    } do
+      reg_conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      attestation_key = "webauthn_attestation_challenge_webauthn"
+      attestation_data = Plug.Conn.get_session(reg_conn, attestation_key)
+
+      # A sign-in arriving in another tab, with only the registration
+      # challenge in the session
+      sign_in_conn =
+        :post
+        |> conn("/user_with_webauthn/webauthn/sign_in", %{})
+        |> SessionPipeline.call([])
+        |> Plug.Conn.put_session(attestation_key, attestation_data)
+        |> WebAuthn.Plug.sign_in(strategy)
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               sign_in_conn.private[:authentication_result]
+
+      # The pending registration ceremony is untouched
+      assert Plug.Conn.get_session(sign_in_conn, attestation_key) == attestation_data
     end
   end
 
