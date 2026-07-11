@@ -68,6 +68,18 @@ end
 
 Run `mix ash.codegen add_webauthn` to generate the migrations.
 
+All cryptographic ceremony work goes through a swappable backend adapter
+(see `AshAuthentication.Strategy.WebAuthn.Adapter`). The default uses the
+`wax_` library; you only need to care about this if you want to replace or
+instrument the ceremony implementation:
+
+```elixir
+webauthn do
+  adapter MyApp.CustomWebAuthnAdapter
+  # ...
+end
+```
+
 ## Configuration modes
 
 The strategy supports four distinct configurations. Pick the row that matches

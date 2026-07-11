@@ -73,7 +73,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
       rp_name = WebAuthn.Helpers.resolve_rp_name(strategy, tenant)
 
       response = %{
-        challenge: Base.url_encode64(challenge.bytes, padding: false),
+        challenge: Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
         rp: %{id: rp_id, name: rp_name},
         user: user_descriptor,
         pubKeyCredParams: @pub_key_cred_params,
@@ -92,15 +92,12 @@ if Code.ensure_loaded?(Wax.Challenge) do
         timeout: strategy.timeout
       }
 
-      # Store challenge as serializable map (not struct) for cookie session stores
-      challenge_data = %{
-        bytes: Base.encode64(challenge.bytes),
-        type: challenge.type,
-        origin: challenge.origin,
-        rp_id: challenge.rp_id,
-        user_handle: user_descriptor.id,
-        issued_at: challenge.issued_at
-      }
+      # The user handle rides along with the adapter's session-safe challenge
+      # data so registration can persist it.
+      challenge_data =
+        challenge
+        |> strategy.adapter.serialize_challenge()
+        |> Map.put(:user_handle, user_descriptor.id)
 
       conn
       |> Conn.put_session(session_key(strategy, :attestation), challenge_data)
@@ -207,7 +204,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
           []
         end
 
-      allow_credentials = wax_allow_credentials(strategy, credentials)
+      allow_credentials = assertion_allow_credentials(strategy, credentials)
 
       {:ok, challenge} =
         WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
@@ -215,25 +212,14 @@ if Code.ensure_loaded?(Wax.Challenge) do
         )
 
       response = %{
-        challenge: Base.url_encode64(challenge.bytes, padding: false),
+        challenge: Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
         rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
         userVerification: strategy.user_verification,
         timeout: strategy.timeout,
         allowCredentials: allow_credentials_entries(strategy, credentials)
       }
 
-      # Store challenge as serializable map
-      challenge_data = %{
-        bytes: Base.encode64(challenge.bytes),
-        type: challenge.type,
-        origin: challenge.origin,
-        rp_id: challenge.rp_id,
-        allow_credentials:
-          Enum.map(allow_credentials, fn {cred_id, cose_key} ->
-            {Base.encode64(cred_id), cose_key}
-          end),
-        issued_at: challenge.issued_at
-      }
+      challenge_data = strategy.adapter.serialize_challenge(challenge)
 
       conn
       |> Conn.put_session(session_key(strategy, :authentication), challenge_data)
@@ -284,7 +270,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
         actor ->
           tenant = get_tenant(conn)
           credentials = load_actor_credentials(strategy, actor, tenant)
-          allow_credentials = wax_allow_credentials(strategy, credentials)
+          allow_credentials = assertion_allow_credentials(strategy, credentials)
 
           {:ok, challenge} =
             WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
@@ -292,24 +278,15 @@ if Code.ensure_loaded?(Wax.Challenge) do
             )
 
           response = %{
-            challenge: Base.url_encode64(challenge.bytes, padding: false),
+            challenge:
+              Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
             rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
             userVerification: strategy.user_verification,
             timeout: strategy.timeout,
             allowCredentials: allow_credentials_entries(strategy, credentials)
           }
 
-          challenge_data = %{
-            bytes: Base.encode64(challenge.bytes),
-            type: challenge.type,
-            origin: challenge.origin,
-            rp_id: challenge.rp_id,
-            allow_credentials:
-              Enum.map(allow_credentials, fn {cred_id, cose_key} ->
-                {Base.encode64(cred_id), cose_key}
-              end),
-            issued_at: challenge.issued_at
-          }
+          challenge_data = strategy.adapter.serialize_challenge(challenge)
 
           conn
           |> Conn.put_session(session_key(strategy, :authentication), challenge_data)
@@ -327,7 +304,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
     @spec verify(Conn.t(), WebAuthn.t()) :: Conn.t()
     def verify(conn, strategy) do
       with actor when not is_nil(actor) <- get_actor(conn),
-           %Wax.Challenge{} = challenge <- reconstruct_challenge(conn, :authentication, strategy) do
+           challenge when not is_nil(challenge) <-
+             reconstruct_challenge(conn, :authentication, strategy) do
         conn = Conn.delete_session(conn, session_key(strategy, :authentication))
         params = subject_params(conn, strategy)
         opts = opts(conn) ++ [challenge: challenge, actor: actor]
@@ -369,7 +347,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
     @spec add_credential(Conn.t(), WebAuthn.t()) :: Conn.t()
     def add_credential(conn, strategy) do
       with actor when not is_nil(actor) <- get_actor(conn),
-           %Wax.Challenge{} = challenge <- reconstruct_challenge(conn, :attestation, strategy) do
+           challenge when not is_nil(challenge) <-
+             reconstruct_challenge(conn, :attestation, strategy) do
         user_handle = session_user_handle(conn, strategy)
         conn = Conn.delete_session(conn, session_key(strategy, :attestation))
         params = subject_params(conn, strategy)
@@ -408,50 +387,14 @@ if Code.ensure_loaded?(Wax.Challenge) do
        )}
     end
 
-    # Reconstruct a Wax.Challenge from the serialized session data.
-    # We store challenges as plain maps because cookie session stores
-    # cannot serialize arbitrary Elixir structs.
+    # Rebuild the ceremony challenge from the serialized session data via the
+    # strategy's adapter (challenges are stored as plain maps because cookie
+    # session stores cannot serialize arbitrary Elixir structs).
     defp reconstruct_challenge(conn, type, strategy) do
-      with %{} = data <- Conn.get_session(conn, session_key(strategy, type)),
-           {:ok, bytes} <- Base.decode64(data["bytes"] || data[:bytes]) do
-        build_challenge(data, bytes, type, strategy)
-      else
+      case Conn.get_session(conn, session_key(strategy, type)) do
+        %{} = data -> strategy.adapter.deserialize_challenge(strategy, data, type)
         _ -> nil
       end
-    end
-
-    defp build_challenge(data, bytes, type, strategy) do
-      base = %Wax.Challenge{
-        type: type,
-        bytes: bytes,
-        origin: data["origin"] || data[:origin],
-        rp_id: data["rp_id"] || data[:rp_id],
-        issued_at: data["issued_at"] || data[:issued_at],
-        origin_verify_fun: {Wax, :origins_match?, []}
-      }
-
-      case type do
-        :attestation ->
-          %{
-            base
-            | attestation: strategy.attestation,
-              trusted_attestation_types: strategy.trusted_attestation_types,
-              verify_trust_root: strategy.verify_trust_root?
-          }
-
-        _ ->
-          %{base | allow_credentials: decode_allow_credentials(data)}
-      end
-    end
-
-    defp decode_allow_credentials(data) do
-      (data["allow_credentials"] || data[:allow_credentials] || [])
-      |> Enum.flat_map(fn {encoded_id, cose_key} ->
-        case Base.decode64(encoded_id) do
-          {:ok, decoded_id} -> [{decoded_id, cose_key}]
-          :error -> []
-        end
-      end)
     end
 
     defp subject_params(conn, strategy) do
@@ -479,9 +422,9 @@ if Code.ensure_loaded?(Wax.Challenge) do
       "#{scheme}://#{host}#{port_segment}"
     end
 
-    # The {credential_id, cose_key} pairs Wax needs to verify an assertion
-    # against the challenge.
-    defp wax_allow_credentials(strategy, credentials) do
+    # The {credential_id, cose_key} pairs the adapter needs to verify an
+    # assertion against the challenge.
+    defp assertion_allow_credentials(strategy, credentials) do
       Enum.map(credentials, fn cred ->
         {Map.get(cred, strategy.credential_id_field), Map.get(cred, strategy.public_key_field)}
       end)

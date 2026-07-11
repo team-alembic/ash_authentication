@@ -298,6 +298,7 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   @struct_fields [
     name: nil,
     provider: :webauthn,
+    adapter: AshAuthentication.Strategy.WebAuthn.Adapters.Wax,
     resource: nil,
     credential_resource: nil,
     rp_id: nil,
@@ -351,6 +352,7 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   @type t :: %WebAuthn{
           name: atom,
           provider: :webauthn,
+          adapter: module,
           resource: module,
           credential_resource: module,
           rp_id: String.t() | {module, atom, list} | {module, keyword},

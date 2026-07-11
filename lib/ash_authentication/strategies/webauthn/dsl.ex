@@ -32,8 +32,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
       args: [{:optional, :name, :webauthn}],
       hide: [:name],
       target: WebAuthn,
-      no_depend_modules: [:credential_resource],
+      no_depend_modules: [:credential_resource, :adapter],
       schema: [
+        adapter: [
+          type: {:behaviour, AshAuthentication.Strategy.WebAuthn.Adapter},
+          doc:
+            "The ceremony backend adapter — handles challenge generation, verification, and challenge (de)serialization. See `AshAuthentication.Strategy.WebAuthn.Adapter`.",
+          default: AshAuthentication.Strategy.WebAuthn.Adapters.Wax
+        ],
         name: [
           type: :atom,
           doc: "Uniquely identifies the strategy.",
