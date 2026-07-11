@@ -91,7 +91,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
       origin: origin,
       rp_id: rp_id,
       user_verification: strategy.user_verification,
-      attestation: strategy.attestation
+      attestation: strategy.attestation,
+      trusted_attestation_types: strategy.trusted_attestation_types,
+      verify_trust_root: strategy.verify_trust_root?
     ]
   end
 end

@@ -49,8 +49,9 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
     # Generate credential ID
     credential_id = Keyword.get_lazy(opts, :credential_id, &generate_credential_id/0)
 
-    # Generate challenge
-    challenge_bytes = :crypto.strong_rand_bytes(32)
+    # Generate challenge (or sign a server-issued one, for plug round trips)
+    challenge_bytes =
+      Keyword.get_lazy(opts, :challenge_bytes, fn -> :crypto.strong_rand_bytes(32) end)
 
     # Build clientDataJSON
     client_data =

@@ -434,8 +434,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
           %{
             base
             | attestation: strategy.attestation,
-              trusted_attestation_types: [:none, :basic, :self, :uncertain],
-              verify_trust_root: false
+              trusted_attestation_types: strategy.trusted_attestation_types,
+              verify_trust_root: strategy.verify_trust_root?
           }
 
         _ ->

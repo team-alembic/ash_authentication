@@ -140,6 +140,50 @@ end
 > omits the port, so set `origin "https://localhost:4001"` explicitly if you
 > terminate ceremonies somewhere without request context in development.
 
+## Attestation
+
+By default the strategy uses `attestation "none"` — the right choice for
+most consumer applications, where *which* authenticator model a user owns is
+none of your business. The registration ceremony is fully verified either
+way; attestation only concerns the authenticator's provenance.
+
+For deployments that must only accept certain authenticators (e.g. corporate
+policy requiring hardware-backed keys), tighten all three settings:
+
+```elixir
+webauthn do
+  credential_resource MyApp.Accounts.WebAuthnCredential
+  rp_id "example.com"
+  rp_name "My App"
+  require_identity? true
+
+  attestation "direct"
+  trusted_attestation_types [:basic, :attca]
+  verify_trust_root? true
+end
+```
+
+- `attestation` — what the client is asked to convey: `"none"`,
+  `"indirect"` (anonymized allowed), `"direct"`, or `"enterprise"`
+  (individually identifying; needs browser/authenticator support).
+- `trusted_attestation_types` — which verified attestation types are
+  accepted. The default (`[:none, :basic, :self, :uncertain]`) accepts
+  everything a consumer flow produces; restricting to `[:basic, :attca]`
+  refuses registrations that don't chain to a known root.
+- `verify_trust_root?` — whether `packed`/`u2f` attestation statements are
+  checked against trust anchors (`tpm` always is).
+
+Verifying trust roots requires FIDO metadata, which is loaded by the
+underlying `wax_` library. Enable the FIDO Alliance MDS3 service:
+
+```elixir
+config :wax_, update_metadata: true
+```
+
+or ship metadata statements yourself via `config :wax_, metadata_dir: :my_app`
+(reads `priv/fido2_metadata/` of that application). Without metadata, keep
+`verify_trust_root? false` and include `:uncertain` in the trusted types.
+
 ## Ceremony phases
 
 Each strategy instance exposes these routes (paths are prefixed with the
@@ -172,7 +216,7 @@ section is maintained as the implementation evolves.
 | `pubKeyCredParams` | ✅ | ES256, EdDSA, ES384/512, PS256/384/512, RS256/384/512 in preference order |
 | `excludeCredentials` | ✅ | The actor's credentials when adding a passkey; identity-matched credentials on registration in identity mode |
 | `authenticatorSelection` (attachment, residentKey, userVerification) | ✅ | All configurable |
-| Attestation conveyance | ⚠️ | `"none"` and `"direct"` only; attestation statements are parsed but not verified against a trust root, and there is no FIDO MDS integration |
+| Attestation conveyance | ✅ | `"none"`, `"indirect"`, `"direct"`, `"enterprise"`; accepted attestation types and trust-root verification configurable (see [Attestation](#attestation)) |
 | `timeout` | ✅ | Configurable |
 
 ### Authentication ceremony

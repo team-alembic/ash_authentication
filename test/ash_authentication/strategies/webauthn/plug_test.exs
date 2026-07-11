@@ -158,6 +158,41 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     end
   end
 
+  describe "register/2" do
+    test "full round trip: challenge then register", %{strategy: strategy} do
+      email = "roundtrip@example.com"
+
+      challenge_conn = registration_challenge_conn(strategy, email)
+      body = Jason.decode!(challenge_conn.resp_body)
+
+      register_conn = register_conn(strategy, challenge_conn, email)
+
+      assert {:ok, user} = register_conn.private[:authentication_result]
+      assert to_string(user.email) == email
+
+      # The user handle minted at challenge time is persisted on the credential
+      {:ok, [credential]} = WebAuthn.Actions.list_credentials(strategy, user, [])
+
+      assert credential.user_handle ==
+               Base.url_decode64!(body["user"]["id"], padding: false)
+    end
+
+    test "restrictive trusted_attestation_types rejects untrusted attestation", %{
+      strategy: strategy
+    } do
+      # Only accept attestation chaining to a known root; the fixture's
+      # "none" attestation must be refused
+      strategy = %{strategy | trusted_attestation_types: [:basic, :attca]}
+      email = "untrusted@example.com"
+
+      challenge_conn = registration_challenge_conn(strategy, email)
+      register_conn = register_conn(strategy, challenge_conn, email)
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               register_conn.private[:authentication_result]
+    end
+  end
+
   describe "challenge session scoping" do
     test "attestation and authentication challenges use distinct session keys", %{
       strategy: strategy
@@ -344,5 +379,43 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
                conn.private[:authentication_result]
     end
+  end
+
+  @attestation_session_key "webauthn_attestation_challenge_webauthn"
+
+  defp registration_challenge_conn(strategy, email) do
+    :get
+    |> conn("/user_with_web_authn/webauthn/registration_challenge", %{"email" => email})
+    |> SessionPipeline.call([])
+    |> WebAuthn.Plug.registration_challenge(strategy)
+  end
+
+  # Build a register POST that answers the server-issued challenge. The test
+  # SessionPipeline mints a fresh secret_key_base per conn, so cookies can't
+  # round-trip; the session entry is transplanted instead.
+  defp register_conn(strategy, challenge_conn, email) do
+    body = Jason.decode!(challenge_conn.resp_body)
+    challenge_bytes = Base.url_decode64!(body["challenge"], padding: false)
+    session_data = Plug.Conn.get_session(challenge_conn, @attestation_session_key)
+
+    fixture =
+      WebAuthnFixtures.generate_registration(
+        origin: "http://www.example.com",
+        rp_id: "example.com",
+        challenge_bytes: challenge_bytes
+      )
+
+    :post
+    |> conn("/user_with_web_authn/webauthn/register", %{
+      "user_with_web_authn" => %{
+        "email" => email,
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "raw_id" => fixture.raw_id
+      }
+    })
+    |> SessionPipeline.call([])
+    |> Plug.Conn.put_session(@attestation_session_key, session_data)
+    |> WebAuthn.Plug.register(strategy)
   end
 end

@@ -172,10 +172,22 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           default: "preferred"
         ],
         attestation: [
-          type: {:in, ["none", "direct"]},
+          type: {:in, ["none", "indirect", "direct", "enterprise"]},
           doc:
-            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"direct\"` requests the authenticator's attestation certificate.",
+            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"indirect\"` allows the client to substitute an anonymized attestation, `\"direct\"` requests the authenticator's attestation statement verbatim, and `\"enterprise\"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide.",
           default: "none"
+        ],
+        trusted_attestation_types: [
+          type: {:list, {:in, [:none, :basic, :self, :attca, :anonca, :uncertain]}},
+          doc:
+            "The attestation types accepted at registration (see `t:Wax.Attestation.type/0`). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata to be configured for the `:wax_` application.",
+          default: [:none, :basic, :self, :uncertain]
+        ],
+        verify_trust_root?: [
+          type: :boolean,
+          doc:
+            "Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata to be configured for the `:wax_` application.",
+          default: false
         ],
         timeout: [
           type: :pos_integer,
