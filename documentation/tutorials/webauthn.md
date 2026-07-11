@@ -68,6 +68,19 @@ end
 
 Run `mix ash.codegen add_webauthn` to generate the migrations.
 
+> ### Migrating from a legacy U2F deployment? {: .warning}
+>
+> Security keys registered through the pre-WebAuthn **FIDO U2F** JavaScript
+> API are scoped to a legacy *AppID* URL rather than a WebAuthn RP ID, and
+> will **not** respond to challenges issued by this strategy. The WebAuthn
+> `appid` extension — the compatibility bridge that lets U2F-era credentials
+> keep working — is **not implemented** here. If you are migrating an
+> existing user base to AshAuthentication and still have U2F-registered keys
+> in circulation, those users must re-register their keys as WebAuthn
+> credentials (e.g. via the `add_credential` flow after signing in with
+> another factor). New deployments are unaffected: the U2F API was removed
+> from browsers in 2022, so no new U2F credentials can exist.
+
 All cryptographic ceremony work goes through a swappable backend adapter
 (see `AshAuthentication.Strategy.WebAuthn.Adapter`). The default uses the
 `wax_` library; you only need to care about this if you want to replace or
