@@ -21,9 +21,20 @@ if Code.ensure_loaded?(Wax.Challenge) do
 
     @session_key "webauthn_challenge"
 
+    # COSE algorithms Wax can verify, in preference order. Deliberately
+    # excludes RSASSA-PKCS1-v1_5 w/ SHA-1 (-65535) and ES256K (-47).
+    @pub_key_cred_params Enum.map(
+                           [-7, -8, -35, -36, -37, -38, -39, -257, -258, -259],
+                           &%{type: "public-key", alg: &1}
+                         )
+
     @doc "Generate and return a registration challenge."
     @spec registration_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
     def registration_challenge(conn, strategy) do
+      send_registration_challenge(conn, strategy, new_user_descriptor(conn, strategy))
+    end
+
+    defp send_registration_challenge(conn, strategy, user_descriptor) do
       tenant = get_tenant(conn)
 
       {:ok, challenge} =
@@ -35,6 +46,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
       response = %{
         challenge: Base.url_encode64(challenge.bytes, padding: false),
         rp: %{id: rp_id, name: rp_name},
+        user: user_descriptor,
+        pubKeyCredParams: @pub_key_cred_params,
         authenticatorSelection: %{
           authenticatorAttachment: strategy.authenticator_attachment,
           userVerification: strategy.user_verification,
@@ -50,6 +63,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
         type: challenge.type,
         origin: challenge.origin,
         rp_id: challenge.rp_id,
+        user_handle: user_descriptor.id,
         issued_at: challenge.issued_at
       }
 
@@ -57,6 +71,82 @@ if Code.ensure_loaded?(Wax.Challenge) do
       |> Conn.put_session(@session_key, challenge_data)
       |> Conn.put_resp_content_type("application/json")
       |> Conn.send_resp(200, Jason.encode!(response))
+    end
+
+    # The user handle (`user.id`) must be an opaque byte sequence of at most
+    # 64 bytes without PII, so a fresh registration gets random bytes rather
+    # than anything derived from the identity value. It is kept in the session
+    # challenge data so the verifying side can associate it with the stored
+    # credential.
+    # `name` is the account identifier shown in the passkey picker (the
+    # identity value when the flow has one); `displayName` is the friendly
+    # name. Both are display-only and may be supplied as request params —
+    # in passkey-first mode (no identity field) `display_name`/`name` params
+    # are the only way to label the account inside the passkey.
+    defp new_user_descriptor(conn, strategy) do
+      identity = presence(conn.params[to_string(strategy.identity_field)])
+      display_name = presence(conn.params["display_name"]) || presence(conn.params["name"])
+      name = identity || display_name || "user"
+
+      %{
+        id: Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false),
+        name: name,
+        displayName: display_name || name
+      }
+    end
+
+    defp presence(value) when is_binary(value) and value != "", do: value
+    defp presence(_), do: nil
+
+    # For an existing user (add_credential flow) the handle must be stable so
+    # all of the user's passkeys share it: reuse the handle stored with an
+    # existing credential when there is one, otherwise fall back to the
+    # primary key (stable, and what our discoverable-credential lookup
+    # resolves anyway).
+    defp actor_user_descriptor(strategy, actor, tenant) do
+      [primary_key] = Ash.Resource.Info.primary_key(strategy.resource)
+      handle = existing_user_handle(strategy, actor, tenant) || pk_handle(actor, primary_key)
+
+      name =
+        case Map.get(actor, strategy.identity_field) do
+          nil -> pk_handle(actor, primary_key)
+          value -> to_string(value)
+        end
+
+      %{
+        id: Base.url_encode64(handle, padding: false),
+        name: name,
+        displayName: name
+      }
+    end
+
+    defp pk_handle(actor, primary_key), do: actor |> Map.fetch!(primary_key) |> to_string()
+
+    defp existing_user_handle(strategy, actor, tenant) do
+      ash_opts = [authorize?: false]
+      ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+
+      case Ash.load(actor, [strategy.credentials_relationship_name], ash_opts) do
+        {:ok, loaded} ->
+          loaded
+          |> Map.get(strategy.credentials_relationship_name, [])
+          |> Enum.find_value(&Map.get(&1, strategy.user_handle_field))
+
+        _ ->
+          nil
+      end
+    end
+
+    # Recover the user handle minted at challenge time so it can be stored
+    # alongside the credential. Read before the session challenge is deleted.
+    defp session_user_handle(conn) do
+      with %{} = data <- Conn.get_session(conn, @session_key),
+           handle when is_binary(handle) <- data["user_handle"] || data[:user_handle],
+           {:ok, bytes} <- Base.url_decode64(handle, padding: false) do
+        bytes
+      else
+        _ -> nil
+      end
     end
 
     @doc "Handle a registration request."
@@ -69,9 +159,10 @@ if Code.ensure_loaded?(Wax.Challenge) do
           |> store_authentication_result(missing_challenge_error(strategy, :register))
 
         challenge ->
+          user_handle = session_user_handle(conn)
           conn = Conn.delete_session(conn, @session_key)
           params = subject_params(conn, strategy)
-          opts = opts(conn) ++ [challenge: challenge]
+          opts = opts(conn) ++ [challenge: challenge, user_handle: user_handle]
           result = Strategy.action(strategy, :register, params, opts)
           store_authentication_result(conn, result)
       end
@@ -240,8 +331,9 @@ if Code.ensure_loaded?(Wax.Challenge) do
         nil ->
           store_authentication_result(conn, unauthenticated_error(strategy, :add_credential))
 
-        _actor ->
-          registration_challenge(conn, strategy)
+        actor ->
+          user_descriptor = actor_user_descriptor(strategy, actor, get_tenant(conn))
+          send_registration_challenge(conn, strategy, user_descriptor)
       end
     end
 
@@ -255,9 +347,10 @@ if Code.ensure_loaded?(Wax.Challenge) do
     def add_credential(conn, strategy) do
       with actor when not is_nil(actor) <- get_actor(conn),
            %Wax.Challenge{} = challenge <- reconstruct_challenge(conn, :attestation, strategy) do
+        user_handle = session_user_handle(conn)
         conn = Conn.delete_session(conn, @session_key)
         params = subject_params(conn, strategy)
-        opts = opts(conn) ++ [challenge: challenge, user: actor]
+        opts = opts(conn) ++ [challenge: challenge, user: actor, user_handle: user_handle]
         result = WebAuthn.Actions.add_credential(strategy, params, opts)
         store_authentication_result(conn, result)
       else

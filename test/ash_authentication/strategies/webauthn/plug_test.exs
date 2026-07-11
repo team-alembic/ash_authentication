@@ -31,6 +31,77 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert is_binary(body["challenge"])
       assert body["rp"]["id"] == "example.com"
     end
+
+    test "includes a spec-compliant user descriptor", %{strategy: strategy} do
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{
+          "email" => "test@example.com"
+        })
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+
+      # The user handle is random bytes (max 64 per spec), not derived from PII
+      assert {:ok, handle} = Base.url_decode64(body["user"]["id"], padding: false)
+      assert byte_size(handle) == 32
+      assert body["user"]["name"] == "test@example.com"
+      assert body["user"]["displayName"] == "test@example.com"
+
+      # The handle is retained in the session so registration can store it
+      session = Plug.Conn.get_session(conn, "webauthn_challenge")
+      assert session["user_handle"] || session[:user_handle] == body["user"]["id"]
+    end
+
+    test "uses display_name param for the account name in passkey-first flows", %{
+      strategy: strategy
+    } do
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{
+          "display_name" => "Simon"
+        })
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+      assert body["user"]["name"] == "Simon"
+      assert body["user"]["displayName"] == "Simon"
+    end
+
+    test "identity value wins as name, display_name as displayName", %{strategy: strategy} do
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{
+          "email" => "test@example.com",
+          "display_name" => "Simon"
+        })
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+      assert body["user"]["name"] == "test@example.com"
+      assert body["user"]["displayName"] == "Simon"
+    end
+
+    test "advertises pubKeyCredParams in preference order", %{strategy: strategy} do
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/registration_challenge", %{})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+      algs = Enum.map(body["pubKeyCredParams"], & &1["alg"])
+
+      assert [-7, -8 | _] = algs
+      assert -257 in algs
+      assert Enum.all?(body["pubKeyCredParams"], &(&1["type"] == "public-key"))
+      # SHA-1 RSA and ES256K are supported by Wax but deliberately not advertised
+      refute -65_535 in algs
+      refute -47 in algs
+    end
   end
 
   describe "add_credential_challenge/2" do
@@ -61,6 +132,27 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert conn.status == 200
       body = Jason.decode!(conn.resp_body)
       assert is_binary(body["challenge"])
+    end
+
+    test "user descriptor identifies the actor with a stable handle", %{strategy: strategy} do
+      {:ok, user} =
+        Example.UserWithWebAuthn
+        |> Ash.Changeset.for_create(:create, %{email: "handle@example.com"})
+        |> Ash.create()
+
+      conn =
+        :get
+        |> conn("/user_with_webauthn/webauthn/add_credential_challenge", %{})
+        |> SessionPipeline.call([])
+        |> Ash.PlugHelpers.set_actor(user)
+        |> WebAuthn.Plug.add_credential_challenge(strategy)
+
+      body = Jason.decode!(conn.resp_body)
+
+      assert {:ok, handle} = Base.url_decode64(body["user"]["id"], padding: false)
+      # No prior credentials, so the handle falls back to the primary key
+      assert handle == to_string(user.id)
+      assert body["user"]["name"] == "handle@example.com"
     end
   end
 

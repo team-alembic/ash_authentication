@@ -28,6 +28,8 @@ defmodule AshAuthentication.WebAuthnCredential do
   - `credential_id` — binary, non-nullable, uniquely constrained
   - `public_key` — `AshAuthentication.Strategy.WebAuthn.CoseKey`, non-nullable
   - `sign_count` — integer, non-nullable, defaults to `0`
+  - `user_handle` — binary, nullable; the WebAuthn user handle (`user.id`)
+    baked into the passkey at registration
   - `label` — string, defaults to `"Security Key"`
   - `last_used_at` — UTC datetime, nullable
   - A `belongs_to` relationship to `user_resource` (named `:user` by default),
@@ -79,6 +81,12 @@ defmodule AshAuthentication.WebAuthnCredential do
           type: :atom,
           doc: "The name of the attribute that stores the authenticator sign count.",
           default: :sign_count
+        ],
+        user_handle_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute that stores the WebAuthn user handle baked into the passkey at registration.",
+          default: :user_handle
         ],
         label_field: [
           type: :atom,

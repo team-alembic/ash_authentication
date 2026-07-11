@@ -51,6 +51,7 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
          {:ok, credential_id_field} <- Info.webauthn_credential_credential_id_field(dsl_state),
          {:ok, public_key_field} <- Info.webauthn_credential_public_key_field(dsl_state),
          {:ok, sign_count_field} <- Info.webauthn_credential_sign_count_field(dsl_state),
+         {:ok, user_handle_field} <- Info.webauthn_credential_user_handle_field(dsl_state),
          {:ok, label_field} <- Info.webauthn_credential_label_field(dsl_state),
          {:ok, last_used_at_field} <- Info.webauthn_credential_last_used_at_field(dsl_state),
          {:ok, user_id_field} <- Info.webauthn_credential_user_id_field(dsl_state),
@@ -86,6 +87,13 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
              public?: true
            ),
          :ok <- validate_attribute(dsl_state, sign_count_field, :integer, allow_nil?: false),
+         {:ok, dsl_state} <-
+           maybe_build_attribute(dsl_state, user_handle_field, :binary,
+             allow_nil?: true,
+             writable?: true,
+             public?: true
+           ),
+         :ok <- validate_attribute(dsl_state, user_handle_field, :binary, allow_nil?: true),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, label_field, :string,
              default: "Security Key",
@@ -128,6 +136,7 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
                  credential_id_field,
                  public_key_field,
                  sign_count_field,
+                 user_handle_field,
                  label_field,
                  user_id_field
                ]

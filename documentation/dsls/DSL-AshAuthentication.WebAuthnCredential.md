@@ -27,6 +27,8 @@ The extension automatically adds:
 - `credential_id` — binary, non-nullable, uniquely constrained
 - `public_key` — `AshAuthentication.Strategy.WebAuthn.CoseKey`, non-nullable
 - `sign_count` — integer, non-nullable, defaults to `0`
+- `user_handle` — binary, nullable; the WebAuthn user handle (`user.id`)
+  baked into the passkey at registration
 - `label` — string, defaults to `"Security Key"`
 - `last_used_at` — UTC datetime, nullable
 - A `belongs_to` relationship to `user_resource` (named `:user` by default),
@@ -67,6 +69,7 @@ Configuration for this WebAuthn credential resource.
 | [`credential_id_field`](#webauthn_credential-credential_id_field){: #webauthn_credential-credential_id_field } | `atom` | `:credential_id` | The name of the attribute that stores the WebAuthn credential ID. |
 | [`public_key_field`](#webauthn_credential-public_key_field){: #webauthn_credential-public_key_field } | `atom` | `:public_key` | The name of the attribute that stores the COSE public key. |
 | [`sign_count_field`](#webauthn_credential-sign_count_field){: #webauthn_credential-sign_count_field } | `atom` | `:sign_count` | The name of the attribute that stores the authenticator sign count. |
+| [`user_handle_field`](#webauthn_credential-user_handle_field){: #webauthn_credential-user_handle_field } | `atom` | `:user_handle` | The name of the attribute that stores the WebAuthn user handle baked into the passkey at registration. |
 | [`label_field`](#webauthn_credential-label_field){: #webauthn_credential-label_field } | `atom` | `:label` | The name of the attribute that stores the human-readable credential label. |
 | [`last_used_at_field`](#webauthn_credential-last_used_at_field){: #webauthn_credential-last_used_at_field } | `atom` | `:last_used_at` | The name of the optional attribute that stores when the credential was last used. |
 | [`user_id_field`](#webauthn_credential-user_id_field){: #webauthn_credential-user_id_field } | `atom` | `:user_id` | The name of the foreign key attribute referencing the user (from the belongs_to). |

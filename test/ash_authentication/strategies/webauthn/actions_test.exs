@@ -63,6 +63,44 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert to_string(user.email) == "webauthn-user@example.com"
     end
 
+    test "stores the user handle on the credential when supplied", %{strategy: strategy} do
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      challenge = %Wax.Challenge{
+        type: :attestation,
+        bytes: fixture.challenge_bytes,
+        origin: "https://example.com",
+        rp_id: "example.com",
+        attestation: "none",
+        trusted_attestation_types: [:none, :basic, :self, :uncertain],
+        verify_trust_root: false,
+        origin_verify_fun: {Wax, :origins_match?, []},
+        issued_at: System.system_time(:second)
+      }
+
+      params = %{
+        "email" => "handle-user@example.com",
+        "attestation_object" => fixture.attestation_object,
+        "client_data_json" => fixture.client_data_json,
+        "raw_id" => fixture.raw_id
+      }
+
+      user_handle = :crypto.strong_rand_bytes(32)
+
+      assert {:ok, user} =
+               Actions.register(strategy, params,
+                 challenge: challenge,
+                 user_handle: user_handle
+               )
+
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.user_handle == user_handle
+    end
+
     test "persists register_action_accept fields from params", %{strategy: strategy} do
       fixture =
         WebAuthnFixtures.generate_registration(

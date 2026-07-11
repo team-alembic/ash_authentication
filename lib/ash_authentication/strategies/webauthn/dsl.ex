@@ -203,6 +203,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           doc: "The name of the sign count attribute on the credential resource.",
           default: :sign_count
         ],
+        user_handle_field: [
+          type: :atom,
+          doc:
+            "The name of the user handle attribute on the credential resource. Stores the WebAuthn user handle (`user.id`) baked into the passkey at registration.",
+          default: :user_handle
+        ],
         label_field: [
           type: :atom,
           doc: "The name of the label attribute on the credential resource.",

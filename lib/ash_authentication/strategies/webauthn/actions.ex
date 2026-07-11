@@ -383,6 +383,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
           auth_data.attested_credential_data,
           auth_data.sign_count,
           params["label"],
+          Keyword.get(opts, :user_handle),
           tenant
         )
       else
@@ -448,6 +449,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         strategy.label_field => params["label"] || "Security Key"
       }
 
+      credential_input =
+        maybe_put_user_handle(credential_input, strategy, Keyword.get(opts, :user_handle))
+
       action_params = %{strategy.credentials_relationship_name => credential_input}
 
       # In passkey-first mode the user resource has no identity attribute, so
@@ -487,6 +491,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         end
       end)
     end
+
+    # The user handle is only known when the ceremony went through a channel
+    # that minted one (the Plug challenge endpoints); callers driving the
+    # actions directly may not have one, and the attribute is nullable.
+    defp maybe_put_user_handle(attrs, _strategy, nil), do: attrs
+
+    defp maybe_put_user_handle(attrs, strategy, user_handle),
+      do: Map.put(attrs, strategy.user_handle_field, user_handle)
 
     defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do
       update_sign_count(strategy, credential_id, new_count, tenant)
@@ -546,14 +558,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       {:error, auth_failed(strategy, action, "Invalid base64 encoding in request parameters")}
     end
 
-    defp store_credential(strategy, user, cred_data, sign_count, label, tenant) do
-      attrs = %{
-        credential_id: cred_data.credential_id,
-        public_key: cred_data.credential_public_key,
-        sign_count: sign_count,
-        label: label || "Security Key",
-        user_id: user.id
-      }
+    defp store_credential(strategy, user, cred_data, sign_count, label, user_handle, tenant) do
+      attrs =
+        %{
+          credential_id: cred_data.credential_id,
+          public_key: cred_data.credential_public_key,
+          sign_count: sign_count,
+          label: label || "Security Key",
+          user_id: user.id
+        }
+        |> maybe_put_user_handle(strategy, user_handle)
 
       ash_opts = internal_ash_opts(tenant)
       action = credential_action_name(strategy.credential_resource, :create_action_name)
