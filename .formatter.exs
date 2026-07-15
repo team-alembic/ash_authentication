@@ -270,7 +270,11 @@ spark_locals_without_parens = [
   warn_on_missing_identity_resource?: 1,
   webauthn: 0,
   webauthn: 1,
-  webauthn: 2
+  webauthn: 2,
+  webauthn_route: 2,
+  webauthn_route: 3,
+  webauthn_setup_route: 2,
+  webauthn_setup_route: 3
 ]
 
 [
