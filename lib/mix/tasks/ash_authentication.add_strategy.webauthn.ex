@@ -173,8 +173,6 @@ if Code.ensure_loaded?(Igniter) do
         inspect(credential_resource),
         "--uuid-primary-key",
         "id",
-        "--relationship",
-        "belongs_to:user:#{inspect(options[:user])}:required",
         "--extend",
         extensions
       ])
@@ -184,12 +182,35 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp add_webauthn_credential_section(igniter, credential_resource, user_resource) do
-      Spark.Igniter.set_option(
-        igniter,
+      igniter
+      |> Spark.Igniter.set_option(
         credential_resource,
         [:webauthn_credential, :user_resource],
         user_resource
       )
+      |> Spark.Igniter.set_option(
+        credential_resource,
+        [:webauthn_credential, :user_relationship_name],
+        user_relationship_name(user_resource)
+      )
+    end
+
+    # Names the belongs_to relationship (and, by Ash's own `<name>_id`
+    # convention, its foreign key) after the user resource's own module name
+    # rather than hardcoding `:user` — so a user resource called `Account`
+    # gets a relationship named `:account` with an `:account_id` foreign
+    # key, instead of a `:user`/`:user_id` pair that doesn't match anything
+    # the resource is actually called. Stamped explicitly into both the
+    # credential resource (here) and the strategy block (`strategy_block/3`)
+    # from this same computed value, so the two can't drift out of sync —
+    # they're independent DSL options that both default to `:user` and have
+    # no way to agree with each other automatically at compile time.
+    defp user_relationship_name(user_resource) do
+      user_resource
+      |> Module.split()
+      |> List.last()
+      |> Macro.underscore()
+      |> String.to_atom()
     end
 
     defp add_credential_resource_timestamps(igniter, credential_resource) do
@@ -360,6 +381,7 @@ if Code.ensure_loaded?(Igniter) do
       """
       webauthn #{inspect(options[:name])} do
         credential_resource #{inspect(credential_resource)}
+        user_relationship_name #{inspect(user_relationship_name(options[:user]))}
         rp_id #{inspect(secrets_module)}
         rp_name #{inspect(secrets_module)}
         origin #{inspect(secrets_module)}

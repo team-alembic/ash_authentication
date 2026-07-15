@@ -135,8 +135,11 @@ defmodule AshAuthentication.WebAuthnCredential do
         user_id_field: [
           type: :atom,
           doc:
-            "The name of the foreign key attribute referencing the user (from the belongs_to).",
-          default: :user_id
+            "The name of the foreign key attribute referencing the user (from the belongs_to). " <>
+              "Defaults to `nil`, which leaves it to `Ash.Resource.Relationships.BelongsTo`'s " <>
+              "own convention (`<user_relationship_name>_id`). Set this only to override that " <>
+              "convention with a different column name.",
+          default: nil
         ],
         user_relationship_name: [
           type: :atom,

@@ -68,6 +68,104 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
     assert igniter.issues == []
   end
 
+  # `igniter.issues == []` (as used above) only reflects issues Igniter itself
+  # noticed while patching source; it says nothing about whether the
+  # generated code actually compiles. That gap is exactly how the
+  # `add_strategy.webauthn` DSL-corruption bug shipped: Igniter's codegen
+  # produced syntactically valid but semantically broken output
+  # (`webauthn_credential(:user_resource)` instead of a `do...end` block,
+  # `policies` spliced inside `attributes`), and no test caught it because
+  # none of them ran the generated source through the compiler. This test
+  # runs `mix ash_authentication.install --auth-strategy webauthn` and then
+  # actually compiles what it generates, swapping Postgres for Ets so it
+  # doesn't need a real database.
+  test "installation with `--auth-strategy webauthn` produces resources that actually compile" do
+    igniter =
+      test_project()
+      |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
+      |> Igniter.compose_task("ash_authentication.install", [
+        "--yes",
+        "--auth-strategy",
+        "webauthn"
+      ])
+      |> Igniter.Project.Formatter.remove_formatter_plugin(Spark.Formatter)
+
+    assert igniter.issues == []
+
+    get = fn path -> igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content) end
+
+    to_ets = fn source ->
+      source
+      |> String.replace("data_layer: AshPostgres.DataLayer", "data_layer: Ash.DataLayer.Ets")
+      |> String.replace(~r/postgres do.*?end\n/s, "ets do\n    private?(true)\n  end\n")
+    end
+
+    accounts =
+      get.("lib/test/accounts.ex")
+      |> String.replace(
+        "use Ash.Domain,\n    otp_app: :test",
+        "use Ash.Domain,\n    otp_app: :test,\n    validate_config_inclusion?: false"
+      )
+
+    secrets = get.("lib/test/secrets.ex")
+    token = get.("lib/test/accounts/token.ex") |> to_ets.()
+
+    user =
+      get.("lib/test/accounts/user.ex")
+      |> to_ets.()
+      |> String.replace(
+        ~r/\n  identities do\n(.*?)\n  end\n/s,
+        "\n  identities do\n    identity :unique_email, [:email], pre_check_with: Test.Accounts\n  end\n"
+      )
+
+    credential =
+      get.("lib/test/accounts/web_authn_credential.ex")
+      |> to_ets.()
+      |> String.replace(
+        ~r/\nend\n\z/,
+        """
+
+          identities do
+            identity :unique_credential_id, [:credential_id], pre_check_with: Test.Accounts
+          end
+        end
+        """
+      )
+
+    bundle = Enum.join([accounts, secrets, token, user, credential], "\n")
+
+    compiled = Code.compile_string(bundle)
+
+    assert {Test.Accounts.User, _} = List.keyfind(compiled, Test.Accounts.User, 0)
+
+    assert {Test.Accounts.WebAuthnCredential, _} =
+             List.keyfind(compiled, Test.Accounts.WebAuthnCredential, 0)
+
+    # Pins the default (`--user` unset) foreign key name through the full
+    # install pipeline, not just the add_strategy task in isolation.
+    relationship = Ash.Resource.Info.relationship(Test.Accounts.WebAuthnCredential, :user)
+
+    assert relationship,
+           "expected a `:user` relationship on Test.Accounts.WebAuthnCredential, but none was found"
+
+    assert %{
+             type: :belongs_to,
+             destination: Test.Accounts.User,
+             source_attribute: :user_id
+           } = relationship
+  after
+    :code.purge(Test.Accounts.User)
+    :code.delete(Test.Accounts.User)
+    :code.purge(Test.Accounts.WebAuthnCredential)
+    :code.delete(Test.Accounts.WebAuthnCredential)
+    :code.purge(Test.Accounts.Token)
+    :code.delete(Test.Accounts.Token)
+    :code.purge(Test.Accounts)
+    :code.delete(Test.Accounts)
+    :code.purge(Test.Secrets)
+    :code.delete(Test.Secrets)
+  end
+
   @tag igniter_args: ["--user", "Test.Accounts.Admin"]
   test "installation honours the user argument", %{igniter: igniter} do
     igniter

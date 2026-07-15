@@ -70,6 +70,8 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
              &build_user_relationship(&1, user_relationship_name, user_resource, user_id_field)
            ),
          :ok <- validate_user_relationship(dsl_state, user_relationship_name, user_resource),
+         user_id_field <-
+           resolve_user_id_field(dsl_state, user_relationship_name, user_id_field),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, credential_id_field, :binary,
              allow_nil?: false,
@@ -188,6 +190,23 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
         )
       end)
     end
+  end
+
+  # `user_id_field` defaults to `nil` so the belongs_to relationship's own
+  # `<name>_id` convention can apply. Once the relationship is built, its
+  # `source_attribute` holds whatever was actually resolved (either that
+  # convention or an explicit `user_id_field` override) — read it back here
+  # so the create action's `accept` list below uses the real attribute name
+  # instead of the pre-resolution `nil`.
+  defp resolve_user_id_field(_dsl_state, _relationship_name, user_id_field)
+       when not is_nil(user_id_field),
+       do: user_id_field
+
+  defp resolve_user_id_field(dsl_state, relationship_name, nil) do
+    %{source_attribute: source_attribute} =
+      Resource.Info.relationship(dsl_state, relationship_name)
+
+    source_attribute
   end
 
   defp build_user_relationship(_dsl_state, name, destination, user_id_field) do
