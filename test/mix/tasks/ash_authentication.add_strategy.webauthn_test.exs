@@ -36,6 +36,54 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     |> assert_creates("lib/test/accounts/web_authn_credential.ex")
   end
 
+  # Regression test: `diff =~` string checks (as used elsewhere in this file)
+  # can't tell a well-formed `webauthn_credential do ... end` block apart from
+  # a corrupt `webauthn_credential(:user_resource)` call, or a `policies`
+  # block that got spliced inside `attributes` instead of the top level.
+  # Both shapes still contain the substrings the other tests assert on, but
+  # only one of them actually compiles. Swap in an Ets-backed domain/user so
+  # this doesn't need Postgres, then compile the real generated source
+  # through the real `AshAuthentication.WebAuthnCredential` extension.
+  test "the generated credential resource actually compiles", %{igniter: igniter} do
+    result = Igniter.compose_task(igniter, "ash_authentication.add_strategy.webauthn", [])
+
+    source =
+      result.rewrite
+      |> Rewrite.source!("lib/test/accounts/web_authn_credential.ex")
+      |> Rewrite.Source.get(:content)
+
+    module_name =
+      Module.concat([
+        "AshAuthentication.AddStrategy.WebauthnTest.Credential#{System.unique_integer([:positive])}"
+      ])
+
+    compilable_source =
+      source
+      |> String.replace("Test.Accounts.WebAuthnCredential", inspect(module_name))
+      |> String.replace(
+        "domain: Test.Accounts",
+        "domain: AshAuthentication.Test.PermissiveDomain"
+      )
+      |> String.replace("data_layer: AshPostgres.DataLayer", "data_layer: Ash.DataLayer.Ets")
+      |> String.replace(~r/postgres do.*?end\n/s, "ets do\n    private?(true)\n  end\n")
+      |> String.replace("Test.Accounts.User", "Example.UserWithWebAuthn")
+      |> String.replace(
+        ~r/\nend\n\z/,
+        """
+
+          identities do
+            identity :unique_credential_id, [:credential_id],
+              pre_check_with: AshAuthentication.Test.PermissiveDomain
+          end
+        end
+        """
+      )
+
+    compiled = Code.compile_string(compilable_source)
+
+    assert {^module_name, _bytecode} = List.keyfind(compiled, module_name, 0)
+  end
+
   test "credential resource uses the AshAuthentication.WebAuthnCredential extension", %{
     igniter: igniter
   } do

@@ -187,8 +187,7 @@ if Code.ensure_loaded?(Igniter) do
       Spark.Igniter.set_option(
         igniter,
         credential_resource,
-        [:webauthn_credential],
-        :user_resource,
+        [:webauthn_credential, :user_resource],
         user_resource
       )
     end
@@ -202,10 +201,9 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp ensure_timestamps(zipper) do
-      with {:ok, do_zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-           {:ok, attrs_zipper} <-
+      with {:ok, attrs_zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(
-               do_zipper,
+               zipper,
                :attributes,
                1
              ),
@@ -236,24 +234,23 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp ensure_authorizer_bypass(zipper) do
-      with {:ok, do_zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-           :error <-
-             Igniter.Code.Function.move_to_function_call_in_current_scope(
-               do_zipper,
-               :policies,
-               1
-             ) do
-        {:ok,
-         Igniter.Code.Common.add_code(do_zipper, """
-         policies do
-           bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-             authorize_if always()
+      case Igniter.Code.Function.move_to_function_call_in_current_scope(
+             zipper,
+             :policies,
+             1
+           ) do
+        :error ->
+          {:ok,
+           Igniter.Code.Common.add_code(zipper, """
+           policies do
+             bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+               authorize_if always()
+             end
            end
-         end
-         """)}
-      else
-        {:ok, _} -> {:ok, zipper}
-        :error -> {:ok, zipper}
+           """)}
+
+        {:ok, _} ->
+          {:ok, zipper}
       end
     end
 
