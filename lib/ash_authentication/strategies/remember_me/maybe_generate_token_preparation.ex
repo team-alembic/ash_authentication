@@ -107,7 +107,7 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparation do
     end
   end
 
-  defp verify_result(query, _resource, _strategy, _context) do
-    {:ok, query}
+  defp verify_result(_query, records, _strategy, _context) do
+    {:ok, records}
   end
 end

@@ -62,4 +62,18 @@ defmodule AshAuthentication.Strategy.RememberMe.MaybeGenerateTokenPreparationTes
                MaybeGenerateTokenPreparation.prepare(query, options, context)
     end
   end
+
+  describe "after_action hook" do
+    test "passes an empty result list through untouched" do
+      query =
+        UserWithRememberMe
+        |> Ash.Query.new()
+        |> Ash.Query.set_argument(:remember_me, true)
+
+      assert %Ash.Query{after_action: [hook]} =
+               MaybeGenerateTokenPreparation.prepare(query, [], %{})
+
+      assert {:ok, []} = hook.(query, [])
+    end
+  end
 end
