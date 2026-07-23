@@ -339,12 +339,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
     sign_in_action_name: nil,
     sign_in_with_token_action_name: nil,
     verify_action_name: nil,
-    store_credential_action_name: nil,
-    update_sign_count_action_name: nil,
-    list_credentials_action_name: nil,
-    delete_credential_action_name: nil,
-    update_credential_label_action_name: nil,
-    add_credential_action_name: nil,
     __spark_metadata__: nil
   ]
 
@@ -382,12 +376,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           sign_in_action_name: atom | nil,
           sign_in_with_token_action_name: atom | nil,
           verify_action_name: atom | nil,
-          store_credential_action_name: atom | nil,
-          update_sign_count_action_name: atom | nil,
-          list_credentials_action_name: atom | nil,
-          delete_credential_action_name: atom | nil,
-          update_credential_label_action_name: atom | nil,
-          add_credential_action_name: atom | nil,
           __spark_metadata__: any
         }
 

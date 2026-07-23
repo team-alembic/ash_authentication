@@ -1116,6 +1116,39 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
     end
   end
 
+  describe "remove_dead_webauthn_action_options/2" do
+    test "strips the unused credential-action-name options from the strategy" do
+      igniter =
+        webauthn_project(
+          strategy_options: [
+            store_credential_action_name: ":store_it",
+            add_credential_action_name: ":add_it"
+          ]
+        )
+
+      igniter = Upgrade.remove_dead_webauthn_action_options(igniter, [])
+
+      igniter
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      - |          store_credential_action_name(:store_it)
+      """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      - |          add_credential_action_name(:add_it)
+      """)
+
+      # Removal only — nothing is moved onto the credential resource.
+      assert_unchanged(igniter, "lib/test/accounts/webauthn_credential.ex")
+    end
+
+    test "leaves a strategy that sets none of them alone" do
+      igniter =
+        webauthn_project(strategy_options: [])
+        |> Upgrade.remove_dead_webauthn_action_options([])
+
+      assert_unchanged(igniter, "lib/test/accounts/user.ex")
+    end
+  end
+
   # Written pre-formatted: the upgrader re-renders any module it visits, so a
   # no-op only compares equal if the source is already in formatted style.
   defp webauthn_project(opts) do

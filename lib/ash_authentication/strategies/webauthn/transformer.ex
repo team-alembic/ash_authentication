@@ -43,42 +43,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
            ),
          strategy <-
            maybe_set_field_lazy(strategy, :verify_action_name, &:"verify_#{&1.name}"),
-         strategy <-
-           maybe_set_field_lazy(
-             strategy,
-             :store_credential_action_name,
-             fn s -> :"store_#{s.name}_credential" end
-           ),
-         strategy <-
-           maybe_set_field_lazy(
-             strategy,
-             :update_sign_count_action_name,
-             fn s -> :"update_#{s.name}_sign_count" end
-           ),
-         strategy <-
-           maybe_set_field_lazy(
-             strategy,
-             :list_credentials_action_name,
-             fn s -> :"list_#{s.name}_credentials" end
-           ),
-         strategy <-
-           maybe_set_field_lazy(
-             strategy,
-             :delete_credential_action_name,
-             fn s -> :"delete_#{s.name}_credential" end
-           ),
-         strategy <-
-           maybe_set_field_lazy(
-             strategy,
-             :update_credential_label_action_name,
-             fn s -> :"update_#{s.name}_credential_label" end
-           ),
-         strategy <-
-           maybe_set_field_lazy(
-             strategy,
-             :add_credential_action_name,
-             fn s -> :"add_#{s.name}_credential" end
-           ),
          {:ok, dsl_state} <-
            (if strategy.registration_enabled? do
               maybe_build_action(

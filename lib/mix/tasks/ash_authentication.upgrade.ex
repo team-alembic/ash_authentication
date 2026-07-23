@@ -55,7 +55,8 @@ if Code.ensure_loaded?(Igniter) do
             &convert_request_actions_to_generic/2,
             &add_brute_force_protection/2,
             &require_identity_resource/2,
-            &move_webauthn_credential_options/2
+            &move_webauthn_credential_options/2,
+            &remove_dead_webauthn_action_options/2
           ]
         }
 
@@ -1062,7 +1063,36 @@ if Code.ensure_loaded?(Igniter) do
         options ->
           igniter
           |> transfer_credential_options(resource, credential_resource(zipper), options)
-          |> remove_webauthn_credential_options(resource)
+          |> remove_strategy_options(resource, @webauthn_credential_options)
+      end
+    end
+
+    # Six action-name options that were declared on the `webauthn` strategy but
+    # never read by anything — no action was ever named from them. Removed
+    # outright (nothing to preserve), unlike the credential field options above
+    # which are moved onto the credential resource.
+    @webauthn_dead_action_options ~w[
+      store_credential_action_name
+      update_sign_count_action_name
+      list_credentials_action_name
+      delete_credential_action_name
+      update_credential_label_action_name
+      add_credential_action_name
+    ]a
+
+    @doc """
+    Removes the unused credential-action-name options from the `webauthn`
+    strategy. They never named an action, so there is nothing to preserve.
+    """
+    def remove_dead_webauthn_action_options(igniter, _opts) do
+      case find_resources_with_webauthn_strategies(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources} ->
+          Enum.reduce(resources, igniter, fn resource, igniter ->
+            remove_strategy_options(igniter, resource, @webauthn_dead_action_options)
+          end)
       end
     end
 
@@ -1168,7 +1198,7 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp remove_webauthn_credential_options(igniter, resource) do
+    defp remove_strategy_options(igniter, resource, options) do
       Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
         with {:ok, zipper} <- enter_auth_strategies(zipper),
              {:ok, zipper} <-
@@ -1180,10 +1210,7 @@ if Code.ensure_loaded?(Igniter) do
              {:ok, block_zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
           {:ok,
            Igniter.Code.Common.remove(block_zipper, fn zipper ->
-             Enum.any?(
-               @webauthn_credential_options,
-               &Igniter.Code.Function.function_call?(zipper, &1, 1)
-             )
+             Enum.any?(options, &Igniter.Code.Function.function_call?(zipper, &1, 1))
            end)}
         else
           _ -> {:ok, zipper}

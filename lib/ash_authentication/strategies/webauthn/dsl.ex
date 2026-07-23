@@ -280,42 +280,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           doc:
             "The name of the second-factor verify action on the user resource. Defaults to `verify_<strategy_name>`.",
           required: false
-        ],
-        store_credential_action_name: [
-          type: :atom,
-          doc:
-            "The name of the create action on the credential resource. Defaults to `store_<strategy_name>_credential`.",
-          required: false
-        ],
-        update_sign_count_action_name: [
-          type: :atom,
-          doc:
-            "The name of the update action for sign_count on the credential resource. Defaults to `update_<strategy_name>_sign_count`.",
-          required: false
-        ],
-        list_credentials_action_name: [
-          type: :atom,
-          doc:
-            "The name of the read action to list credentials. Defaults to `list_<strategy_name>_credentials`.",
-          required: false
-        ],
-        delete_credential_action_name: [
-          type: :atom,
-          doc:
-            "The name of the destroy action for credentials. Defaults to `delete_<strategy_name>_credential`.",
-          required: false
-        ],
-        update_credential_label_action_name: [
-          type: :atom,
-          doc:
-            "The name of the update action for credential labels. Defaults to `update_<strategy_name>_credential_label`.",
-          required: false
-        ],
-        add_credential_action_name: [
-          type: :atom,
-          doc:
-            "The name of the action to add a credential to an existing user. Defaults to `add_<strategy_name>_credential`.",
-          required: false
         ]
       ]
     }
