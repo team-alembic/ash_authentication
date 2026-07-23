@@ -103,6 +103,7 @@ spark_locals_without_parens = [
   identity_relationship_name: 1,
   identity_relationship_user_id_attribute: 1,
   identity_resource: 1,
+  idp_initiated_login?: 1,
   include_actions: 1,
   include_fields: 1,
   include_purposes: 1,

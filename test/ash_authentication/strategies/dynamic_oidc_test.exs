@@ -44,6 +44,35 @@ defmodule AshAuthentication.Strategy.DynamicOidcTest do
       {:ok, strategy} = Info.strategy(Example.User, :sso)
       assert strategy.prevent_hijacking? == true
     end
+
+    test "idp_initiated_login? defaults to false" do
+      {:ok, strategy} = Info.strategy(Example.User, :sso)
+      assert strategy.idp_initiated_login? == false
+    end
+  end
+
+  describe "idp_initiated_login? rejection" do
+    # dynamic_oidc resolves its provider config from a `connection_id` in the
+    # request-phase path; an IdP-initiated callback carries no `connection_id`,
+    # so the request-phase restart cannot build an authorize URL. Rather than
+    # accept a setting that would silently never fire, the verifier rejects it.
+    test "the verifier rejects idp_initiated_login? true with a DslError" do
+      {:ok, strategy} = Info.strategy(Example.User, :sso)
+      dsl_state = Example.User.spark_dsl_config()
+
+      # Flip only the flag on an otherwise-valid strategy, so the rejection is
+      # the sole thing under test (redirect_uri / connection_resource are valid).
+      result = DynamicOidc.Verifier.verify(%{strategy | idp_initiated_login?: true}, dsl_state)
+
+      assert {:error, %Spark.Error.DslError{} = error} = result
+      assert error.path == [:authentication, :strategies, :sso, :idp_initiated_login?]
+      assert Exception.message(error) =~ "not supported on `dynamic_oidc`"
+    end
+
+    test "a valid strategy (flag unset) passes the verifier" do
+      {:ok, strategy} = Info.strategy(Example.User, :sso)
+      assert :ok = DynamicOidc.Verifier.verify(strategy, Example.User.spark_dsl_config())
+    end
   end
 
   describe "routing" do
