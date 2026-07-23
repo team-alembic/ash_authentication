@@ -33,6 +33,15 @@ config :ash_authentication,
         token_url: "https://example.com/oauth/token",
         user_url: "https://example.com/userinfo",
         trusted_audiences: ["01234", "56789"]
+      ],
+      oauth2_idp_initiated: [
+        client_id: "pretend client id",
+        redirect_uri: "http://localhost:4000/auth",
+        client_secret: "pretend client secret",
+        base_url: "https://example.com/",
+        authorize_url: "https://example.com/authorize",
+        token_url: "https://example.com/oauth/token",
+        user_url: "https://example.com/userinfo"
       ]
     ],
     tokens: [

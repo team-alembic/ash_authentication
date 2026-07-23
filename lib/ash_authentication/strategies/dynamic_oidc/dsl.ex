@@ -53,6 +53,23 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Dsl do
     |> Keyword.delete(:private_key)
     |> Keyword.delete(:private_key_id)
     |> Keyword.delete(:private_key_path)
+    # `idp_initiated_login?` is inherited from the OAuth2 schema but cannot
+    # work here (see `DynamicOidc.Verifier`, which rejects it at compile
+    # time): the restart it triggers resolves provider config from a
+    # `connection_id` in the request path, which an IdP-initiated callback
+    # does not carry. Keep the option in the schema so the verifier can return
+    # a helpful error, but override its docs so generated references describe
+    # the rejection rather than inheriting OAuth2's "this works" text.
+    |> Keyword.put(:idp_initiated_login?,
+      type: :boolean,
+      default: false,
+      doc:
+        "Not supported on `dynamic_oidc` and rejected at compile time: an " <>
+          "IdP-initiated callback carries no `connection_id`, so the " <>
+          "request-phase restart cannot resolve the connection's provider " <>
+          "config. Use a statically-configured `oauth2`/`oidc` strategy for " <>
+          "IdP-initiated login."
+    )
     |> Keyword.merge(
       connection_resource: [
         type: {:behaviour, Ash.Resource},
