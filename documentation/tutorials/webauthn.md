@@ -27,6 +27,17 @@ Create a credential resource using the `AshAuthentication.WebAuthnCredential`
 extension. It scaffolds the required attributes, relationship, identity, and
 actions for you:
 
+> #### The extension is required {: .info}
+>
+> As of 5.0 the credential resource must use this extension. Its
+> `webauthn_credential` section is the single place the credential's attribute
+> names, its `belongs_to` to the user resource, and its action names are
+> configured — the `webauthn` strategy reads them back from there rather than
+> declaring its own copies.
+>
+> Support for a credential resource without the extension may return in a
+> later minor version.
+
 ```elixir
 defmodule MyApp.Accounts.WebAuthnCredential do
   use Ash.Resource,
@@ -67,6 +78,42 @@ end
 ```
 
 Run `mix ash.codegen add_webauthn` to generate the migrations.
+
+### How the two resources fit together
+
+The credential resource's `webauthn_credential` section is the single source
+of truth for the credential's shape: it names the attributes, and it names the
+`belongs_to` back to the user. The strategy only points at the credential
+resource (`credential_resource`) and reads those names back from it — it never
+declares its own copies. On the user side, the strategy builds a matching
+`has_many`; both ends meet on the credential's one foreign key.
+
+```mermaid
+graph LR
+  subgraph User["User resource"]
+    Strategy["webauthn strategy<br/>credential_resource ➜"]
+    HasMany["has_many :webauthn_credentials"]
+  end
+
+  subgraph Credential["Credential resource"]
+    Extension["webauthn_credential section<br/>user_resource, field + relationship names"]
+    BelongsTo["belongs_to :user<br/>(source_attribute: :user_id)"]
+  end
+
+  Strategy -- "points at" --> Credential
+  Strategy -. "reads names from" .-> Extension
+  HasMany -- "destination_attribute" --> BelongsTo
+
+  classDef section fill:#f6f8fa,stroke:#8b949e,color:#24292f;
+  class User,Credential section;
+```
+
+If the user resource isn't named `User`, the generated `has_many` derives its
+foreign key from that resource's name (`Account` ➜ `:account_id`), so the
+credential's `belongs_to` has to be named to match — set
+`user_relationship_name` on the `webauthn_credential` section and everything
+else follows from it. `mix ash_authentication.add_strategy.webauthn` does this
+for you.
 
 > ### Migrating from a legacy U2F deployment? {: .warning}
 >
@@ -225,6 +272,46 @@ subject name and strategy name, e.g. `/user/webauthn/...`):
 | `verify` | POST | Prove possession as a second factor |
 | `add_credential_challenge` | GET | Creation options for enrolling another passkey |
 | `add_credential` | POST | Attach a new credential to the authenticated user |
+
+Every ceremony is the same two round trips: a GET that mints a challenge and
+stashes it in the session, then a POST that verifies the authenticator's
+signed response against that stored challenge. Registration and sign-in differ
+only in what the POST does once verification passes — create a user and
+credential, or issue a token.
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant A as Authenticator
+  participant P as AshAuthentication Plug
+  participant R as Ash (user + credential)
+
+  Note over B,R: Challenge phase (GET)
+  B->>P: GET …/registration_challenge (or …/authentication_challenge)
+  P->>P: Generate challenge, store in session
+  P-->>B: Creation / request options (+ challenge)
+  B->>A: navigator.credentials.create() / .get()
+  A-->>B: Signed attestation / assertion
+
+  Note over B,R: Verification phase (POST)
+  B->>P: POST …/register (or …/sign_in)
+  P->>P: Reconstruct challenge from session
+  alt register
+    P->>R: Verify attestation, create user + credential
+    R-->>P: User
+    P-->>B: Session token
+  else sign_in
+    P->>R: Verify assertion, look up user by credential id
+    R-->>P: User
+    P-->>B: Short-lived sign-in token
+    B->>P: POST …/sign_in_with_token
+    P-->>B: Session token
+  end
+```
+
+The `verify` (second factor) and `add_credential` (enroll another passkey)
+ceremonies follow the same challenge-then-verify shape; they differ only in
+requiring an already-authenticated actor and in what the POST does on success.
 
 ## Feature matrix
 
