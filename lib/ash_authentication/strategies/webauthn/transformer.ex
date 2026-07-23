@@ -163,16 +163,23 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
   end
 
   # The credential resource is declared `no_depend_modules`, so it may not be
-  # compiled yet when this runs — we can only build against its module name,
-  # not introspect its attributes. `:user_id` matches
-  # `AshAuthentication.WebAuthnCredential`'s own default `user_id_field`; if a
-  # credential resource customises that field name, declare this relationship
-  # manually instead (it will be left untouched, per `maybe_build_relationship/3`).
+  # compiled yet when this runs — we can't read the foreign key off its
+  # `belongs_to`. Leave `destination_attribute` unset so Ash's own
+  # `HasDestinationField` transformer derives it from *this* resource's name
+  # (`Account` -> `:account_id`), which agrees with the credential resource
+  # whenever its `belongs_to` is named after the user resource too — the
+  # convention the installer generates and `BelongsTo` defaults to.
+  #
+  # Hardcoding `:user_id` here instead, as this used to, silently produced a
+  # `has_many` pointing at a column that doesn't exist for any user resource
+  # not called `User`. Where the derivation can't hold, the verifier compares
+  # the two ends once the credential resource *is* compiled and tells you to
+  # declare the relationship yourself (it will then be left untouched, per
+  # `maybe_build_relationship/3`).
   defp build_credentials_relationship(_dsl_state, strategy) do
     Transformer.build_entity(Resource.Dsl, [:relationships], :has_many,
       name: strategy.credentials_relationship_name,
-      destination: strategy.credential_resource,
-      destination_attribute: :user_id
+      destination: strategy.credential_resource
     )
   end
 

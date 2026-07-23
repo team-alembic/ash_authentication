@@ -119,7 +119,7 @@ defmodule Mix.Tasks.AshAuthentication.InstallTest do
       )
 
     credential =
-      get.("lib/test/accounts/web_authn_credential.ex")
+      get.("lib/test/accounts/webauthn_credential.ex")
       |> to_ets.()
       |> String.replace(
         ~r/\nend\n\z/,

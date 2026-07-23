@@ -176,23 +176,47 @@ if Code.ensure_loaded?(Igniter) do
         "--extend",
         extensions
       ])
+      |> fix_credential_resource_file_name(credential_resource)
       |> add_webauthn_credential_section(credential_resource, options[:user])
       |> add_credential_resource_authorizer(credential_resource)
       |> add_credential_resource_timestamps(credential_resource)
     end
 
+    # `ash.gen.resource` derives the file path from the module name via
+    # `Macro.underscore/1`, which doesn't know `WebAuthn` is meant to stay
+    # one word — it splits `WebAuthnCredential` into `web_authn_credential`
+    # (three words), giving `web_authn_credential.ex`. Every other WebAuthn
+    # file in this project (`webauthn_credential.ex`, `webauthn.ex`,
+    # `webauthn/dsl.ex`, ...) is named without that split, so move the
+    # freshly generated file to match.
+    defp fix_credential_resource_file_name(igniter, credential_resource) do
+      wrong_path = Igniter.Project.Module.proper_location(igniter, credential_resource)
+      right_path = wrong_path |> Path.dirname() |> Path.join("webauthn_credential.ex")
+
+      Igniter.move_file(igniter, wrong_path, right_path, error_if_exists?: false)
+    end
+
     defp add_webauthn_credential_section(igniter, credential_resource, user_resource) do
-      igniter
-      |> Spark.Igniter.set_option(
-        credential_resource,
-        [:webauthn_credential, :user_resource],
-        user_resource
-      )
-      |> Spark.Igniter.set_option(
-        credential_resource,
-        [:webauthn_credential, :user_relationship_name],
-        user_relationship_name(user_resource)
-      )
+      igniter =
+        Spark.Igniter.set_option(
+          igniter,
+          credential_resource,
+          [:webauthn_credential, :user_resource],
+          user_resource
+        )
+
+      relationship_name = user_relationship_name(user_resource)
+
+      if relationship_name == :user do
+        igniter
+      else
+        Spark.Igniter.set_option(
+          igniter,
+          credential_resource,
+          [:webauthn_credential, :user_relationship_name],
+          relationship_name
+        )
+      end
     end
 
     # Names the belongs_to relationship (and, by Ash's own `<name>_id`
@@ -200,11 +224,13 @@ if Code.ensure_loaded?(Igniter) do
     # rather than hardcoding `:user` — so a user resource called `Account`
     # gets a relationship named `:account` with an `:account_id` foreign
     # key, instead of a `:user`/`:user_id` pair that doesn't match anything
-    # the resource is actually called. Stamped explicitly into both the
-    # credential resource (here) and the strategy block (`strategy_block/3`)
-    # from this same computed value, so the two can't drift out of sync —
-    # they're independent DSL options that both default to `:user` and have
-    # no way to agree with each other automatically at compile time.
+    # the resource is actually called. Only stamped when it differs from
+    # `:user`, the DSL's own default.
+    #
+    # Stamped into the credential resource only: the strategy reads the name
+    # back off the credential resource's DSL, and the `has_many` it builds on
+    # the user resource derives the same `<name>_id` from that resource's
+    # module name. Both ends therefore follow from this one value.
     defp user_relationship_name(user_resource) do
       user_resource
       |> Module.split()
@@ -381,7 +407,6 @@ if Code.ensure_loaded?(Igniter) do
       """
       webauthn #{inspect(options[:name])} do
         credential_resource #{inspect(credential_resource)}
-        user_relationship_name #{inspect(user_relationship_name(options[:user]))}
         rp_id #{inspect(secrets_module)}
         rp_name #{inspect(secrets_module)}
         origin #{inspect(secrets_module)}

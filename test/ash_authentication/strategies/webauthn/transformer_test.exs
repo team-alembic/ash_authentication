@@ -66,6 +66,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
 
     webauthn_credential do
       user_resource <%= user_module %>
+      user_relationship_name <%= user_relationship_name %>
     end
   end
   """
@@ -119,6 +120,22 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
                ResourceInfo.relationship(user_module, :webauthn_credentials)
     end
 
+    # The auto-built `has_many` used to hardcode `destination_attribute:
+    # :user_id`, which silently pointed at a non-existent column for any user
+    # resource not called `User`. It now leaves the attribute for Ash to
+    # derive from the user resource's name, so assert the two ends actually
+    # meet on the same column rather than just that the relationship exists.
+    test "is auto-built pointing at the credential's own foreign key" do
+      {user_module, credential_module} = compile_pair!()
+
+      %{source_attribute: foreign_key} =
+        ResourceInfo.relationships(credential_module)
+        |> Enum.find(&(&1.type == :belongs_to))
+
+      assert %{destination_attribute: ^foreign_key} =
+               ResourceInfo.relationship(user_module, :webauthn_credentials)
+    end
+
     test "a manually-declared relationship pointing at the wrong resource still raises a friendly DslError" do
       error =
         assert_raise DslError, fn ->
@@ -142,10 +159,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
 
     relationships = Keyword.get(opts, :relationships, "")
 
+    # The auto-built `has_many` derives its foreign key from the *user*
+    # resource's name, so the credential's `belongs_to` has to be named after
+    # that resource for the two ends to meet — the convention `BelongsTo`
+    # defaults to for a resource called `User`, and the one the installer
+    # stamps for any other name. These fixtures get a unique suffix per test
+    # (`User1234`), so name the relationship explicitly to match, exactly as
+    # the installer would.
+    user_relationship_name = ":user#{suffix}"
+
     source =
       @user_source
       |> String.replace("<%= user_module %>", user_module_name)
       |> String.replace("<%= credential_module %>", credential_module_name)
+      |> String.replace("<%= user_relationship_name %>", user_relationship_name)
       |> String.replace("<%= relationships %>", relationships)
 
     user_module = Module.concat([user_module_name])

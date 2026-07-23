@@ -191,7 +191,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
                signature,
                client_data_json,
                challenge,
-               [{raw_id, Map.get(credential, strategy.public_key_field)}]
+               [{raw_id, Map.get(credential, WebAuthn.public_key_field(strategy))}]
              ),
            :ok <- handle_sign_count(strategy, action_name, credential, assertion, tenant) do
         {:ok, credential, user}
@@ -218,15 +218,15 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       strategy.credential_resource
       |> Query.new()
       |> Query.set_context(auth_context())
-      |> Query.filter(^ref(strategy.credential_id_field) == ^raw_id)
-      |> Query.load(strategy.user_relationship_name)
+      |> Query.filter(^ref(WebAuthn.credential_id_field(strategy)) == ^raw_id)
+      |> Query.load(WebAuthn.user_relationship_name(strategy))
       |> Ash.read_one(ash_opts)
       |> case do
         {:ok, nil} ->
           {:error, auth_failed(strategy, :sign_in, "Unknown credential")}
 
         {:ok, credential} ->
-          case Map.get(credential, strategy.user_relationship_name) do
+          case Map.get(credential, WebAuthn.user_relationship_name(strategy)) do
             nil ->
               {:error, auth_failed(strategy, :sign_in, "Credential is not linked to a user")}
 
@@ -250,7 +250,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       relationship =
         Ash.Resource.Info.relationship(
           strategy.credential_resource,
-          strategy.user_relationship_name
+          WebAuthn.user_relationship_name(strategy)
         )
 
       foreign_key = relationship.source_attribute
@@ -258,7 +258,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       strategy.credential_resource
       |> Query.new()
       |> Query.set_context(auth_context())
-      |> Query.filter(^ref(strategy.credential_id_field) == ^raw_id)
+      |> Query.filter(^ref(WebAuthn.credential_id_field(strategy)) == ^raw_id)
       |> Query.filter(^ref(foreign_key) == ^actor_id)
       |> Ash.read_one(ash_opts)
       |> case do
@@ -495,12 +495,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     # relationship) and `add_credential` (via the credential create action).
     defp credential_attrs(strategy, registration, params, user_handle) do
       %{
-        strategy.credential_id_field => registration.credential_id,
-        strategy.public_key_field => registration.public_key,
-        strategy.sign_count_field => registration.sign_count,
-        strategy.label_field => params["label"] || "Security Key",
-        strategy.backup_eligible_field => registration.backup_eligible,
-        strategy.backed_up_field => registration.backed_up
+        WebAuthn.credential_id_field(strategy) => registration.credential_id,
+        WebAuthn.public_key_field(strategy) => registration.public_key,
+        WebAuthn.sign_count_field(strategy) => registration.sign_count,
+        WebAuthn.label_field(strategy) => params["label"] || "Security Key",
+        WebAuthn.backup_eligible_field(strategy) => registration.backup_eligible,
+        WebAuthn.backed_up_field(strategy) => registration.backed_up
       }
       |> maybe_put_transports(strategy, params["transports"])
       |> maybe_put_discoverable(strategy, params["cred_props"])
@@ -512,7 +512,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     # signature-covered) and optional — browsers may omit it — so only an
     # explicit boolean is stored.
     defp maybe_put_discoverable(attrs, strategy, %{"rk" => rk}) when is_boolean(rk),
-      do: Map.put(attrs, strategy.discoverable_field, rk)
+      do: Map.put(attrs, WebAuthn.discoverable_field(strategy), rk)
 
     defp maybe_put_discoverable(attrs, _strategy, _cred_props), do: attrs
 
@@ -525,7 +525,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     defp maybe_put_transports(attrs, strategy, transports) when is_list(transports) do
       case transports |> Enum.filter(&(&1 in @known_transports)) |> Enum.uniq() do
         [] -> attrs
-        transports -> Map.put(attrs, strategy.transports_field, transports)
+        transports -> Map.put(attrs, WebAuthn.transports_field(strategy), transports)
       end
     end
 
@@ -537,7 +537,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     defp maybe_put_user_handle(attrs, _strategy, nil), do: attrs
 
     defp maybe_put_user_handle(attrs, strategy, user_handle),
-      do: Map.put(attrs, strategy.user_handle_field, user_handle)
+      do: Map.put(attrs, WebAuthn.user_handle_field(strategy), user_handle)
 
     # Sign count check per WebAuthn §6.1.1: when the authenticator implements
     # a counter (either side nonzero), a count that hasn't increased over the
@@ -545,8 +545,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     # 0 on both sides and never trip this. On success the stored state is
     # refreshed; how an anomaly is handled depends on `sign_count_policy`.
     defp handle_sign_count(strategy, action_name, credential, assertion, tenant) do
-      credential_id = Map.get(credential, strategy.credential_id_field)
-      stored_count = Map.get(credential, strategy.sign_count_field) || 0
+      credential_id = Map.get(credential, WebAuthn.credential_id_field(strategy))
+      stored_count = Map.get(credential, WebAuthn.sign_count_field(strategy)) || 0
       new_count = assertion.sign_count
       anomaly? = (stored_count != 0 or new_count != 0) and new_count <= stored_count
 
@@ -624,7 +624,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
     end
 
-    defp auth_context, do: %{private: %{ash_authentication?: true}}
+    # `:private` context never leaves this changeset — Ash only forwards the
+    # `:shared` key into nested changesets built for managed relationships
+    # (e.g. the credential created alongside the user during registration).
+    # Set the flag in both places so the resource-level `AshAuthenticationInteraction`
+    # bypass sees it whether the policy runs against this changeset or a
+    # nested one.
+    defp auth_context,
+      do: %{
+        private: %{ash_authentication?: true},
+        shared: %{private: %{ash_authentication?: true}}
+      }
 
     defp auth_failed(strategy, action, message) do
       AuthenticationFailed.exception(

@@ -20,7 +20,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
     with :ok <- validate_wax_dependency(),
          :ok <- validate_rp_id(strategy),
          :ok <- validate_credential_resource(strategy),
-         :ok <- validate_credential_resource_shape(strategy),
+         :ok <- validate_credential_resource_shape(strategy, dsl_state),
          :ok <- validate_tokens_enabled(dsl_state),
          :ok <- validate_verify_action(strategy, dsl_state),
          :ok <- validate_register_action_manages_credential(strategy, dsl_state),
@@ -86,85 +86,96 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
 
   defp validate_credential_resource(_), do: :ok
 
-  # The credential resource may be in `no_depend_modules`, so it may not be
-  # compiled when the user resource is verified. Skip shape checks if we
-  # can't introspect it yet — they will run when the credential resource
-  # is itself compiled.
-  defp validate_credential_resource_shape(strategy) do
+  # The credential resource is declared in `no_depend_modules`, so it may not
+  # be compiled when the user resource is verified. Skip the checks that need
+  # to introspect it if it isn't loaded yet.
+  #
+  # Nothing is lost by deferring: the credential resource's own transformer
+  # validates its attributes, relationship and identity as it compiles, and
+  # every value the strategy reads back off it now comes from that same DSL
+  # rather than from a second copy on this side.
+  defp validate_credential_resource_shape(strategy, dsl_state) do
     if Code.ensure_loaded?(strategy.credential_resource) and
          function_exported?(strategy.credential_resource, :spark_dsl_config, 0) do
-      with :ok <- validate_belongs_to_user(strategy),
-           :ok <- validate_required_attribute(strategy, strategy.credential_id_field, :binary),
-           :ok <-
-             validate_required_attribute(
-               strategy,
-               strategy.public_key_field,
-               WebAuthn.CoseKey
-             ) do
-        validate_required_attribute(strategy, strategy.sign_count_field, :integer)
+      with :ok <- validate_credential_resource_extension(strategy) do
+        validate_credentials_relationship_destination(strategy, dsl_state)
       end
     else
       :ok
     end
   end
 
-  defp validate_belongs_to_user(strategy) do
-    case ResourceInfo.relationship(strategy.credential_resource, strategy.user_relationship_name) do
-      %{type: :belongs_to} ->
-        :ok
+  # As of 5.0 the credential resource must use the `WebAuthnCredential`
+  # extension — the strategy reads every credential field name, the
+  # belongs-to name and the credential action names straight off its DSL, so
+  # a resource without it has nothing to read and would silently fall back to
+  # this extension's defaults.
+  defp validate_credential_resource_extension(strategy) do
+    if AshAuthentication.WebAuthnCredential in Spark.extensions(strategy.credential_resource) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies, strategy.name, :credential_resource],
+         message: """
+         The credential resource `#{inspect(strategy.credential_resource)}` must use the \
+         `AshAuthentication.WebAuthnCredential` extension.
 
-      nil ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies, strategy.name],
-           message: """
-           The credential resource `#{inspect(strategy.credential_resource)}` is missing the \
-           `#{inspect(strategy.user_relationship_name)}` relationship.
+         Add it to the resource:
 
-           Add a `belongs_to` relationship pointing to the user resource:
+             use Ash.Resource,
+               extensions: [AshAuthentication.WebAuthnCredential]
 
-               relationships do
-                 belongs_to :#{strategy.user_relationship_name}, MyApp.Accounts.User, allow_nil?: false
+             webauthn_credential do
+               user_resource #{inspect(strategy.resource)}
+             end
+
+         The extension builds and validates the credential's attributes, its \
+         `belongs_to` to the user resource, and its actions — and is where all \
+         of their names are configured.
+         """
+       )}
+    end
+  end
+
+  # The `has_many` on the user resource and the `belongs_to` on the credential
+  # resource must meet on the same column. The strategy's transformer can only
+  # guess the former (the credential resource isn't compiled when it runs), so
+  # confirm the guess here, where it is.
+  defp validate_credentials_relationship_destination(strategy, dsl_state) do
+    with %{destination_attribute: destination_attribute} <-
+           ResourceInfo.relationship(dsl_state, strategy.credentials_relationship_name),
+         %{source_attribute: source_attribute} <-
+           ResourceInfo.relationship(
+             strategy.credential_resource,
+             WebAuthn.user_relationship_name(strategy)
+           ),
+         false <- destination_attribute == source_attribute do
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies, strategy.name, :credentials_relationship_name],
+         message: """
+         The `#{inspect(strategy.credentials_relationship_name)}` relationship on \
+         `#{inspect(strategy.resource)}` points at `#{inspect(destination_attribute)}` on \
+         `#{inspect(strategy.credential_resource)}`, but that resource's \
+         `#{inspect(WebAuthn.user_relationship_name(strategy))}` relationship uses \
+         `#{inspect(source_attribute)}`.
+
+         The generated `has_many` derives its foreign key from this resource's name, which \
+         only matches when the credential resource's `belongs_to` is named after it too. \
+         Declare the relationship yourself to say which column to use:
+
+             relationships do
+               has_many #{inspect(strategy.credentials_relationship_name)}, \
+         #{inspect(strategy.credential_resource)} do
+                 destination_attribute #{inspect(source_attribute)}
                end
-           """
-         )}
-
-      %{type: type} ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies, strategy.name],
-           message:
-             "The `#{inspect(strategy.user_relationship_name)}` relationship on `#{inspect(strategy.credential_resource)}` must be a `belongs_to` (found `#{type}`)."
-         )}
+             end
+         """
+       )}
+    else
+      _ -> :ok
     end
-  end
-
-  defp validate_required_attribute(strategy, name, expected_type) do
-    case ResourceInfo.attribute(strategy.credential_resource, name) do
-      nil ->
-        {:error,
-         DslError.exception(
-           path: [:authentication, :strategies, strategy.name],
-           message:
-             "The credential resource `#{inspect(strategy.credential_resource)}` is missing the `#{inspect(name)}` attribute."
-         )}
-
-      %{type: type} ->
-        if attribute_type_matches?(type, expected_type) do
-          :ok
-        else
-          {:error,
-           DslError.exception(
-             path: [:authentication, :strategies, strategy.name],
-             message:
-               "The `#{inspect(name)}` attribute on `#{inspect(strategy.credential_resource)}` must have type `#{inspect(expected_type)}` (found `#{inspect(type)}`)."
-           )}
-        end
-    end
-  end
-
-  defp attribute_type_matches?(actual, expected) do
-    Ash.Type.get_type(actual) == Ash.Type.get_type(expected)
   end
 
   defp validate_tokens_enabled(dsl_state) do

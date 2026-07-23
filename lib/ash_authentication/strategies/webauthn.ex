@@ -293,6 +293,22 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   - **Token generation happens in `Actions.sign_in`** via `Jwt.token_for_user/3`, not in
     an Ash preparation like the Password strategy. This is because Wax verification
     happens outside the Ash action pipeline.
+
+  ## Credential resource configuration
+
+  Since 5.0 the credential resource must use the
+  `AshAuthentication.WebAuthnCredential` extension. The names of its
+  attributes, and of its `belongs_to` to the user resource, are declared once
+  on its own `webauthn_credential` section -- not on this strategy. The
+  accessors in this module read them back off `credential_resource`, so they
+  always reflect what that resource actually declares:
+
+      strategy = AshAuthentication.Info.strategy!(MyApp.Accounts.User, :webauthn)
+      AshAuthentication.Strategy.WebAuthn.credential_id_field(strategy)
+      #=> :credential_id
+
+  If you have the credential resource module rather than the strategy, call
+  `AshAuthentication.WebAuthnCredential.Info` directly instead.
   """
 
   @struct_fields [
@@ -314,17 +330,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
     timeout: 60_000,
     resident_key: :required,
     sign_count_policy: :reject,
-    credential_id_field: :credential_id,
-    public_key_field: :public_key,
-    sign_count_field: :sign_count,
-    user_handle_field: :user_handle,
-    transports_field: :transports,
-    backup_eligible_field: :backup_eligible,
-    backed_up_field: :backed_up,
-    discoverable_field: :discoverable,
-    label_field: :label,
-    last_used_at_field: :last_used_at,
-    user_relationship_name: :user,
     credentials_relationship_name: :webauthn_credentials,
     registration_enabled?: true,
     sign_in_enabled?: true,
@@ -368,17 +373,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           timeout: pos_integer,
           resident_key: :required | :preferred | :discouraged,
           sign_count_policy: :reject | :log | :ignore,
-          credential_id_field: atom,
-          public_key_field: atom,
-          sign_count_field: atom,
-          user_handle_field: atom,
-          transports_field: atom,
-          backup_eligible_field: atom,
-          backed_up_field: atom,
-          discoverable_field: atom,
-          label_field: atom,
-          last_used_at_field: atom | nil,
-          user_relationship_name: atom,
           credentials_relationship_name: atom,
           registration_enabled?: boolean,
           sign_in_enabled?: boolean,
@@ -396,6 +390,86 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           add_credential_action_name: atom | nil,
           __spark_metadata__: any
         }
+
+  alias AshAuthentication.WebAuthnCredential.Info, as: CredentialInfo
+
+  @doc "The attribute on the credential resource which stores the WebAuthn credential ID."
+  @spec credential_id_field(t()) :: atom
+  def credential_id_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_credential_id_field!/1)
+
+  @doc "The attribute on the credential resource which stores the COSE public key."
+  @spec public_key_field(t()) :: atom
+  def public_key_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_public_key_field!/1)
+
+  @doc "The attribute on the credential resource which stores the authenticator sign count."
+  @spec sign_count_field(t()) :: atom
+  def sign_count_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_sign_count_field!/1)
+
+  @doc "The attribute on the credential resource which stores the WebAuthn user handle."
+  @spec user_handle_field(t()) :: atom
+  def user_handle_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_user_handle_field!/1)
+
+  @doc "The attribute on the credential resource which stores the client-reported transports."
+  @spec transports_field(t()) :: atom
+  def transports_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_transports_field!/1)
+
+  @doc "The attribute on the credential resource which stores the BE (backup eligible) flag."
+  @spec backup_eligible_field(t()) :: atom
+  def backup_eligible_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_backup_eligible_field!/1)
+
+  @doc "The attribute on the credential resource which stores the BS (backup state) flag."
+  @spec backed_up_field(t()) :: atom
+  def backed_up_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_backed_up_field!/1)
+
+  @doc "The attribute on the credential resource which stores the `credProps.rk` result."
+  @spec discoverable_field(t()) :: atom
+  def discoverable_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_discoverable_field!/1)
+
+  @doc "The attribute on the credential resource which stores the human-readable label."
+  @spec label_field(t()) :: atom
+  def label_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_label_field!/1)
+
+  @doc "The attribute on the credential resource which stores when it was last used."
+  @spec last_used_at_field(t()) :: atom
+  def last_used_at_field(strategy),
+    do: credential_option!(strategy, &CredentialInfo.webauthn_credential_last_used_at_field!/1)
+
+  @doc "The `belongs_to` relationship on the credential resource pointing at the user resource."
+  @spec user_relationship_name(t()) :: atom
+  def user_relationship_name(strategy),
+    do:
+      credential_option!(strategy, &CredentialInfo.webauthn_credential_user_relationship_name!/1)
+
+  # Every option read here is declared with a default, so the getters can only
+  # fail to produce a value when the section itself is absent — i.e. when the
+  # credential resource doesn't use the extension. Spark would quietly hand
+  # back this extension's default in that case, so check for the extension
+  # first and say what's actually wrong. The compile-time verifier catches
+  # this too, but only when the credential resource happens to be loaded by
+  # the time the user resource is verified.
+  defp credential_option!(%{credential_resource: resource}, getter) do
+    unless AshAuthentication.WebAuthnCredential in Spark.extensions(resource) do
+      raise ArgumentError, """
+      The credential resource `#{inspect(resource)}` does not use the \
+      `AshAuthentication.WebAuthnCredential` extension.
+
+      Since 5.0 the WebAuthn strategy reads the credential's field names, \
+      relationship name and action names from that extension's \
+      `webauthn_credential` section, so it is required.
+      """
+    end
+
+    getter.(resource)
+  end
 
   @doc false
   defdelegate dsl(), to: Dsl

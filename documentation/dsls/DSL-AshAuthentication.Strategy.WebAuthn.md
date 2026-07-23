@@ -291,6 +291,22 @@ resource (e.g. password with resettable, magic link, or confirmation).
   an Ash preparation like the Password strategy. This is because Wax verification
   happens outside the Ash action pipeline.
 
+## Credential resource configuration
+
+Since 5.0 the credential resource must use the
+`AshAuthentication.WebAuthnCredential` extension. The names of its
+attributes, and of its `belongs_to` to the user resource, are declared once
+on its own `webauthn_credential` section -- not on this strategy. The
+accessors in this module read them back off `credential_resource`, so they
+always reflect what that resource actually declares:
+
+    strategy = AshAuthentication.Info.strategy!(MyApp.Accounts.User, :webauthn)
+    AshAuthentication.Strategy.WebAuthn.credential_id_field(strategy)
+    #=> :credential_id
+
+If you have the credential resource module rather than the strategy, call
+`AshAuthentication.WebAuthnCredential.Info` directly instead.
+
 
 
 ### authentication.strategies.webauthn
@@ -338,17 +354,6 @@ end
 | [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. |
 | [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication. |
 | [`sign_count_policy`](#authentication-strategies-webauthn-sign_count_policy){: #authentication-strategies-webauthn-sign_count_policy } | `:reject \| :log \| :ignore` | `:reject` | How to react when an assertion's sign count has not increased over the stored value — the WebAuthn signal that the authenticator may have been cloned (§6.1.1). The check only fires when the authenticator actually implements a counter: synced passkeys report a constant `0` on both sides and are never flagged. - `:reject` (default) — fail the ceremony with an authentication error. - `:log` — allow the ceremony but log a warning; the stored sign count   is deliberately **not** lowered, so a cloned authenticator keeps   tripping the check. - `:ignore` — no check; the stored count is simply overwritten. |
-| [`credential_id_field`](#authentication-strategies-webauthn-credential_id_field){: #authentication-strategies-webauthn-credential_id_field } | `atom` | `:credential_id` | The name of the credential ID attribute on the credential resource. |
-| [`public_key_field`](#authentication-strategies-webauthn-public_key_field){: #authentication-strategies-webauthn-public_key_field } | `atom` | `:public_key` | The name of the public key attribute on the credential resource. |
-| [`sign_count_field`](#authentication-strategies-webauthn-sign_count_field){: #authentication-strategies-webauthn-sign_count_field } | `atom` | `:sign_count` | The name of the sign count attribute on the credential resource. |
-| [`user_handle_field`](#authentication-strategies-webauthn-user_handle_field){: #authentication-strategies-webauthn-user_handle_field } | `atom` | `:user_handle` | The name of the user handle attribute on the credential resource. Stores the WebAuthn user handle (`user.id`) baked into the passkey at registration. |
-| [`transports_field`](#authentication-strategies-webauthn-transports_field){: #authentication-strategies-webauthn-transports_field } | `atom` | `:transports` | The name of the transports attribute on the credential resource. Stores the transports reported by the client at registration and echoes them back as `allowCredentials` hints. |
-| [`backup_eligible_field`](#authentication-strategies-webauthn-backup_eligible_field){: #authentication-strategies-webauthn-backup_eligible_field } | `atom` | `:backup_eligible` | The name of the attribute on the credential resource storing the authenticator data BE (backup eligible) flag. |
-| [`backed_up_field`](#authentication-strategies-webauthn-backed_up_field){: #authentication-strategies-webauthn-backed_up_field } | `atom` | `:backed_up` | The name of the attribute on the credential resource storing the authenticator data BS (backup state) flag. Refreshed on each assertion. |
-| [`discoverable_field`](#authentication-strategies-webauthn-discoverable_field){: #authentication-strategies-webauthn-discoverable_field } | `atom` | `:discoverable` | The name of the attribute on the credential resource storing the client-reported `credProps.rk` extension result (whether the credential is discoverable). |
-| [`label_field`](#authentication-strategies-webauthn-label_field){: #authentication-strategies-webauthn-label_field } | `atom` | `:label` | The name of the label attribute on the credential resource. |
-| [`last_used_at_field`](#authentication-strategies-webauthn-last_used_at_field){: #authentication-strategies-webauthn-last_used_at_field } | `atom` | `:last_used_at` | The name of the last_used_at attribute on the credential resource. Set to `nil` to disable tracking. |
-| [`user_relationship_name`](#authentication-strategies-webauthn-user_relationship_name){: #authentication-strategies-webauthn-user_relationship_name } | `atom` | `:user` | The name of the belongs_to relationship on the credential resource pointing to the user. |
 | [`credentials_relationship_name`](#authentication-strategies-webauthn-credentials_relationship_name){: #authentication-strategies-webauthn-credentials_relationship_name } | `atom` | `:webauthn_credentials` | The name of the has_many relationship on the user resource pointing to credentials. |
 | [`registration_enabled?`](#authentication-strategies-webauthn-registration_enabled?){: #authentication-strategies-webauthn-registration_enabled? } | `boolean` | `true` | Whether to allow new user registration via WebAuthn. |
 | [`sign_in_enabled?`](#authentication-strategies-webauthn-sign_in_enabled?){: #authentication-strategies-webauthn-sign_in_enabled? } | `boolean` | `true` | Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor. |

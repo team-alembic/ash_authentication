@@ -57,7 +57,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
       if strategy.require_identity? && identity_value do
         strategy
         |> lookup_user_credentials(identity_value, get_tenant(conn))
-        |> Enum.map(&Map.get(&1, strategy.credential_id_field))
+        |> Enum.map(&Map.get(&1, WebAuthn.credential_id_field(strategy)))
       else
         []
       end
@@ -139,7 +139,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
       [primary_key] = Ash.Resource.Info.primary_key(strategy.resource)
 
       handle =
-        Enum.find_value(credentials, &Map.get(&1, strategy.user_handle_field)) ||
+        Enum.find_value(credentials, &Map.get(&1, WebAuthn.user_handle_field(strategy))) ||
           pk_handle(actor, primary_key)
 
       name =
@@ -332,7 +332,9 @@ if Code.ensure_loaded?(Wax.Challenge) do
         actor ->
           credentials = load_actor_credentials(strategy, actor, get_tenant(conn))
           user_descriptor = actor_user_descriptor(strategy, actor, credentials)
-          exclude_ids = Enum.map(credentials, &Map.get(&1, strategy.credential_id_field))
+
+          exclude_ids =
+            Enum.map(credentials, &Map.get(&1, WebAuthn.credential_id_field(strategy)))
 
           send_registration_challenge(conn, strategy, user_descriptor, exclude_ids)
       end
@@ -426,7 +428,8 @@ if Code.ensure_loaded?(Wax.Challenge) do
     # assertion against the challenge.
     defp assertion_allow_credentials(strategy, credentials) do
       Enum.map(credentials, fn cred ->
-        {Map.get(cred, strategy.credential_id_field), Map.get(cred, strategy.public_key_field)}
+        {Map.get(cred, WebAuthn.credential_id_field(strategy)),
+         Map.get(cred, WebAuthn.public_key_field(strategy))}
       end)
     end
 
@@ -436,11 +439,14 @@ if Code.ensure_loaded?(Wax.Challenge) do
     defp allow_credentials_entries(strategy, credentials) do
       Enum.map(credentials, fn cred ->
         entry = %{
-          id: Base.url_encode64(Map.get(cred, strategy.credential_id_field), padding: false),
+          id:
+            Base.url_encode64(Map.get(cred, WebAuthn.credential_id_field(strategy)),
+              padding: false
+            ),
           type: "public-key"
         }
 
-        case Map.get(cred, strategy.transports_field) do
+        case Map.get(cred, WebAuthn.transports_field(strategy)) do
           [_ | _] = transports -> Map.put(entry, :transports, transports)
           _ -> entry
         end

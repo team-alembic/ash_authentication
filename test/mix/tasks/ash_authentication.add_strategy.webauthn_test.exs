@@ -33,7 +33,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
   test "creates the credential resource", %{igniter: igniter} do
     igniter
     |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
-    |> assert_creates("lib/test/accounts/web_authn_credential.ex")
+    |> assert_creates("lib/test/accounts/webauthn_credential.ex")
   end
 
   # Regression test: `diff =~` string checks (as used elsewhere in this file)
@@ -49,7 +49,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
 
     source =
       result.rewrite
-      |> Rewrite.source!("lib/test/accounts/web_authn_credential.ex")
+      |> Rewrite.source!("lib/test/accounts/webauthn_credential.ex")
       |> Rewrite.Source.get(:content)
 
     module_name =
@@ -116,20 +116,24 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
 
   # Mirrors "when the user resource isn't named `User`, both generated
   # files agree on the relationship name" below — that test pins down the
-  # `:account` override; this one pins down that the *default* `--user`
-  # (`Test.Accounts.User`) still produces `:user` explicitly, not merely by
-  # both independent DSL defaults happening to agree.
-  test "with the default user resource, both generated files stamp `user_relationship_name(:user)`",
+  # `:account` override, which the installer *does* stamp explicitly (the
+  # two independent DSL defaults can't otherwise agree). With the default
+  # `--user` (`Test.Accounts.User`), the derived name equals `:user` — the
+  # shared default both DSLs already agree on — so nothing needs stamping;
+  # asserting its absence keeps the generated code free of a
+  # `user_relationship_name(:user)` line that would otherwise be added on
+  # every single install regardless of whether anything was customized.
+  test "with the default user resource, neither generated file stamps `user_relationship_name`",
        %{igniter: igniter} do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
-    credential_diff = diff(result, only: "lib/test/accounts/web_authn_credential.ex")
+    credential_diff = diff(result, only: "lib/test/accounts/webauthn_credential.ex")
     user_diff = diff(result, only: "lib/test/accounts/user.ex")
 
-    assert credential_diff =~ "user_relationship_name(:user)"
-    assert user_diff =~ "user_relationship_name(:user)"
+    refute credential_diff =~ "user_relationship_name"
+    refute user_diff =~ "user_relationship_name"
   end
 
   # No explicit `relationships` block is generated — the extension's
@@ -145,7 +149,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
-    refute diff(result, only: "lib/test/accounts/web_authn_credential.ex") =~ "relationships do"
+    refute diff(result, only: "lib/test/accounts/webauthn_credential.ex") =~ "relationships do"
   end
 
   test "credential resource has the AshAuthenticationInteraction policy bypass", %{
@@ -332,16 +336,14 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     refute diff(second_run, only: "lib/test/accounts/user.ex") =~ "webauthn :webauthn"
   end
 
-  # `user_relationship_name` exists independently on both the credential
-  # resource's `webauthn_credential` DSL and the user resource's `webauthn`
-  # strategy DSL, and each has its own hardcoded `:user` default — they
-  # can't agree with each other automatically at compile time. So when the
-  # user resource isn't actually called `User`, the installer must compute
-  # the relationship name once and stamp the *same* value into both
-  # generated files, rather than relying on the two independent defaults to
-  # happen to match (they only would if the user resource were named
-  # `User`).
-  test "when the user resource isn't named `User`, both generated files agree on the relationship name" do
+  # `user_relationship_name` lives on the credential resource's
+  # `webauthn_credential` DSL and nowhere else — the strategy reads it back
+  # off the credential resource, and the `has_many` it builds on the user
+  # resource derives the matching `<name>_id` from that resource's own module
+  # name. So when the user resource isn't called `User`, the installer stamps
+  # the computed name into the credential resource only, and the user
+  # resource must *not* carry a copy of it.
+  test "when the user resource isn't named `User`, the relationship name is stamped into the credential resource alone" do
     igniter =
       test_project()
       |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
@@ -355,13 +357,12 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
 
     assert igniter.issues == []
 
-    credential_diff = diff(igniter, only: "lib/test/accounts/web_authn_credential.ex")
+    credential_diff = diff(igniter, only: "lib/test/accounts/webauthn_credential.ex")
     account_diff = diff(igniter, only: "lib/test/accounts/account.ex")
 
     assert credential_diff =~ "user_relationship_name(:account)"
-    assert account_diff =~ "user_relationship_name(:account)"
     refute credential_diff =~ "user_relationship_name(:user)"
-    refute account_diff =~ "user_relationship_name(:user)"
+    refute account_diff =~ "user_relationship_name"
 
     # The diff-text checks above only prove the *source* says
     # `user_relationship_name(:account)` — not that compiling it actually
@@ -401,7 +402,7 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
 
     credential_source =
       igniter.rewrite
-      |> Rewrite.source!("lib/test/accounts/web_authn_credential.ex")
+      |> Rewrite.source!("lib/test/accounts/webauthn_credential.ex")
       |> Rewrite.Source.get(:content)
       |> String.replace("Test.Accounts.WebAuthnCredential", inspect(credential_module))
       |> String.replace("Test.Accounts.Account", inspect(account_module))

@@ -1078,4 +1078,99 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
     test_project(files: files)
     |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
   end
+
+  describe "move_webauthn_credential_options/2" do
+    test "moves credential options from the strategy to the credential resource" do
+      igniter =
+        webauthn_project(
+          strategy_options: [
+            credential_id_field: ":passkey_id",
+            user_relationship_name: ":account"
+          ]
+        )
+
+      igniter = Upgrade.move_webauthn_credential_options(igniter, [])
+
+      igniter
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      - |          credential_id_field(:passkey_id)
+      """)
+      |> assert_has_patch("lib/test/accounts/user.ex", """
+      - |          user_relationship_name(:account)
+      """)
+      |> assert_has_patch("lib/test/accounts/webauthn_credential.ex", """
+      + |    credential_id_field(:passkey_id)
+      """)
+      |> assert_has_patch("lib/test/accounts/webauthn_credential.ex", """
+      + |    user_relationship_name(:account)
+      """)
+    end
+
+    test "leaves a strategy that sets none of them alone" do
+      igniter =
+        webauthn_project(strategy_options: [])
+        |> Upgrade.move_webauthn_credential_options([])
+
+      assert_unchanged(igniter, "lib/test/accounts/user.ex")
+      assert_unchanged(igniter, "lib/test/accounts/webauthn_credential.ex")
+    end
+  end
+
+  # Written pre-formatted: the upgrader re-renders any module it visits, so a
+  # no-op only compares equal if the source is already in formatted style.
+  defp webauthn_project(opts) do
+    strategy_options =
+      opts
+      |> Keyword.fetch!(:strategy_options)
+      |> Enum.map_join("", fn {option, value} -> "          #{option}(#{value})\n" end)
+
+    user_resource = """
+    defmodule Test.Accounts.User do
+      use Ash.Resource,
+        domain: Test.Accounts,
+        extensions: [AshAuthentication],
+        data_layer: Ash.DataLayer.Ets
+
+      attributes do
+        uuid_primary_key(:id)
+      end
+
+      authentication do
+        tokens do
+          enabled?(true)
+          token_resource(Test.Accounts.Token)
+          signing_secret(fn _, _ -> {:ok, "secret"} end)
+        end
+
+        strategies do
+          webauthn :webauthn do
+            credential_resource(Test.Accounts.WebAuthnCredential)
+            rp_id("example.com")
+            rp_name("Test")
+    #{strategy_options}      end
+        end
+      end
+    end
+    """
+
+    credential_resource = """
+    defmodule Test.Accounts.WebAuthnCredential do
+      use Ash.Resource,
+        domain: Test.Accounts,
+        extensions: [AshAuthentication.WebAuthnCredential],
+        data_layer: Ash.DataLayer.Ets
+
+      webauthn_credential do
+        user_resource(Test.Accounts.User)
+      end
+    end
+    """
+
+    test_project(
+      files: %{
+        "lib/test/accounts/user.ex" => user_resource,
+        "lib/test/accounts/webauthn_credential.ex" => credential_resource
+      }
+    )
+  end
 end

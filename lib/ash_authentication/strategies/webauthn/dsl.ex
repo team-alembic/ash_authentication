@@ -225,68 +225,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           """,
           default: :reject
         ],
-        credential_id_field: [
-          type: :atom,
-          doc: "The name of the credential ID attribute on the credential resource.",
-          default: :credential_id
-        ],
-        public_key_field: [
-          type: :atom,
-          doc: "The name of the public key attribute on the credential resource.",
-          default: :public_key
-        ],
-        sign_count_field: [
-          type: :atom,
-          doc: "The name of the sign count attribute on the credential resource.",
-          default: :sign_count
-        ],
-        user_handle_field: [
-          type: :atom,
-          doc:
-            "The name of the user handle attribute on the credential resource. Stores the WebAuthn user handle (`user.id`) baked into the passkey at registration.",
-          default: :user_handle
-        ],
-        transports_field: [
-          type: :atom,
-          doc:
-            "The name of the transports attribute on the credential resource. Stores the transports reported by the client at registration and echoes them back as `allowCredentials` hints.",
-          default: :transports
-        ],
-        backup_eligible_field: [
-          type: :atom,
-          doc:
-            "The name of the attribute on the credential resource storing the authenticator data BE (backup eligible) flag.",
-          default: :backup_eligible
-        ],
-        backed_up_field: [
-          type: :atom,
-          doc:
-            "The name of the attribute on the credential resource storing the authenticator data BS (backup state) flag. Refreshed on each assertion.",
-          default: :backed_up
-        ],
-        discoverable_field: [
-          type: :atom,
-          doc:
-            "The name of the attribute on the credential resource storing the client-reported `credProps.rk` extension result (whether the credential is discoverable).",
-          default: :discoverable
-        ],
-        label_field: [
-          type: :atom,
-          doc: "The name of the label attribute on the credential resource.",
-          default: :label
-        ],
-        last_used_at_field: [
-          type: :atom,
-          doc:
-            "The name of the last_used_at attribute on the credential resource. Set to `nil` to disable tracking.",
-          default: :last_used_at
-        ],
-        user_relationship_name: [
-          type: :atom,
-          doc:
-            "The name of the belongs_to relationship on the credential resource pointing to the user.",
-          default: :user
-        ],
         credentials_relationship_name: [
           type: :atom,
           doc:
