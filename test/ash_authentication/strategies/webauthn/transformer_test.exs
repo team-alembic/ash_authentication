@@ -42,6 +42,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
           rp_name "Test App"
           origin "https://example.com"
           require_identity? false
+          <%= strategy_extra %>
         end
       end
     end
@@ -112,6 +113,29 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
     end
   end
 
+  describe "sign-in action gating (sign_in_enabled?)" do
+    test "the sign-in actions are built when sign-in is enabled (the default)" do
+      {user_module, _credential_module} = compile_pair!()
+
+      assert ResourceInfo.action(user_module, :sign_in_with_webauthn)
+      assert ResourceInfo.action(user_module, :sign_in_with_webauthn_token)
+    end
+
+    test "the sign-in actions are NOT built when sign_in_enabled? is false" do
+      {user_module, _credential_module} =
+        compile_pair!(strategy_extra: "sign_in_enabled? false")
+
+      refute ResourceInfo.action(user_module, :sign_in_with_webauthn),
+             "sign_in action must not be built for a verify-only / 2fa deployment"
+
+      refute ResourceInfo.action(user_module, :sign_in_with_webauthn_token),
+             "sign_in_with_token action must not be built for a verify-only / 2fa deployment"
+
+      # Registration is independent and stays available.
+      assert ResourceInfo.action(user_module, :register_with_webauthn)
+    end
+  end
+
   describe "credentials relationship" do
     test "is auto-built when omitted, matching the configured credential_resource" do
       {user_module, credential_module} = compile_pair!()
@@ -158,6 +182,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
       "AshAuthentication.Strategy.WebAuthn.TransformerTest.Credential#{suffix}"
 
     relationships = Keyword.get(opts, :relationships, "")
+    strategy_extra = Keyword.get(opts, :strategy_extra, "")
 
     # The auto-built `has_many` derives its foreign key from the *user*
     # resource's name, so the credential's `belongs_to` has to be named after
@@ -174,6 +199,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
       |> String.replace("<%= credential_module %>", credential_module_name)
       |> String.replace("<%= user_relationship_name %>", user_relationship_name)
       |> String.replace("<%= relationships %>", relationships)
+      |> String.replace("<%= strategy_extra %>", strategy_extra)
 
     user_module = Module.concat([user_module_name])
     credential_module = Module.concat([credential_module_name])
