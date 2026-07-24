@@ -25,14 +25,21 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           rp_id "example.com"
           rp_name "My App"
           identity_field :email
+          require_identity? true
         end
         """
       ],
       args: [{:optional, :name, :webauthn}],
       hide: [:name],
       target: WebAuthn,
-      no_depend_modules: [:credential_resource],
+      no_depend_modules: [:credential_resource, :adapter],
       schema: [
+        adapter: [
+          type: {:behaviour, AshAuthentication.Strategy.WebAuthn.Adapter},
+          doc:
+            "The ceremony backend adapter — handles challenge generation, verification, and challenge (de)serialization. See `AshAuthentication.Strategy.WebAuthn.Adapter`.",
+          default: AshAuthentication.Strategy.WebAuthn.Adapters.Wax
+        ],
         name: [
           type: :atom,
           doc: "Uniquely identifies the strategy.",
@@ -134,8 +141,29 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         identity_field: [
           type: :atom,
           doc:
-            "The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication.",
+            "The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. Ignored when `require_identity?` is `false`.",
           default: :email
+        ],
+        require_identity?: [
+          type: :boolean,
+          required: true,
+          doc: """
+          Must be set explicitly. There is no default; the developer chooses the mode per resource.
+
+          When `true` (identity-required mode), the user resource must expose an
+          `identity_field` attribute (default `:email`) that is writable, public,
+          and uniquely constrained. Users sign in by supplying this identity at
+          challenge time; their credentials are returned via `allowCredentials`.
+
+          When `false` (passkey-first mode), the user resource needs no identity
+          column. Users sign in via a discoverable credential only; the
+          credential id resolves the user at verification time. Pairs with
+          `resident_key: :required`.
+
+          Note: the runtime in `Actions.sign_in/3` and `Plug.authentication_challenge/2`
+          supports both modes; this option only relaxes the compile-time checks
+          in the transformer and the sign-in preparation.
+          """
         ],
         authenticator_attachment: [
           type: {:in, [nil, :platform, :cross_platform]},
@@ -150,10 +178,22 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           default: "preferred"
         ],
         attestation: [
-          type: {:in, ["none", "direct"]},
+          type: {:in, ["none", "indirect", "direct", "enterprise"]},
           doc:
-            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"direct\"` requests the authenticator's attestation certificate.",
+            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"indirect\"` allows the client to substitute an anonymized attestation, `\"direct\"` requests the authenticator's attestation statement verbatim, and `\"enterprise\"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `\"direct\"` only asks the client to *convey* an attestation statement; it does not verify it. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and configure FIDO metadata for `:wax_`.",
           default: "none"
+        ],
+        trusted_attestation_types: [
+          type: {:list, {:in, [:none, :basic, :self, :attca, :anonca, :uncertain]}},
+          doc:
+            "The attestation types accepted at registration (see `t:Wax.Attestation.type/0`). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata to be configured for the `:wax_` application.",
+          default: [:none, :basic, :self, :uncertain]
+        ],
+        verify_trust_root?: [
+          type: :boolean,
+          doc:
+            "Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata to be configured for the `:wax_` application.",
+          default: false
         ],
         timeout: [
           type: :pos_integer,
@@ -166,37 +206,24 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication.",
           default: :required
         ],
-        credential_id_field: [
-          type: :atom,
-          doc: "The name of the credential ID attribute on the credential resource.",
-          default: :credential_id
-        ],
-        public_key_field: [
-          type: :atom,
-          doc: "The name of the public key attribute on the credential resource.",
-          default: :public_key
-        ],
-        sign_count_field: [
-          type: :atom,
-          doc: "The name of the sign count attribute on the credential resource.",
-          default: :sign_count
-        ],
-        label_field: [
-          type: :atom,
-          doc: "The name of the label attribute on the credential resource.",
-          default: :label
-        ],
-        last_used_at_field: [
-          type: :atom,
-          doc:
-            "The name of the last_used_at attribute on the credential resource. Set to `nil` to disable tracking.",
-          default: :last_used_at
-        ],
-        user_relationship_name: [
-          type: :atom,
-          doc:
-            "The name of the belongs_to relationship on the credential resource pointing to the user.",
-          default: :user
+        sign_count_policy: [
+          type: {:in, [:reject, :log, :ignore]},
+          doc: """
+          How to react when an assertion's sign count has not increased over the
+          stored value — the WebAuthn signal that the authenticator may have been
+          cloned (§6.1.1).
+
+          The check only fires when the authenticator actually implements a
+          counter: synced passkeys report a constant `0` on both sides and are
+          never flagged.
+
+          - `:reject` (default) — fail the ceremony with an authentication error.
+          - `:log` — allow the ceremony but log a warning; the stored sign count
+            is deliberately **not** lowered, so a cloned authenticator keeps
+            tripping the check.
+          - `:ignore` — no check; the stored count is simply overwritten.
+          """,
+          default: :reject
         ],
         credentials_relationship_name: [
           type: :atom,
@@ -227,6 +254,15 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "The name of the register action on the user resource. Defaults to `register_with_<strategy_name>`.",
           required: false
         ],
+        register_action_accept: [
+          type:
+            {:list,
+             {:or, [:atom, {:tuple, [:atom, {:keyword_list, [secret?: [type: :boolean]]}]}]}},
+          default: [],
+          doc:
+            "A list of additional writable attributes to be accepted in the register action (e.g. `[:name]`). Their values are validated by the action as usual, so `allow_nil?`, constraints, and any validations on the resource apply. Attributes marked `sensitive?: true` must confirm whether they are secrets via a `{field, secret?: boolean}` entry (e.g. `[given_names: [secret?: false]]`); `secret?: true` renders a masked input, `secret?: false` a regular one.",
+          required: false
+        ],
         sign_in_action_name: [
           type: :atom,
           doc:
@@ -243,42 +279,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           type: :atom,
           doc:
             "The name of the second-factor verify action on the user resource. Defaults to `verify_<strategy_name>`.",
-          required: false
-        ],
-        store_credential_action_name: [
-          type: :atom,
-          doc:
-            "The name of the create action on the credential resource. Defaults to `store_<strategy_name>_credential`.",
-          required: false
-        ],
-        update_sign_count_action_name: [
-          type: :atom,
-          doc:
-            "The name of the update action for sign_count on the credential resource. Defaults to `update_<strategy_name>_sign_count`.",
-          required: false
-        ],
-        list_credentials_action_name: [
-          type: :atom,
-          doc:
-            "The name of the read action to list credentials. Defaults to `list_<strategy_name>_credentials`.",
-          required: false
-        ],
-        delete_credential_action_name: [
-          type: :atom,
-          doc:
-            "The name of the destroy action for credentials. Defaults to `delete_<strategy_name>_credential`.",
-          required: false
-        ],
-        update_credential_label_action_name: [
-          type: :atom,
-          doc:
-            "The name of the update action for credential labels. Defaults to `update_<strategy_name>_credential_label`.",
-          required: false
-        ],
-        add_credential_action_name: [
-          type: :atom,
-          doc:
-            "The name of the action to add a credential to an existing user. Defaults to `add_<strategy_name>_credential`.",
           required: false
         ]
       ]
