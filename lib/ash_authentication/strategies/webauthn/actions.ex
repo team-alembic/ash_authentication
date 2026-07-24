@@ -6,8 +6,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   @moduledoc """
   Core action implementations for the WebAuthn strategy.
 
-  Wraps the `wax_` library for FIDO2 ceremony handling and coordinates
-  with Ash to persist users and credentials.
+  Delegates FIDO2 ceremony handling to the strategy's adapter (see
+  `AshAuthentication.Strategy.WebAuthn.Adapter`; the default is backed by
+  the `wax_` library) and coordinates with Ash to persist users and
+  credentials.
   """
 
   alias AshAuthentication.Errors.AuthenticationFailed
@@ -15,6 +17,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   if Code.ensure_loaded?(Wax) do
     alias Ash.{Changeset, Query}
     alias AshAuthentication.{Info, Jwt, Strategy.WebAuthn}
+    alias AshAuthentication.Strategy.CustomFields
+    alias AshAuthentication.Strategy.WebAuthn.Adapter
     import Ash.Expr, only: [ref: 1]
     require Ash.Query
     require Logger
@@ -26,11 +30,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     (e.g. with the request's actual origin when serving from a Plug or
     LiveView).
     """
-    @spec registration_challenge(WebAuthn.t(), any, keyword) :: {:ok, Wax.Challenge.t()}
+    @spec registration_challenge(WebAuthn.t(), any, keyword) :: {:ok, Adapter.challenge()}
     def registration_challenge(strategy, tenant, opts \\ []) do
-      wax_opts = WebAuthn.Helpers.wax_opts(strategy, tenant, opts)
-      challenge = Wax.new_registration_challenge(wax_opts)
-      {:ok, challenge}
+      {:ok, strategy.adapter.registration_challenge(strategy, tenant, opts)}
     end
 
     @doc """
@@ -39,15 +41,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     Pass `origin: "..."` in `opts` to override the strategy's configured origin.
     """
     @spec authentication_challenge(WebAuthn.t(), list, any, keyword) ::
-            {:ok, Wax.Challenge.t()}
+            {:ok, Adapter.challenge()}
     def authentication_challenge(strategy, allow_credentials, tenant, opts \\ []) do
-      wax_opts =
-        strategy
-        |> WebAuthn.Helpers.wax_opts(tenant, opts)
-        |> Keyword.put(:allow_credentials, allow_credentials)
-
-      challenge = Wax.new_authentication_challenge(wax_opts)
-      {:ok, challenge}
+      {:ok, strategy.adapter.authentication_challenge(strategy, allow_credentials, tenant, opts)}
     end
 
     @doc "Register a new user with a WebAuthn credential."
@@ -57,47 +53,18 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
       with {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
-           {:ok, {auth_data, _}} <-
-             wax_register(strategy, attestation_object, client_data_json, challenge),
-           {:ok, user} <- create_user_from_registration(strategy, auth_data, params, opts) do
-        case store_credential_from_auth(strategy, user, auth_data, params, opts) do
-          {:ok, _credential} ->
-            {:ok, user}
-
-          {:error, error} ->
-            cleanup_orphaned_user(user, opts)
-            {:error, error}
-        end
+           {:ok, registration} <-
+             verify_registration(
+               strategy,
+               :register,
+               attestation_object,
+               client_data_json,
+               challenge
+             ) do
+        create_user_from_registration(strategy, registration, params, opts)
       else
         :error -> base64_error(strategy, :register)
         {:error, error} -> {:error, error}
-      end
-    end
-
-    # Compensating cleanup: if credential store fails after user creation, destroy
-    # the user to prevent orphans. Failure to clean up is logged loudly but does
-    # not mask the original error.
-    defp cleanup_orphaned_user(user, opts) do
-      ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
-
-      user
-      |> Changeset.new()
-      |> Changeset.set_context(auth_context())
-      |> Ash.destroy(ash_opts)
-      |> case do
-        :ok ->
-          :ok
-
-        {:ok, _} ->
-          :ok
-
-        {:error, error} ->
-          Logger.error(
-            "Failed to clean up orphaned user after WebAuthn credential store failure: " <>
-              inspect(error)
-          )
-
-          :error
       end
     end
 
@@ -215,8 +182,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
            {:ok, signature} <- safe_url_decode64(params["signature"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
            {:ok, credential, user} <- lookup_fn.(raw_id),
-           {:ok, auth_data} <-
-             wax_authenticate(
+           {:ok, assertion} <-
+             verify_authentication(
                strategy,
                action_name,
                raw_id,
@@ -224,9 +191,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
                signature,
                client_data_json,
                challenge,
-               [{raw_id, Map.get(credential, strategy.public_key_field)}]
+               [{raw_id, Map.get(credential, WebAuthn.public_key_field(strategy))}]
              ),
-           :ok <- best_effort_update_sign_count(strategy, raw_id, auth_data.sign_count, tenant) do
+           :ok <- handle_sign_count(strategy, action_name, credential, assertion, tenant) do
         {:ok, credential, user}
       else
         :error -> base64_error(strategy, action_name)
@@ -251,15 +218,15 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       strategy.credential_resource
       |> Query.new()
       |> Query.set_context(auth_context())
-      |> Query.filter(^ref(strategy.credential_id_field) == ^raw_id)
-      |> Query.load(strategy.user_relationship_name)
+      |> Query.filter(^ref(WebAuthn.credential_id_field(strategy)) == ^raw_id)
+      |> Query.load(WebAuthn.user_relationship_name(strategy))
       |> Ash.read_one(ash_opts)
       |> case do
         {:ok, nil} ->
           {:error, auth_failed(strategy, :sign_in, "Unknown credential")}
 
         {:ok, credential} ->
-          case Map.get(credential, strategy.user_relationship_name) do
+          case Map.get(credential, WebAuthn.user_relationship_name(strategy)) do
             nil ->
               {:error, auth_failed(strategy, :sign_in, "Credential is not linked to a user")}
 
@@ -283,7 +250,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       relationship =
         Ash.Resource.Info.relationship(
           strategy.credential_resource,
-          strategy.user_relationship_name
+          WebAuthn.user_relationship_name(strategy)
         )
 
       foreign_key = relationship.source_attribute
@@ -291,7 +258,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       strategy.credential_resource
       |> Query.new()
       |> Query.set_context(auth_context())
-      |> Query.filter(^ref(strategy.credential_id_field) == ^raw_id)
+      |> Query.filter(^ref(WebAuthn.credential_id_field(strategy)) == ^raw_id)
       |> Query.filter(^ref(foreign_key) == ^actor_id)
       |> Ash.read_one(ash_opts)
       |> case do
@@ -335,11 +302,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
             {:ok, [Ash.Resource.Record.t()]} | {:error, any}
     def list_credentials(strategy, user, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+      action = credential_action_name(strategy.credential_resource, :read_action_name)
 
       strategy.credential_resource
       |> Query.new()
       |> Query.set_context(auth_context())
-      |> Query.for_read(:read, %{}, ash_opts)
+      |> Query.for_read(action, %{}, ash_opts)
       |> Query.filter(user_id == ^user.id)
       |> maybe_sort_by_inserted_at(strategy)
       |> Ash.read()
@@ -372,12 +340,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
             {:ok, Ash.Resource.Record.t()} | {:error, any}
     def update_credential_label(strategy, credential_id, new_label, opts) do
       ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+      action = credential_action_name(strategy.credential_resource, :update_action_name)
 
       with {:ok, credential} <- Ash.get(strategy.credential_resource, credential_id, ash_opts) do
         credential
         |> Changeset.new()
         |> Changeset.set_context(auth_context())
-        |> Changeset.for_update(:update, %{label: new_label}, ash_opts)
+        |> Changeset.for_update(action, %{label: new_label}, ash_opts)
         |> Ash.update()
       end
     end
@@ -407,43 +376,48 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
       with {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
-           {:ok, {auth_data, _}} <-
-             wax_register_credential(strategy, attestation_object, client_data_json, challenge) do
-        store_credential(
-          strategy,
-          user,
-          auth_data.attested_credential_data,
-          auth_data.sign_count,
-          params["label"],
-          tenant
-        )
+           {:ok, registration} <-
+             verify_registration(
+               strategy,
+               :add_credential,
+               attestation_object,
+               client_data_json,
+               challenge
+             ) do
+        attrs =
+          strategy
+          |> credential_attrs(registration, params, Keyword.get(opts, :user_handle))
+          |> Map.put(:user_id, user.id)
+
+        store_credential(strategy, attrs, tenant)
       else
         :error -> base64_error(strategy, :add_credential)
         {:error, error} -> {:error, error}
       end
     end
 
-    defp wax_register_credential(strategy, attestation_object, client_data_json, challenge) do
-      case Wax.register(attestation_object, client_data_json, challenge) do
+    defp verify_registration(
+           strategy,
+           action_name,
+           attestation_object,
+           client_data_json,
+           challenge
+         ) do
+      case strategy.adapter.verify_registration(
+             strategy,
+             attestation_object,
+             client_data_json,
+             challenge
+           ) do
         {:ok, _} = success ->
           success
 
         {:error, error} ->
-          {:error, auth_failed(strategy, :add_credential, inspect(error))}
+          {:error, auth_failed(strategy, action_name, inspect(error))}
       end
     end
 
-    defp wax_register(strategy, attestation_object, client_data_json, challenge) do
-      case Wax.register(attestation_object, client_data_json, challenge) do
-        {:ok, _} = success ->
-          success
-
-        {:error, error} ->
-          {:error, auth_failed(strategy, :register, inspect(error))}
-      end
-    end
-
-    defp wax_authenticate(
+    defp verify_authentication(
            strategy,
            action_name,
            raw_id,
@@ -453,7 +427,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
            challenge,
            credentials
          ) do
-      case Wax.authenticate(
+      case strategy.adapter.verify_authentication(
+             strategy,
              raw_id,
              authenticator_data,
              signature,
@@ -469,18 +444,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       end
     end
 
-    defp create_user_from_registration(strategy, auth_data, params, opts) do
+    defp create_user_from_registration(strategy, registration, params, opts) do
       tenant = Keyword.get(opts, :tenant)
-      cred_data = auth_data.attested_credential_data
-      identity_key = to_string(strategy.identity_field)
 
-      action_params = %{
-        identity_key => params[identity_key],
-        "credential_id" => cred_data.credential_id,
-        "public_key" => cred_data.credential_public_key,
-        "sign_count" => auth_data.sign_count,
-        "label" => params["label"] || "Security Key"
-      }
+      credential_input =
+        credential_attrs(strategy, registration, params, Keyword.get(opts, :user_handle))
+
+      action_params = %{strategy.credentials_relationship_name => credential_input}
+
+      # In passkey-first mode the user resource has no identity attribute, so
+      # passing the identity key would be rejected as an unknown input.
+      action_params =
+        strategy
+        |> maybe_put_identity_in_params(action_params, params)
+        |> put_accepted_fields_in_params(strategy, params)
 
       ash_opts = build_ash_opts(strategy, opts, tenant)
 
@@ -491,14 +468,124 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       |> Ash.create()
     end
 
-    defp store_credential_from_auth(strategy, user, auth_data, params, opts) do
-      tenant = Keyword.get(opts, :tenant)
-      cred_data = auth_data.attested_credential_data
-      store_credential(strategy, user, cred_data, auth_data.sign_count, params["label"], tenant)
+    defp maybe_put_identity_in_params(%_{require_identity?: false}, action_params, _params) do
+      action_params
     end
 
-    defp best_effort_update_sign_count(strategy, credential_id, new_count, tenant) do
-      update_sign_count(strategy, credential_id, new_count, tenant)
+    defp maybe_put_identity_in_params(%_{identity_field: identity_key}, action_params, params) do
+      Map.put(action_params, identity_key, params[to_string(identity_key)])
+    end
+
+    # Values for `register_action_accept` fields are forwarded verbatim; the
+    # register action validates them like any other accepted attribute.
+    defp put_accepted_fields_in_params(action_params, strategy, params) do
+      strategy.register_action_accept
+      |> List.wrap()
+      |> CustomFields.accept_names()
+      |> Enum.reduce(action_params, fn field, acc ->
+        case Map.fetch(params, to_string(field)) do
+          {:ok, value} -> Map.put(acc, field, value)
+          :error -> acc
+        end
+      end)
+    end
+
+    # Everything the ceremony tells us about the new credential, keyed by the
+    # strategy's configured field names. Shared by `register` (via the managed
+    # relationship) and `add_credential` (via the credential create action).
+    defp credential_attrs(strategy, registration, params, user_handle) do
+      %{
+        WebAuthn.credential_id_field(strategy) => registration.credential_id,
+        WebAuthn.public_key_field(strategy) => registration.public_key,
+        WebAuthn.sign_count_field(strategy) => registration.sign_count,
+        WebAuthn.label_field(strategy) => params["label"] || "Security Key",
+        WebAuthn.backup_eligible_field(strategy) => registration.backup_eligible,
+        WebAuthn.backed_up_field(strategy) => registration.backed_up
+      }
+      |> maybe_put_transports(strategy, params["transports"])
+      |> maybe_put_discoverable(strategy, params["cred_props"])
+      |> maybe_put_user_handle(strategy, user_handle)
+    end
+
+    # The `credProps` client extension result, passed by the client as it
+    # came from `getClientExtensionResults()`. Client-reported (not
+    # signature-covered) and optional — browsers may omit it — so only an
+    # explicit boolean is stored.
+    defp maybe_put_discoverable(attrs, strategy, %{"rk" => rk}) when is_boolean(rk),
+      do: Map.put(attrs, WebAuthn.discoverable_field(strategy), rk)
+
+    defp maybe_put_discoverable(attrs, _strategy, _cred_props), do: attrs
+
+    @known_transports ~w(usb nfc ble smart-card hybrid internal)
+
+    # `transports` comes from the client's `getTransports()` and, unlike the
+    # flags above, is not covered by the ceremony's signature — sanitize to
+    # the transports registered with the spec rather than storing arbitrary
+    # client input.
+    defp maybe_put_transports(attrs, strategy, transports) when is_list(transports) do
+      case transports |> Enum.filter(&(&1 in @known_transports)) |> Enum.uniq() do
+        [] -> attrs
+        transports -> Map.put(attrs, WebAuthn.transports_field(strategy), transports)
+      end
+    end
+
+    defp maybe_put_transports(attrs, _strategy, _transports), do: attrs
+
+    # The user handle is only known when the ceremony went through a channel
+    # that minted one (the Plug challenge endpoints); callers driving the
+    # actions directly may not have one, and the attribute is nullable.
+    defp maybe_put_user_handle(attrs, _strategy, nil), do: attrs
+
+    defp maybe_put_user_handle(attrs, strategy, user_handle),
+      do: Map.put(attrs, WebAuthn.user_handle_field(strategy), user_handle)
+
+    # Sign count check per WebAuthn §6.1.1: when the authenticator implements
+    # a counter (either side nonzero), a count that hasn't increased over the
+    # stored value signals a possible clone. Synced passkeys report a constant
+    # 0 on both sides and never trip this. On success the stored state is
+    # refreshed; how an anomaly is handled depends on `sign_count_policy`.
+    defp handle_sign_count(strategy, action_name, credential, assertion, tenant) do
+      credential_id = Map.get(credential, WebAuthn.credential_id_field(strategy))
+      stored_count = Map.get(credential, WebAuthn.sign_count_field(strategy)) || 0
+      new_count = assertion.sign_count
+      anomaly? = (stored_count != 0 or new_count != 0) and new_count <= stored_count
+
+      case {anomaly?, strategy.sign_count_policy} do
+        {false, _policy} ->
+          best_effort_update_assertion_state(strategy, credential, assertion, tenant)
+
+        {true, :ignore} ->
+          best_effort_update_assertion_state(strategy, credential, assertion, tenant)
+
+        {true, :log} ->
+          log_sign_count_anomaly(strategy, credential_id, stored_count, new_count)
+          # Deliberately skip the update: keeping the stored high-water mark
+          # means a cloned authenticator keeps tripping this check.
+          :ok
+
+        {true, :reject} ->
+          log_sign_count_anomaly(strategy, credential_id, stored_count, new_count)
+
+          {:error,
+           auth_failed(
+             strategy,
+             action_name,
+             "Sign count did not increase (stored #{stored_count}, got #{new_count}); " <>
+               "possible cloned authenticator"
+           )}
+      end
+    end
+
+    defp log_sign_count_anomaly(strategy, credential_id, stored_count, new_count) do
+      Logger.warning(
+        "WebAuthn sign count anomaly for credential #{Base.encode64(credential_id)} " <>
+          "(strategy #{inspect(strategy.name)}): stored #{stored_count}, got #{new_count} — " <>
+          "possible cloned authenticator"
+      )
+    end
+
+    defp best_effort_update_assertion_state(strategy, credential, assertion, tenant) do
+      update_assertion_state(strategy, credential, assertion, tenant)
       :ok
     end
 
@@ -537,7 +624,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
     end
 
-    defp auth_context, do: %{private: %{ash_authentication?: true}}
+    # `:private` context never leaves this changeset — Ash only forwards the
+    # `:shared` key into nested changesets built for managed relationships
+    # (e.g. the credential created alongside the user during registration).
+    # Set the flag in both places so the resource-level `AshAuthenticationInteraction`
+    # bypass sees it whether the policy runs against this changeset or a
+    # nested one.
+    defp auth_context,
+      do: %{
+        private: %{ash_authentication?: true},
+        shared: %{private: %{ash_authentication?: true}}
+      }
 
     defp auth_failed(strategy, action, message) do
       AuthenticationFailed.exception(
@@ -555,54 +652,44 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       {:error, auth_failed(strategy, action, "Invalid base64 encoding in request parameters")}
     end
 
-    defp store_credential(strategy, user, cred_data, sign_count, label, tenant) do
-      attrs = %{
-        credential_id: cred_data.credential_id,
-        public_key: cred_data.credential_public_key,
-        sign_count: sign_count,
-        label: label || "Security Key",
-        user_id: user.id
-      }
-
+    defp store_credential(strategy, attrs, tenant) do
       ash_opts = internal_ash_opts(tenant)
+      action = credential_action_name(strategy.credential_resource, :create_action_name)
 
       strategy.credential_resource
       |> Changeset.new()
       |> Changeset.set_context(auth_context())
-      |> Changeset.for_create(:create, attrs, ash_opts)
+      |> Changeset.for_create(action, attrs, ash_opts)
       |> Ash.create()
     end
 
-    defp update_sign_count(strategy, credential_id, new_count, tenant) do
+    # Refresh what the assertion just told us about the credential: the new
+    # sign count, when it was used, and the current BS (backup state) flag —
+    # the spec recommends tracking BS on every authentication since a
+    # credential can become backed up after registration (e.g. the user
+    # enables passkey syncing).
+    defp update_assertion_state(strategy, credential, assertion, tenant) do
       ash_opts = internal_ash_opts(tenant)
 
-      strategy.credential_resource
-      |> Query.new()
-      |> Query.set_context(auth_context())
-      |> Query.for_read(:read, %{}, ash_opts)
-      |> Query.filter(credential_id == ^credential_id)
-      |> Ash.read_one()
+      update_action =
+        credential_action_name(strategy.credential_resource, :update_action_name)
+
+      credential
+      |> Changeset.new()
+      |> Changeset.set_context(auth_context())
+      |> Changeset.for_update(
+        update_action,
+        %{
+          WebAuthn.sign_count_field(strategy) => assertion.sign_count,
+          WebAuthn.last_used_at_field(strategy) => DateTime.utc_now(),
+          WebAuthn.backed_up_field(strategy) => assertion.backed_up
+        },
+        ash_opts
+      )
+      |> Ash.update()
       |> case do
-        {:ok, nil} ->
-          :ok
-
-        {:ok, credential} ->
-          credential
-          |> Changeset.new()
-          |> Changeset.set_context(auth_context())
-          |> Changeset.for_update(
-            :update,
-            %{sign_count: new_count, last_used_at: DateTime.utc_now()},
-            ash_opts
-          )
-          |> Ash.update()
-          |> case do
-            {:ok, _} -> :ok
-            {:error, error} -> log_sign_count_failure(error)
-          end
-
-        {:error, error} ->
-          log_sign_count_failure(error)
+        {:ok, _} -> :ok
+        {:error, error} -> log_sign_count_failure(error)
       end
     end
 
@@ -615,6 +702,24 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       ash_opts = [authorize?: false]
       if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
     end
+
+    defp credential_action_name(credential_resource, field) do
+      # These action-name options are declared with defaults in the
+      # WebAuthnCredential DSL, so the getters always return `{:ok, name}`.
+      {:ok, name} = apply_credential_info(credential_resource, field)
+      name
+    end
+
+    defp apply_credential_info(resource, :read_action_name),
+      do: AshAuthentication.WebAuthnCredential.Info.webauthn_credential_read_action_name(resource)
+
+    defp apply_credential_info(resource, :create_action_name),
+      do:
+        AshAuthentication.WebAuthnCredential.Info.webauthn_credential_create_action_name(resource)
+
+    defp apply_credential_info(resource, :update_action_name),
+      do:
+        AshAuthentication.WebAuthnCredential.Info.webauthn_credential_update_action_name(resource)
 
     defp maybe_generate_token(user, strategy, opts) do
       if Info.authentication_tokens_enabled?(strategy.resource) do
