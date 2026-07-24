@@ -11,8 +11,17 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
   Uses "none" attestation format for simplicity.
   """
 
-  @default_origin "https://example.com"
-  @default_rp_id "example.com"
+  @default_rp_id "default-webauthn-domain.com"
+  @default_origin "https://#{@default_rp_id}"
+
+  @doc false
+  def default_origin, do: @default_origin
+
+  @doc false
+  def default_rp_id, do: @default_rp_id
+
+  @doc "Generate a random WebAuthn credential ID."
+  def generate_credential_id, do: :crypto.strong_rand_bytes(32)
 
   @doc """
   Generate a complete WebAuthn registration fixture.
@@ -38,10 +47,11 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
     cose_key = %{1 => 2, 3 => -7, -1 => 1, -2 => x, -3 => y}
 
     # Generate credential ID
-    credential_id = :crypto.strong_rand_bytes(32)
+    credential_id = Keyword.get_lazy(opts, :credential_id, &generate_credential_id/0)
 
-    # Generate challenge
-    challenge_bytes = :crypto.strong_rand_bytes(32)
+    # Generate challenge (or sign a server-issued one, for plug round trips)
+    challenge_bytes =
+      Keyword.get_lazy(opts, :challenge_bytes, fn -> :crypto.strong_rand_bytes(32) end)
 
     # Build clientDataJSON
     client_data =
@@ -54,8 +64,9 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
 
     # Build authenticator data
     rp_id_hash = :crypto.hash(:sha256, rp_id)
-    # flags: UP (0x01) | AT (0x40) = 0x41
-    flags = <<0x41>>
+    # flags: UP (0x01) | AT (0x40) = 0x41 by default; pass `flags:` to add
+    # e.g. BE (0x08) and BS (0x10) for synced-passkey scenarios
+    flags = <<Keyword.get(opts, :flags, 0x41)>>
     sign_count = <<0::unsigned-big-integer-size(32)>>
 
     # Attested credential data
@@ -120,8 +131,9 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
 
     # Build authenticator data (no attested credential data for authentication)
     rp_id_hash = :crypto.hash(:sha256, rp_id)
-    # flags: UP (0x01) | UV (0x04) = 0x05
-    flags = <<0x05>>
+    # flags: UP (0x01) | UV (0x04) = 0x05 by default; pass `flags:` to add
+    # e.g. BE (0x08) and BS (0x10) for synced-passkey scenarios
+    flags = <<Keyword.get(opts, :flags, 0x05)>>
     sign_count_bytes = <<sign_count::unsigned-big-integer-size(32)>>
     auth_data = rp_id_hash <> flags <> sign_count_bytes
 

@@ -7,6 +7,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.CoseKeyTest do
 
   alias AshAuthentication.Strategy.WebAuthn.CoseKey
 
+  @moduletag feature: :webauthn
+
   @sample_cose_key %{
     1 => 2,
     3 => -7,
