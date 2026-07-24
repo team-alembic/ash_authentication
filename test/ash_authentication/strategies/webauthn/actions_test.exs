@@ -495,6 +495,25 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert credential.sign_count == 5
     end
 
+    test "sign_count_policy :ignore allows the assertion and overwrites the stored count", %{
+      strategy: strategy
+    } do
+      strategy = %{strategy | sign_count_policy: :ignore}
+      {user, reg_fixture} = register_user(strategy, "ignore-clone@example.com")
+
+      assert {:ok, _} =
+               sign_in_with_count(strategy, reg_fixture, "ignore-clone@example.com", 5)
+
+      # A regressed counter is accepted...
+      assert {:ok, _} =
+               sign_in_with_count(strategy, reg_fixture, "ignore-clone@example.com", 3)
+
+      # ...and, unlike `:log`, the stored count is lowered to the regressed
+      # value rather than keeping the high-water mark.
+      {:ok, [credential]} = Actions.list_credentials(strategy, user, [])
+      assert credential.sign_count == 3
+    end
+
     test "returns error for unknown identity", %{strategy: strategy} do
       reg_fixture =
         WebAuthnFixtures.generate_registration(
@@ -524,6 +543,65 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
 
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
                Actions.sign_in(strategy, params, challenge: auth_challenge)
+    end
+
+    test "rejects an assertion whose challenge does not match the stored one", %{
+      strategy: strategy
+    } do
+      {_user, reg_fixture} = register_user(strategy, "tampered-challenge@example.com")
+      auth_fixture = WebAuthnFixtures.generate_authentication(reg_fixture)
+
+      # The server's stored challenge bytes differ from the ones the
+      # authenticator actually signed over (embedded in client_data_json).
+      tampered_challenge = %Wax.Challenge{
+        type: :authentication,
+        bytes: :crypto.strong_rand_bytes(32),
+        origin: "https://example.com",
+        rp_id: "example.com",
+        allow_credentials: [{reg_fixture.credential_id, reg_fixture.cose_key}],
+        origin_verify_fun: {Wax, :origins_match?, []},
+        issued_at: System.system_time(:second)
+      }
+
+      params = %{
+        "email" => "tampered-challenge@example.com",
+        "raw_id" => Base.url_encode64(auth_fixture.raw_id, padding: false),
+        "authenticator_data" => auth_fixture.authenticator_data,
+        "signature" => auth_fixture.signature,
+        "client_data_json" => auth_fixture.client_data_json
+      }
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               Actions.sign_in(strategy, params, challenge: tampered_challenge)
+    end
+
+    test "rejects an assertion whose challenge has expired", %{strategy: strategy} do
+      {_user, reg_fixture} = register_user(strategy, "expired-challenge@example.com")
+      auth_fixture = WebAuthnFixtures.generate_authentication(reg_fixture)
+
+      # Challenge bytes match, but it was issued an hour ago with a 60s timeout,
+      # so Wax's `not_expired?` check must reject it.
+      expired_challenge = %Wax.Challenge{
+        type: :authentication,
+        bytes: auth_fixture.challenge_bytes,
+        origin: "https://example.com",
+        rp_id: "example.com",
+        allow_credentials: [{reg_fixture.credential_id, reg_fixture.cose_key}],
+        origin_verify_fun: {Wax, :origins_match?, []},
+        timeout: 60,
+        issued_at: System.system_time(:second) - 3600
+      }
+
+      params = %{
+        "email" => "expired-challenge@example.com",
+        "raw_id" => Base.url_encode64(auth_fixture.raw_id, padding: false),
+        "authenticator_data" => auth_fixture.authenticator_data,
+        "signature" => auth_fixture.signature,
+        "client_data_json" => auth_fixture.client_data_json
+      }
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               Actions.sign_in(strategy, params, challenge: expired_challenge)
     end
   end
 
