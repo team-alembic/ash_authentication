@@ -37,30 +37,18 @@ if Code.ensure_loaded?(Wax.Challenge) do
     @doc "Generate and return a registration challenge."
     @spec registration_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
     def registration_challenge(conn, strategy) do
+      # `excludeCredentials` is intentionally left empty. Populating it from the
+      # submitted identity would turn this public, unauthenticated endpoint into
+      # an oracle: it would return a user's real credential ids to anyone who
+      # guesses their identity. The cost is that an authenticator won't refuse a
+      # duplicate enrolment up front; the register action still rejects it via
+      # its unique-credential-id constraint.
       send_registration_challenge(
         conn,
         strategy,
         new_user_descriptor(conn, strategy),
-        registration_exclude_ids(conn, strategy)
-      )
-    end
-
-    # Credentials already registered to the identity being (re-)registered,
-    # so the authenticator refuses to enroll the same key twice. Only
-    # meaningful in identity-required mode when the form supplied an identity;
-    # in passkey-first mode there is nothing to look the user up by. This
-    # doesn't leak account existence beyond what the register action already
-    # reveals via its unique-identity error.
-    defp registration_exclude_ids(conn, strategy) do
-      identity_value = presence(conn.params[to_string(strategy.identity_field)])
-
-      if strategy.require_identity? && identity_value do
-        strategy
-        |> lookup_user_credentials(identity_value, get_tenant(conn))
-        |> Enum.map(&Map.get(&1, WebAuthn.credential_id_field(strategy)))
-      else
         []
-      end
+      )
     end
 
     defp send_registration_challenge(conn, strategy, user_descriptor, exclude_credential_ids) do

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule AshAuthentication.Strategy.WebAuthn.CustomRelationshipTest do
+defmodule AshAuthentication.Strategy.WebAuthn.CustomUserRelationshipTest do
   @moduledoc """
   Regression test for credential management resolving the user via the
   *configured* `belongs_to` foreign key rather than a hardcoded `:user_id` /
@@ -21,10 +21,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.CustomRelationshipTest do
 
   setup_all do
     suffix = System.unique_integer([:positive])
-    user_name = "AshAuthentication.Strategy.WebAuthn.CustomRelationshipTest.User#{suffix}"
+    user_name = "AshAuthentication.Strategy.WebAuthn.CustomUserRelationshipTest.User#{suffix}"
 
     credential_name =
-      "AshAuthentication.Strategy.WebAuthn.CustomRelationshipTest.Credential#{suffix}"
+      "AshAuthentication.Strategy.WebAuthn.CustomUserRelationshipTest.Credential#{suffix}"
 
     source = """
     defmodule #{user_name} do
@@ -103,7 +103,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.CustomRelationshipTest do
     }
   end
 
-  test "the configured foreign key really isn't `user_id`", %{credential_module: credential_module} do
+  test "the configured foreign key really isn't `user_id`", %{
+    credential_module: credential_module
+  } do
     refute ResourceInfo.attribute(credential_module, :user_id)
 
     assert Enum.any?(
