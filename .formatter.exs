@@ -92,6 +92,7 @@ spark_locals_without_parens = [
   grace_period: 1,
   hash_provider: 1,
   hashed_password_field: 1,
+  http_adapter: 1,
   icon: 1,
   icon_url_field: 1,
   id: 1,
