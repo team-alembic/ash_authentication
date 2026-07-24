@@ -33,27 +33,123 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
   test "creates the credential resource", %{igniter: igniter} do
     igniter
     |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
-    |> assert_creates("lib/test/accounts/web_authn_credential.ex")
+    |> assert_creates("lib/test/accounts/webauthn_credential.ex")
   end
 
-  test "credential resource has the WebAuthn-specific attributes", %{igniter: igniter} do
+  # Regression test: `diff =~` string checks (as used elsewhere in this file)
+  # can't tell a well-formed `webauthn_credential do ... end` block apart from
+  # a corrupt `webauthn_credential(:user_resource)` call, or a `policies`
+  # block that got spliced inside `attributes` instead of the top level.
+  # Both shapes still contain the substrings the other tests assert on, but
+  # only one of them actually compiles. Swap in an Ets-backed domain/user so
+  # this doesn't need Postgres, then compile the real generated source
+  # through the real `AshAuthentication.WebAuthnCredential` extension.
+  test "the generated credential resource actually compiles", %{igniter: igniter} do
+    result = Igniter.compose_task(igniter, "ash_authentication.add_strategy.webauthn", [])
+
+    source =
+      result.rewrite
+      |> Rewrite.source!("lib/test/accounts/webauthn_credential.ex")
+      |> Rewrite.Source.get(:content)
+
+    module_name =
+      Module.concat([
+        "AshAuthentication.AddStrategy.WebauthnTest.Credential#{System.unique_integer([:positive])}"
+      ])
+
+    compilable_source =
+      source
+      |> String.replace("Test.Accounts.WebAuthnCredential", inspect(module_name))
+      |> String.replace(
+        "domain: Test.Accounts",
+        "domain: AshAuthentication.Test.PermissiveDomain"
+      )
+      |> String.replace("data_layer: AshPostgres.DataLayer", "data_layer: Ash.DataLayer.Ets")
+      |> String.replace(~r/postgres do.*?end\n/s, "ets do\n    private?(true)\n  end\n")
+      |> String.replace("Test.Accounts.User", "Example.UserWithWebAuthn")
+      |> String.replace(
+        ~r/\nend\n\z/,
+        """
+
+          identities do
+            identity :unique_credential_id, [:credential_id],
+              pre_check_with: AshAuthentication.Test.PermissiveDomain
+          end
+        end
+        """
+      )
+
+    compiled = Code.compile_string(compilable_source)
+
+    assert {^module_name, _bytecode} = List.keyfind(compiled, module_name, 0)
+
+    # The generated resource declares no `relationships` block — the
+    # extension's transformer auto-builds `belongs_to :user`, reading the
+    # foreign key's type off the real user resource's primary key. This
+    # confirms the auto-built relationship actually exists post-compile
+    # (not just that the file happens to compile).
+    relationship = Ash.Resource.Info.relationship(module_name, :user)
+
+    assert relationship,
+           "expected a `:user` relationship to be auto-built on #{inspect(module_name)}, but none was found"
+
+    assert %{
+             type: :belongs_to,
+             destination: Example.UserWithWebAuthn,
+             allow_nil?: false,
+             source_attribute: :user_id
+           } = relationship
+  end
+
+  test "credential resource uses the AshAuthentication.WebAuthnCredential extension", %{
+    igniter: igniter
+  } do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
     diff = diff(result)
-    assert diff =~ "credential_id"
-    assert diff =~ "AshAuthentication.Strategy.WebAuthn.CoseKey"
-    assert diff =~ "sign_count"
-    assert diff =~ "label"
+    assert diff =~ "AshAuthentication.WebAuthnCredential"
+    assert diff =~ "webauthn_credential"
+    assert diff =~ "user_resource"
   end
 
-  test "credential resource has a belongs_to user relationship", %{igniter: igniter} do
+  # Mirrors "when the user resource isn't named `User`, both generated
+  # files agree on the relationship name" below — that test pins down the
+  # `:account` override, which the installer *does* stamp explicitly (the
+  # two independent DSL defaults can't otherwise agree). With the default
+  # `--user` (`Test.Accounts.User`), the derived name equals `:user` — the
+  # shared default both DSLs already agree on — so nothing needs stamping;
+  # asserting its absence keeps the generated code free of a
+  # `user_relationship_name(:user)` line that would otherwise be added on
+  # every single install regardless of whether anything was customized.
+  test "with the default user resource, neither generated file stamps `user_relationship_name`",
+       %{igniter: igniter} do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
 
-    assert diff(result) =~ "belongs_to :user"
+    credential_diff = diff(result, only: "lib/test/accounts/webauthn_credential.ex")
+    user_diff = diff(result, only: "lib/test/accounts/user.ex")
+
+    refute credential_diff =~ "user_relationship_name"
+    refute user_diff =~ "user_relationship_name"
+  end
+
+  # No explicit `relationships` block is generated — the extension's
+  # transformer auto-builds `belongs_to :user` (see the "actually compiles"
+  # test above for confirmation it's built correctly). Generating it
+  # explicitly here would be redundant and, worse, would use Ash's generic
+  # `default_belongs_to_type` config instead of the user resource's real
+  # primary key type, so it could silently mismatch.
+  test "credential resource does not declare an explicit relationships block", %{
+    igniter: igniter
+  } do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    refute diff(result, only: "lib/test/accounts/webauthn_credential.ex") =~ "relationships do"
   end
 
   test "credential resource has the AshAuthenticationInteraction policy bypass", %{
@@ -193,6 +289,40 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     refute diff =~ "sign_in_enabled?(false)"
   end
 
+  test "default mode emits `require_identity? true`", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    assert diff =~ "require_identity?(true)"
+    assert diff =~ "identity_field(:email)"
+  end
+
+  test "`--passkey-only` emits a no-identity strategy block", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", ["--passkey-only"])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    assert diff =~ "webauthn :webauthn"
+    assert diff =~ "require_identity?(false)"
+    refute diff =~ "identity_field"
+  end
+
+  test "`--passkey-only` does not add an identity attribute or identity to the user", %{
+    igniter: igniter
+  } do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", ["--passkey-only"])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    refute diff =~ "attribute(:email"
+    refute diff =~ "identity(:unique_email"
+    assert diff =~ "has_many(:webauthn_credentials, Test.Accounts.WebAuthnCredential)"
+  end
+
   test "is idempotent — running twice doesn't error or duplicate config", %{igniter: igniter} do
     igniter =
       igniter
@@ -204,5 +334,108 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert second_run.issues == []
 
     refute diff(second_run, only: "lib/test/accounts/user.ex") =~ "webauthn :webauthn"
+  end
+
+  # `user_relationship_name` lives on the credential resource's
+  # `webauthn_credential` DSL and nowhere else — the strategy reads it back
+  # off the credential resource, and the `has_many` it builds on the user
+  # resource derives the matching `<name>_id` from that resource's own module
+  # name. So when the user resource isn't called `User`, the installer stamps
+  # the computed name into the credential resource only, and the user
+  # resource must *not* carry a copy of it.
+  test "when the user resource isn't named `User`, the relationship name is stamped into the credential resource alone" do
+    igniter =
+      test_project()
+      |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
+      |> Igniter.compose_task("ash_authentication.install", [
+        "--yes",
+        "--user",
+        "Test.Accounts.Account",
+        "--auth-strategy",
+        "webauthn"
+      ])
+
+    assert igniter.issues == []
+
+    credential_diff = diff(igniter, only: "lib/test/accounts/webauthn_credential.ex")
+    account_diff = diff(igniter, only: "lib/test/accounts/account.ex")
+
+    assert credential_diff =~ "user_relationship_name(:account)"
+    refute credential_diff =~ "user_relationship_name(:user)"
+    refute account_diff =~ "user_relationship_name"
+
+    # The diff-text checks above only prove the *source* says
+    # `user_relationship_name(:account)` — not that compiling it actually
+    # produces a relationship named `:account` with an `:account_id`
+    # foreign key. Compile the generated credential resource for real
+    # (Ets instead of Postgres) against a minimal stand-in `Account`
+    # resource — not the real generated `account.ex`, which also drags in
+    # `Test.Accounts.Token`/`Test.Secrets` that aren't part of this bundle —
+    # to close that gap, mirroring how "the generated credential resource
+    # actually compiles" (above) isolates the credential resource using
+    # `Example.UserWithWebAuthn` as its stand-in destination.
+    credential_module =
+      Module.concat([
+        "AshAuthentication.AddStrategy.WebauthnTest.AccountCredential#{System.unique_integer([:positive])}"
+      ])
+
+    account_module =
+      Module.concat([
+        "AshAuthentication.AddStrategy.WebauthnTest.Account#{System.unique_integer([:positive])}"
+      ])
+
+    account_source = """
+    defmodule #{inspect(account_module)} do
+      use Ash.Resource,
+        domain: AshAuthentication.Test.PermissiveDomain,
+        data_layer: Ash.DataLayer.Ets
+
+      ets do
+        private?(true)
+      end
+
+      attributes do
+        uuid_primary_key(:id)
+      end
+    end
+    """
+
+    credential_source =
+      igniter.rewrite
+      |> Rewrite.source!("lib/test/accounts/webauthn_credential.ex")
+      |> Rewrite.Source.get(:content)
+      |> String.replace("Test.Accounts.WebAuthnCredential", inspect(credential_module))
+      |> String.replace("Test.Accounts.Account", inspect(account_module))
+      |> String.replace(
+        "domain: Test.Accounts",
+        "domain: AshAuthentication.Test.PermissiveDomain"
+      )
+      |> String.replace("data_layer: AshPostgres.DataLayer", "data_layer: Ash.DataLayer.Ets")
+      |> String.replace(~r/postgres do.*?end\n/s, "ets do\n    private?(true)\n  end\n")
+      |> String.replace(
+        ~r/\nend\n\z/,
+        """
+
+          identities do
+            identity :unique_credential_id, [:credential_id],
+              pre_check_with: AshAuthentication.Test.PermissiveDomain
+          end
+        end
+        """
+      )
+
+    Code.compile_string(account_source <> "\n" <> credential_source)
+
+    relationship = Ash.Resource.Info.relationship(credential_module, :account)
+
+    assert relationship,
+           "expected a `:account` relationship on #{inspect(credential_module)} (the installer should " <>
+             "have stamped `user_relationship_name :account` into the generated source), but none was found"
+
+    assert %{
+             type: :belongs_to,
+             destination: ^account_module,
+             source_attribute: :account_id
+           } = relationship
   end
 end
