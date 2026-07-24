@@ -39,18 +39,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.PasskeyOnlyModeTest do
   end
 
   describe "SignInPreparation in passkey mode" do
-    test "returns the query unchanged instead of filtering to no results" do
-      user =
-        Example.UserWithWebAuthnNoIdentity
-        |> Ash.Changeset.for_create(:create, %{})
-        |> Ash.create!()
+    test "fails closed rather than returning every user" do
+      # In passkey-first mode the user is resolved from the credential id in
+      # `Actions.sign_in/3`, not by this read action. A direct read of the
+      # sign-in action must therefore return nothing rather than enumerating
+      # every user in the resource.
+      Example.UserWithWebAuthnNoIdentity
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
 
-      assert {:ok, [found]} =
+      assert {:ok, []} =
                Example.UserWithWebAuthnNoIdentity
                |> Ash.Query.for_read(:sign_in_with_webauthn, %{})
                |> Ash.read(authorize?: false)
-
-      assert found.id == user.id
     end
   end
 
