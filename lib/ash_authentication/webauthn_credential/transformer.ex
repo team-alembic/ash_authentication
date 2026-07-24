@@ -136,12 +136,15 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
              writable?: true,
              public?: true
            ),
+         :ok <- validate_attribute(dsl_state, label_field, :string, allow_nil?: true),
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, last_used_at_field, :utc_datetime_usec,
              allow_nil?: true,
              writable?: true,
              public?: true
            ),
+         :ok <-
+           validate_attribute(dsl_state, last_used_at_field, :utc_datetime_usec, allow_nil?: true),
          {:ok, read_action_name} <- Info.webauthn_credential_read_action_name(dsl_state),
          {:ok, destroy_action_name} <- Info.webauthn_credential_destroy_action_name(dsl_state),
          {:ok, create_action_name} <- Info.webauthn_credential_create_action_name(dsl_state),
@@ -368,6 +371,15 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
                  "`#{inspect(credential_id_field)}`."
            )}
         end
+
+      nil ->
+        {:error,
+         DslError.exception(
+           path: [:webauthn_credential],
+           message:
+             "The `#{inspect(resource)}` resource must define a `unique_credential_id` identity " <>
+               "covering `#{inspect(credential_id_field)}`."
+         )}
     end
   end
 end

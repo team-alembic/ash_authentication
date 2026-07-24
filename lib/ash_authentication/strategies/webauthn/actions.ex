@@ -552,10 +552,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
       case {anomaly?, strategy.sign_count_policy} do
         {false, _policy} ->
-          best_effort_update_assertion_state(strategy, credential_id, assertion, tenant)
+          best_effort_update_assertion_state(strategy, credential, assertion, tenant)
 
         {true, :ignore} ->
-          best_effort_update_assertion_state(strategy, credential_id, assertion, tenant)
+          best_effort_update_assertion_state(strategy, credential, assertion, tenant)
 
         {true, :log} ->
           log_sign_count_anomaly(strategy, credential_id, stored_count, new_count)
@@ -584,8 +584,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       )
     end
 
-    defp best_effort_update_assertion_state(strategy, credential_id, assertion, tenant) do
-      update_assertion_state(strategy, credential_id, assertion, tenant)
+    defp best_effort_update_assertion_state(strategy, credential, assertion, tenant) do
+      update_assertion_state(strategy, credential, assertion, tenant)
       :ok
     end
 
@@ -668,44 +668,28 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     # the spec recommends tracking BS on every authentication since a
     # credential can become backed up after registration (e.g. the user
     # enables passkey syncing).
-    defp update_assertion_state(strategy, credential_id, assertion, tenant) do
+    defp update_assertion_state(strategy, credential, assertion, tenant) do
       ash_opts = internal_ash_opts(tenant)
-      read_action = credential_action_name(strategy.credential_resource, :read_action_name)
 
       update_action =
         credential_action_name(strategy.credential_resource, :update_action_name)
 
-      strategy.credential_resource
-      |> Query.new()
-      |> Query.set_context(auth_context())
-      |> Query.for_read(read_action, %{}, ash_opts)
-      |> Query.filter(credential_id == ^credential_id)
-      |> Ash.read_one()
+      credential
+      |> Changeset.new()
+      |> Changeset.set_context(auth_context())
+      |> Changeset.for_update(
+        update_action,
+        %{
+          WebAuthn.sign_count_field(strategy) => assertion.sign_count,
+          WebAuthn.last_used_at_field(strategy) => DateTime.utc_now(),
+          WebAuthn.backed_up_field(strategy) => assertion.backed_up
+        },
+        ash_opts
+      )
+      |> Ash.update()
       |> case do
-        {:ok, nil} ->
-          :ok
-
-        {:ok, credential} ->
-          credential
-          |> Changeset.new()
-          |> Changeset.set_context(auth_context())
-          |> Changeset.for_update(
-            update_action,
-            %{
-              sign_count: assertion.sign_count,
-              last_used_at: DateTime.utc_now(),
-              backed_up: assertion.backed_up
-            },
-            ash_opts
-          )
-          |> Ash.update()
-          |> case do
-            {:ok, _} -> :ok
-            {:error, error} -> log_sign_count_failure(error)
-          end
-
-        {:error, error} ->
-          log_sign_count_failure(error)
+        {:ok, _} -> :ok
+        {:error, error} -> log_sign_count_failure(error)
       end
     end
 

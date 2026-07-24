@@ -215,6 +215,86 @@ defmodule AshAuthentication.WebAuthnCredential.VerifierTest do
     end
   end
 
+  describe "attribute validation" do
+    test "a pre-declared `label` attribute of the wrong type raises a friendly DslError" do
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          compile_credential_with!(attributes: "attribute :label, :integer, public?: true")
+        end
+
+      assert error.message =~ "label"
+      assert error.message =~ "Ash.Type.String"
+    end
+
+    test "a pre-declared `last_used_at` attribute of the wrong type raises a friendly DslError" do
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          compile_credential_with!(attributes: "attribute :last_used_at, :string, public?: true")
+        end
+
+      assert error.message =~ "last_used_at"
+      assert error.message =~ "Ash.Type.UtcDatetimeUsec"
+    end
+  end
+
+  describe "unique_credential_id identity" do
+    test "a `unique_credential_id` identity that omits the credential id field raises" do
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          compile_credential_with!(
+            identities:
+              "identity :unique_credential_id, [:sign_count], " <>
+                "pre_check_with: AshAuthentication.Test.PermissiveDomain"
+          )
+        end
+
+      assert error.message =~ "unique_credential_id"
+      assert error.message =~ "credential_id"
+    end
+  end
+
+  # Like `compile_credential!/1`, but lets a test inject extra `attributes`
+  # and/or `identities` DSL so it can exercise the credential resource's
+  # attribute/identity validations.
+  defp compile_credential_with!(opts) do
+    module_name =
+      "AshAuthentication.WebAuthnCredential.VerifierTest.Credential#{System.unique_integer([:positive])}"
+
+    attributes = Keyword.get(opts, :attributes, "")
+    identities = Keyword.get(opts, :identities, "")
+
+    source = """
+    defmodule #{module_name} do
+      @moduledoc false
+      use Ash.Resource,
+        domain: AshAuthentication.Test.PermissiveDomain,
+        data_layer: Ash.DataLayer.Ets,
+        extensions: [AshAuthentication.WebAuthnCredential]
+
+      ets do
+        private?(true)
+      end
+
+      webauthn_credential do
+        user_resource(Example.UserWithWebAuthn)
+      end
+
+      attributes do
+        #{attributes}
+      end
+
+      identities do
+        #{identities}
+      end
+    end
+    """
+
+    module = Module.concat([module_name])
+    compiled = Code.compile_string(source)
+    {^module, _bytecode} = List.keyfind(compiled, module, 0)
+    module
+  end
+
   # Compiles a fresh, throwaway WebAuthn credential resource from a string
   # source fixture, so each test can exercise
   # `AshAuthentication.WebAuthnCredential`'s transformer/verifier pipeline

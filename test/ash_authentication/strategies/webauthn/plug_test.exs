@@ -52,7 +52,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
 
       # The handle is retained in the session so registration can store it
       session = Plug.Conn.get_session(conn, "webauthn_attestation_challenge_webauthn")
-      assert session["user_handle"] || session[:user_handle] == body["user"]["id"]
+      assert (session["user_handle"] || session[:user_handle]) == body["user"]["id"]
     end
 
     test "uses display_name param for the account name in passkey-first flows", %{
@@ -86,7 +86,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert body["user"]["displayName"] == "Simon"
     end
 
-    test "excludes existing credentials when the identity is known", %{strategy: strategy} do
+    test "never leaks existing credentials, even when the identity is known", %{
+      strategy: strategy
+    } do
+      # The registration_challenge endpoint is public and unauthenticated.
+      # Populating `excludeCredentials` from the submitted identity would turn it
+      # into an enumeration oracle leaking a user's real credential ids, so it is
+      # always empty regardless of whether the account (or a credential) exists.
       user =
         Example.UserWithWebAuthn
         |> Ash.Changeset.for_create(:create, %{email: "exclude-test@example.com"})
@@ -109,8 +115,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
 
       body = Jason.decode!(conn.resp_body)
 
-      assert [%{"id" => encoded_id, "type" => "public-key"}] = body["excludeCredentials"]
-      assert Base.url_decode64!(encoded_id, padding: false) == fixture.credential_id
+      assert body["excludeCredentials"] == []
     end
 
     test "sends no exclusions when no identity is supplied", %{strategy: strategy} do

@@ -7,7 +7,6 @@ spark_locals_without_parens = [
   access_token_expires_at_attribute_name: 1,
   action_name: 1,
   adapter: 1,
-  add_credential_action_name: 1,
   api_key: 0,
   api_key: 1,
   api_key: 2,
@@ -66,7 +65,6 @@ spark_locals_without_parens = [
   credential_id_field: 1,
   credential_resource: 1,
   credentials_relationship_name: 1,
-  delete_credential_action_name: 1,
   destroy_action_name: 1,
   discoverable_field: 1,
   display_name_field: 1,
@@ -121,7 +119,6 @@ spark_locals_without_parens = [
   label_field: 1,
   last_totp_at_field: 1,
   last_used_at_field: 1,
-  list_credentials_action_name: 1,
   live_socket_id_template: 1,
   log_lifetime: 1,
   log_out_everywhere: 0,
@@ -232,7 +229,6 @@ spark_locals_without_parens = [
   status: 1,
   store_all_tokens?: 1,
   store_changes_action_name: 1,
-  store_credential_action_name: 1,
   store_token_action_name: 1,
   strategy: 1,
   strategy_attribute_name: 1,
@@ -254,8 +250,6 @@ spark_locals_without_parens = [
   trusted_audiences: 1,
   uid_attribute_name: 1,
   update_action_name: 1,
-  update_credential_label_action_name: 1,
-  update_sign_count_action_name: 1,
   upsert_action_name: 1,
   user_handle_field: 1,
   user_id_attribute_name: 1,
@@ -270,11 +264,7 @@ spark_locals_without_parens = [
   warn_on_missing_identity_resource?: 1,
   webauthn: 0,
   webauthn: 1,
-  webauthn: 2,
-  webauthn_route: 2,
-  webauthn_route: 3,
-  webauthn_setup_route: 2,
-  webauthn_setup_route: 3
+  webauthn: 2
 ]
 
 [
