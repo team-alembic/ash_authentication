@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule Example.Repo.Migrations.AddWebauthnCredentialSpecFields do
+defmodule Example.Repo.Migrations.AddWebauthnPasskeyOnlyAndCredentialSpecFields do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -69,7 +69,9 @@ defmodule Example.Repo.Migrations.AddWebauthnCredentialSpecFields do
           name: "webauthn_no_identity_credentials_user_id_fkey",
           type: :uuid,
           prefix: "public"
-        ), null: false)
+        ),
+        null: false
+      )
     end
 
     create unique_index(:webauthn_no_identity_credentials, [:credential_id],
