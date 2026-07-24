@@ -35,6 +35,13 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
   # Strategy transformers (OAuth2's `identities`) add relationships, which need
   # SetRelationshipSource to fill in their source.
   def before?(Ash.Resource.Transformers.SetRelationshipSource), do: true
+  # Strategy transformers also add `has_many` relationships (webauthn's
+  # credentials, for one) without naming a `destination_attribute`, so that
+  # Ash derives it from this resource's name rather than the strategy having
+  # to guess a foreign key on a resource it can't introspect yet. That
+  # derivation is `HasDestinationField`'s job, so it has to run after the
+  # relationships exist — otherwise they keep a `nil` destination attribute.
+  def before?(Ash.Resource.Transformers.HasDestinationField), do: true
   def before?(_), do: false
 
   @doc false

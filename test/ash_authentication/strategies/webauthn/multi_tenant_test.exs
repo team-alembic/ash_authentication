@@ -7,6 +7,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.MultiTenantTest do
 
   alias AshAuthentication.{Info, Strategy.WebAuthn.Helpers}
 
+  @moduletag feature: :webauthn
+
   describe "multi-tenant rp_id resolution" do
     test "resolves dynamic rp_id via MFA" do
       strategy = Info.strategy!(Example.MultiTenantUserWithWebAuthn, :webauthn)
