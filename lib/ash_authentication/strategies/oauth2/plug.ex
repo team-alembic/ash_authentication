@@ -79,19 +79,42 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
-  # The session holding `session_params` is absent. This is expected when a
-  # provider using `response_mode=form_post` (e.g. Apple with name/email scope)
-  # POSTs the callback cross-site: the browser withholds the `SameSite=Lax`
-  # session cookie on a cross-site POST. Render an interstitial page that
-  # same-origin re-POSTs the params so the follow-up request carries the
-  # session. On the (same-origin) re-POST `session_params` is present and the
-  # `with` above succeeds; if it is *still* absent we've already bounced once,
-  # so fail closed rather than loop.
+  # The session holding `session_params` is absent. Two legitimate cases can
+  # reach here; otherwise we fail closed.
+  #
+  # 1. A provider using `response_mode=form_post` (e.g. Apple with name/email
+  #    scope) POSTs the callback cross-site: the browser withholds the
+  #    `SameSite=Lax` session cookie on a cross-site POST. We render an
+  #    interstitial page that same-origin re-POSTs the params so the follow-up
+  #    request carries the session. On the (same-origin) re-POST `session_params`
+  #    is present and the `with` above succeeds; if it is *still* absent we've
+  #    already bounced once, so fall through rather than loop.
+  #
+  # 2. An IdP/third-party-initiated login (e.g. a launch from an identity
+  #    provider's app-launcher or portal tile): the provider redirects straight
+  #    to our callback with a `code` but no `state`, so the request phase never
+  #    ran and nothing was stored. We must NOT complete authentication from
+  #    this request — with no stored `state` there is no CSRF binding to
+  #    verify, and "session absent" is an attacker-controllable condition (a
+  #    normal flow with the cookie stripped is indistinguishable), so trusting
+  #    it would disable `state` verification for every flow on the strategy.
+  #    Instead, when the strategy opts in via `idp_initiated_login?`, we treat
+  #    the callback as a *trigger* and restart the request phase, which mints a
+  #    fresh `state` we later verify — the OpenID Connect Core §4 ("Initiating
+  #    Login from a Third Party") pattern. The user still has a live session at
+  #    the provider, so the restarted flow returns immediately. The restart
+  #    stores a session, so its callback takes the success path above and never
+  #    re-enters here — the bounce happens at most once.
   defp maybe_reflect_or_fail(conn, strategy) do
-    if conn.method == "POST" and not reflected?(conn) do
-      render_interstitial(conn, strategy)
-    else
-      store_authentication_result(conn, {:error, nil})
+    cond do
+      conn.method == "POST" and not reflected?(conn) ->
+        render_interstitial(conn, strategy)
+
+      conn.method == "GET" and strategy.idp_initiated_login? ->
+        request(conn, strategy)
+
+      true ->
+        store_authentication_result(conn, {:error, nil})
     end
   end
 

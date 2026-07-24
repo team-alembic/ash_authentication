@@ -173,6 +173,12 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
             "The resource used to store user identities. Required: matching users by email or other provider claims is unsafe, so the provider's `iss`/`sub` claims must be persisted. See the User Identities section of the strategy docs for more.",
           default: false
         ],
+        idp_initiated_login?: [
+          type: :boolean,
+          doc:
+            "If enabled, a callback arriving with no stored session (an IdP/third-party-initiated login, e.g. an identity provider's app-launcher or portal tile, that omits `state`) is treated as a *trigger* to restart authentication rather than completed directly. The plug discards the inbound response and redirects into the request phase, where a fresh `state` is generated and later verified — the OpenID Connect Core §4 (\"Initiating Login from a Third Party\") pattern. This keeps CSRF `state` verification intact for all flows. Requires the user to still have a live session at the provider so the restarted flow returns immediately. Defaults to `false` (stateless callbacks fail closed).",
+          default: false
+        ],
         warn_on_missing_identity_resource?: [
           type: :boolean,
           doc:
