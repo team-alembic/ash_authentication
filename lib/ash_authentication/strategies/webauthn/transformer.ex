@@ -54,17 +54,25 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
               {:ok, dsl_state}
             end),
          {:ok, dsl_state} <-
-           maybe_build_action(
-             dsl_state,
-             strategy.sign_in_action_name,
-             &build_sign_in_action(&1, strategy)
-           ),
+           (if strategy.sign_in_enabled? do
+              maybe_build_action(
+                dsl_state,
+                strategy.sign_in_action_name,
+                &build_sign_in_action(&1, strategy)
+              )
+            else
+              {:ok, dsl_state}
+            end),
          {:ok, dsl_state} <-
-           maybe_build_action(
-             dsl_state,
-             strategy.sign_in_with_token_action_name,
-             &build_sign_in_with_token_action(&1, strategy)
-           ),
+           (if strategy.sign_in_enabled? do
+              maybe_build_action(
+                dsl_state,
+                strategy.sign_in_with_token_action_name,
+                &build_sign_in_with_token_action(&1, strategy)
+              )
+            else
+              {:ok, dsl_state}
+            end),
          {:ok, dsl_state} <-
            (if strategy.verify_enabled? do
               maybe_build_action(
@@ -93,7 +101,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
   end
 
   defp register_webauthn_actions(dsl_state, strategy) do
-    actions = [strategy.sign_in_action_name, strategy.sign_in_with_token_action_name]
+    actions = []
+
+    actions =
+      if strategy.sign_in_enabled?,
+        do: [strategy.sign_in_action_name, strategy.sign_in_with_token_action_name | actions],
+        else: actions
 
     actions =
       if strategy.registration_enabled?,

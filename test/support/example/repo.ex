@@ -6,6 +6,8 @@ defmodule Example.Repo do
   @moduledoc false
   use AshPostgres.Repo, otp_app: :ash_authentication
 
+  alias Ecto.Adapters.SQL
+
   @doc false
   @impl AshPostgres.Repo
   def installed_extensions, do: ["ash-functions", "uuid-ossp", "citext"]
@@ -18,7 +20,7 @@ defmodule Example.Repo do
   @impl AshPostgres.Repo
   def all_tenants do
     __MODULE__
-    |> Ecto.Adapters.SQL.query!(
+    |> SQL.query!(
       "SELECT schema_name FROM information_schema.schemata " <>
         "WHERE schema_name NOT IN ('public', 'information_schema') " <>
         "AND schema_name NOT LIKE 'pg\\_%'",

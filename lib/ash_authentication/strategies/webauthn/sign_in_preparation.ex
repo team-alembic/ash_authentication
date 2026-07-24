@@ -13,7 +13,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
-  alias AshAuthentication.Info
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info}
   require Ash.Query
 
   @doc false
@@ -27,8 +27,27 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
           identity -> Query.filter(query, ^ref(identity_field) == ^identity)
         end
 
-      _ ->
+      {:ok, %_{require_identity?: false}} ->
+        # Passkey-first mode: the user is resolved from the credential id in
+        # `Actions.sign_in/3`, not by this query. Constrain to nothing so a
+        # direct read of the sign-in action can never enumerate every user.
+        Query.filter(query, false)
+
+      :error ->
+        # No strategy resolved for this query: fail closed rather than
+        # returning an unfiltered (all-users) query, and surface the failure
+        # instead of swallowing it.
         query
+        |> Query.filter(false)
+        |> Query.add_error(
+          AuthenticationFailed.exception(
+            query: query,
+            caused_by: %{
+              module: __MODULE__,
+              message: "Unable to identify the WebAuthn strategy for this sign-in query."
+            }
+          )
+        )
     end
   end
 end
