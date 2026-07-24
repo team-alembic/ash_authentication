@@ -63,12 +63,9 @@ defmodule MyApp.Accounts.User do
         rp_name "My App"
         origin "https://example.com"
         identity_field :email
+        require_identity? true
       end
     end
-  end
-
-  relationships do
-    has_many :webauthn_credentials, MyApp.Accounts.Credential
   end
 
   identities do
@@ -106,24 +103,26 @@ browser includes the port in the origin and `Wax` will reject the mismatch.
 
 ## Credential Resource
 
-You must define a separate Ash resource to store WebAuthn credentials. It needs:
-
-- `credential_id` (`:binary`) - the raw credential ID from the authenticator
-- `public_key` (`AshAuthentication.Strategy.WebAuthn.CoseKey`) - the COSE public key
-- `sign_count` (`:integer`) - replay attack counter
-- `label` (`:string`) - user-facing name for the credential
-- `last_used_at` (`:utc_datetime_usec`, optional) - tracks last authentication time
-- A `belongs_to` relationship to your user resource
-- A policy bypass for `AshAuthentication.Checks.AshAuthenticationInteraction`
-
-### Full Example
+You must define a separate Ash resource to store WebAuthn credentials. Add the
+`AshAuthentication.WebAuthnCredential` extension and it will automatically scaffold
+the required attributes (`credential_id`, `public_key`, `sign_count`, `label`,
+`last_used_at`), the `belongs_to` relationship back to the user resource, the
+unique identity on `credential_id`, and all four CRUD actions. The matching
+`has_many :webauthn_credentials` relationship on the user resource is scaffolded
+by the `webauthn` strategy itself. Either relationship can still be declared by
+hand if you need non-default options — whatever you don't declare is built for you.
 
 ```elixir
 defmodule MyApp.Accounts.Credential do
   use Ash.Resource,
     domain: MyApp.Accounts,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshAuthentication.WebAuthnCredential]
+
+  webauthn_credential do
+    user_resource MyApp.Accounts.User
+  end
 
   postgres do
     table "webauthn_credentials"
@@ -142,38 +141,8 @@ defmodule MyApp.Accounts.Credential do
 
   attributes do
     uuid_primary_key :id
-    attribute :credential_id, :binary, allow_nil?: false, public?: true
-
-    attribute :public_key, AshAuthentication.Strategy.WebAuthn.CoseKey,
-      allow_nil?: false, public?: true
-
-    attribute :sign_count, :integer, default: 0, allow_nil?: false, public?: true
-    attribute :label, :string, default: "Security Key", public?: true
-    attribute :last_used_at, :utc_datetime_usec, public?: true
     create_timestamp :inserted_at
     update_timestamp :updated_at
-  end
-
-  relationships do
-    belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
-  end
-
-  identities do
-    identity :unique_credential_id, [:credential_id]
-  end
-
-  actions do
-    defaults [:read, :destroy]
-
-    create :create do
-      primary? true
-      accept [:credential_id, :public_key, :sign_count, :label, :user_id]
-    end
-
-    update :update do
-      primary? true
-      accept [:sign_count, :label, :last_used_at]
-    end
   end
 end
 ```
@@ -236,6 +205,7 @@ webauthn :webauthn do
   rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []}
   origin {MyApp.WebAuthn, :origin_for_tenant, []}
   identity_field :email
+  require_identity? true
 end
 ```
 
@@ -248,6 +218,60 @@ defmodule MyApp.WebAuthn do
   def origin_for_tenant(tenant), do: "https://#{tenant}.example.com"
 end
 ```
+
+## Passkey-First (No Identity) Flow
+
+By default the strategy requires an `identity_field` attribute (e.g. `:email`)
+on the user resource. For passkey-only systems — internal admin apps, or apps
+where the user resource has no email-style column at all — set
+`require_identity? false` and the requirement is lifted entirely:
+
+```elixir
+defmodule MyApp.Accounts.User do
+  use Ash.Resource,
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
+
+  attributes do
+    uuid_primary_key :id
+  end
+
+  authentication do
+    tokens do
+      enabled? true
+      token_resource MyApp.Accounts.Token
+      signing_secret fn _, _ -> {:ok, Application.get_env(:my_app, :token_secret)} end
+    end
+
+    strategies do
+      webauthn :webauthn do
+        credential_resource MyApp.Accounts.Credential
+        rp_id "example.com"
+        rp_name "My App"
+        origin "https://example.com"
+        require_identity? false
+      end
+    end
+  end
+end
+```
+
+No `:email` attribute, no unique identity. At challenge time no identity is
+sent to the server, so the browser surfaces a discoverable credential
+(passkey); at verification time the credential id alone resolves the user.
+
+This composes with `resident_key: :required` (the default): `resident_key`
+controls whether the browser is asked to create a discoverable credential
+during registration, while `require_identity?` controls whether the
+user resource must expose an identity column. Set both for the full
+passkey-first experience.
+
+The companion package `ash_authentication_phoenix` needs to skip the email
+input in its sign-in components for this mode — see its documentation.
+
+**Gotcha:** registration creates a user with no identity, so this mode is
+unsuitable when paired with strategies that need an email on the same
+resource (e.g. password with resettable, magic link, or confirmation).
 
 ## Gotchas
 
@@ -266,6 +290,22 @@ end
 - **Token generation happens in `Actions.sign_in`** via `Jwt.token_for_user/3`, not in
   an Ash preparation like the Password strategy. This is because Wax verification
   happens outside the Ash action pipeline.
+
+## Credential resource configuration
+
+Since 5.0 the credential resource must use the
+`AshAuthentication.WebAuthnCredential` extension. The names of its
+attributes, and of its `belongs_to` to the user resource, are declared once
+on its own `webauthn_credential` section -- not on this strategy. The
+accessors in this module read them back off `credential_resource`, so they
+always reflect what that resource actually declares:
+
+    strategy = AshAuthentication.Info.strategy!(MyApp.Accounts.User, :webauthn)
+    AshAuthentication.Strategy.WebAuthn.credential_id_field(strategy)
+    #=> :credential_id
+
+If you have the credential resource module rather than the strategy, call
+`AshAuthentication.WebAuthnCredential.Info` directly instead.
 
 
 
@@ -287,6 +327,7 @@ webauthn :webauthn do
   rp_id "example.com"
   rp_name "My App"
   identity_field :email
+  require_identity? true
 end
 
 ```
@@ -301,33 +342,27 @@ end
 | [`credential_resource`](#authentication-strategies-webauthn-credential_resource){: #authentication-strategies-webauthn-credential_resource .spark-required} | `atom \| module` |  | The Ash resource used to store WebAuthn credentials. Must have `credential_id` (binary), `public_key` (binary), and `sign_count` (integer) attributes, plus a `belongs_to` relationship to the user resource. |
 | [`rp_id`](#authentication-strategies-webauthn-rp_id){: #authentication-strategies-webauthn-rp_id .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party ID - your domain name (e.g. "example.com"). For multi-tenant setups, pass an MFA tuple or 1-arity function that receives the tenant and returns the domain string:     rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_id MyApp.Secrets |
 | [`rp_name`](#authentication-strategies-webauthn-rp_name){: #authentication-strategies-webauthn-rp_name .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party display name shown to the user during registration. For multi-tenant setups, pass an MFA tuple or 1-arity function:     rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_name MyApp.Secrets |
+| [`require_identity?`](#authentication-strategies-webauthn-require_identity?){: #authentication-strategies-webauthn-require_identity? .spark-required} | `boolean` |  | Must be set explicitly. There is no default; the developer chooses the mode per resource. When `true` (identity-required mode), the user resource must expose an `identity_field` attribute (default `:email`) that is writable, public, and uniquely constrained. Users sign in by supplying this identity at challenge time; their credentials are returned via `allowCredentials`. When `false` (passkey-first mode), the user resource needs no identity column. Users sign in via a discoverable credential only; the credential id resolves the user at verification time. Pairs with `resident_key: :required`. Note: the runtime in `Actions.sign_in/3` and `Plug.authentication_challenge/2` supports both modes; this option only relaxes the compile-time checks in the transformer and the sign-in preparation. |
+| [`adapter`](#authentication-strategies-webauthn-adapter){: #authentication-strategies-webauthn-adapter } | `module` | `AshAuthentication.Strategy.WebAuthn.Adapters.Wax` | The ceremony backend adapter — handles challenge generation, verification, and challenge (de)serialization. See `AshAuthentication.Strategy.WebAuthn.Adapter`. |
 | [`origin`](#authentication-strategies-webauthn-origin){: #authentication-strategies-webauthn-origin } | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | The expected origin for WebAuthn ceremonies. In WebAuthn, the **origin** is the scheme + domain + port that the browser reports during registration and authentication. It is distinct from `rp_id`: - `rp_id` = domain only (e.g. `"example.com"`) - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`) If not set, defaults to `"https://{rp_id}"`. This default **omits the port**, which works for production on port 443 but will cause Wax to reject ceremonies in development where the port is non-standard. **Production:**     origin "https://example.com" **Development (non-standard port):**     origin "https://localhost:4001" **Dynamic (multi-tenant):**     origin {MyApp.WebAuthn, :origin_for_tenant, []} **Application-environment-driven:**     origin MyApp.Secrets |
-| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. |
+| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. Ignored when `require_identity?` is `false`. |
 | [`authenticator_attachment`](#authentication-strategies-webauthn-authenticator_attachment){: #authentication-strategies-webauthn-authenticator_attachment } | `nil \| :platform \| :cross_platform` |  | Restricts authenticator type. `nil` allows any, `:platform` limits to built-in (Touch ID, Windows Hello), `:cross_platform` limits to USB/NFC keys (YubiKey). |
 | [`user_verification`](#authentication-strategies-webauthn-user_verification){: #authentication-strategies-webauthn-user_verification } | `"required" \| "preferred" \| "discouraged"` | `"preferred"` | Whether user verification (PIN/biometric) is required. Use `"required"` for highest security. |
-| [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "direct"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"direct"` requests the authenticator's attestation certificate. |
+| [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "indirect" \| "direct" \| "enterprise"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"indirect"` allows the client to substitute an anonymized attestation, `"direct"` requests the authenticator's attestation statement verbatim, and `"enterprise"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. |
+| [`trusted_attestation_types`](#authentication-strategies-webauthn-trusted_attestation_types){: #authentication-strategies-webauthn-trusted_attestation_types } | `list(:none \| :basic \| :self \| :attca \| :anonca \| :uncertain)` | `[:none, :basic, :self, :uncertain]` | The attestation types accepted at registration (see `t:Wax.Attestation.type/0`). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata to be configured for the `:wax_` application. |
+| [`verify_trust_root?`](#authentication-strategies-webauthn-verify_trust_root?){: #authentication-strategies-webauthn-verify_trust_root? } | `boolean` | `false` | Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata to be configured for the `:wax_` application. |
 | [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. |
 | [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication. |
-| [`credential_id_field`](#authentication-strategies-webauthn-credential_id_field){: #authentication-strategies-webauthn-credential_id_field } | `atom` | `:credential_id` | The name of the credential ID attribute on the credential resource. |
-| [`public_key_field`](#authentication-strategies-webauthn-public_key_field){: #authentication-strategies-webauthn-public_key_field } | `atom` | `:public_key` | The name of the public key attribute on the credential resource. |
-| [`sign_count_field`](#authentication-strategies-webauthn-sign_count_field){: #authentication-strategies-webauthn-sign_count_field } | `atom` | `:sign_count` | The name of the sign count attribute on the credential resource. |
-| [`label_field`](#authentication-strategies-webauthn-label_field){: #authentication-strategies-webauthn-label_field } | `atom` | `:label` | The name of the label attribute on the credential resource. |
-| [`last_used_at_field`](#authentication-strategies-webauthn-last_used_at_field){: #authentication-strategies-webauthn-last_used_at_field } | `atom` | `:last_used_at` | The name of the last_used_at attribute on the credential resource. Set to `nil` to disable tracking. |
-| [`user_relationship_name`](#authentication-strategies-webauthn-user_relationship_name){: #authentication-strategies-webauthn-user_relationship_name } | `atom` | `:user` | The name of the belongs_to relationship on the credential resource pointing to the user. |
+| [`sign_count_policy`](#authentication-strategies-webauthn-sign_count_policy){: #authentication-strategies-webauthn-sign_count_policy } | `:reject \| :log \| :ignore` | `:reject` | How to react when an assertion's sign count has not increased over the stored value — the WebAuthn signal that the authenticator may have been cloned (§6.1.1). The check only fires when the authenticator actually implements a counter: synced passkeys report a constant `0` on both sides and are never flagged. - `:reject` (default) — fail the ceremony with an authentication error. - `:log` — allow the ceremony but log a warning; the stored sign count   is deliberately **not** lowered, so a cloned authenticator keeps   tripping the check. - `:ignore` — no check; the stored count is simply overwritten. |
 | [`credentials_relationship_name`](#authentication-strategies-webauthn-credentials_relationship_name){: #authentication-strategies-webauthn-credentials_relationship_name } | `atom` | `:webauthn_credentials` | The name of the has_many relationship on the user resource pointing to credentials. |
 | [`registration_enabled?`](#authentication-strategies-webauthn-registration_enabled?){: #authentication-strategies-webauthn-registration_enabled? } | `boolean` | `true` | Whether to allow new user registration via WebAuthn. |
 | [`sign_in_enabled?`](#authentication-strategies-webauthn-sign_in_enabled?){: #authentication-strategies-webauthn-sign_in_enabled? } | `boolean` | `true` | Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor. |
 | [`verify_enabled?`](#authentication-strategies-webauthn-verify_enabled?){: #authentication-strategies-webauthn-verify_enabled? } | `boolean` | `true` | Whether the strategy exposes a `:verify` phase that proves possession of a passkey for an already-authenticated user. Used for second-factor and step-up flows. |
 | [`register_action_name`](#authentication-strategies-webauthn-register_action_name){: #authentication-strategies-webauthn-register_action_name } | `atom` |  | The name of the register action on the user resource. Defaults to `register_with_<strategy_name>`. |
+| [`register_action_accept`](#authentication-strategies-webauthn-register_action_accept){: #authentication-strategies-webauthn-register_action_accept } | `list(atom \| {atom, [secret?: boolean]})` | `[]` | A list of additional writable attributes to be accepted in the register action (e.g. `[:name]`). Their values are validated by the action as usual, so `allow_nil?`, constraints, and any validations on the resource apply. Attributes marked `sensitive?: true` must confirm whether they are secrets via a `{field, secret?: boolean}` entry (e.g. `[given_names: [secret?: false]]`); `secret?: true` renders a masked input, `secret?: false` a regular one. |
 | [`sign_in_action_name`](#authentication-strategies-webauthn-sign_in_action_name){: #authentication-strategies-webauthn-sign_in_action_name } | `atom` |  | The name of the sign-in action on the user resource. Defaults to `sign_in_with_<strategy_name>`. |
 | [`sign_in_with_token_action_name`](#authentication-strategies-webauthn-sign_in_with_token_action_name){: #authentication-strategies-webauthn-sign_in_with_token_action_name } | `atom` |  | The name of the action used to sign in with a short-lived token issued by a successful WebAuthn ceremony. Defaults to `sign_in_with_<strategy_name>_token`. |
 | [`verify_action_name`](#authentication-strategies-webauthn-verify_action_name){: #authentication-strategies-webauthn-verify_action_name } | `atom` |  | The name of the second-factor verify action on the user resource. Defaults to `verify_<strategy_name>`. |
-| [`store_credential_action_name`](#authentication-strategies-webauthn-store_credential_action_name){: #authentication-strategies-webauthn-store_credential_action_name } | `atom` |  | The name of the create action on the credential resource. Defaults to `store_<strategy_name>_credential`. |
-| [`update_sign_count_action_name`](#authentication-strategies-webauthn-update_sign_count_action_name){: #authentication-strategies-webauthn-update_sign_count_action_name } | `atom` |  | The name of the update action for sign_count on the credential resource. Defaults to `update_<strategy_name>_sign_count`. |
-| [`list_credentials_action_name`](#authentication-strategies-webauthn-list_credentials_action_name){: #authentication-strategies-webauthn-list_credentials_action_name } | `atom` |  | The name of the read action to list credentials. Defaults to `list_<strategy_name>_credentials`. |
-| [`delete_credential_action_name`](#authentication-strategies-webauthn-delete_credential_action_name){: #authentication-strategies-webauthn-delete_credential_action_name } | `atom` |  | The name of the destroy action for credentials. Defaults to `delete_<strategy_name>_credential`. |
-| [`update_credential_label_action_name`](#authentication-strategies-webauthn-update_credential_label_action_name){: #authentication-strategies-webauthn-update_credential_label_action_name } | `atom` |  | The name of the update action for credential labels. Defaults to `update_<strategy_name>_credential_label`. |
-| [`add_credential_action_name`](#authentication-strategies-webauthn-add_credential_action_name){: #authentication-strategies-webauthn-add_credential_action_name } | `atom` |  | The name of the action to add a credential to an existing user. Defaults to `add_<strategy_name>_credential`. |
 
 
 
