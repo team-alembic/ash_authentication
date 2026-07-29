@@ -185,6 +185,7 @@ defmodule MyApp.Accounts.User do
       enabled? true
       token_resource MyApp.Accounts.Token
       store_all_tokens? true
+      require_token_presence_for_authentication? true
       signing_secret fn _, _ ->
         # This is a secret key used to sign tokens. See the note below on secrets management
         Application.fetch_env(:my_app, :token_signing_secret)
