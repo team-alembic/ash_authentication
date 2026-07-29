@@ -245,11 +245,6 @@ if Code.ensure_loaded?(Igniter) do
       )
       |> Spark.Igniter.set_option(
         user_resource,
-        [:authentication, :tokens, :token_resource],
-        token_resource
-      )
-      |> Spark.Igniter.set_option(
-        user_resource,
         [:authentication, :tokens, :signing_secret],
         secrets_module
       )
