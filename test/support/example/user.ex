@@ -337,6 +337,22 @@ defmodule Example.User do
         warn_on_missing_identity_resource? false
       end
 
+      oauth2 :oauth2_idp_initiated do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        base_url &get_config/2
+        authorize_url &get_config/2
+        token_url &get_config/2
+        user_url &get_config/2
+        authorization_params scope: "openid profile email"
+        auth_method :client_secret_post
+        registration_enabled? false
+        sign_in_action_name :sign_in_with_oauth2
+        warn_on_missing_identity_resource? false
+        idp_initiated_login?(true)
+      end
+
       auth0 do
         client_id &get_config/2
         redirect_uri &get_config/2
