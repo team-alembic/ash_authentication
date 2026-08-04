@@ -26,6 +26,27 @@ defmodule AshAuthentication.Strategy.OAuth2.PlugTest do
       session = get_session(conn, "user/oauth2")
       assert session.state =~ ~r/.+/
     end
+
+    test "a strategy's `http_adapter` overrides the application default" do
+      import Mimic
+
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      strategy = %{strategy | http_adapter: {MyEnvelopeAdapter, unwrap: true}}
+
+      test_pid = self()
+
+      stub(Assent.Strategy.OAuth2, :authorize_url, fn config ->
+        send(test_pid, {:config, config})
+        {:ok, %{session_params: %{state: "s"}, url: "https://example.com/authorize?state=s"}}
+      end)
+
+      :get |> conn("/", %{}) |> SessionPipeline.call([]) |> Plug.request(strategy)
+
+      # The config handed to the assent strategy carries the strategy's own
+      # adapter, not the app default (Finch) — the plug no longer clobbers it.
+      assert_received {:config, config}
+      assert config[:http_adapter] == {MyEnvelopeAdapter, unwrap: true}
+    end
   end
 
   describe "callback/2 with no session (cross-site form_post)" do

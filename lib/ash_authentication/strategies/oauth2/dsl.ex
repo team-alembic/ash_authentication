@@ -28,6 +28,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
         :base_url,
         :client_id,
         :client_secret,
+        :http_adapter,
         :identity_resource,
         :private_key,
         :private_key_id,
@@ -105,6 +106,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
           doc: """
           A list of audiences which are trusted. #{secret_doc}
           """,
+          required: false,
+          default: nil
+        ],
+        http_adapter: [
+          type: {:or, [:atom, {:tuple, [:atom, :keyword_list]}]},
+          doc:
+            "The `Assent.HTTPAdapter` to use for this strategy's OAuth2 requests, as a module or `{module, opts}` tuple. Overrides the `:ash_authentication, :http_adapter` application default. Use this for a provider that needs bespoke transport handling — for example an adapter that unwraps a non-standard response envelope before the standard OAuth2 parsing runs. Defaults to the application setting (`Assent.HTTPAdapter.Finch`).",
           required: false,
           default: nil
         ],

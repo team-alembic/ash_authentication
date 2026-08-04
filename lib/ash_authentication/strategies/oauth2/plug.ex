@@ -213,7 +213,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
            ),
          {:ok, config} <-
            add_secret_value(config, strategy, :trusted_audiences, true, context),
-         {:ok, config} <- add_http_adapter(config),
+         {:ok, config} <- add_http_adapter(config, strategy),
          {:ok, config} <-
            add_secret_value(
              config,
@@ -354,13 +354,17 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
-  defp add_http_adapter(config) do
+  defp add_http_adapter(config, strategy) do
+    # A strategy may declare its own `http_adapter` (e.g. a provider that needs
+    # bespoke transport handling); it takes precedence over the application
+    # default so the plug does not clobber it.
     http_adapter =
-      Application.get_env(
-        :ash_authentication,
-        :http_adapter,
-        {Finch, supervisor: AshAuthentication.Finch}
-      )
+      strategy.http_adapter ||
+        Application.get_env(
+          :ash_authentication,
+          :http_adapter,
+          {Finch, supervisor: AshAuthentication.Finch}
+        )
 
     {:ok, Map.put(config, :http_adapter, http_adapter)}
   end
