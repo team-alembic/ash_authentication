@@ -124,6 +124,8 @@ defmodule AshAuthentication.MixProject do
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.Totp)},
         {"documentation/dsls/DSL-AshAuthentication.Strategy.WebAuthn.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.Strategy.WebAuthn)},
+        {"documentation/dsls/DSL-AshAuthentication.WebAuthnCredential.md",
+         search_data: Spark.Docs.search_data_for(AshAuthentication.WebAuthnCredential)},
         {"documentation/dsls/DSL-AshAuthentication.AuditLogResource.md",
          search_data: Spark.Docs.search_data_for(AshAuthentication.AuditLogResource)},
         {"documentation/dsls/DSL-AshAuthentication.OidcConnection.md",
@@ -155,7 +157,8 @@ defmodule AshAuthentication.MixProject do
         {"documentation/tutorials/recovery-codes.md", title: "Recovery Codes"},
         {"documentation/tutorials/remember-me.md", title: "Remember Me"},
         {"documentation/tutorials/slack.md", title: "Slack"},
-        {"documentation/tutorials/totp.md", title: "Time-based One Time Password"}
+        {"documentation/tutorials/totp.md", title: "Time-based One Time Password"},
+        {"documentation/tutorials/webauthn.md", title: "WebAuthn (Passkeys)"}
       ],
       groups_for_extras: [
         "Start Here": [
@@ -183,6 +186,8 @@ defmodule AshAuthentication.MixProject do
               document.head.appendChild(script);
             }
           </script>
+          <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+          <script>mermaid.initialize({startOnLoad: true})</script>
           """
         end
       end,
@@ -309,6 +314,7 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.AddOn.Confirmation",
       "AshAuthentication.AddOn.LogOutEverywhere",
       "AshAuthentication.AuditLogResource",
+      "AshAuthentication.OidcConnection",
       "AshAuthentication.Strategy.ApiKey",
       "AshAuthentication.Strategy.Apple",
       "AshAuthentication.Strategy.Auth0",
@@ -327,9 +333,9 @@ defmodule AshAuthentication.MixProject do
       "AshAuthentication.Strategy.Slack",
       "AshAuthentication.Strategy.Totp",
       "AshAuthentication.Strategy.WebAuthn",
-      "AshAuthentication.OidcConnection",
       "AshAuthentication.TokenResource",
-      "AshAuthentication.UserIdentity"
+      "AshAuthentication.UserIdentity",
+      "AshAuthentication.WebAuthnCredential"
     ]
 
     [
