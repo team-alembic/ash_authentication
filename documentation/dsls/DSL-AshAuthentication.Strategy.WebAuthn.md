@@ -273,6 +273,34 @@ input in its sign-in components for this mode — see its documentation.
 unsuitable when paired with strategies that need an email on the same
 resource (e.g. password with resettable, magic link, or confirmation).
 
+## Cross-Device (Hybrid) Passkeys
+
+Hybrid transport -- "use your phone or tablet", the option that shows a QR
+code -- is implemented entirely by the browser and the phone's operating
+system. The QR code, the Bluetooth proximity check and the tunnel back to the
+browser are none of this library's business: a hybrid-signed assertion is
+indistinguishable from a USB-key one and verifies through exactly the same
+path. The server's only job is to say that the option should be offered:
+
+    webauthn do
+      # ...
+      hints [:hybrid, :security_key]
+      timeout 300_000
+    end
+
+That yields the two-option dialog ("use your phone or tablet" / "use your
+security key") on both sign-in and registration, so a machine with no
+authenticator of its own can enrol and then use a passkey held on a phone.
+Raise `timeout` well above the default when doing this -- a QR scan plus a
+prompt on the second device easily exceeds a minute.
+
+Set `allow_hint_override? true` to let a UI request one specific kind per
+ceremony (`GET .../authentication_challenge?hints=hybrid`), which is how a
+dedicated "sign in with a phone" button skips straight to the QR code.
+
+`hints` is a presentation preference and cannot relax verification; browsers
+which do not implement it ignore it and show their default picker.
+
 ## Gotchas
 
 - **Origin must include the port** for non-standard ports (e.g., `"https://localhost:4001"`).
@@ -347,11 +375,13 @@ end
 | [`origin`](#authentication-strategies-webauthn-origin){: #authentication-strategies-webauthn-origin } | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | The expected origin for WebAuthn ceremonies. In WebAuthn, the **origin** is the scheme + domain + port that the browser reports during registration and authentication. It is distinct from `rp_id`: - `rp_id` = domain only (e.g. `"example.com"`) - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`) If not set, defaults to `"https://{rp_id}"`. This default **omits the port**, which works for production on port 443 but will cause Wax to reject ceremonies in development where the port is non-standard. **Production:**     origin "https://example.com" **Development (non-standard port):**     origin "https://localhost:4001" **Dynamic (multi-tenant):**     origin {MyApp.WebAuthn, :origin_for_tenant, []} **Application-environment-driven:**     origin MyApp.Secrets |
 | [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. Ignored when `require_identity?` is `false`. |
 | [`authenticator_attachment`](#authentication-strategies-webauthn-authenticator_attachment){: #authentication-strategies-webauthn-authenticator_attachment } | `nil \| :platform \| :cross_platform` |  | Restricts authenticator type. `nil` allows any, `:platform` limits to built-in (Touch ID, Windows Hello), `:cross_platform` limits to USB/NFC keys (YubiKey). |
+| [`hints`](#authentication-strategies-webauthn-hints){: #authentication-strategies-webauthn-hints } | `list(:security_key \| :client_device \| :hybrid)` | `[]` | Which kinds of authenticator the browser should offer, in order of preference (the WebAuthn Level 3 `hints` member). * `:hybrid` -- another device, reached by scanning a QR code with a   phone or tablet ("use your phone or tablet"). * `:security_key` -- a removable USB/NFC key. * `:client_device` -- the authenticator built in to this device   (Touch ID, Windows Hello). `hints [:hybrid, :security_key]` produces the two-option cross-device dialog. This is a presentation hint only -- it changes which options the browser leads with and never relaxes verification. Clients which do not implement `hints` (currently everything but Chromium >= 128) ignore it and fall back to their default picker. Cross-device ceremonies involve a QR scan, a Bluetooth handshake and a prompt on the second device, so raise `timeout` to at least `120_000` when `:hybrid` is offered. |
+| [`allow_hint_override?`](#authentication-strategies-webauthn-allow_hint_override?){: #authentication-strategies-webauthn-allow_hint_override? } | `boolean` | `false` | Whether a `hints` request parameter on the challenge endpoints overrides the configured `hints`. Lets a UI offer separate entry points ("sign in with a phone", "use a security key") which jump straight to one kind of authenticator, by requesting e.g. `?hints=hybrid`. Values outside the `hints` enum are discarded, and a request which names none of them falls back to the configured value. The parameter only affects the dialog the requesting browser shows itself; every security-relevant option stays server-derived. |
 | [`user_verification`](#authentication-strategies-webauthn-user_verification){: #authentication-strategies-webauthn-user_verification } | `"required" \| "preferred" \| "discouraged"` | `"preferred"` | Whether user verification (PIN/biometric) is required. Use `"required"` for highest security. |
 | [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "indirect" \| "direct" \| "enterprise"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"indirect"` allows the client to substitute an anonymized attestation, `"direct"` requests the authenticator's attestation statement verbatim, and `"enterprise"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `"direct"` only asks the client to *convey* an attestation statement; it does not verify it. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and configure FIDO metadata for `:wax_`. |
 | [`trusted_attestation_types`](#authentication-strategies-webauthn-trusted_attestation_types){: #authentication-strategies-webauthn-trusted_attestation_types } | `list(:none \| :basic \| :self \| :attca \| :anonca \| :uncertain)` | `[:none, :basic, :self, :uncertain]` | The attestation types accepted at registration (see `t:Wax.Attestation.type/0`). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata to be configured for the `:wax_` application. |
 | [`verify_trust_root?`](#authentication-strategies-webauthn-verify_trust_root?){: #authentication-strategies-webauthn-verify_trust_root? } | `boolean` | `false` | Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata to be configured for the `:wax_` application. |
-| [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. |
+| [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`. |
 | [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication. |
 | [`sign_count_policy`](#authentication-strategies-webauthn-sign_count_policy){: #authentication-strategies-webauthn-sign_count_policy } | `:reject \| :log \| :ignore` | `:reject` | How to react when an assertion's sign count has not increased over the stored value — the WebAuthn signal that the authenticator may have been cloned (§6.1.1). The check only fires when the authenticator actually implements a counter: synced passkeys report a constant `0` on both sides and are never flagged. - `:reject` (default) — fail the ceremony with an authentication error. - `:log` — allow the ceremony but log a warning; the stored sign count   is deliberately **not** lowered, so a cloned authenticator keeps   tripping the check. - `:ignore` — no check; the stored count is simply overwritten. |
 | [`credentials_relationship_name`](#authentication-strategies-webauthn-credentials_relationship_name){: #authentication-strategies-webauthn-credentials_relationship_name } | `atom` | `:webauthn_credentials` | The name of the has_many relationship on the user resource pointing to credentials. |

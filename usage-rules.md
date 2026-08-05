@@ -28,6 +28,8 @@ SPDX-License-Identifier: MIT
 - The `register` action creates a new user; adding a credential to an existing user requires a custom controller calling `Wax.register/3` directly
 - Passkey-first mode (no identity column): set `require_identity? false` on the `webauthn` block. The user resource needs no `identity_field` attribute; users are resolved from the WebAuthn credential id at verification time. Pairs with `resident_key: :required`
 - `require_identity?` is required on every `webauthn` block (no default); set it to `true` for the classic identity-required flow
+- Cross-device ("use your phone or tablet", QR code) is hybrid transport, implemented by the browser and the phone — the server only asks for it via `hints [:hybrid, :security_key]`. Raise `timeout` to at least `120_000`, or the ceremony expires mid-scan
+- `allow_hint_override? true` honours a `?hints=hybrid` request param on the challenge endpoints, for UIs with a dedicated "sign in with a phone" button. Safe to expose: `hints` only steers the requesting browser's own dialog
 
 ## Strategy Selection
 
