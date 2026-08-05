@@ -212,6 +212,91 @@ end
 > omits the port, so set `origin "https://localhost:4001"` explicitly if you
 > terminate ceremonies somewhere without request context in development.
 
+## Cross-device sign-in (QR code / hybrid transport)
+
+Browsers can offer a passkey held on *another* device:
+
+```
+[Camera]  Use your phone or tablet
+          Scan this QR code with the camera on the device that has your passkey
+[USB key] Use your security key
+          Insert and touch your security key
+```
+
+This is **hybrid transport** (formerly caBLE), and it is implemented entirely
+by the browser and the phone's operating system. The QR code, the Bluetooth
+proximity check that stops it being phishable, and the tunnel carrying the
+CTAP messages back to the browser are all outside this library — a
+hybrid-signed assertion is indistinguishable from one produced by a USB key and
+verifies through the same path. The server's only job is to ask for the option:
+
+```elixir
+webauthn do
+  credential_resource MyApp.Accounts.WebAuthnCredential
+  rp_id "example.com"
+  rp_name "My App"
+  require_identity? false
+  resident_key :required
+
+  hints [:hybrid, :security_key]
+  timeout 300_000
+end
+```
+
+`hints` orders the kinds of authenticator the browser should lead with:
+`:hybrid` (another device, via QR), `:security_key` (removable USB/NFC), and
+`:client_device` (this machine's built-in authenticator). It applies to
+registration as much as to sign-in, so a machine with no authenticator of its
+own can enrol a passkey held on a phone and then use it.
+
+**Raise the timeout.** The 60 second default cannot accommodate a QR scan, a
+Bluetooth handshake and a biometric prompt on the second device; the ceremony
+expires mid-scan. Allow at least 120 seconds. The strategy warns at compile
+time if you offer `:hybrid` with less.
+
+The phone needs no network route to your application — it talks to the browser,
+not to you — so this works against `localhost` in development without a tunnel.
+
+### Per-ceremony hints
+
+Set `allow_hint_override? true` to let the client choose per ceremony:
+
+```
+GET /auth/user/webauthn/authentication_challenge?hints=hybrid
+```
+
+That is how a UI offers a dedicated "sign in with a phone" button which skips
+the picker and goes straight to the QR code. Values outside the enum are
+discarded and a request naming none of them falls back to the configured
+`hints`. The parameter is safe to expose: `hints` only steers the dialog the
+requesting browser shows itself, and every option that bears on verification
+(`rp_id`, `origin`, `user_verification`, `allowCredentials`, attestation
+policy) stays server-derived and is re-applied from the stored challenge.
+
+### Browser support
+
+`hints` is a WebAuthn Level 3 member, honoured by Chromium 128 and later.
+Browsers that don't implement it ignore it and show their own picker — which
+already includes the cross-device option — so no feature detection is needed
+and nothing degrades. Note that `authenticator_attachment :platform` forbids
+cross-device authenticators outright and contradicts `:hybrid`; the strategy
+refuses that combination at compile time.
+
+### Registering a phone passkey
+
+Nothing extra is required. `registration_challenge` and
+`add_credential_challenge` carry the same hints, and the resulting credential
+is stored with `transports` including `"hybrid"` and `backup_eligible: true`.
+Those transports are echoed in `allowCredentials` on later ceremonies, which is
+what lets the browser route straight back to the phone.
+
+One asymmetry to be aware of: `add_credential` (which requires an authenticated
+actor) populates `excludeCredentials`, so re-enrolling a phone that is already
+registered is refused up front. The public `registration_challenge` endpoint
+always sends an empty list — populating it from a submitted email address would
+turn a public endpoint into an account-enumeration oracle — so a duplicate
+enrolment there is caught by the unique-credential-id constraint instead.
+
 ## Attestation
 
 By default the strategy uses `attestation "none"` — the right choice for

@@ -43,6 +43,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
           rp_name "Test App"
           origin "https://example.com"
           require_identity? false
+          <%= strategy_options %>
         end
       end
     end
@@ -88,6 +89,62 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
 
       assert output =~ "webauthn_credentials"
       assert output =~ "destination_attribute :owner_id"
+    end
+  end
+
+  describe "hints" do
+    test "rejects roaming hints under authenticator_attachment :platform" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(
+            strategy_options: """
+            hints [:hybrid, :security_key]
+            authenticator_attachment :platform
+            timeout 300_000
+            """
+          )
+        end)
+
+      assert output =~ "contradicts `authenticator_attachment :platform`"
+    end
+
+    test "rejects :client_device under authenticator_attachment :cross_platform" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(
+            strategy_options: """
+            hints [:client_device]
+            authenticator_attachment :cross_platform
+            """
+          )
+        end)
+
+      assert output =~ "contradicts `authenticator_attachment :cross_platform`"
+    end
+
+    # A cross-device ceremony has to fit a QR scan and a prompt on the second
+    # device inside the timeout, which the 60s default cannot do.
+    test "warns when :hybrid is offered with a timeout too short to scan a QR code" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(strategy_options: "hints [:hybrid]")
+        end)
+
+      assert output =~ "offers the `:hybrid` hint with `timeout 60000`"
+    end
+
+    test "does not warn when the timeout accommodates a cross-device ceremony" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(
+            strategy_options: """
+            hints [:hybrid, :security_key]
+            timeout 300_000
+            """
+          )
+        end)
+
+      refute output =~ ":hybrid"
     end
   end
 
@@ -191,6 +248,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
     @user_source
     |> String.replace("<%= user_module %>", user_module)
     |> String.replace("<%= credential_module %>", credential_module)
+    |> String.replace("<%= strategy_options %>", Keyword.get(opts, :strategy_options, ""))
     |> Code.compile_string()
   end
 end

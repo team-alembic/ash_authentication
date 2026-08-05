@@ -397,6 +397,189 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     end
   end
 
+  describe "hints" do
+    # Every challenge endpoint has to carry the hints, since a device with no
+    # authenticator of its own needs the cross-device option to enrol a passkey
+    # as much as it needs it to use one.
+    setup %{strategy: strategy} do
+      user =
+        Example.UserWithWebAuthn
+        |> Ash.Changeset.for_create(:create, %{email: "hints@example.com"})
+        |> Ash.create!()
+
+      hinted = %{strategy | hints: [:hybrid, :security_key]}
+
+      challenges = %{
+        registration_challenge: fn strategy, params ->
+          :get
+          |> conn("/user_with_webauthn/webauthn/registration_challenge", params)
+          |> SessionPipeline.call([])
+          |> WebAuthn.Plug.registration_challenge(strategy)
+        end,
+        authentication_challenge: fn strategy, params ->
+          :get
+          |> conn("/user_with_webauthn/webauthn/authentication_challenge", params)
+          |> SessionPipeline.call([])
+          |> WebAuthn.Plug.authentication_challenge(strategy)
+        end,
+        add_credential_challenge: fn strategy, params ->
+          :get
+          |> conn("/user_with_webauthn/webauthn/add_credential_challenge", params)
+          |> SessionPipeline.call([])
+          |> Ash.PlugHelpers.set_actor(user)
+          |> WebAuthn.Plug.add_credential_challenge(strategy)
+        end,
+        verify_challenge: fn strategy, params ->
+          :get
+          |> conn("/user_with_webauthn/webauthn/verify_challenge", params)
+          |> SessionPipeline.call([])
+          |> Ash.PlugHelpers.set_actor(user)
+          |> WebAuthn.Plug.verify_challenge(strategy)
+        end
+      }
+
+      %{hinted: hinted, challenges: challenges}
+    end
+
+    test "every challenge endpoint carries the configured hints", %{
+      hinted: hinted,
+      challenges: challenges
+    } do
+      for {phase, request} <- challenges do
+        body = request.(hinted, %{}) |> Map.fetch!(:resp_body) |> Jason.decode!()
+        assert body["hints"] == ["hybrid", "security-key"], "#{phase} dropped the hints"
+      end
+    end
+
+    test "the member is omitted entirely when no hints are configured", %{
+      strategy: strategy,
+      challenges: challenges
+    } do
+      for {phase, request} <- challenges do
+        body = request.(strategy, %{}) |> Map.fetch!(:resp_body) |> Jason.decode!()
+        refute Map.has_key?(body, "hints"), "#{phase} sent an empty hints member"
+      end
+    end
+
+    test "a request param overrides the configuration when permitted", %{
+      hinted: hinted,
+      challenges: challenges
+    } do
+      overridable = %{hinted | allow_hint_override?: true}
+
+      for {phase, request} <- challenges do
+        body =
+          request.(overridable, %{"hints" => "hybrid"})
+          |> Map.fetch!(:resp_body)
+          |> Jason.decode!()
+
+        assert body["hints"] == ["hybrid"], "#{phase} ignored the requested hints"
+      end
+    end
+
+    test "a request param is ignored unless allow_hint_override? is set", %{
+      hinted: hinted,
+      challenges: challenges
+    } do
+      for {phase, request} <- challenges do
+        body =
+          request.(hinted, %{"hints" => "client-device"})
+          |> Map.fetch!(:resp_body)
+          |> Jason.decode!()
+
+        assert body["hints"] == ["hybrid", "security-key"],
+               "#{phase} honoured an unpermitted hint"
+      end
+    end
+
+    test "requested hints are accepted as a list and normalised", %{
+      hinted: hinted,
+      challenges: %{authentication_challenge: request}
+    } do
+      overridable = %{hinted | allow_hint_override?: true}
+
+      body =
+        request.(overridable, %{"hints" => [" Hybrid ", "SECURITY-KEY", "hybrid"]})
+        |> Map.fetch!(:resp_body)
+        |> Jason.decode!()
+
+      assert body["hints"] == ["hybrid", "security-key"]
+    end
+
+    test "unrecognised requested hints are discarded", %{
+      hinted: hinted,
+      challenges: %{authentication_challenge: request}
+    } do
+      overridable = %{hinted | allow_hint_override?: true}
+
+      body =
+        request.(overridable, %{"hints" => "drop-tables,hybrid"})
+        |> Map.fetch!(:resp_body)
+        |> Jason.decode!()
+
+      assert body["hints"] == ["hybrid"]
+    end
+
+    test "a request naming no valid hint falls back to the configuration", %{
+      hinted: hinted,
+      challenges: %{authentication_challenge: request}
+    } do
+      overridable = %{hinted | allow_hint_override?: true}
+
+      for params <- [
+            %{"hints" => "nonsense"},
+            %{"hints" => ""},
+            %{"hints" => List.duplicate("nope", 50)},
+            %{"hints" => %{"not" => "a list"}}
+          ] do
+        body = request.(overridable, params) |> Map.fetch!(:resp_body) |> Jason.decode!()
+        assert body["hints"] == ["hybrid", "security-key"], "#{inspect(params)} was not rejected"
+      end
+    end
+
+    test "hints do not leak into the stored challenge, so assertions still verify", %{
+      strategy: strategy
+    } do
+      overridable = %{strategy | hints: [:hybrid], allow_hint_override?: true}
+
+      hinted_conn = registration_challenge_conn(overridable, "hints-roundtrip@example.com")
+      assert Jason.decode!(hinted_conn.resp_body)["hints"] == ["hybrid"]
+
+      conn = register_conn(overridable, hinted_conn, "hints-roundtrip@example.com")
+
+      assert {:ok, user} = conn.private[:authentication_result]
+      assert user.email |> to_string() == "hints-roundtrip@example.com"
+    end
+  end
+
+  describe "authenticatorSelection" do
+    test "omits authenticatorAttachment when there is no preference", %{strategy: strategy} do
+      # `null` is not a member of the AuthenticatorAttachment enum -- absence is
+      # how "any authenticator" is spelled.
+      body =
+        strategy
+        |> registration_challenge_conn("attachment@example.com")
+        |> Map.fetch!(:resp_body)
+        |> Jason.decode!()
+
+      refute Map.has_key?(body["authenticatorSelection"], "authenticatorAttachment")
+      assert body["authenticatorSelection"]["residentKey"] == "required"
+      assert body["authenticatorSelection"]["requireResidentKey"] == true
+    end
+
+    test "sends authenticatorAttachment when configured", %{strategy: strategy} do
+      body =
+        %{strategy | authenticator_attachment: :cross_platform}
+        |> registration_challenge_conn("attachment2@example.com")
+        |> Map.fetch!(:resp_body)
+        |> Jason.decode!()
+
+      # Hyphenated, per the AuthenticatorAttachment enum -- a client which does
+      # not recognise the value ignores the member outright.
+      assert body["authenticatorSelection"]["authenticatorAttachment"] == "cross-platform"
+    end
+  end
+
   @attestation_session_key "webauthn_attestation_challenge_webauthn"
 
   defp registration_challenge_conn(strategy, email) do
