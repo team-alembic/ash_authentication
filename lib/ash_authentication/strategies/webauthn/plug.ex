@@ -60,25 +60,24 @@ if Code.ensure_loaded?(Wax.Challenge) do
       rp_id = WebAuthn.Helpers.resolve_rp_id(strategy, tenant)
       rp_name = WebAuthn.Helpers.resolve_rp_name(strategy, tenant)
 
-      response = %{
-        challenge: Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
-        rp: %{id: rp_id, name: rp_name},
-        user: user_descriptor,
-        pubKeyCredParams: @pub_key_cred_params,
-        excludeCredentials:
-          Enum.map(
-            exclude_credential_ids,
-            &%{id: Base.url_encode64(&1, padding: false), type: "public-key"}
-          ),
-        authenticatorSelection: %{
-          authenticatorAttachment: strategy.authenticator_attachment,
-          userVerification: strategy.user_verification,
-          residentKey: strategy.resident_key
-        },
-        extensions: %{credProps: true},
-        attestation: strategy.attestation,
-        timeout: strategy.timeout
-      }
+      response =
+        %{
+          challenge:
+            Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
+          rp: %{id: rp_id, name: rp_name},
+          user: user_descriptor,
+          pubKeyCredParams: @pub_key_cred_params,
+          excludeCredentials:
+            Enum.map(
+              exclude_credential_ids,
+              &%{id: Base.url_encode64(&1, padding: false), type: "public-key"}
+            ),
+          authenticatorSelection: authenticator_selection(strategy),
+          extensions: %{credProps: true},
+          attestation: strategy.attestation,
+          timeout: strategy.timeout
+        }
+        |> put_hints(resolve_hints(conn, strategy))
 
       # The user handle rides along with the adapter's session-safe challenge
       # data so registration can persist it.
@@ -199,13 +198,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
           origin: origin_from_conn(conn)
         )
 
-      response = %{
-        challenge: Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
-        rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
-        userVerification: strategy.user_verification,
-        timeout: strategy.timeout,
-        allowCredentials: allow_credentials_entries(strategy, credentials)
-      }
+      response = assertion_options(conn, strategy, challenge, credentials, tenant)
 
       challenge_data = strategy.adapter.serialize_challenge(challenge)
 
@@ -265,14 +258,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
               origin: origin_from_conn(conn)
             )
 
-          response = %{
-            challenge:
-              Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
-            rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
-            userVerification: strategy.user_verification,
-            timeout: strategy.timeout,
-            allowCredentials: allow_credentials_entries(strategy, credentials)
-          }
+          response = assertion_options(conn, strategy, challenge, credentials, tenant)
 
           challenge_data = strategy.adapter.serialize_challenge(challenge)
 
@@ -410,6 +396,85 @@ if Code.ensure_loaded?(Wax.Challenge) do
         end
 
       "#{scheme}://#{host}#{port_segment}"
+    end
+
+    # The `PublicKeyCredentialRequestOptions` sent to the browser. Shared by
+    # sign-in and second-factor verification, which differ only in how they
+    # arrive at their candidate credentials.
+    defp assertion_options(conn, strategy, challenge, credentials, tenant) do
+      %{
+        challenge: Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
+        rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
+        userVerification: strategy.user_verification,
+        timeout: strategy.timeout,
+        allowCredentials: allow_credentials_entries(strategy, credentials)
+      }
+      |> put_hints(resolve_hints(conn, strategy))
+    end
+
+    # `authenticatorAttachment` is a three-valued enum with no member for "no
+    # preference" — the absence of the key is how that is expressed, and
+    # `null` is not a legal value. Sending it explicitly also competes with
+    # `hints`, which supersedes it.
+    defp authenticator_selection(strategy) do
+      %{
+        userVerification: strategy.user_verification,
+        residentKey: strategy.resident_key,
+        # The Level 1 spelling, for clients predating `residentKey`.
+        requireResidentKey: strategy.resident_key == :required
+      }
+      |> maybe_put(:authenticatorAttachment, attachment(strategy.authenticator_attachment))
+    end
+
+    # The DSL spells this option in snake case; the enum member is hyphenated,
+    # and a client which doesn't recognise the value ignores the whole member.
+    defp attachment(:cross_platform), do: "cross-platform"
+    defp attachment(:platform), do: "platform"
+    defp attachment(nil), do: nil
+
+    defp maybe_put(map, _key, nil), do: map
+    defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+    @hint_strings %{
+      security_key: "security-key",
+      client_device: "client-device",
+      hybrid: "hybrid"
+    }
+    @valid_hints Map.values(@hint_strings)
+
+    # An empty `hints` means "no preference", which is spelled by leaving the
+    # member out — an empty sequence reads to some clients as "nothing is
+    # acceptable".
+    defp put_hints(response, []), do: response
+    defp put_hints(response, hints), do: Map.put(response, :hints, hints)
+
+    # `hints` only steers the dialog the requesting browser shows itself, so a
+    # request-supplied value can be honoured without ceding anything: every
+    # option that bears on verification is server-derived and re-applied from
+    # the session-stored challenge. Unrecognised values are dropped rather than
+    # rejected, since a client is free to send hints this version has never
+    # heard of.
+    defp resolve_hints(conn, strategy) do
+      with true <- strategy.allow_hint_override?,
+           [_ | _] = hints <- requested_hints(conn) do
+        hints
+      else
+        _ -> Enum.map(strategy.hints, &Map.fetch!(@hint_strings, &1))
+      end
+    end
+
+    defp requested_hints(conn) do
+      conn.params
+      |> Map.get("hints")
+      |> List.wrap()
+      |> Enum.flat_map(fn
+        hint when is_binary(hint) -> String.split(hint, ",", trim: true)
+        _ -> []
+      end)
+      |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+      |> Enum.filter(&(&1 in @valid_hints))
+      |> Enum.uniq()
+      |> Enum.take(length(@valid_hints))
     end
 
     # The {credential_id, cose_key} pairs the adapter needs to verify an
