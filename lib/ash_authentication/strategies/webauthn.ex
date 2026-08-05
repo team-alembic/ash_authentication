@@ -276,6 +276,34 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   unsuitable when paired with strategies that need an email on the same
   resource (e.g. password with resettable, magic link, or confirmation).
 
+  ## Cross-Device (Hybrid) Passkeys
+
+  Hybrid transport -- "use your phone or tablet", the option that shows a QR
+  code -- is implemented entirely by the browser and the phone's operating
+  system. The QR code, the Bluetooth proximity check and the tunnel back to the
+  browser are none of this library's business: a hybrid-signed assertion is
+  indistinguishable from a USB-key one and verifies through exactly the same
+  path. The server's only job is to say that the option should be offered:
+
+      webauthn do
+        # ...
+        hints [:hybrid, :security_key]
+        timeout 300_000
+      end
+
+  That yields the two-option dialog ("use your phone or tablet" / "use your
+  security key") on both sign-in and registration, so a machine with no
+  authenticator of its own can enrol and then use a passkey held on a phone.
+  Raise `timeout` well above the default when doing this -- a QR scan plus a
+  prompt on the second device easily exceeds a minute.
+
+  Set `allow_hint_override? true` to let a UI request one specific kind per
+  ceremony (`GET .../authentication_challenge?hints=hybrid`), which is how a
+  dedicated "sign in with a phone" button skips straight to the QR code.
+
+  `hints` is a presentation preference and cannot relax verification; browsers
+  which do not implement it ignore it and show their default picker.
+
   ## Gotchas
 
   - **Origin must include the port** for non-standard ports (e.g., `"https://localhost:4001"`).
@@ -323,6 +351,8 @@ defmodule AshAuthentication.Strategy.WebAuthn do
     identity_field: :email,
     require_identity?: nil,
     authenticator_attachment: nil,
+    hints: [],
+    allow_hint_override?: false,
     user_verification: "preferred",
     attestation: "none",
     trusted_attestation_types: [:none, :basic, :self, :uncertain],
@@ -360,6 +390,8 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           identity_field: atom,
           require_identity?: boolean,
           authenticator_attachment: nil | :platform | :cross_platform,
+          hints: [:security_key | :client_device | :hybrid],
+          allow_hint_override?: boolean,
           user_verification: String.t(),
           attestation: String.t(),
           trusted_attestation_types: [:none | :basic | :self | :attca | :anonca | :uncertain],

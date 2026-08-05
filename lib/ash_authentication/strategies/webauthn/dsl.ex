@@ -171,6 +171,47 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "Restricts authenticator type. `nil` allows any, `:platform` limits to built-in (Touch ID, Windows Hello), `:cross_platform` limits to USB/NFC keys (YubiKey).",
           default: nil
         ],
+        hints: [
+          type: {:list, {:in, [:security_key, :client_device, :hybrid]}},
+          doc: """
+          Which kinds of authenticator the browser should offer, in order of
+          preference (the WebAuthn Level 3 `hints` member).
+
+          * `:hybrid` -- another device, reached by scanning a QR code with a
+            phone or tablet ("use your phone or tablet").
+          * `:security_key` -- a removable USB/NFC key.
+          * `:client_device` -- the authenticator built in to this device
+            (Touch ID, Windows Hello).
+
+          `hints [:hybrid, :security_key]` produces the two-option cross-device
+          dialog. This is a presentation hint only -- it changes which options
+          the browser leads with and never relaxes verification. Clients which
+          do not implement `hints` (currently everything but Chromium >= 128)
+          ignore it and fall back to their default picker.
+
+          Cross-device ceremonies involve a QR scan, a Bluetooth handshake and a
+          prompt on the second device, so raise `timeout` to at least `120_000`
+          when `:hybrid` is offered.
+          """,
+          default: []
+        ],
+        allow_hint_override?: [
+          type: :boolean,
+          doc: """
+          Whether a `hints` request parameter on the challenge endpoints
+          overrides the configured `hints`.
+
+          Lets a UI offer separate entry points ("sign in with a phone", "use a
+          security key") which jump straight to one kind of authenticator, by
+          requesting e.g. `?hints=hybrid`. Values outside the `hints` enum are
+          discarded, and a request which names none of them falls back to the
+          configured value.
+
+          The parameter only affects the dialog the requesting browser shows
+          itself; every security-relevant option stays server-derived.
+          """,
+          default: false
+        ],
         user_verification: [
           type: {:in, ["required", "preferred", "discouraged"]},
           doc:
@@ -197,7 +238,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         ],
         timeout: [
           type: :pos_integer,
-          doc: "Timeout for WebAuthn ceremonies in milliseconds.",
+          doc:
+            "Timeout for WebAuthn ceremonies in milliseconds. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`.",
           default: 60_000
         ],
         resident_key: [

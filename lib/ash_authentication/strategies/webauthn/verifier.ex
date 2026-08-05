@@ -21,6 +21,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
          :ok <- validate_rp_id(strategy),
          :ok <- validate_credential_resource(strategy),
          :ok <- validate_credential_resource_shape(strategy, dsl_state),
+         :ok <- validate_hints(strategy),
          :ok <- validate_tokens_enabled(dsl_state),
          :ok <- validate_verify_action(strategy, dsl_state),
          :ok <- validate_register_action_manages_credential(strategy, dsl_state),
@@ -75,6 +76,54 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   end
 
   defp validate_rp_id(_), do: :ok
+
+  defp validate_hints(%{hints: []}), do: :ok
+
+  defp validate_hints(strategy) do
+    roaming = Enum.filter(strategy.hints, &(&1 in [:hybrid, :security_key]))
+
+    cond do
+      strategy.authenticator_attachment == :platform and roaming != [] ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, :webauthn, :hints],
+           message: """
+           `hints #{inspect(strategy.hints)}` contradicts `authenticator_attachment :platform`.
+
+           #{inspect(roaming)} asks for an authenticator on another device, which
+           `:platform` forbids, so the browser has nothing left to offer. Drop
+           `authenticator_attachment` (`hints` supersedes it) or drop the roaming hints.
+           """
+         )}
+
+      strategy.authenticator_attachment == :cross_platform and :client_device in strategy.hints ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, :webauthn, :hints],
+           message: """
+           `hints [:client_device]` contradicts `authenticator_attachment :cross_platform`.
+
+           `:client_device` asks for this device's built-in authenticator, which
+           `:cross_platform` forbids. Drop `authenticator_attachment` (`hints`
+           supersedes it) or drop the `:client_device` hint.
+           """
+         )}
+
+      :hybrid in strategy.hints and strategy.timeout < 120_000 ->
+        IO.warn("""
+        The WebAuthn strategy offers the `:hybrid` hint with `timeout #{strategy.timeout}`.
+
+        A cross-device ceremony has to fit a QR scan, a Bluetooth handshake and a
+        prompt on the second device inside that window; under 120_000 ms it will
+        routinely expire mid-scan.
+        """)
+
+        :ok
+
+      true ->
+        :ok
+    end
+  end
 
   defp validate_credential_resource(%{credential_resource: nil}) do
     {:error,
