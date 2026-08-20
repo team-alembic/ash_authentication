@@ -160,6 +160,33 @@ defmodule AshAuthentication.Plug.HelpersTest do
       refute conn.assigns.current_user_with_token_required
     end
 
+    test "when the subject can't be found it removes the session", %{conn: conn} do
+      conn =
+        conn
+        |> Conn.put_session("user", "jti:user?id=#{Ash.UUID.generate()}")
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      refute conn.assigns.current_user
+      refute conn.private.plug_session["user"]
+    end
+
+    test "when a resource requires a tenant and the request has none it keeps the session", %{
+      conn: conn
+    } do
+      # Without a tenant the query is rejected by Ash before it reaches the data
+      # layer, so we have learned nothing about whether the session is valid and
+      # must not discard it.
+      session_value = "jti:multi_tenant_user_with_web_authn?id=#{Ash.UUID.generate()}"
+
+      conn =
+        conn
+        |> Conn.put_session("multi_tenant_user_with_web_authn", session_value)
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      refute conn.assigns.current_multi_tenant_user_with_web_authn
+      assert conn.private.plug_session["multi_tenant_user_with_web_authn"] == session_value
+    end
+
     test "with opts", %{conn: conn} do
       # without token
       user = build_user()

@@ -216,12 +216,13 @@ defmodule AshAuthentication.Plug.Helpers do
         authenticate_resource_from_session(resource, session, otp_app, opts),
         resource,
         options,
-        session
+        session,
+        opts
       )
     end)
   end
 
-  defp handle_session_auth_result(conn, {:ok, user}, _resource, options, session) do
+  defp handle_session_auth_result(conn, {:ok, user}, _resource, options, session, _opts) do
     current_subject_name = current_subject_name(options.subject_name)
 
     # Restore authentication metadata from the session onto the user
@@ -230,7 +231,7 @@ defmodule AshAuthentication.Plug.Helpers do
     Conn.assign(conn, current_subject_name, user)
   end
 
-  defp handle_session_auth_result(conn, :error, resource, options, _session) do
+  defp handle_session_auth_result(conn, :error, resource, options, _session, opts) do
     current_subject_name = current_subject_name(options.subject_name)
 
     require_token? =
@@ -239,9 +240,22 @@ defmodule AshAuthentication.Plug.Helpers do
     session_key =
       if require_token?, do: session_key(options.subject_name), else: options.subject_name
 
-    conn
-    |> Conn.assign(current_subject_name, nil)
-    |> Conn.delete_session(session_key)
+    conn = Conn.assign(conn, current_subject_name, nil)
+
+    if tenant_required?(resource, opts) do
+      # The lookup was rejected before it could reach the data layer because this
+      # request has no tenant, so we know nothing about whether the session is
+      # valid and must leave it alone rather than signing the user out.
+      conn
+    else
+      Conn.delete_session(conn, session_key)
+    end
+  end
+
+  defp tenant_required?(resource, opts) do
+    is_nil(Keyword.get(opts, :tenant)) and
+      not is_nil(Resource.Info.multitenancy_strategy(resource)) and
+      not Resource.Info.multitenancy_global?(resource)
   end
 
   defp restore_metadata_from_session(user, subject_name, session) do
