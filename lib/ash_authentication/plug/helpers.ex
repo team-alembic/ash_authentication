@@ -253,6 +253,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
            when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
+           true <- usable_as_bearer_token?(claims),
            {:ok, token_record} <-
              validate_token(resource, jti, opts),
            {:ok, user} <-
@@ -282,6 +283,18 @@ defmodule AshAuthentication.Plug.Helpers do
       current_subject_token_record_name(subject_name),
       token_record
     )
+  end
+
+  # Rejects purpose-scoped tokens (`sign_in`, `remember_me`, …) being replayed as
+  # bearer credentials. A missing `"purpose"` claim must remain valid: several
+  # sign-in paths (OAuth2, magic link, OTP, token exchange) mint user tokens
+  # without stamping the claim, so this cannot be tightened to `== "user"`.
+  defp usable_as_bearer_token?(claims) do
+    case Map.get(claims, "purpose") do
+      nil -> true
+      "user" -> true
+      _ -> false
+    end
   end
 
   defp validate_token(resource, jti, opts) do

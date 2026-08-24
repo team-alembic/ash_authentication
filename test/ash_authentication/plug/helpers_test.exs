@@ -263,6 +263,46 @@ defmodule AshAuthentication.Plug.HelpersTest do
       refute is_map_key(conn.assigns, :current_user_with_token_required)
     end
 
+    test "a sign-in token cannot be replayed as a bearer token", %{conn: conn} do
+      user = build_user()
+
+      {:ok, sign_in_token, _claims} =
+        Jwt.token_for_user(user, %{"purpose" => "sign_in"}, purpose: :sign_in)
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{sign_in_token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      refute is_map_key(conn.assigns, :current_user)
+    end
+
+    test "a remember-me token cannot be replayed as a bearer token", %{conn: conn} do
+      user = build_user()
+
+      {:ok, remember_me_token, _claims} =
+        Jwt.token_for_user(user, %{"purpose" => "remember_me"}, purpose: :remember_me)
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{remember_me_token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      refute is_map_key(conn.assigns, :current_user)
+    end
+
+    test "a user token minted without a purpose claim is still accepted", %{conn: conn} do
+      user = build_user()
+      {:ok, token, _claims} = Jwt.token_for_user(user, %{})
+
+      conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      assert conn.assigns.current_user.id == user.id
+    end
+
     test "with opts", %{conn: conn} do
       user = build_user()
 
