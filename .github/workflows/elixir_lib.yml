@@ -7,9 +7,9 @@ on:
   push:
     tags:
       - "v*"
-    branches: [main]
+    branches: [main, stable-4.0]
   pull_request:
-    branches: [main]
+    branches: [main, stable-4.0]
 jobs:
   ash-ci:
     uses: ash-project/ash/.github/workflows/ash-ci.yml@main
