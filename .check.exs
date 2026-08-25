@@ -37,6 +37,8 @@
     {:spark_cheat_sheets, "mix spark.cheat_sheets --check"},
     {:generate_migrations, "mix ash_postgres.generate_migrations --check"},
     {:reuse,
-     command: ["pipx", "run", "--spec", "reuse[charset-normalizer]", "reuse", "lint", "-q"]}
+     command: ["pipx", "run", "--spec", "reuse[charset-normalizer]", "reuse", "lint", "-q"]},
+    {:mix_audit, false},
+    {:hex_audit, command: "mix hex.audit"}
   ]
 ]
