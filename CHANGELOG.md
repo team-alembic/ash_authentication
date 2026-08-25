@@ -11,6 +11,35 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.14.2](https://github.com/team-alembic/ash_authentication/compare/v4.14.1...v4.14.2) (2026-08-25)
+### Breaking Changes:
+
+* require an `identity_resource` for all OAuth2 and OIDC strategies by James Harton
+
+* require an `identity_resource` for all OAuth2 and OIDC strategies by James Harton
+
+
+
+### Features:
+
+* confirm-to-link for untrusted OAuth2 email matches by James Harton
+
+### Bug Fixes:
+
+* escape interpolated values in confirmation and magic link forms by James Harton
+
+* generate a user identity resource in the upgrader when one is missing by James Harton
+
+* thread tenant/actor through OAuth2 identity resolution by James Harton
+
+* resolve OAuth2/OIDC users by `iss`/`sub`, never by email by James Harton
+
+### Improvements:
+
+* generated confirmation sender demonstrates identity-link copy by James Harton
+
+* trust `email_verified` by default for Slack and Apple by James Harton
+
 ## [v4.14.1](https://github.com/team-alembic/ash_authentication/compare/v4.14.0...v4.14.1) (2026-06-15)
 ### Breaking Changes:
 
