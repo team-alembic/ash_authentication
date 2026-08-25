@@ -11,6 +11,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.13](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.12...v5.0.0-rc.13) (2026-08-25)
+
+
+
+
+### Bug Fixes:
+
+* return error tuple from Jwt.peek/1 on malformed tokens (#1201) by Sai Asish Y
+
+* escape interpolated values in confirmation and magic link forms by James Harton
+
+* remove a duplicate call in the installer by Dmitry Maganov
+
+* remember-me after-action hook returns query instead of empty records (#1190) (#1191) by James Harton
+
+### Improvements:
+
+* escape `@reflected_param` in the oauth2 interstitial for consistency by James Harton
+
 ## [v5.0.0-rc.12](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.11...v5.0.0-rc.12) (2026-07-08)
 
 
