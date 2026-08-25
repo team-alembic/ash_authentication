@@ -19,6 +19,7 @@ jobs:
       community-files: false
       conventional-commit: false
       tenants: false
+      deps-audit: false
     permissions:
       id-token: write
       contents: write
