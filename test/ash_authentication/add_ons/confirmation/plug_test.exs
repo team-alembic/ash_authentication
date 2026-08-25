@@ -85,4 +85,25 @@ defmodule AshAuthentication.AddOn.Confirmation.PlugTest do
       assert confirmed_user.confirmed_at
     end
   end
+
+  describe "accept/2" do
+    test "it HTML-escapes the token into the rendered form" do
+      {:ok, strategy} = Info.strategy(Example.User, :confirm)
+
+      payload = ~s|"><script>alert(1)</script>|
+
+      conn =
+        :get
+        |> conn("/", %{"confirm" => payload})
+        |> Plug.accept(strategy)
+
+      assert conn.status == 200
+
+      refute conn.resp_body =~ payload
+      refute conn.resp_body =~ "<script>"
+
+      assert conn.resp_body =~
+               ~s|value="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;"|
+    end
+  end
 end

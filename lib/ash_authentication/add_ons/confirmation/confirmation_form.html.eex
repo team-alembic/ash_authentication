@@ -7,8 +7,8 @@
   <body>
     <h1>Confirm your account</h1>
 
-    <form method="post" action="<%= @conn.request_path %>">
-      <input type="hidden" name="confirm" value="<%= @token %>" />
+    <form method="post" action="<%= Plug.HTML.html_escape(@conn.request_path) %>">
+      <input type="hidden" name="confirm" value="<%= Plug.HTML.html_escape(to_string(@token)) %>" />
       <input type="submit" value="Confirm" />
     </form>
   </body>
