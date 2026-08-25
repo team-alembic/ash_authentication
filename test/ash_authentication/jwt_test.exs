@@ -96,5 +96,9 @@ defmodule AshAuthentication.JwtTest do
 
       assert :error = Jwt.verify(token, :ash_authentication)
     end
+
+    test "it is unsuccessful when the token is malformed" do
+      assert :error = Jwt.verify("aaaa.bbbb.cccc", :ash_authentication)
+    end
   end
 end

@@ -238,7 +238,11 @@ defmodule AshAuthentication.Jwt do
   Given a token, read it's claims without validating.
   """
   @spec peek(token) :: {:ok, claims} | {:error, any}
-  def peek(token), do: Joken.peek_claims(token)
+  def peek(token) do
+    Joken.peek_claims(token)
+  rescue
+    error -> {:error, error}
+  end
 
   @doc """
   Given a token, verify it's signature and validate it's claims.
