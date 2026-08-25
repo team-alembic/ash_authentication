@@ -21,7 +21,7 @@
       <%= for {key, value} <- @params do %>
         <input type="hidden" name="<%= Plug.HTML.html_escape(to_string(key)) %>" value="<%= Plug.HTML.html_escape(to_string(value)) %>" />
       <% end %>
-      <input type="hidden" name="<%= @reflected_param %>" value="1" />
+      <input type="hidden" name="<%= Plug.HTML.html_escape(@reflected_param) %>" value="1" />
       <noscript>
         <p>Signing you in…</p>
         <button type="submit">Continue</button>
