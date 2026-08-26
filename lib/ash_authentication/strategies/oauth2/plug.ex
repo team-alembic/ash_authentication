@@ -79,25 +79,55 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
-  # The session holding `session_params` is absent. This is expected when a
-  # provider using `response_mode=form_post` (e.g. Apple with name/email scope)
-  # POSTs the callback cross-site: the browser withholds the `SameSite=Lax`
-  # session cookie on a cross-site POST. Render an interstitial page that
-  # same-origin re-POSTs the params so the follow-up request carries the
-  # session. On the (same-origin) re-POST `session_params` is present and the
-  # `with` above succeeds; if it is *still* absent we've already bounced once,
-  # so fail closed rather than loop.
+  # The session holding `session_params` is absent. Two legitimate cases can
+  # reach here; otherwise we fail closed.
+  #
+  # 1. A provider using `response_mode=form_post` (e.g. Apple with name/email
+  #    scope) POSTs the callback cross-site: the browser withholds the
+  #    `SameSite=Lax` session cookie on a cross-site POST. We render an
+  #    interstitial page that same-origin re-POSTs the params so the follow-up
+  #    request carries the session. On the (same-origin) re-POST `session_params`
+  #    is present and the `with` above succeeds; if it is *still* absent we've
+  #    already bounced once, so fall through rather than loop.
+  #
+  # 2. An IdP/third-party-initiated login (e.g. a launch from an identity
+  #    provider's app-launcher or portal tile): the provider redirects straight
+  #    to our callback with a `code` but no `state`, so the request phase never
+  #    ran and nothing was stored. We must NOT complete authentication from
+  #    this request — with no stored `state` there is no CSRF binding to
+  #    verify, and "session absent" is an attacker-controllable condition (a
+  #    normal flow with the cookie stripped is indistinguishable), so trusting
+  #    it would disable `state` verification for every flow on the strategy.
+  #    Instead, when the strategy opts in via `idp_initiated_login?`, we treat
+  #    the callback as a *trigger* and restart the request phase, which mints a
+  #    fresh `state` we later verify — the OpenID Connect Core §4 ("Initiating
+  #    Login from a Third Party") pattern. The user still has a live session at
+  #    the provider, so the restarted flow returns immediately. We restart only
+  #    when the callback carries no `state`, which is what makes it genuinely
+  #    IdP-initiated: the request phase always mints one, so a callback bearing
+  #    `state` came from a flow we started and its session should have been
+  #    present. If it isn't, the session could not be persisted (or was
+  #    stripped), and restarting would only repeat the round trip until the
+  #    browser gives up — so fail closed instead. This bounds the bounce to one,
+  #    the same job `reflected?/1` does for the interstitial.
   defp maybe_reflect_or_fail(conn, strategy) do
-    if conn.method == "POST" and not reflected?(conn) do
-      render_interstitial(conn, strategy)
-    else
-      store_authentication_result(conn, {:error, nil})
+    cond do
+      conn.method == "POST" and not reflected?(conn) ->
+        render_interstitial(conn, strategy)
+
+      conn.method == "GET" and strategy.idp_initiated_login? and not state_param?(conn) ->
+        request(conn, strategy)
+
+      true ->
+        store_authentication_result(conn, {:error, nil})
     end
   end
 
   @reflected_param "_ash_authentication_reflected"
 
   defp reflected?(conn), do: Map.get(conn.params, @reflected_param) == "1"
+
+  defp state_param?(conn), do: Map.has_key?(conn.params, "state")
 
   # sobelow_skip ["XSS.SendResp"]
   defp render_interstitial(conn, strategy) do
