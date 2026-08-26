@@ -194,17 +194,26 @@ defmodule AshAuthentication do
   Returns a list of resource modules.
   """
   @spec authenticated_resources(atom | [atom]) :: [Resource.t()]
-  def authenticated_resources(otp_app) do
+  def authenticated_resources(otp_app),
+    do: resources_with_extension(otp_app, AshAuthentication)
+
+  @doc """
+  Find all resources using a given extension for one or more OTP applications.
+
+  Resources are located by walking the domains configured in each application's
+  `:ash_domains` environment key, meaning that only resources registered with a
+  domain can be found.
+
+  Returns a list of resource modules.
+  """
+  @spec resources_with_extension(atom | [atom], module) :: [Resource.t()]
+  def resources_with_extension(otp_app, extension) do
     otp_app
     |> List.wrap()
-    |> Enum.flat_map(fn otp_app ->
-      otp_app
-      |> Application.get_env(:ash_domains, [])
-      |> Stream.flat_map(&Domain.Info.resources(&1))
-      |> Stream.uniq()
-      |> Stream.filter(&(AshAuthentication in Spark.extensions(&1)))
-      |> Enum.to_list()
-    end)
+    |> Stream.flat_map(&Ash.Info.domains/1)
+    |> Stream.flat_map(&Domain.Info.resources/1)
+    |> Stream.uniq()
+    |> Enum.filter(&(extension in Spark.extensions(&1)))
   end
 
   @doc """

@@ -57,8 +57,7 @@ defmodule AshAuthentication.AuditLogResource.Batcher do
 
     audit_configs =
       otp_app
-      |> Spark.sparks(Ash.Resource)
-      |> Stream.filter(&(AuditLogResource in Spark.extensions(&1)))
+      |> AshAuthentication.resources_with_extension(AuditLogResource)
       |> Enum.reduce(%{}, fn resource, configs ->
         Map.put(configs, resource, %{
           timeout: Info.audit_log_write_batching_timeout!(resource),

@@ -38,8 +38,7 @@ defmodule AshAuthentication.AuditLogResource.Expunger do
   def init(opts) do
     opts
     |> Keyword.fetch!(:otp_app)
-    |> Spark.sparks(Ash.Resource)
-    |> Stream.filter(&(AuditLogResource in Spark.extensions(&1)))
+    |> AshAuthentication.resources_with_extension(AuditLogResource)
     |> Enum.reduce([], fn resource, configs ->
       with {:ok, lifetime_days} when is_integer(lifetime_days) and lifetime_days > 0 <-
              Info.audit_log_log_lifetime(resource),
