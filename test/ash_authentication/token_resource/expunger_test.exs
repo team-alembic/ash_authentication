@@ -15,6 +15,24 @@ defmodule AshAuthentication.TokenResource.ExpungerTest do
       assert %{Example.Token => %{timer: timer, interval: interval}} = resource_states
       assert timer
       assert is_integer(interval) and interval > 0
+
+      for resource <- [Example.TokenWithCustomCreateTimestamp, ExampleMultiTenant.Token] do
+        assert is_map_key(resource_states, resource)
+      end
+    end
+
+    test "it only finds token resources registered with the configured domains" do
+      configured_domains = Application.get_env(:ash_authentication, :ash_domains, [])
+
+      on_exit(fn ->
+        Application.put_env(:ash_authentication, :ash_domains, configured_domains)
+      end)
+
+      Application.put_env(:ash_authentication, :ash_domains, [ExampleMultiTenant])
+
+      assert {:ok, %{resources: resource_states}} = Expunger.init(otp_app: :ash_authentication)
+
+      assert Map.keys(resource_states) == [ExampleMultiTenant.Token]
     end
   end
 

@@ -40,8 +40,7 @@ defmodule AshAuthentication.TokenResource.Expunger do
 
     resource_states =
       otp_app
-      |> Spark.sparks(Ash.Resource)
-      |> Stream.filter(&(TokenResource in Spark.extensions(&1)))
+      |> AshAuthentication.resources_with_extension(TokenResource)
       |> Enum.reduce(%{}, fn resource, resources ->
         state =
           resources
