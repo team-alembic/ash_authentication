@@ -102,15 +102,20 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   #    the callback as a *trigger* and restart the request phase, which mints a
   #    fresh `state` we later verify — the OpenID Connect Core §4 ("Initiating
   #    Login from a Third Party") pattern. The user still has a live session at
-  #    the provider, so the restarted flow returns immediately. The restart
-  #    stores a session, so its callback takes the success path above and never
-  #    re-enters here — the bounce happens at most once.
+  #    the provider, so the restarted flow returns immediately. We restart only
+  #    when the callback carries no `state`, which is what makes it genuinely
+  #    IdP-initiated: the request phase always mints one, so a callback bearing
+  #    `state` came from a flow we started and its session should have been
+  #    present. If it isn't, the session could not be persisted (or was
+  #    stripped), and restarting would only repeat the round trip until the
+  #    browser gives up — so fail closed instead. This bounds the bounce to one,
+  #    the same job `reflected?/1` does for the interstitial.
   defp maybe_reflect_or_fail(conn, strategy) do
     cond do
       conn.method == "POST" and not reflected?(conn) ->
         render_interstitial(conn, strategy)
 
-      conn.method == "GET" and strategy.idp_initiated_login? ->
+      conn.method == "GET" and strategy.idp_initiated_login? and not state_param?(conn) ->
         request(conn, strategy)
 
       true ->
@@ -121,6 +126,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   @reflected_param "_ash_authentication_reflected"
 
   defp reflected?(conn), do: Map.get(conn.params, @reflected_param) == "1"
+
+  defp state_param?(conn), do: Map.has_key?(conn.params, "state")
 
   # sobelow_skip ["XSS.SendResp"]
   defp render_interstitial(conn, strategy) do

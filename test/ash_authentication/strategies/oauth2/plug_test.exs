@@ -148,5 +148,24 @@ defmodule AshAuthentication.Strategy.OAuth2.PlugTest do
       assert conn.resp_body =~ ~s(name="_ash_authentication_reflected" value="1")
       refute conn.status == 302
     end
+
+    test "a stateless GET carrying a `state` fails closed rather than restarting again" do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2_idp_initiated)
+
+      conn =
+        :get
+        |> conn("/user/oauth2_idp_initiated/callback", %{"code" => "abc", "state" => "xyz"})
+        |> SessionPipeline.call([])
+        |> Plug.callback(strategy)
+
+      # A genuine IdP-initiated launch carries no `state`. This one does, so a
+      # request phase already ran and its session should have been present — it
+      # could not be persisted, or was stripped. Restarting would mint another
+      # `state` into a session that will be lost again and loop the browser, so
+      # fail closed.
+      assert conn.private[:authentication_result] == {:error, nil}
+      refute conn.status == 302
+      refute conn.status == 200
+    end
   end
 end
