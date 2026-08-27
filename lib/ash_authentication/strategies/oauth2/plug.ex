@@ -392,6 +392,6 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
         {Finch, supervisor: AshAuthentication.Finch}
       )
 
-    {:ok, Map.put(config, :http_adapter, http_adapter)}
+    {:ok, Map.put_new(config, :http_adapter, http_adapter)}
   end
 end
