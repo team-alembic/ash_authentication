@@ -247,9 +247,33 @@ defmodule AshAuthentication.AddOn.AuditLog.AuditorTest do
   end
 
   describe "extra_data capture" do
-    test "captures actor from context when present" do
-      # This would require setting up an actor in the context
-      # Skipping for now as it requires more complex test setup
+    test "captures the actor from the context as a subject rather than as a record" do
+      actor = build_user_with_audit_log()
+      user = build_user_with_audit_log()
+
+      assert is_binary(actor.hashed_password)
+
+      params = %{
+        "email" => user.email,
+        "password" => user.__metadata__.password
+      }
+
+      strategy = Info.strategy!(Example.UserWithAuditLog, :password)
+
+      {:ok, _signed_in_user} =
+        AshAuthentication.Strategy.action(strategy, :sign_in, params, actor: actor)
+
+      Batcher.flush()
+
+      logs = Example.AuditLog |> Ash.read!()
+
+      assert sign_in_log = Enum.find(logs, &(&1.action_name == :sign_in_with_password))
+      assert sign_in_log.extra_data["actor"] == AshAuthentication.user_to_subject(actor)
+
+      refute logs
+             |> Enum.map(& &1.extra_data)
+             |> Jason.encode!()
+             |> String.contains?(actor.hashed_password)
     end
 
     test "captures tenant from context when present" do

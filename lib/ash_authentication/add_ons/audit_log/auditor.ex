@@ -193,6 +193,7 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
 
     context
     |> Map.take([:actor, :tenant])
+    |> Map.update(:actor, nil, &serialise_actor/1)
     |> Map.put(:request, processed_request)
     |> Map.put(:params, get_params(input, audit_strategy))
   end
@@ -225,4 +226,14 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
     do: Map.new(attribute_names, &{&1, Ash.Changeset.get_attribute(input, &1)})
 
   defp get_named_attributes(_input, _attribute_names), do: %{}
+
+  defp serialise_actor(nil), do: nil
+
+  defp serialise_actor(actor) when is_struct(actor) do
+    AshAuthentication.user_to_subject(actor)
+  rescue
+    _ -> inspect(actor)
+  end
+
+  defp serialise_actor(actor), do: actor
 end
