@@ -88,6 +88,10 @@ defmodule AshAuthentication.Jwt do
 
   @doc """
   Given a user, generate a signed JWT for use while authenticating.
+
+  The `:purpose` option (default `:user`) is recorded both on the token resource
+  row and as a `purpose` claim in the JWT.  Any purpose other than `:user` marks
+  the token as unusable as a bearer credential.
   """
   @spec token_for_user(
           Resource.Record.t(),
@@ -114,8 +118,13 @@ defmodule AshAuthentication.Jwt do
 
     dsl_claims = get_dsl_extra_claims(resource, user, action_opts)
 
+    # The bearer boundary decides whether a token may stand in for a session by
+    # reading the `purpose` claim, so the mint path stamps it rather than
+    # trusting each caller to remember. Claims passed by the caller still win,
+    # as they always have; claims configured in the resource's DSL do not.
     all_extra_claims =
       dsl_claims
+      |> Map.put("purpose", to_string(purpose))
       |> Map.merge(extra_claims)
       |> Map.put("sub", subject)
 
@@ -180,7 +189,8 @@ defmodule AshAuthentication.Jwt do
       Info.authentication_subject_name!(resource)
 
     extra_claims =
-      extra_claims
+      %{"purpose" => to_string(purpose)}
+      |> Map.merge(extra_claims)
       |> Map.put("sub", subject)
 
     with {:ok, token, claims} <-

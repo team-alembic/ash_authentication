@@ -68,6 +68,33 @@ defmodule AshAuthentication.JwtTest do
       assert {:ok, _token, claims} = Jwt.token_for_user(user, %{})
       refute is_map_key(claims, "tenant")
     end
+
+    test "it stamps the default purpose when none is requested" do
+      user = build_user()
+      assert {:ok, _token, claims} = Jwt.token_for_user(user, %{})
+      assert claims["purpose"] == "user"
+    end
+
+    test "the purpose option and an explicit purpose claim produce equivalent claims" do
+      user = build_user()
+
+      assert {:ok, _token, from_opts} = Jwt.token_for_user(user, %{}, purpose: :sign_in)
+
+      assert {:ok, _token, from_claims} =
+               Jwt.token_for_user(user, %{"purpose" => "sign_in"}, purpose: :sign_in)
+
+      assert from_opts["purpose"] == "sign_in"
+
+      unique = ~w[exp iat jti nbf]
+      assert Map.drop(from_opts, unique) == Map.drop(from_claims, unique)
+    end
+
+    test "an explicit purpose claim takes precedence over the purpose option" do
+      user = build_user()
+
+      assert {:ok, _token, claims} = Jwt.token_for_user(user, %{"purpose" => "sign_in"})
+      assert claims["purpose"] == "sign_in"
+    end
   end
 
   describe "verify/2" do

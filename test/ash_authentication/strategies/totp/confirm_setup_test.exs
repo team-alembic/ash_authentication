@@ -6,7 +6,7 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupTest do
   @moduledoc false
   use DataCase, async: true
 
-  alias AshAuthentication.{Info, Strategy}
+  alias AshAuthentication.{Info, Jwt, Strategy}
 
   describe "TOTP confirm setup flow" do
     test "setup returns setup_token and totp_url (secret not on user)" do
@@ -25,6 +25,11 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupTest do
       # Metadata should contain setup_token and totp_url
       assert user_with_pending_setup.__metadata__.setup_token
       assert user_with_pending_setup.__metadata__.totp_url
+
+      # The purpose must be stamped into the JWT itself, not just the token
+      # record, so that the bearer boundary can see it.
+      assert {:ok, %{"purpose" => "totp_setup"}} =
+               Jwt.peek(user_with_pending_setup.__metadata__.setup_token)
 
       # TOTP URL should be properly formatted
       assert String.starts_with?(user_with_pending_setup.__metadata__.totp_url, "otpauth://totp/")

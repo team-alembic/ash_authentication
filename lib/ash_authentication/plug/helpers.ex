@@ -371,9 +371,9 @@ defmodule AshAuthentication.Plug.Helpers do
 
   # Rejects purpose-scoped tokens (`sign_in`, `remember_me`, `totp_setup`, …)
   # being replayed as bearer credentials. A missing `"purpose"` claim must remain
-  # valid: several sign-in paths (OAuth2, magic link, OTP, token exchange) mint
-  # user tokens without stamping the claim, so this cannot be tightened to
-  # `== "user"`.
+  # valid: tokens minted before every mint path stamped the claim are still
+  # within their lifetime, so this cannot be tightened to `== "user"` until
+  # those have aged out.
   defp usable_as_bearer_token?(claims) do
     case Map.get(claims, "purpose") do
       nil -> true

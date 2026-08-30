@@ -5,7 +5,7 @@
 defmodule AshAuthentication.Plug.HelpersTest do
   @moduledoc false
   use DataCase, async: true
-  alias AshAuthentication.{Info, Jwt, Plug.Helpers, Strategy.Password, TokenResource}
+  alias AshAuthentication.{Info, Jwt, Plug.Helpers, Strategy, Strategy.Password, TokenResource}
   import Plug.Test, only: [conn: 3, put_req_cookie: 3]
   alias Plug.Conn
 
@@ -279,8 +279,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
     test "a sign-in token cannot be replayed as a bearer token", %{conn: conn} do
       user = build_user()
 
-      {:ok, sign_in_token, _claims} =
-        Jwt.token_for_user(user, %{"purpose" => "sign_in"}, purpose: :sign_in)
+      {:ok, sign_in_token, _claims} = Jwt.token_for_user(user, %{}, purpose: :sign_in)
 
       conn =
         conn
@@ -293,8 +292,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
     test "a remember-me token cannot be replayed as a bearer token", %{conn: conn} do
       user = build_user()
 
-      {:ok, remember_me_token, _claims} =
-        Jwt.token_for_user(user, %{"purpose" => "remember_me"}, purpose: :remember_me)
+      {:ok, remember_me_token, _claims} = Jwt.token_for_user(user, %{}, purpose: :remember_me)
 
       conn =
         conn
@@ -305,17 +303,31 @@ defmodule AshAuthentication.Plug.HelpersTest do
     end
 
     test "a totp-setup token cannot be replayed as a bearer token", %{conn: conn} do
-      user = build_user()
+      user = build_user_with_totp_confirm_setup()
+      strategy = Info.strategy!(user.__struct__, :totp)
 
-      {:ok, totp_setup_token, _claims} =
-        Jwt.token_for_user(user, %{"purpose" => "totp_setup"}, purpose: :totp_setup)
+      {:ok, pending_setup} = Strategy.action(strategy, :setup, %{user: user}, [])
 
-      conn =
+      setup_conn =
         conn
-        |> Conn.put_req_header("authorization", "Bearer #{totp_setup_token}")
+        |> Conn.put_req_header(
+          "authorization",
+          "Bearer #{pending_setup.__metadata__.setup_token}"
+        )
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
-      refute is_map_key(conn.assigns, :current_user)
+      refute is_map_key(setup_conn.assigns, :current_user_with_totp_confirm_setup)
+
+      # Control: an ordinary token for the same resource is accepted, so the
+      # refutation above is about the token's purpose, not the resource.
+      {:ok, user_token, _claims} = Jwt.token_for_user(user, %{})
+
+      user_conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user_token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      assert user_conn.assigns.current_user_with_totp_confirm_setup.id == user.id
     end
 
     test "a user token minted without a purpose claim is still accepted", %{conn: conn} do
