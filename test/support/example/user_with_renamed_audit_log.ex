@@ -2,15 +2,16 @@
 #
 # SPDX-License-Identifier: MIT
 
-defmodule Example.UserWithSelectiveStrategyIncludes do
+defmodule Example.UserWithRenamedAuditLog do
   @moduledoc """
-  Test resource that only includes specific strategies for audit logging.
+  Test resource whose audit log add-on does not use the default name.
 
-  Only actions belonging to the `password` strategy should be logged; the
-  `magic_link` actions and the actions which belong to no strategy should not.
+  The transformer marks actions which belong to no strategy with the name
+  `:audit_log`, which is also the default name of the add-on. This resource
+  proves that the marker stays valid when no add-on carries that name.
   """
   use Ash.Resource,
-    data_layer: AshPostgres.DataLayer,
+    data_layer: Ash.DataLayer.Ets,
     extensions: [AshAuthentication],
     domain: Example
 
@@ -27,11 +28,6 @@ defmodule Example.UserWithSelectiveStrategyIncludes do
     defaults [:read, :destroy, create: :*, update: :*]
   end
 
-  postgres do
-    table "users_with_selective_strategy_includes"
-    repo(Example.Repo)
-  end
-
   authentication do
     session_identifier :jti
 
@@ -43,15 +39,8 @@ defmodule Example.UserWithSelectiveStrategyIncludes do
     end
 
     add_ons do
-      audit_log do
+      audit_log :security_log do
         audit_log_resource(Example.AuditLog)
-        # Only include password strategy actions, not the audit_log add-on itself
-        include_strategies([:password])
-        # Include all actions for included strategies
-        include_actions([:*])
-        # No exclusions
-        exclude_strategies([])
-        exclude_actions([])
       end
     end
 
@@ -59,21 +48,11 @@ defmodule Example.UserWithSelectiveStrategyIncludes do
       password do
         identity_field :email
       end
-
-      magic_link do
-        identity_field :email
-        sender fn _user, _token, _opts -> :ok end
-      end
     end
   end
 
   identities do
-    identity :unique_email, [:email]
-  end
-
-  code_interface do
-    define :sign_in_with_password
-    define :register_with_password
+    identity :unique_email, [:email], pre_check_with: Example
   end
 
   def get_config(path, _resource) do

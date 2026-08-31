@@ -9,9 +9,16 @@ defmodule AshAuthentication.AddOn.AuditLog.Verifier do
 
   alias Spark.Error.DslError
 
+  # The transformer tags actions which belong to no strategy with this name, so
+  # it is always a valid `include_strategies` entry. It is also the default name
+  # of the add-on itself, but it stays valid when the add-on is renamed.
+  @no_strategy :audit_log
+
   @doc false
   def verify(strategy, _dsl) do
     with :ok <- verify_audit_log_resource(strategy),
+         :ok <- verify_include_strategies(strategy),
+         :ok <- verify_include_actions(strategy),
          :ok <- verify_exclude_strategies(strategy),
          :ok <- verify_exclude_actions(strategy),
          :ok <- verify_truncation_masks(strategy) do
@@ -40,6 +47,76 @@ defmodule AshAuthentication.AddOn.AuditLog.Verifier do
 
       true ->
         :ok
+    end
+  end
+
+  defp verify_include_strategies(strategy) when strategy.include_strategies == [], do: :ok
+
+  defp verify_include_strategies(strategy) do
+    strategy.include_strategies
+    |> Enum.reject(
+      &(&1 == @no_strategy or AshAuthentication.Info.strategy_present?(strategy.resource, &1))
+    )
+    |> case do
+      [] ->
+        :ok
+
+      [missing_strategy] ->
+        {:error,
+         DslError.exception(
+           module: strategy.resource,
+           path: [:authentication, :add_ons, :audit_log, strategy.name, :include_strategies],
+           message:
+             "The strategy or add-on `#{inspect(missing_strategy)}` is not present on the resource `#{inspect(strategy.resource)}`."
+         )}
+
+      missing_strategies ->
+        missing_strategies = Enum.map_join(missing_strategies, "\n  - ", &"`#{inspect(&1)}`")
+
+        {:error,
+         DslError.exception(
+           module: strategy.resource,
+           path: [:authentication, :add_ons, :audit_log, strategy.name, :include_strategies],
+           message: """
+           The following strategies or add-ons are not present on the resource `#{inspect(strategy.resource)}`:
+
+           - #{missing_strategies}
+           """
+         )}
+    end
+  end
+
+  defp verify_include_actions(strategy) when strategy.include_actions == [], do: :ok
+
+  defp verify_include_actions(strategy) do
+    strategy.include_actions
+    |> Enum.reject(&Ash.Resource.Info.action(strategy.resource, &1))
+    |> case do
+      [] ->
+        :ok
+
+      [missing_action] ->
+        {:error,
+         DslError.exception(
+           module: strategy.resource,
+           path: [:authentication, :add_ons, :audit_log, strategy.name, :include_actions],
+           message:
+             "The action `#{inspect(missing_action)}` is not present on the resource `#{inspect(strategy.resource)}`."
+         )}
+
+      missing_actions ->
+        missing_actions = Enum.map_join(missing_actions, "\n  - ", &"`#{inspect(&1)}`")
+
+        {:error,
+         DslError.exception(
+           module: strategy.resource,
+           path: [:authentication, :add_ons, :audit_log, strategy.name, :include_actions],
+           message: """
+           The following actions are not present on the resource `#{inspect(strategy.resource)}`:
+
+           - #{missing_actions}
+           """
+         )}
     end
   end
 

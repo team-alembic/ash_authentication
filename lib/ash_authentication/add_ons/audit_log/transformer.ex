@@ -6,6 +6,8 @@ defmodule AshAuthentication.AddOn.AuditLog.Transformer do
   @moduledoc false
   alias Spark.Dsl.Transformer
 
+  @no_strategy :audit_log
+
   @doc false
   def transform(strategy, dsl) do
     with {:ok, strategy, dsl} <- prefill_included(strategy, dsl),
@@ -35,6 +37,8 @@ defmodule AshAuthentication.AddOn.AuditLog.Transformer do
       dsl
       |> AshAuthentication.Info.list_strategies()
       |> Enum.map(& &1.name)
+      |> Enum.concat([@no_strategy])
+      |> Enum.uniq()
 
     {:ok, %{strategy | include_strategies: strategy_names}}
   end
@@ -56,13 +60,12 @@ defmodule AshAuthentication.AddOn.AuditLog.Transformer do
     logged_actions =
       strategy.include_actions
       |> Stream.map(fn action_name ->
-        # For actions that belong to a strategy, use the strategy name
-        # For actions that don't belong to any strategy, use :audit_log as the strategy
         case AshAuthentication.Info.strategy_for_action(dsl, action_name) do
           {:ok, action_strategy} -> {action_name, action_strategy.name}
-          :error -> {action_name, :audit_log}
+          :error -> {action_name, @no_strategy}
         end
       end)
+      |> Stream.filter(&(elem(&1, 1) in strategy.include_strategies))
       |> Stream.reject(&(elem(&1, 0) in strategy.exclude_actions))
       |> Stream.reject(&(elem(&1, 1) in strategy.exclude_strategies))
       |> Enum.to_list()
