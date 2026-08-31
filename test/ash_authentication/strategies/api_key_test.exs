@@ -59,6 +59,78 @@ defmodule AshAuthentication.Strategy.ApiKeyTest do
     end
   end
 
+  describe "malformed API keys" do
+    @over_long_token_segment String.duplicate("Z", 96 * 1024)
+    @over_long_crc_segment String.duplicate("Z", 24 * 1024)
+    @decode_budget_ms 500
+
+    test "an over-long token segment is rejected without decoding it" do
+      {elapsed_ms, result} =
+        :timer.tc(
+          fn ->
+            User
+            |> Ash.Query.for_read(
+              :sign_in_with_api_key,
+              %{api_key: "aap_#{@over_long_token_segment}_a"},
+              context: %{private: %{ash_authentication?: true}}
+            )
+            |> Ash.read_one!()
+          end,
+          :millisecond
+        )
+
+      refute result
+      assert elapsed_ms < @decode_budget_ms
+    end
+
+    test "an over-long checksum segment is rejected without decoding it", %{
+      plaintext_api_key: plaintext_api_key
+    } do
+      [prefix, token, _crc] = String.split(plaintext_api_key, "_", parts: 3)
+
+      {elapsed_ms, result} =
+        :timer.tc(
+          fn ->
+            User
+            |> Ash.Query.for_read(
+              :sign_in_with_api_key,
+              %{api_key: "#{prefix}_#{token}_#{@over_long_crc_segment}"},
+              context: %{private: %{ash_authentication?: true}}
+            )
+            |> Ash.read_one!()
+          end,
+          :millisecond
+        )
+
+      refute result
+      assert elapsed_ms < @decode_budget_ms
+    end
+
+    test "a token segment with a leading base62 zero is rejected", %{
+      user: user,
+      plaintext_api_key: plaintext_api_key
+    } do
+      [prefix, token, crc] = String.split(plaintext_api_key, "_", parts: 3)
+
+      assert {:ok, auth_user} =
+               User
+               |> Ash.Query.for_read(:sign_in_with_api_key, %{api_key: plaintext_api_key},
+                 context: %{private: %{ash_authentication?: true}}
+               )
+               |> Ash.read_one()
+
+      assert auth_user.id == user.id
+
+      refute User
+             |> Ash.Query.for_read(
+               :sign_in_with_api_key,
+               %{api_key: "#{prefix}_a#{token}_#{crc}"},
+               context: %{private: %{ash_authentication?: true}}
+             )
+             |> Ash.read_one!()
+    end
+  end
+
   describe "authentication with API key using plug" do
     test "succeeeds when API key is present in header", %{
       plaintext_api_key: plaintext_api_key,

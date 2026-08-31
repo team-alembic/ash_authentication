@@ -127,13 +127,19 @@ defmodule AshAuthentication.Strategy.ApiKey.SignInPreparation do
     end
   end
 
+  # A token is 32 random bytes plus a 16 byte id, which encodes to at most 65
+  # base62 characters. A CRC32 is 32 bits, which encodes to at most 6.
+  @max_token_length 65
+  @max_crc32_length 6
+
   defp decode_api_key(api_key) do
     with [_parse_prefix, middle, crc32] <- String.split(api_key, "_", parts: 3),
-         {:ok, <<random_bytes::binary-size(32), id::binary-size(16)>>} <-
-           AshAuthentication.Base.bindecode62(middle),
          true <-
-           AshAuthentication.Base.decode62(crc32) ==
-             {:ok, :erlang.crc32(random_bytes <> id)} do
+           byte_size(middle) <= @max_token_length and byte_size(crc32) <= @max_crc32_length,
+         {:ok, <<random_bytes::binary-size(32), id::binary-size(16)>> = token} <-
+           AshAuthentication.Base.bindecode62(middle),
+         true <- AshAuthentication.Base.encode62(token) == middle,
+         true <- AshAuthentication.Base.encode62(:erlang.crc32(token)) == crc32 do
       {:ok, id, random_bytes}
     else
       _ ->
