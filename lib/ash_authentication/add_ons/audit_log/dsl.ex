@@ -50,10 +50,12 @@ defmodule AshAuthentication.AddOn.AuditLog.Dsl do
           required: true
         ],
         include_strategies: [
+          type: {:wrap_list, :atom},
           doc: "Explicitly allow events from the named strategies.",
           default: [:*]
         ],
         include_actions: [
+          type: {:wrap_list, :atom},
           doc: "Explicitly allow events from the named actions.",
           default: [:*]
         ],
