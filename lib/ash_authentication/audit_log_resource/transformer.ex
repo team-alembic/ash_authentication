@@ -191,7 +191,7 @@ defmodule AshAuthentication.AuditLogResource.Transformer do
 
         fields ->
           with {:ok, id} <- Info.audit_log_attributes_id(dsl),
-               {:ok, subject} <- Info.audit_log_attributes_id(dsl),
+               {:ok, subject} <- Info.audit_log_attributes_subject(dsl),
                {:ok, strategy} <- Info.audit_log_attributes_strategy(dsl),
                {:ok, audit_log} <- Info.audit_log_attributes_audit_log(dsl),
                {:ok, logged_at} <- Info.audit_log_attributes_logged_at(dsl),
