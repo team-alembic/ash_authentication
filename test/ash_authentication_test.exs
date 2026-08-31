@@ -17,6 +17,7 @@ defmodule AshAuthenticationTest do
                Example.UserWithExcludedActions,
                Example.UserWithExcludedStrategies,
                Example.UserWithExplicitIncludes,
+               Example.UserWithRenamedAuditLog,
                Example.UserWithSelectiveStrategyIncludes,
                Example.UserWithTokenRequired,
                Example.UserWithRememberMe,

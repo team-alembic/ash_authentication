@@ -20,6 +20,7 @@ defmodule Example do
     resource Example.UserWithExplicitIncludes
     resource Example.UserWithRegisterMagicLink
     resource Example.UserWithRememberMe
+    resource Example.UserWithRenamedAuditLog
     resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired
     resource Example.UserWithWildcardAndExclusions
