@@ -108,6 +108,23 @@ The audit log add-on tracks all authentication actions by default, so there's no
 need to list them explicitly — failures on `request_otp` and `sign_in_with_otp`
 will both count toward the `audit_log_max_failures` threshold.
 
+### Request timing and account enumeration
+
+The request action returns `:ok` whether or not the identity matches a user, so the
+response body does not reveal which accounts exist. The response time is not
+uniform. With `registration_enabled?` set to `false` (the default), a match
+generates a code, signs a token, writes that token to the token resource and calls
+your sender. A miss does none of that work. The synchronous send alone takes tens
+to hundreds of milliseconds against an SMTP or HTTP API, which is enough to
+separate the two paths.
+
+An asynchronous sender removes the largest part of that difference. A sender that
+enqueues a job and returns `:ok` immediately keeps delivery latency off both paths
+— see `AshAuthentication.Sender`. OTP still leaves a wider gap than the other
+request-style strategies, because it stores its token unconditionally. That
+database insert happens on the match path only, whatever `store_all_tokens?` is set
+to.
+
 ## Prerequisites
 
 Your user resource needs:
@@ -270,7 +287,8 @@ The OTP strategy uses a deterministic JTI (JWT ID) to map short codes back to st
 3. A JWT is created with a deterministic JTI derived from `(strategy_name, user_subject, otp_code)`
 4. The JWT is stored in the token resource with purpose `"otp"`
 5. The short code is sent to the user via the sender
-6. Returns `:ok` regardless of whether the user exists (never reveals user existence)
+6. Returns `:ok` whether or not the user exists, so the response body does not
+   reveal account existence — see "Request timing and account enumeration" above
 
 **Sign-in flow:**
 
