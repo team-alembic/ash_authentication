@@ -85,17 +85,42 @@ defmodule AshAuthentication.AddOn.AuditLog.TransformerTest do
       assert :register_with_password in tracked_actions
     end
 
-    test "strategy-level filtering applies to included actions" do
-      # UserWithSelectiveStrategyIncludes only includes [:password] strategy
+    test "actions belonging to strategies outside include_strategies are not tracked" do
+      # UserWithSelectiveStrategyIncludes has password and magic_link strategies,
+      # but only includes [:password]
       _strategy = Info.strategy!(Example.UserWithSelectiveStrategyIncludes, :audit_log)
 
       tracked_actions =
         Auditor.get_tracked_actions(Example.UserWithSelectiveStrategyIncludes, :audit_log)
 
-      # All tracked actions should belong to password strategy
       assert :sign_in_with_password in tracked_actions
       assert :register_with_password in tracked_actions
-      # If there were actions from other strategies, they wouldn't be included
+
+      magic_link = Info.strategy!(Example.UserWithSelectiveStrategyIncludes, :magic_link)
+
+      for action_name <- [magic_link.request_action_name, magic_link.sign_in_action_name] do
+        refute action_name in tracked_actions
+      end
+    end
+
+    test "actions belonging to no strategy are not tracked when include_strategies is narrowed" do
+      _strategy = Info.strategy!(Example.UserWithSelectiveStrategyIncludes, :audit_log)
+
+      tracked_actions =
+        Auditor.get_tracked_actions(Example.UserWithSelectiveStrategyIncludes, :audit_log)
+
+      for action_name <- [:read, :create, :update, :destroy] do
+        refute action_name in tracked_actions
+      end
+    end
+
+    test "actions belonging to no strategy are tracked when include_strategies is the wildcard" do
+      # UserWithAuditLog uses the default include_strategies: [:*]
+      tracked_actions = Auditor.get_tracked_actions(Example.UserWithAuditLog, :audit_log)
+
+      for action_name <- [:read, :create, :update, :destroy] do
+        assert action_name in tracked_actions
+      end
     end
   end
 
