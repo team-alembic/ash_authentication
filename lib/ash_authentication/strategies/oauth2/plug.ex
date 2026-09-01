@@ -55,27 +55,39 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
   """
   @spec callback(Conn.t(), OAuth2.t()) :: Conn.t()
   def callback(conn, strategy) do
-    with {:ok, session_key} <- session_key(strategy),
-         {:ok, config} <- config_for(strategy, %{conn: conn}),
-         session_params when is_map(session_params) <- get_session(conn, session_key),
-         conn <- delete_session(conn, session_key),
-         config <- Keyword.put(config, :session_params, session_params),
-         {:ok, %{user: user, token: token}} <-
-           strategy.assent_strategy.callback(config, conn.params),
-         action_opts <- action_opts(conn),
-         {:ok, user} <-
-           register_or_sign_in_user(
-             strategy,
-             %{user_info: user, oauth_tokens: token},
-             action_opts
-           ) do
-      store_authentication_result(conn, {:ok, user})
-    else
-      nil ->
-        store_authentication_result(conn, {:error, nil})
-
+    # `session_key` is bound out here because bindings from a `with` head are not
+    # in scope in its `else`, so the error branch below could not otherwise clear
+    # the session.
+    case session_key(strategy) do
       {:error, reason} ->
         store_authentication_result(conn, {:error, reason})
+
+      {:ok, session_key} ->
+        with {:ok, config} <- config_for(strategy, %{conn: conn}),
+             session_params when is_map(session_params) <- get_session(conn, session_key),
+             config <- Keyword.put(config, :session_params, session_params),
+             {:ok, %{user: user, token: token}} <-
+               strategy.assent_strategy.callback(config, conn.params),
+             action_opts <- action_opts(conn),
+             {:ok, user} <-
+               register_or_sign_in_user(
+                 strategy,
+                 %{user_info: user, oauth_tokens: token},
+                 action_opts
+               ) do
+          conn
+          |> delete_session(session_key)
+          |> store_authentication_result({:ok, user})
+        else
+          # No session was present at all, so there is nothing to clear.
+          nil ->
+            store_authentication_result(conn, {:error, nil})
+
+          {:error, reason} ->
+            conn
+            |> delete_session(session_key)
+            |> store_authentication_result({:error, reason})
+        end
     end
   end
 
