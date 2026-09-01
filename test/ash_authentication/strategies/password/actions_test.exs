@@ -248,6 +248,37 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       refute log =~ ~r/password reset request for user/i
     end
 
+    test "it escapes control characters in the identity when the lookup fails" do
+      {:ok, strategy} = Info.strategy(Example.UserWithGenericPasswordReset, :password)
+
+      identity = "victim@example.test\n[error] forged log entry\0"
+
+      log =
+        capture_log([level: :warning], fn ->
+          assert :ok = Actions.reset_request(strategy, %{"email" => identity}, [])
+        end)
+
+      assert log =~ ~r/something went wrong resetting password/i
+
+      refute log
+             |> String.split("\n")
+             |> Enum.any?(&String.starts_with?(&1, "[error] forged log entry"))
+    end
+
+    test "it truncates an over-long identity when the lookup fails" do
+      {:ok, strategy} = Info.strategy(Example.UserWithGenericPasswordReset, :password)
+
+      identity = String.duplicate("a", 4096) <> "\0"
+
+      log =
+        capture_log([level: :warning], fn ->
+          assert :ok = Actions.reset_request(strategy, %{"email" => identity}, [])
+        end)
+
+      assert log =~ ~r/something went wrong resetting password/i
+      refute log =~ String.duplicate("a", 256)
+    end
+
     test "it returns an error when the strategy is not resettable" do
       {:ok, strategy} = Info.strategy(Example.User, :password)
       strategy = %{strategy | resettable: nil}
