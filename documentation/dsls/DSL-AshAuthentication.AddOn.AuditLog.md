@@ -43,7 +43,7 @@ compliance, security monitoring, and user activity analysis.
 
 Events are batched for performance and automatically expire based on configured retention periods.
 Sensitive fields are filtered by default but can be explicitly included when necessary.
-IP addresses can be transformed for privacy compliance using hashing, truncation, or exclusion.
+IP addresses can be hashed, truncated or excluded. See `AshAuthentication.AddOn.AuditLog.IpPrivacy`.
 
 
 
@@ -78,7 +78,7 @@ end
 | [`exclude_strategies`](#authentication-add_ons-audit_log-exclude_strategies){: #authentication-add_ons-audit_log-exclude_strategies } | `atom \| list(atom)` | `[]` | Explicitly ignore events from the named strategies. |
 | [`exclude_actions`](#authentication-add_ons-audit_log-exclude_actions){: #authentication-add_ons-audit_log-exclude_actions } | `atom \| list(atom)` | `[]` | Explicitly ignore events from the named actions. |
 | [`include_fields`](#authentication-add_ons-audit_log-include_fields){: #authentication-add_ons-audit_log-include_fields } | `atom \| list(atom)` | `[]` | Explicitly include named attributes and arguments in the audit log regardless of their sensitivity setting. |
-| [`ip_privacy_mode`](#authentication-add_ons-audit_log-ip_privacy_mode){: #authentication-add_ons-audit_log-ip_privacy_mode } | `:none \| :hash \| :truncate \| :exclude` | `:none` | How to handle IP addresses for privacy - :none (store as-is), :hash (SHA256), :truncate (network prefix), or :exclude (don't store). |
+| [`ip_privacy_mode`](#authentication-add_ons-audit_log-ip_privacy_mode){: #authentication-add_ons-audit_log-ip_privacy_mode } | `:none \| :hash \| :truncate \| :exclude` | `:none` | How to handle IP addresses for privacy - `:none` (store as-is), `:hash` (keyed digest), `:truncate` (network prefix), or `:exclude` (don't store). `:hash` requires a secret salt in `config :my_app, audit_log_ip_salt: ...`, where `:my_app` is the application which owns this resource. `AshAuthentication.Supervisor` refuses to start without one, because an IP address digest under a known salt can be reversed. Prefer `:truncate` or `:exclude` when you do not need to tell one address from another. See `AshAuthentication.AddOn.AuditLog.IpPrivacy`. |
 | [`ipv4_truncation_mask`](#authentication-add_ons-audit_log-ipv4_truncation_mask){: #authentication-add_ons-audit_log-ipv4_truncation_mask } | `pos_integer` | `24` | IPv4 network mask bits for truncation (0-32). Default 24 keeps first 3 octets. |
 | [`ipv6_truncation_mask`](#authentication-add_ons-audit_log-ipv6_truncation_mask){: #authentication-add_ons-audit_log-ipv6_truncation_mask } | `pos_integer` | `48` | IPv6 network prefix bits for truncation (0-128). Default 48 keeps first 3 segments. |
 

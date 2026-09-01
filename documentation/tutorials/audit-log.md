@@ -293,7 +293,7 @@ end
 
 ### Configure IP address privacy
 
-To comply with privacy regulations like GDPR, you can control how IP addresses are stored in audit logs:
+You can control how IP addresses are stored in audit logs:
 
 ```elixir
 authentication do
@@ -315,9 +315,11 @@ end
 Available IP privacy modes:
 
 - `:none` (default) - Store IP addresses as-is without modification
-- `:hash` - Hash IP addresses using SHA256 with application secret as salt
 - `:truncate` - Truncate IP addresses to a network prefix (e.g., 192.168.1.100 → 192.168.1.0/24)
 - `:exclude` - Don't store IP addresses at all
+- `:hash` - Store a keyed digest of the IP address. This mode needs a secret salt. See [Hashing IP addresses](#hashing-ip-addresses) below
+
+Use `:truncate` or `:exclude` when the audit log does not need to tell one address from another. Neither depends on a secret, so neither can be misconfigured.
 
 When using `:truncate` mode, the default masks are:
 - IPv4: `/24` - Keeps first 3 octets (e.g., 192.168.1.0/24)
@@ -326,12 +328,6 @@ When using `:truncate` mode, the default masks are:
 Example configurations:
 
 ```elixir
-# Hash all IP addresses for privacy
-audit_log do
-  audit_log_resource MyApp.Accounts.AuditLog
-  ip_privacy_mode :hash
-end
-
 # Truncate with more aggressive masking
 audit_log do
   audit_log_resource MyApp.Accounts.AuditLog
@@ -351,6 +347,63 @@ The IP privacy transformation applies to all IP-related fields in the request me
 - `remote_ip` - The direct client IP
 - `x_forwarded_for` - Proxy chain IPs
 - `forwarded` - Standard forwarded header with IP information
+
+### Hashing IP addresses
+
+`:hash` stores an HMAC-SHA256 digest of the address, truncated to 64 bits. It keeps
+each address distinct, so you can count the events which come from one address
+without storing the address itself.
+
+`:hash` needs a salt, and you must configure it under your own application name:
+
+```elixir
+config :my_app,
+  audit_log_ip_salt: System.fetch_env!("AUDIT_LOG_IP_SALT")
+```
+
+`mix ash_authentication.add_add_on.audit_log` provisions this for you: a distinct
+generated value in `dev.exs` and `test.exs`, and a `runtime.exs` entry for `:prod`
+which reads `AUDIT_LOG_IP_SALT` from the environment.
+
+The salt can be a string, or a `{module, function, arguments}` tuple which returns
+a string. AshAuthentication reads it from the application which owns the resource
+being audited, so each application in an umbrella has its own salt.
+
+```elixir
+# Hash all IP addresses. Requires the salt above
+audit_log do
+  audit_log_resource MyApp.Accounts.AuditLog
+  ip_privacy_mode :hash
+end
+```
+
+The salt must be secret and it must have high entropy. Generate one with
+`mix phx.gen.secret` or `Base.encode64(:crypto.strong_rand_bytes(32))`, then keep
+it in your secret store beside your other production secrets.
+
+There is no salt which is safe to share between deployments, and there is no safe
+default. IPv4 has only 2^32 addresses, so anybody who knows the salt can compute
+the digest of every address and recover the original from a stored digest. For
+this reason `:hash` fails closed: `AshAuthentication.Supervisor` refuses to start
+when a resource selects `:hash` and no salt is configured.
+
+Changing the salt changes every digest, so entries written before the change no
+longer correlate with entries written after it.
+
+#### Deprecated salt locations
+
+Earlier versions read the salt from this library's own application name. Both
+`config :ash_authentication, audit_log_ip_salt: ...` and
+`config :ash_authentication, secret: ...` still work, and are used when your own
+application configures nothing. Both are deprecated, both warn at start up, and
+both will be removed in a future release.
+
+Run `mix ash_authentication.upgrade` to move the setting into your application's
+namespace. Keep the value identical — a different salt rotates every stored digest.
+
+A digest is not anonymous data. It still singles out one subscriber, so it remains
+personal data under the GDPR and similar laws. Apply the same access controls,
+retention limits and deletion processes you would apply to raw addresses.
 
 ## Audit log attributes
 
@@ -373,7 +426,7 @@ Each audit log entry contains:
 ## Security considerations
 
 - Sensitive fields (passwords, tokens, API keys) are automatically filtered from audit logs unless explicitly included via `include_fields`
-- IP addresses can be hashed, truncated, or excluded for privacy compliance using the `ip_privacy_mode` option
+- IP addresses can be hashed, truncated or excluded with the `ip_privacy_mode` option. `:hash` needs a secret salt, and the digests it stores are still personal data. Prefer `:truncate` or `:exclude` where per-address granularity is not needed
 - Audit logs should be stored in a resilient data layer like PostgreSQL
 - Consider setting up alerts for suspicious patterns (multiple failed logins, etc.)
 - Ensure proper access controls on the audit log resource using Ash policies

@@ -175,20 +175,25 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
     |> Map.merge(Map.get(context, :ash_authentication_request, %{}))
   end
 
+  defp ip_privacy_opts(audit_strategy) do
+    %{
+      truncation_masks: %{
+        ipv4: Map.get(audit_strategy, :ipv4_truncation_mask, 24),
+        ipv6: Map.get(audit_strategy, :ipv6_truncation_mask, 48)
+      },
+      otp_app: Application.get_application(Map.get(audit_strategy, :resource))
+    }
+  end
+
   defp build_extra_data(context, request, input, audit_strategy) do
     # Apply IP privacy transformations to request data
     ip_privacy_mode = Map.get(audit_strategy, :ip_privacy_mode, :none)
-
-    truncation_masks = %{
-      ipv4: Map.get(audit_strategy, :ipv4_truncation_mask, 24),
-      ipv6: Map.get(audit_strategy, :ipv6_truncation_mask, 48)
-    }
 
     processed_request =
       IpPrivacy.apply_to_request(
         request,
         ip_privacy_mode,
-        %{truncation_masks: truncation_masks}
+        ip_privacy_opts(audit_strategy)
       )
 
     context

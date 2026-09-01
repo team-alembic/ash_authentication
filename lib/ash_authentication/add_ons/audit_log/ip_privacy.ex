@@ -6,11 +6,66 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacy do
   @moduledoc """
   Provides IP address privacy transformations for audit logging.
 
-  This module handles transforming IP addresses according to privacy settings
-  to help comply with privacy regulations like GDPR.
+  The audit log add-on transforms client IP addresses with this module before it
+  writes them. Select the transformation with the `ip_privacy_mode` option of the
+  `audit_log` add-on.
+
+  ## Modes
+
+  - `:none` - store the address unchanged. This is the default.
+  - `:truncate` - keep the network prefix of the address and drop the host part.
+  - `:exclude` - do not store the address at all.
+  - `:hash` - store a keyed digest of the address.
+
+  ## The `:hash` mode
+
+  `:hash` computes an HMAC-SHA256 of the address under a salt which you must
+  configure, then keeps the first 64 bits of the result:
+
+  ```elixir
+  config :my_app, audit_log_ip_salt: System.fetch_env!("AUDIT_LOG_IP_SALT")
+  ```
+
+  The salt can be a string, or a `{module, function, arguments}` tuple which
+  returns a string. The add-on reads it from the application which owns the
+  resource being audited, so each application in an umbrella has its own salt.
+
+  ## Deprecated salt locations
+
+  Earlier versions read the salt from this library's own application name. Both
+  `config :ash_authentication, audit_log_ip_salt: ...` and
+  `config :ash_authentication, secret: ...` still work, and are used when the
+  owning application configures nothing. Both are deprecated, both warn at start
+  up, and both will be removed in a future release.
+
+  Run `mix ash_authentication.upgrade` to move the setting. Keep the value
+  identical: a different salt changes every stored digest, so entries written
+  before the move stop correlating with entries written after it.
+
+  The salt must be secret and it must have high entropy. IPv4 has only 2^32
+  addresses, so anybody who knows the salt can compute the digest of every
+  address and reverse the stored values. There is no salt which is safe to share
+  between deployments, and there is no safe default. `:hash` therefore fails
+  closed: `AshAuthentication.Supervisor` refuses to start when a resource selects
+  `:hash` without a salt, and `hash_ip/1` raises for the same reason.
+
+  A digest still identifies one address, which lets you count the events which
+  come from it. Use `:truncate` or `:exclude` when you do not need that.
+  Neither depends on a secret, so neither can fail in this way.
+
+  Hashing is not anonymisation. A digest of an IP address remains personal data
+  under the GDPR and similar laws, because it still singles out one subscriber.
+  Protect the stored digests the same way you would protect the raw addresses.
   """
 
   import Bitwise
+  alias AshAuthentication.{AddOn.AuditLog, Info}
+  require Logger
+
+  @deprecated_salt_sources [
+    {:ash_authentication, :audit_log_ip_salt},
+    {:ash_authentication, :secret}
+  ]
 
   @doc """
   Apply privacy transformation to an IP address string.
@@ -18,14 +73,16 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacy do
   ## Options
   - `:mode` - The privacy mode (`:none`, `:hash`, `:truncate`, `:exclude`)
   - `:truncation_masks` - Map with `:ipv4` and `:ipv6` keys for truncation bits
+  - `:otp_app` - The application whose configuration holds the hash salt. Only
+    used by `:hash`.
   """
   @spec apply_privacy(String.t() | nil, atom(), map()) :: String.t() | nil
   def apply_privacy(nil, _mode, _opts), do: nil
   def apply_privacy(_ip, :exclude, _opts), do: nil
   def apply_privacy(ip, :none, _opts), do: ip
 
-  def apply_privacy(ip, :hash, _opts) when is_binary(ip) do
-    hash_ip(ip)
+  def apply_privacy(ip, :hash, opts) when is_binary(ip) do
+    hash_ip(ip, opts[:otp_app])
   end
 
   def apply_privacy(ip, :truncate, opts) when is_binary(ip) do
@@ -191,38 +248,153 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacy do
   end
 
   @doc """
-  Hash an IP address using SHA256.
+  Hash an IP address with the configured salt.
 
-  Uses the application's secret key base as salt for consistent hashing.
+  Computes an HMAC-SHA256 of the address and keeps the first 64 bits of the
+  digest.
+
+  Raises when no salt is configured. See the module documentation for the reason
+  and for the configuration keys.
   """
-  @spec hash_ip(String.t()) :: String.t()
-  def hash_ip(ip) when is_binary(ip) do
-    # Get a salt from application config or use a default
-    salt = get_hash_salt()
+  @spec hash_ip(String.t(), atom | nil) :: String.t() | nil
+  def hash_ip(ip, otp_app \\ nil)
 
-    :crypto.hash(:sha256, salt <> ip)
-    |> Base.encode16(case: :lower)
-    # Use first 16 chars for readability
-    |> String.slice(0..15)
-    |> then(&"hashed:#{&1}")
+  def hash_ip(ip, otp_app) when is_binary(ip) do
+    digest =
+      :hmac
+      |> :crypto.mac(:sha256, hash_salt!(otp_app), ip)
+      |> Base.encode16(case: :lower)
+      |> String.slice(0..15)
+
+    "hashed:#{digest}"
   end
 
-  def hash_ip(_), do: nil
+  def hash_ip(_ip, _otp_app), do: nil
 
-  defp get_hash_salt do
-    # Try to get from application config
-    case Application.get_env(:ash_authentication, :audit_log_ip_salt) do
-      nil ->
-        # Fall back to secret_key_base if available
-        case Application.get_env(:ash_authentication, :secret) do
-          nil -> "default-salt-change-in-production"
-          secret when is_binary(secret) -> secret
-          {module, fun, args} -> apply(module, fun, args)
-        end
+  @doc """
+  Check the given resources for an audit log add-on which hashes IP addresses
+  without a configured salt.
 
-      salt when is_binary(salt) ->
-        salt
+  Raises when it finds one. `AshAuthentication.Supervisor` calls this when it
+  starts, so a deployment which is missing the salt fails to boot instead of
+  writing reversible digests.
+
+  Warns when the salt only resolves from the deprecated `:ash_authentication`
+  configuration.
+  """
+  @spec verify_hash_salt!(atom | nil, [Ash.Resource.t()]) :: :ok
+  def verify_hash_salt!(otp_app, resources) do
+    case Enum.flat_map(resources, &hashing_add_ons/1) do
+      [] -> :ok
+      hashing -> verify_salt_for(otp_app, hashing)
     end
+  end
+
+  defp verify_salt_for(otp_app, hashing) do
+    case fetch_salt(otp_app) do
+      nil -> raise_missing_salt(otp_app, hashing)
+      {_salt, :ash_authentication, key} -> warn_deprecated_location(otp_app, key)
+      {_salt, _app, _key} -> :ok
+    end
+  end
+
+  defp raise_missing_salt(otp_app, offenders) do
+    raise """
+    #{missing_salt_message(otp_app)}
+
+    These audit log add-ons use `ip_privacy_mode :hash`:
+
+    #{Enum.map_join(offenders, "\n", &describe_add_on/1)}
+    """
+  end
+
+  defp describe_add_on({resource, name}),
+    do: "  * `#{inspect(resource)}`, add-on `#{inspect(name)}`"
+
+  defp warn_deprecated_location(otp_app, _key) when otp_app in [nil, :ash_authentication], do: :ok
+
+  defp warn_deprecated_location(otp_app, key) do
+    Logger.warning("""
+    Audit log IP hashing reads its salt from `config :ash_authentication, #{inspect(key)}`.
+
+    That location is deprecated. Configuration under this library's own
+    application name cannot vary per application in an umbrella. Move the salt to
+    your own application:
+
+        config #{inspect(otp_app)}, audit_log_ip_salt: <your existing salt>
+
+    `mix ash_authentication.upgrade` moves it for you.
+
+    Keep the value identical. A different salt changes every stored digest, so
+    entries written before the move stop correlating with entries written after.
+
+    The deprecated location still works, and will be removed in a future release.
+    """)
+
+    :ok
+  end
+
+  defp hashing_add_ons(resource) do
+    resource
+    |> Info.authentication_add_ons()
+    |> Enum.filter(&(is_struct(&1, AuditLog) and &1.ip_privacy_mode == :hash))
+    |> Enum.map(&{resource, &1.name})
+  end
+
+  defp hash_salt!(otp_app) do
+    case fetch_salt(otp_app) do
+      {salt, _app, _key} -> salt
+      nil -> raise missing_salt_message(otp_app)
+    end
+  end
+
+  defp fetch_salt(otp_app) do
+    otp_app
+    |> salt_sources()
+    |> Enum.find_value(fn {app, key} ->
+      case app |> Application.get_env(key) |> evaluate_salt() |> presence() do
+        nil -> nil
+        salt -> {salt, app, key}
+      end
+    end)
+  end
+
+  defp salt_sources(otp_app) when otp_app in [nil, :ash_authentication],
+    do: @deprecated_salt_sources
+
+  defp salt_sources(otp_app), do: [{otp_app, :audit_log_ip_salt} | @deprecated_salt_sources]
+
+  defp evaluate_salt({module, function, args})
+       when is_atom(module) and is_atom(function) and is_list(args),
+       do: apply(module, function, args)
+
+  defp evaluate_salt(salt), do: salt
+
+  defp presence(salt) when is_binary(salt) do
+    if String.trim(salt) == "", do: nil, else: salt
+  end
+
+  defp presence(_salt), do: nil
+
+  defp missing_salt_message(otp_app) do
+    """
+    No salt is configured for audit log IP address hashing.
+
+    The `:hash` IP privacy mode needs a secret, high entropy salt. Without one
+    the stored digests are reversible, because IPv4 has few enough addresses to
+    hash all of them.
+
+    Configure a salt:
+
+        config #{inspect(otp_app || :your_app)},
+          audit_log_ip_salt: System.fetch_env!("AUDIT_LOG_IP_SALT")
+
+    You can also supply a `{module, function, arguments}` tuple which returns the
+    salt.
+
+    Use `ip_privacy_mode :truncate` or `ip_privacy_mode :exclude` instead when
+    you do not need to tell one address from another. Neither needs a secret.
+    """
   end
 
   @doc """

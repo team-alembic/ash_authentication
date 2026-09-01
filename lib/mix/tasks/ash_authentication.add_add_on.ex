@@ -54,6 +54,12 @@ if Code.ensure_loaded?(Igniter) do
 
     #{@add_on_explanation}
 
+    The `audit_log` add-on also provisions `:audit_log_ip_salt` under your
+    application: a distinct generated value in `dev.exs` and `test.exs`, and a
+    `runtime.exs` entry for `:prod` which reads `AUDIT_LOG_IP_SALT` from the
+    environment. The salt is only used by `ip_privacy_mode :hash`, and is
+    provisioned so that selecting that mode later works without further setup.
+
     ## Example
 
     ```bash
@@ -200,9 +206,39 @@ if Code.ensure_loaded?(Igniter) do
           "AshAuthentication.AuditLogResource"
         ])
         |> add_audit_log_add_on(options[:user], audit_log_resource, options)
+        |> configure_ip_salt(otp_app)
         |> ensure_supervisor(otp_app)
       end
     end
+
+    defp configure_ip_salt(igniter, otp_app) do
+      igniter
+      |> Igniter.Project.Config.configure_new(
+        "dev.exs",
+        otp_app,
+        [:audit_log_ip_salt],
+        generate_salt()
+      )
+      |> Igniter.Project.Config.configure_new(
+        "test.exs",
+        otp_app,
+        [:audit_log_ip_salt],
+        generate_salt()
+      )
+      |> Igniter.Project.Config.configure_runtime_env(
+        :prod,
+        otp_app,
+        [:audit_log_ip_salt],
+        {:code,
+         Sourceror.parse_string!("""
+         System.get_env("AUDIT_LOG_IP_SALT") ||
+         raise "Missing environment variable `AUDIT_LOG_IP_SALT`!"
+         """)}
+      )
+    end
+
+    defp generate_salt,
+      do: :crypto.strong_rand_bytes(32) |> Base.encode64(padding: false) |> binary_part(0, 32)
 
     defp add_audit_log_add_on(igniter, user_resource, audit_log_resource, options) do
       include_fields = options[:include_fields] || []

@@ -22,7 +22,7 @@ defmodule AshAuthentication.AddOn.AuditLog.Dsl do
 
       Events are batched for performance and automatically expire based on configured retention periods.
       Sensitive fields are filtered by default but can be explicitly included when necessary.
-      IP addresses can be transformed for privacy compliance using hashing, truncation, or exclusion.
+      IP addresses can be hashed, truncated or excluded. See `AshAuthentication.AddOn.AuditLog.IpPrivacy`.
       """,
       examples: [
         """
@@ -80,8 +80,11 @@ defmodule AshAuthentication.AddOn.AuditLog.Dsl do
           type: {:in, [:none, :hash, :truncate, :exclude]},
           required: false,
           default: :none,
-          doc:
-            "How to handle IP addresses for privacy - :none (store as-is), :hash (SHA256), :truncate (network prefix), or :exclude (don't store)."
+          doc: """
+          How to handle IP addresses for privacy - `:none` (store as-is), `:hash` (keyed digest), `:truncate` (network prefix), or `:exclude` (don't store).
+
+          `:hash` requires a secret salt in `config :my_app, audit_log_ip_salt: ...`, where `:my_app` is the application which owns this resource. `AshAuthentication.Supervisor` refuses to start without one, because an IP address digest under a known salt can be reversed. Prefer `:truncate` or `:exclude` when you do not need to tell one address from another. See `AshAuthentication.AddOn.AuditLog.IpPrivacy`.
+          """
         ],
         ipv4_truncation_mask: [
           type: :pos_integer,
