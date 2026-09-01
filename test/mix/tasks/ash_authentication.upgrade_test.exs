@@ -980,6 +980,188 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
     end
   end
 
+  describe "move_audit_log_ip_salt/2" do
+    test "moves a string salt into the consuming application" do
+      test_project(
+        files: %{
+          "config/config.exs" => """
+          import Config
+          config :ash_authentication, audit_log_ip_salt: "the existing salt"
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_has_patch("config/config.exs", """
+      - |config :ash_authentication, audit_log_ip_salt: "the existing salt"
+      + |config :test, audit_log_ip_salt: "the existing salt"
+      """)
+    end
+
+    test "preserves a `System.fetch_env!/1` value" do
+      test_project(
+        files: %{
+          "config/runtime.exs" => """
+          import Config
+          config :ash_authentication, audit_log_ip_salt: System.fetch_env!("AUDIT_LOG_IP_SALT")
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_has_patch("config/runtime.exs", """
+      - |config :ash_authentication, audit_log_ip_salt: System.fetch_env!("AUDIT_LOG_IP_SALT")
+      + |config :test, audit_log_ip_salt: System.fetch_env!("AUDIT_LOG_IP_SALT")
+      """)
+    end
+
+    test "preserves a `{module, function, arguments}` value" do
+      test_project(
+        files: %{
+          "config/config.exs" => """
+          import Config
+          config :ash_authentication, audit_log_ip_salt: {MyApp.Secrets, :ip_salt, []}
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_has_patch("config/config.exs", """
+      + |config :test, audit_log_ip_salt: {MyApp.Secrets, :ip_salt, []}
+      """)
+    end
+
+    test "moves the three argument form" do
+      test_project(
+        files: %{
+          "config/config.exs" => """
+          import Config
+          config :ash_authentication, :audit_log_ip_salt, "the existing salt"
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_has_patch("config/config.exs", """
+      - |config :ash_authentication, :audit_log_ip_salt, "the existing salt"
+      + |config :test, :audit_log_ip_salt, "the existing salt"
+      """)
+    end
+
+    test "leaves other `:ash_authentication` keys behind" do
+      test_project(
+        files: %{
+          "config/config.exs" => """
+          import Config
+
+          config :ash_authentication,
+            audit_log_ip_salt: "the existing salt",
+            suppress_sensitive_field_warnings?: true
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_has_patch("config/config.exs", """
+      - |  audit_log_ip_salt: "the existing salt",
+      """)
+      |> assert_has_patch("config/config.exs", """
+      + |config :test, audit_log_ip_salt: "the existing salt"
+      """)
+    end
+
+    test "migrates every config file which sets the salt" do
+      igniter =
+        test_project(
+          files: %{
+            "config/dev.exs" => """
+            import Config
+            config :ash_authentication, audit_log_ip_salt: "the dev salt"
+            """,
+            "config/test.exs" => """
+            import Config
+            config :ash_authentication, audit_log_ip_salt: "the test salt"
+            """
+          }
+        )
+        |> Upgrade.move_audit_log_ip_salt([])
+
+      igniter
+      |> assert_has_patch("config/dev.exs", """
+      + |config :test, audit_log_ip_salt: "the dev salt"
+      """)
+      |> assert_has_patch("config/test.exs", """
+      + |config :test, audit_log_ip_salt: "the test salt"
+      """)
+    end
+
+    test "finds a salt nested inside a `config_env/0` branch" do
+      test_project(
+        files: %{
+          "config/runtime.exs" => """
+          import Config
+
+          if config_env() == :prod do
+            config :ash_authentication, audit_log_ip_salt: "the prod salt"
+          end
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_has_patch("config/runtime.exs", """
+      + |  config :test, audit_log_ip_salt: "the prod salt"
+      """)
+    end
+
+    test "does nothing when the consuming application already sets the salt" do
+      test_project(
+        files: %{
+          "config/config.exs" => """
+          import Config
+          config :ash_authentication, audit_log_ip_salt: "the old salt"
+          config :test, audit_log_ip_salt: "the new salt"
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_unchanged("config/config.exs")
+    end
+
+    test "does not move the salt when it is already nested in a `config_env/0` branch" do
+      test_project(
+        files: %{
+          "config/config.exs" => """
+          import Config
+          config :ash_authentication, audit_log_ip_salt: "the old salt"
+          """,
+          "config/runtime.exs" => """
+          import Config
+
+          if config_env() == :prod do
+            config :test, audit_log_ip_salt: "the new salt"
+          end
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_unchanged("config/config.exs")
+    end
+
+    test "leaves a `:secret` fallback alone" do
+      test_project(
+        files: %{
+          "config/config.exs" => """
+          import Config
+          config :ash_authentication, secret: "a secret used as the salt"
+          """
+        }
+      )
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_unchanged("config/config.exs")
+    end
+
+    test "does nothing when no salt is configured" do
+      test_project()
+      |> Upgrade.move_audit_log_ip_salt([])
+      |> assert_unchanged()
+    end
+  end
+
   defp oauth2_project(opts) do
     strategy = Keyword.fetch!(opts, :strategy)
     identity_resource? = Keyword.get(opts, :identity_resource?, false)
