@@ -10,8 +10,10 @@ defmodule AshAuthentication.Strategy.RememberMe.Token.Helpers do
 
   @doc """
   Revokes a remember me token.
+
+  Returns `:error` when the token maps to no authentication resource.
   """
-  @spec revoke_remember_me_token(String.t(), atom, keyword) :: :ok | {:error, any}
+  @spec revoke_remember_me_token(String.t(), atom, keyword) :: :ok | :error | {:error, any}
   def revoke_remember_me_token(token, otp_app, opts \\ [])
   def revoke_remember_me_token(nil, _otp_app, _opts), do: :ok
 

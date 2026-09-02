@@ -6,9 +6,12 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
   @moduledoc false
   use DataCase, async: true
 
+  alias Ash.Error.Unknown
+  alias AshAuthentication.Errors.InvalidToken
   alias AshAuthentication.Strategy.RememberMe
   alias AshAuthentication.Strategy.RememberMe.Plug.Helpers
   alias AshAuthentication.Strategy.RememberMe.Token
+  alias AshAuthentication.TokenResource
   alias Example.UserWithRememberMe
   alias Plug.Conn
 
@@ -165,6 +168,45 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
                  }
                }
              } = Helpers.delete_all_remember_me_cookies(conn, :ash_authentication)
+    end
+
+    test "revokes the token before it deletes the cookie" do
+      user = build_user_with_remember_me()
+      {:ok, token} = generate_remember_me_token(user)
+
+      conn = conn(:get, "/") |> put_req_cookie("remember_me", token)
+
+      refute TokenResource.token_revoked?(Example.Token, token)
+
+      assert %{resp_cookies: %{"remember_me" => %{max_age: 0}}} =
+               Helpers.delete_all_remember_me_cookies(conn, :ash_authentication)
+
+      assert TokenResource.token_revoked?(Example.Token, token)
+    end
+
+    test "deletes the cookie when another request revoked the token first" do
+      conn = conn(:get, "/") |> put_req_cookie("remember_me", "token1")
+
+      Token.Helpers
+      |> expect(:revoke_remember_me_token, fn "token1", :ash_authentication, _opts ->
+        {:error, InvalidToken.exception(type: :revocation)}
+      end)
+
+      assert %{resp_cookies: %{"remember_me" => %{max_age: 0}}} =
+               Helpers.delete_all_remember_me_cookies(conn, :ash_authentication)
+    end
+
+    test "raises when the revocation fails for any other reason" do
+      conn = conn(:get, "/") |> put_req_cookie("remember_me", "token1")
+
+      Token.Helpers
+      |> expect(:revoke_remember_me_token, fn "token1", :ash_authentication, _opts ->
+        {:error, Unknown.exception(errors: ["the database is unavailable"])}
+      end)
+
+      assert_raise CaseClauseError, fn ->
+        Helpers.delete_all_remember_me_cookies(conn, :ash_authentication)
+      end
     end
   end
 
