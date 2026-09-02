@@ -8,7 +8,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   """
 
   alias Ash.{Query, Resource}
-  alias AshAuthentication.{Info, Strategy.RememberMe}
+  alias AshAuthentication.{Errors.InvalidToken, Info, Strategy.RememberMe}
   alias Plug.Conn
 
   import AshAuthentication.Strategy.RememberMe.Token.Helpers
@@ -136,6 +136,10 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
 
   @doc """
   Delete all the remember me tokens from the response cookies.
+
+  Each token is revoked before its cookie is deleted. A concurrent revocation of
+  the same token is tolerated. Any other revocation failure raises, so that the
+  cookie is never removed while the token stays valid.
   """
   @spec delete_all_remember_me_cookies(Conn.t(), atom) :: Conn.t()
   def delete_all_remember_me_cookies(%{cookies: %Plug.Conn.Unfetched{}} = conn, otp_app) do
@@ -148,22 +152,34 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
     |> Enum.reduce(conn, fn cookie_name, conn ->
       token = Plug.Conn.get_cookies(conn) |> Map.get(cookie_name)
 
-      case token do
-        nil ->
-          conn
-
-        token ->
-          opts =
-            []
-            |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
-            |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
-
-          revoke_remember_me_token(token, otp_app, opts)
-          delete_remember_me_cookie(conn, cookie_name)
-      end
+      revoke_cookie_token_or_tolerate_race!(conn, token, otp_app)
 
       delete_remember_me_cookie(conn, cookie_name)
     end)
+  end
+
+  defp revoke_cookie_token_or_tolerate_race!(_conn, nil, _otp_app), do: :ok
+
+  # We still want unexpected errors to blow up — only the concurrent
+  # revocation race is an expected non-success during logout.
+  defp revoke_cookie_token_or_tolerate_race!(conn, token, otp_app) do
+    opts =
+      []
+      |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
+      |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
+
+    case revoke_remember_me_token(token, otp_app, opts) do
+      :ok ->
+        :ok
+
+      {:error, %InvalidToken{type: :revocation}} ->
+        :ok
+
+      # the cookie holds a token which no longer maps to a resource, so there
+      # is nothing to revoke
+      :error ->
+        :ok
+    end
   end
 
   @doc """
