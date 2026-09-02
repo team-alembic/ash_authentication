@@ -28,6 +28,8 @@ defmodule AshAuthenticationTest do
                Example.UserWithTokenRequired,
                Example.UserWithTotp,
                Example.UserWithTotpConfirmSetup,
+               Example.UserWithUnstoredSignInTokens,
+               Example.UserWithUnstoredWebAuthn,
                Example.UserWithRememberMe,
                Example.UserWithRegisterMagicLink,
                Example.UserWithWebAuthn,

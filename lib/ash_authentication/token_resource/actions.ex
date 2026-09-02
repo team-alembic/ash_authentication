@@ -7,9 +7,10 @@ defmodule AshAuthentication.TokenResource.Actions do
   The code interface for interacting with the token resource.
   """
 
-  alias Ash.{Changeset, Query, Resource}
+  alias Ash.{Changeset, Error.Changes.StaleRecord, Query, Resource}
   alias AshAuthentication.{Errors.InvalidToken, Jwt, TokenResource, TokenResource.Info}
 
+  import Ash.Expr
   import AshAuthentication.Utils
 
   require Logger
@@ -185,9 +186,13 @@ defmodule AshAuthentication.TokenResource.Actions do
       the revocation is performed atomically so that concurrent revocations of
       the same token cannot both succeed:
 
-        * `true` — the token row is expected to exist; it is locked with
-          `SELECT … FOR UPDATE` and its purpose flipped to `"revocation"`.
-          Returns `{:error, _}` if the row is already a revocation record.
+        * `true` — the token row is expected to exist. Its purpose is flipped to
+          `"revocation"` by a conditional upsert which only matches a row whose
+          purpose is not already `"revocation"`. The condition is evaluated by
+          the data layer as part of the write, so it is the serialisation point:
+          of several concurrent revocations exactly one matches a row and the
+          rest are surfaced as `{:error, _}`. Callers on a read action get this
+          guarantee too, because it does not depend on an enclosing transaction.
         * `false` — the token row is expected not to exist; a plain insert is
           performed. A concurrent duplicate results in a primary key conflict
           which is surfaced as `{:error, _}`.
@@ -219,7 +224,7 @@ defmodule AshAuthentication.TokenResource.Actions do
       |> Ash.create(domain: domain)
       |> case do
         {:ok, _} -> :ok
-        {:error, reason} -> {:error, translate_jti_conflict(reason)}
+        {:error, reason} -> {:error, translate_revocation_conflict(reason)}
       end
     end
   end
@@ -250,8 +255,46 @@ defmodule AshAuthentication.TokenResource.Actions do
           revoke_atomic_insert(resource, token, opts)
 
         _ ->
-          revoke_legacy_upsert(resource, token, opts)
+          revoke_conditional_upsert(resource, token, opts)
       end
+    end
+  end
+
+  defp revoke_conditional_upsert(resource, token, opts) do
+    with :ok <- assert_resource_has_extension(resource, TokenResource),
+         {:ok, domain} <- Info.token_domain(resource),
+         {:ok, revoke_token_action_name} <-
+           Info.token_revocation_revoke_token_action_name(resource) do
+      resource
+      |> Changeset.new()
+      |> Changeset.set_context(%{private: %{ash_authentication?: true}})
+      |> Changeset.for_create(
+        revoke_token_action_name,
+        %{"token" => token},
+        Keyword.merge(opts,
+          upsert?: true,
+          upsert_condition: expr(purpose != "revocation"),
+          return_skipped_upsert?: true
+        )
+      )
+      |> Ash.create(domain: domain)
+      |> case do
+        {:ok, record} -> revocation_result(record)
+        {:error, reason} -> {:error, translate_revocation_conflict(reason)}
+      end
+    end
+  end
+
+  # A single-use revocation that lost the race matches no row. Asking for the
+  # skipped upsert to be returned rather than raised keeps the outcome a value
+  # in both callers: on a read action there is no transaction to roll back, and
+  # on a create action the caller turns this into a changeset error, which
+  # aborts the action and rolls it back with a meaningful reason attached.
+  defp revocation_result(record) do
+    if Resource.get_metadata(record, :upsert_skipped) do
+      {:error, revocation_conflict()}
+    else
+      :ok
     end
   end
 
@@ -307,7 +350,7 @@ defmodule AshAuthentication.TokenResource.Actions do
       |> Ash.create(domain: domain)
       |> case do
         {:ok, _} -> :ok
-        {:error, reason} -> {:error, translate_jti_conflict(reason)}
+        {:error, reason} -> {:error, translate_revocation_conflict(reason)}
       end
     end
   end
@@ -360,20 +403,30 @@ defmodule AshAuthentication.TokenResource.Actions do
     end
   end
 
-  defp translate_jti_conflict(%Ash.Error.Invalid{errors: errors} = error) do
-    if Enum.any?(errors, &jti_unique_conflict?/1) do
-      InvalidToken.exception(type: :revocation, reason: "token has already been revoked")
+  # A revocation that lost a race is reported as a skipped upsert when the row
+  # already existed, and as a primary key conflict when it did not.
+  defp translate_revocation_conflict(%Ash.Error.Invalid{errors: errors} = error) do
+    if Enum.any?(errors, &lost_revocation_race?/1) do
+      revocation_conflict()
     else
       error
     end
   end
 
-  defp translate_jti_conflict(error), do: error
+  defp translate_revocation_conflict(error), do: error
 
-  defp jti_unique_conflict?(%Ash.Error.Changes.InvalidAttribute{field: :jti, private_vars: vars}),
-    do: Keyword.get(vars, :constraint_type) == :unique
+  defp revocation_conflict,
+    do: InvalidToken.exception(type: :revocation, reason: "token has already been revoked")
 
-  defp jti_unique_conflict?(_), do: false
+  defp lost_revocation_race?(%StaleRecord{}), do: true
+
+  defp lost_revocation_race?(%Ash.Error.Changes.InvalidAttribute{
+         field: :jti,
+         private_vars: vars
+       }),
+       do: Keyword.get(vars, :constraint_type) == :unique
+
+  defp lost_revocation_race?(_), do: false
 
   @doc """
   Store a token.

@@ -31,6 +31,9 @@ defmodule Example do
     resource Example.UserWithTokenRequired
     resource Example.UserWithTotp
     resource Example.UserWithTotpConfirmSetup
+    resource Example.UserWithUnstoredSignInTokens
+    resource Example.UserWithUnstoredWebAuthn
+    resource Example.UnstoredWebAuthnCredential
     resource Example.UserWithWildcardAndExclusions
     resource Example.UserWithExtraClaims
     resource Example.RecoveryCode

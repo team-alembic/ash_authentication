@@ -12,7 +12,7 @@ config :ash_authentication, Example.Repo,
   hostname: System.get_env("DATABASE_HOST", "localhost"),
   database: "ash_authentication_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10
+  pool_size: 30
 
 config :bcrypt_elixir, :log_rounds, 4
 config :argon2_elixir, t_cost: 1, m_cost: 8
