@@ -81,6 +81,45 @@ defmodule AshAuthentication.Strategy.MagicLinkTest do
               }} = MagicLink.Actions.sign_in(strategy, %{"token" => token <> "a"}, [])
     end
 
+    test "an already revoked token cannot register a user" do
+      strategy =
+        Info.strategy!(Example.UserWithRegisterMagicLink, :magic_link)
+
+      log =
+        capture_log(fn ->
+          MagicLink.Actions.request(
+            strategy,
+            %{"email" => "raced@example.com"},
+            []
+          )
+        end)
+
+      token =
+        log
+        |> String.split("Magic link request for raced@example.com, token \"", parts: 2)
+        |> Enum.at(1)
+        |> String.split("\"", parts: 2)
+        |> Enum.at(0)
+
+      {:ok, token_resource} =
+        Info.authentication_tokens_token_resource(Example.UserWithRegisterMagicLink)
+
+      :ok =
+        AshAuthentication.TokenResource.Actions.revoke(token_resource, token, single_use?: true)
+
+      assert {:error, _} = MagicLink.Actions.sign_in(strategy, %{"token" => token}, [])
+
+      # Verification rejects the revoked token, so the upsert never runs.
+      import Ecto.Query
+
+      assert Example.Repo.aggregate(
+               from(u in "user_with_register_magic_link",
+                 where: u.email == "raced@example.com"
+               ),
+               :count
+             ) == 0
+    end
+
     test "cannot upsert against an unconfirmed user by default" do
       strategy =
         Info.strategy!(Example.UserWithRegisterMagicLink, :magic_link)

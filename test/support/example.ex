@@ -26,6 +26,7 @@ defmodule Example do
     resource Example.UserWithRenamedAuditLog
     resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired
+    resource Example.UserWithUnstoredSignInTokens
     resource Example.UserWithWildcardAndExclusions
   end
 

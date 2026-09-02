@@ -50,33 +50,51 @@ defmodule AshAuthentication.Strategy.MagicLink.SignInPreparation do
             Query.do_filter(query, false)
         end
       end)
-      |> Query.after_action(fn
-        query, [record] ->
-          if strategy.single_use_token? do
-            token_resource = Info.authentication_tokens_token_resource!(query.resource)
-            :ok = TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context))
-          end
-
-          extra_claims =
-            case strategy.extra_claims do
-              nil -> %{}
-              fun when is_function(fun, 4) -> fun.(record, strategy, claims, context)
-            end
-
-          {:ok, token, _claims} =
-            Jwt.token_for_user(record, extra_claims, Ash.Context.to_opts(context))
-
-          {:ok, [Resource.put_metadata(record, :token, token)]}
-
-        _query, [] ->
-          {:ok, []}
-      end)
+      |> Query.after_action(&handle_sign_in_result(&1, &2, strategy, claims, token, context))
     else
       _error ->
         query
         |> Query.do_filter(false)
         |> maybe_add_error_on_invalid_token()
     end
+  end
+
+  defp handle_sign_in_result(query, [record], strategy, claims, token, context) do
+    case revoke_single_use_token(strategy, query, token, context) do
+      :ok -> generate_token_for_record(record, strategy, claims, context)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp handle_sign_in_result(_query, [], _strategy, _claims, _token, _context) do
+    {:ok, []}
+  end
+
+  defp revoke_single_use_token(strategy, query, token, context) do
+    if strategy.single_use_token? do
+      token_resource = Info.authentication_tokens_token_resource!(query.resource)
+
+      opts =
+        context
+        |> Ash.Context.to_opts()
+        |> Keyword.put(:single_use?, true)
+
+      TokenResource.revoke(token_resource, token, opts)
+    else
+      :ok
+    end
+  end
+
+  defp generate_token_for_record(record, strategy, claims, context) do
+    extra_claims =
+      case strategy.extra_claims do
+        nil -> %{}
+        fun when is_function(fun, 4) -> fun.(record, strategy, claims, context)
+      end
+
+    {:ok, token, _claims} = Jwt.token_for_user(record, extra_claims, Ash.Context.to_opts(context))
+
+    {:ok, [Resource.put_metadata(record, :token, token)]}
   end
 
   defp maybe_add_error_on_invalid_token(query) do

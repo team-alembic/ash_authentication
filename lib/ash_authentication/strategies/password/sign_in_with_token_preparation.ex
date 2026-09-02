@@ -75,7 +75,14 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
     token_resource = Info.authentication_tokens_token_resource!(strategy.resource)
     token = Query.get_argument(query, :token)
 
-    case TokenResource.revoke(token_resource, token, Ash.Context.to_opts(context)) do
+    # A sign-in token grants a session to whoever redeems it, so the revocation
+    # must be exclusive rather than idempotent.
+    opts =
+      context
+      |> Ash.Context.to_opts()
+      |> Keyword.put(:single_use?, true)
+
+    case TokenResource.revoke(token_resource, token, opts) do
       :ok ->
         {:ok, [user]}
 

@@ -7,9 +7,10 @@ defmodule AshAuthentication.TokenResource.Actions do
   The code interface for interacting with the token resource.
   """
 
-  alias Ash.{Changeset, Query, Resource}
-  alias AshAuthentication.{TokenResource, TokenResource.Info}
+  alias Ash.{Changeset, Error.Changes.StaleRecord, Query, Resource}
+  alias AshAuthentication.{Errors.InvalidToken, TokenResource, TokenResource.Info}
 
+  import Ash.Expr
   import AshAuthentication.Utils
 
   require Logger
@@ -258,9 +259,29 @@ defmodule AshAuthentication.TokenResource.Actions do
 
   Extracts the JTI from the provided token and uses it to generate a revocation
   record.
+
+  ## Options
+
+    * `:single_use?` — set this when the token grants something that exactly one
+      caller may claim, such as a single-use magic link. The revocation is then
+      performed by a conditional upsert which only matches a row whose purpose
+      is not already `"revocation"`. The data layer evaluates the condition as
+      part of the write, so it is the serialisation point: of several concurrent
+      revocations exactly one matches a row and the rest get
+      `{:error, %AshAuthentication.Errors.InvalidToken{type: :revocation}}`.
+      Callers on a read action get this guarantee too, because it does not
+      depend on an enclosing transaction.
+
+      Defaults to `false`, which performs an unconditional upsert. That is
+      idempotent rather than exclusive: revoking an already revoked token
+      returns `:ok`. Leave it unset where losing the race is harmless, such as
+      signing out, where the winner revokes the token and the wanted end state
+      is reached either way.
   """
   @spec revoke(Resource.t(), String.t(), keyword) :: :ok | {:error, any}
   def revoke(resource, token, opts \\ []) do
+    {single_use?, opts} = Keyword.pop(opts, :single_use?, false)
+
     with :ok <- assert_resource_has_extension(resource, TokenResource),
          {:ok, domain} <- Info.token_domain(resource),
          {:ok, revoke_token_action_name} <-
@@ -275,15 +296,50 @@ defmodule AshAuthentication.TokenResource.Actions do
       |> Changeset.for_create(
         revoke_token_action_name,
         %{"token" => token},
-        Keyword.merge(opts, upsert?: true)
+        Keyword.merge(opts, revocation_opts(single_use?))
       )
       |> Ash.create(domain: domain)
       |> case do
-        {:ok, _} -> :ok
-        {:error, reason} -> {:error, reason}
+        {:ok, record} -> revocation_result(record)
+        {:error, reason} -> {:error, translate_revocation_conflict(reason)}
       end
     end
   end
+
+  defp revocation_opts(false), do: [upsert?: true]
+
+  defp revocation_opts(true),
+    do: [
+      upsert?: true,
+      upsert_condition: expr(purpose != "revocation"),
+      return_skipped_upsert?: true
+    ]
+
+  # A single-use revocation that lost the race matches no row. Asking for the
+  # skipped upsert to be returned rather than raised keeps the outcome a value
+  # in both callers: on a read action there is no transaction to roll back, and
+  # on a create action the caller turns this into a changeset error, which
+  # aborts the action and rolls it back with a meaningful reason attached.
+  defp revocation_result(record) do
+    if Resource.get_metadata(record, :upsert_skipped) do
+      {:error, revocation_conflict()}
+    else
+      :ok
+    end
+  end
+
+  defp translate_revocation_conflict(%Ash.Error.Invalid{errors: errors} = error) do
+    if Enum.any?(errors, &match?(%StaleRecord{}, &1)) do
+      revocation_conflict()
+    else
+      error
+    end
+  end
+
+  defp translate_revocation_conflict(error), do: error
+
+  defp revocation_conflict,
+    do: InvalidToken.exception(type: :revocation, reason: "token has already been revoked")
 
   @doc """
   Revoke a token by JTI.
