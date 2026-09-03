@@ -103,6 +103,19 @@ defmodule AshAuthentication.Plug.HelpersTest do
       assert conn.assigns.current_user.id == user.id
     end
 
+    test "when token presence is not required and the session's jti has been revoked it doesn't load the subject",
+         %{conn: conn} do
+      user = build_user()
+
+      conn = Helpers.store_in_session(conn, user)
+
+      assert Helpers.retrieve_from_session(conn, :ash_authentication).assigns.current_user
+
+      Helpers.revoke_session_tokens(conn, :ash_authentication)
+
+      refute Helpers.retrieve_from_session(conn, :ash_authentication).assigns.current_user
+    end
+
     test "when token presence is required and the token is present in the token resource it loads the token's subject",
          %{conn: conn} do
       user = build_user_with_token_required()
