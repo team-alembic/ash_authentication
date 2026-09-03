@@ -82,7 +82,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> AshAuthentication.authenticated_resources()
     |> Stream.map(&{&1, Info.authentication_options(&1)})
     |> Enum.reduce(conn, fn {resource, options}, conn ->
-      session_key = session_key(options.subject_name)
+      session_key = subject_session_key(resource, options.subject_name)
 
       if Conn.get_session(conn, session_key) do
         # Already signed in
@@ -114,8 +114,9 @@ defmodule AshAuthentication.Plug.Helpers do
     require_token? =
       Info.authentication_tokens_require_token_presence_for_authentication?(resource)
 
+    session_key = subject_session_key(resource, options.subject_name)
+
     if require_token? do
-      session_key = session_key(options.subject_name)
       token_resource = Info.authentication_tokens_token_resource!(resource)
 
       with token when is_binary(token) <- Map.get(session, session_key),
@@ -134,8 +135,6 @@ defmodule AshAuthentication.Plug.Helpers do
         _ -> :error
       end
     else
-      session_key = to_string(options.subject_name)
-
       with subject when is_binary(subject) <- Map.get(session, session_key),
            {:ok, jti, subject} <- split_identifier(subject, resource),
            :ok <- validate_session_jti(resource, jti, opts),
@@ -186,12 +185,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
   defp handle_session_auth_result(conn, :error, resource, options) do
     current_subject_name = current_subject_name(options.subject_name)
-
-    require_token? =
-      Info.authentication_tokens_require_token_presence_for_authentication?(resource)
-
-    session_key =
-      if require_token?, do: session_key(options.subject_name), else: options.subject_name
+    session_key = subject_session_key(resource, options.subject_name)
 
     conn
     |> Conn.assign(current_subject_name, nil)
@@ -483,6 +477,18 @@ defmodule AshAuthentication.Plug.Helpers do
     do: String.to_atom("current_#{subject_name}_token_record")
 
   defp session_key(subject_name), do: "#{subject_name}_token"
+
+  # The key `store_in_session/2` writes the subject under. When token presence is
+  # required it stores the token itself under `session_key/1`; otherwise it stores
+  # the subject under the bare subject name. Every reader must agree with that
+  # choice, or it looks up a key which is never written.
+  defp subject_session_key(resource, subject_name) do
+    if Info.authentication_tokens_require_token_presence_for_authentication?(resource) do
+      session_key(subject_name)
+    else
+      to_string(subject_name)
+    end
+  end
 
   defp split_identifier(subject, resource) do
     if Info.authentication_session_identifier!(resource) == :jti do

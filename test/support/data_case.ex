@@ -175,8 +175,36 @@ defmodule DataCase do
     end)
   end
 
+  @doc "User with remember me strategy and no required token presence factory"
+  @spec build_user_with_remember_me_token_optional(keyword) ::
+          Example.UserWithRememberMeTokenOptional.t() | no_return
+  def build_user_with_remember_me_token_optional(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:username, "test_user_#{System.unique_integer([:positive])}")
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithRememberMeTokenOptional
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
   @doc "Generate a remember me token for a user"
-  @spec generate_remember_me_token(Example.UserWithRememberMe.t()) :: {:ok, String.t()} | :error
+  @spec generate_remember_me_token(
+          Example.UserWithRememberMe.t()
+          | Example.UserWithRememberMeTokenOptional.t()
+        ) :: {:ok, String.t()} | :error
   def generate_remember_me_token(user) do
     claims = %{"purpose" => "remember_me"}
 

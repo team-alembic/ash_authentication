@@ -24,6 +24,7 @@ defmodule AshAuthenticationTest do
                Example.UserWithUnstoredSignInTokens,
                Example.UserWithRememberMe,
                Example.UserWithOAuthAuditLog,
+               Example.UserWithRememberMeTokenOptional,
                Example.UserWithRegisterMagicLink,
                Example.UserWithWildcardAndExclusions,
                ExampleMultiTenant.User,

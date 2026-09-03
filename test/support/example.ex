@@ -23,6 +23,7 @@ defmodule Example do
     resource Example.UserWithGenericPasswordReset
     resource Example.UserWithRegisterMagicLink
     resource Example.UserWithRememberMe
+    resource Example.UserWithRememberMeTokenOptional
     resource Example.UserWithRenamedAuditLog
     resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired

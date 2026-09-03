@@ -597,6 +597,32 @@ defmodule AshAuthentication.Plug.HelpersTest do
       assert conn.private.plug_session["user_with_remember_me_token"]
     end
 
+    test "when token presence is not required, an existing session stops it signing in again" do
+      user = build_user_with_remember_me_token_optional()
+      {:ok, remember_me_token} = generate_remember_me_token(user)
+
+      first =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("remember_me_token_optional", remember_me_token)
+        |> SessionPipeline.call([])
+        |> Helpers.sign_in_using_remember_me(:ash_authentication)
+
+      assert first.private.plug_session["user_with_remember_me_token_optional"]
+
+      second =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("remember_me_token_optional", remember_me_token)
+        |> SessionPipeline.call([])
+        |> copy_session_from(first)
+        |> Helpers.sign_in_using_remember_me(:ash_authentication)
+
+      # A second sign-in mints a fresh token, so an unchanged session proves the
+      # guard stopped the remember-me sign-in from running again.
+      assert second.private.plug_session == first.private.plug_session
+    end
+
     test "it handles multiple authenticated resources", %{conn: conn} do
       # This test would require multiple resources with remember me strategies
       # For now, we'll test that it doesn't crash with the existing setup
@@ -605,5 +631,11 @@ defmodule AshAuthentication.Plug.HelpersTest do
       # Should not crash and should not have any assigns set
       refute conn.private.plug_session["user_with_remember_me"]
     end
+  end
+
+  defp copy_session_from(conn, source) do
+    Enum.reduce(source.private.plug_session, conn, fn {key, value}, conn ->
+      Conn.put_session(conn, key, value)
+    end)
   end
 end
