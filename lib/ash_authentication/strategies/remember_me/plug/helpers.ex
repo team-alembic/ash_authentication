@@ -87,9 +87,9 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   @remember_me_cookie_options [
     # cookie is only readable by HTTP/S
     http_only: true,
-    # only send the cookie over HTTPS, except in development
-    # otherwise Safari will block the cookie
-    secure: Mix.env() != :dev,
+    # always marked `Secure`, so browsers only send the cookie over HTTPS
+    # remember-me therefore does not work over plain `http://` in local development
+    secure: true,
     # prevents the cookie from being sent with cross-site requests
     same_site: "Lax"
   ]
