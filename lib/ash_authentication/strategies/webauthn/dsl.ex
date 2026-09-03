@@ -146,9 +146,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         ],
         require_identity?: [
           type: :boolean,
-          required: true,
+          default: true,
           doc: """
-          Must be set explicitly. There is no default; the developer chooses the mode per resource.
+          Defaults to `true` (identity-required mode). Set to `false` for
+          passkey-only mode.
 
           When `true` (identity-required mode), the user resource must expose an
           `identity_field` attribute (default `:email`) that is writable, public,
