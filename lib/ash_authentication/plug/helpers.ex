@@ -13,10 +13,19 @@ defmodule AshAuthentication.Plug.Helpers do
 
   @doc """
   Store the user in the connections' session.
+
+  The session is renewed before the subject is written. Renewing issues a new
+  session identifier and carries the existing session contents across, so values
+  such as `return_to` and the flash survive. Without it the identifier the
+  visitor arrived with would continue into their authenticated session, and an
+  identifier an attacker planted in the visitor's browser beforehand would become
+  an authenticated one.
   """
   @spec store_in_session(Conn.t(), Resource.record()) :: Conn.t()
   def store_in_session(conn, user) when is_struct(user) do
     subject_name = Info.authentication_subject_name!(user.__struct__)
+
+    conn = Conn.configure_session(conn, renew: true)
 
     if Info.authentication_tokens_require_token_presence_for_authentication?(user.__struct__) do
       Conn.put_session(conn, session_key(subject_name), user.__metadata__.token)
