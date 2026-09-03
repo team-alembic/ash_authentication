@@ -17,10 +17,19 @@ defmodule AshAuthentication.Plug.Helpers do
   Stores both the session identifier (token, jti:subject, or subject) and any
   authentication metadata from the user. The metadata is stored separately and
   will be restored onto the user when loading from the session.
+
+  The session is renewed before the subject is written. Renewing issues a new
+  session identifier and carries the existing session contents across, so values
+  such as `return_to` and the flash survive. Without it the identifier the
+  visitor arrived with would continue into their authenticated session, and an
+  identifier an attacker planted in the visitor's browser beforehand would become
+  an authenticated one.
   """
   @spec store_in_session(Conn.t(), Resource.Record.t()) :: Conn.t()
   def store_in_session(conn, user) when is_struct(user) do
     subject_name = Info.authentication_subject_name!(user.__struct__)
+
+    conn = Conn.configure_session(conn, renew: true)
 
     conn =
       cond do
