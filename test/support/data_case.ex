@@ -19,6 +19,7 @@ defmodule DataCase do
   """
 
   use ExUnit.CaseTemplate
+  alias AshAuthentication.Jwt.Config, as: JwtConfig
   alias Ecto.Adapters.SQL.Sandbox
 
   using do
@@ -198,6 +199,27 @@ defmodule DataCase do
     |> Enum.reduce(user, fn {field, value}, user ->
       Ash.Resource.put_metadata(user, field, value)
     end)
+  end
+
+  @doc """
+  Sign a token for `resource` with the `sub` claim set verbatim.
+
+  `AshAuthentication.Jwt.token_for_user/4` always overwrites `sub` with the
+  canonical `AshAuthentication.user_to_subject/1` output, so no code path in the
+  library can mint a token whose subject names a non-primary-key field or
+  carries an empty query. This helper signs one directly so that tests can
+  present such a token to a decoder.
+  """
+  @spec sign_token_with_subject(module, String.t(), map) :: String.t()
+  def sign_token_with_subject(resource, subject, extra_claims \\ %{}) do
+    {:ok, token, _claims} =
+      Joken.generate_and_sign(
+        JwtConfig.default_claims(resource, []),
+        Map.put(extra_claims, "sub", subject),
+        JwtConfig.token_signer(resource, [], %{})
+      )
+
+    token
   end
 
   @doc "Generate a remember me token for a user"

@@ -243,6 +243,60 @@ defmodule AshAuthentication do
   end
 
   @doc ~S"""
+  Given a subject, extract and validate the primary key it names.
+
+  A subject carries two pieces of information and both halves are checked: the
+  path must equal the resource's subject name, and the query must contain
+  exactly the resource's primary key fields. A subject whose query is empty, or
+  which names any other field, is rejected.
+
+  Returns the primary key as a list of string key/value pairs, ready to pass to
+  `Ash.Query.filter/2`.
+
+      iex> %{id: user_id} = build_user()
+      ...> {:ok, [{"id", ^user_id}]} = subject_to_primary_key("user?id=#{user_id}", Example.User)
+
+  """
+  @spec subject_to_primary_key(subject | URI.t(), Resource.t()) ::
+          {:ok, [{String.t(), String.t()}]} | {:error, String.t()}
+  def subject_to_primary_key(subject, resource) when is_binary(subject),
+    do: subject |> URI.parse() |> subject_to_primary_key(resource)
+
+  def subject_to_primary_key(%URI{path: subject_name, query: query}, resource) do
+    case Info.authentication_subject_name(resource) do
+      {:ok, resource_subject_name} ->
+        validate_subject_name(subject_name, to_string(resource_subject_name), query, resource)
+
+      _ ->
+        {:error, "The resource does not support authentication"}
+    end
+  end
+
+  defp validate_subject_name(subject_name, subject_name, query, resource) do
+    query
+    |> to_string()
+    |> URI.decode_query()
+    |> validate_primary_key(resource)
+  end
+
+  defp validate_subject_name(_subject_name, _resource_subject_name, _query, _resource),
+    do: {:error, "The subject name does not match the resource"}
+
+  defp validate_primary_key(primary_key, _resource) when map_size(primary_key) == 0,
+    do: {:error, "The subject does not contain a primary key"}
+
+  defp validate_primary_key(primary_key, resource) do
+    expected = MapSet.new(Resource.Info.primary_key(resource), &to_string/1)
+    provided = MapSet.new(Map.keys(primary_key))
+
+    if MapSet.equal?(expected, provided) do
+      {:ok, Enum.to_list(primary_key)}
+    else
+      {:error, "The subject does not contain the correct primary key fields"}
+    end
+  end
+
+  @doc ~S"""
   Given a subject string, attempt to retrieve a user record.
 
       iex> %{id: user_id} = build_user()
@@ -293,19 +347,9 @@ defmodule AshAuthentication do
   def do_subject_to_user(subject, resource, options) when is_binary(subject),
     do: subject |> URI.parse() |> subject_to_user(resource, options)
 
-  def do_subject_to_user(
-        %URI{path: subject_name, query: primary_key} = _subject,
-        resource,
-        options
-      ) do
-    with {:ok, resource_subject_name} <- Info.authentication_subject_name(resource),
-         ^subject_name <- to_string(resource_subject_name),
+  def do_subject_to_user(%URI{} = subject, resource, options) do
+    with {:ok, primary_key} <- subject_to_primary_key(subject, resource),
          {:ok, action_name} <- Info.authentication_get_by_subject_action_name(resource) do
-      primary_key =
-        primary_key
-        |> URI.decode_query()
-        |> Enum.to_list()
-
       options =
         options
         |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(resource) end)
