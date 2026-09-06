@@ -74,8 +74,8 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
     end
 
     for phase <- ~w[sign_in_with_token]a do
-      test "it is get for the #{phase} phase" do
-        assert :get ==
+      test "it accepts both get and post for the #{phase} phase" do
+        assert [:get, :post] ==
                  %Password{}
                  |> Strategy.method_for_phase(unquote(phase))
       end
