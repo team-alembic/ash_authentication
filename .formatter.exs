@@ -140,6 +140,7 @@ spark_locals_without_parens = [
   sign_in_action_name: 1,
   sign_in_enabled?: 1,
   sign_in_token_lifetime: 1,
+  sign_in_token_via_post?: 1,
   sign_in_tokens_enabled?: 1,
   sign_in_with_token_action_name: 1,
   signing_algorithm: 1,

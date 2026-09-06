@@ -79,6 +79,32 @@ defmodule AshAuthentication.Strategy.Password.StrategyTest do
                  %Password{}
                  |> Strategy.method_for_phase(unquote(phase))
       end
+
+      test "it is post for the #{phase} phase when sign_in_token_via_post? is set" do
+        assert :post ==
+                 %Password{sign_in_token_via_post?: true}
+                 |> Strategy.method_for_phase(unquote(phase))
+      end
+    end
+
+    test "it returns a bare verb for every combination of the sign in token options" do
+      for sign_in_tokens_enabled? <- [true, false],
+          sign_in_token_via_post? <- [true, false],
+          phase <- ~w[register sign_in reset_request reset sign_in_with_token]a do
+        strategy = %Password{
+          sign_in_tokens_enabled?: sign_in_tokens_enabled?,
+          sign_in_token_via_post?: sign_in_token_via_post?
+        }
+
+        method = Strategy.method_for_phase(strategy, phase)
+
+        assert method in [:get, :post],
+               """
+               expected :get or :post for the #{phase} phase with \
+               sign_in_tokens_enabled?: #{sign_in_tokens_enabled?} and \
+               sign_in_token_via_post?: #{sign_in_token_via_post?}, got #{inspect(method)}
+               """
+      end
     end
   end
 

@@ -130,6 +130,30 @@ defmodule AshAuthentication.Strategy.Password.Dsl do
           doc:
             "A lifetime for which a generated sign in token will be valid, if `sign_in_tokens_enabled?`. Unit defaults to `:seconds`."
         ],
+        sign_in_token_via_post?: [
+          type: :boolean,
+          doc: """
+          Hand the sign in token to the `sign_in_with_token` route in a POST body rather than a query string.
+
+          The sign in token is a live credential. Presenting it establishes an authenticated session.
+          A query string is recorded by reverse proxies, CDNs, load balancers, full-URL telemetry and
+          browser history. A POST body is recorded by none of those. Enable this so that the token is
+          not written to any of them.
+
+          This option replaces the GET route with a POST route. It does not add a POST route beside
+          the GET one. You must therefore run a version of `ash_authentication_phoenix` that posts the
+          token from a form. An older version redirects the browser to the GET route, which no longer
+          exists, so sign in fails. Upgrade `ash_authentication_phoenix` first, then set this option.
+
+          The option has no effect unless `sign_in_tokens_enabled?` is also set. It defaults to
+          `false`, so the route behaviour does not change until you enable it.
+
+          The 5.0 line does not have this option. There the phase accepts GET and POST together, and
+          no configuration is needed.
+          """,
+          required: false,
+          default: false
+        ],
         sign_in_with_token_action_name: [
           type: :atom,
           doc: "The name to use for the sign in action.",
