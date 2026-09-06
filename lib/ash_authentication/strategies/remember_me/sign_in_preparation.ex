@@ -125,30 +125,8 @@ defmodule AshAuthentication.Strategy.RememberMe.SignInPreparation do
   defp verify_token_purpose(%{"purpose" => "remember_me"}), do: :ok
   defp verify_token_purpose(_), do: {:error, "The token purpose is not valid"}
 
-  defp extract_primary_keys_from_subject(%{"sub" => sub}, resource) do
-    primary_key_fields =
-      resource
-      |> Resource.Info.primary_key()
-      |> Enum.map(&to_string/1)
-      |> MapSet.new()
-
-    key_parts =
-      sub
-      |> URI.parse()
-      |> Map.get(:query, "")
-      |> URI.decode_query()
-
-    provided_key_fields =
-      key_parts
-      |> Map.keys()
-      |> MapSet.new()
-
-    if MapSet.equal?(primary_key_fields, provided_key_fields) do
-      {:ok, Enum.to_list(key_parts)}
-    else
-      {:error, "token subject doesn't contain correct keys"}
-    end
-  end
+  defp extract_primary_keys_from_subject(%{"sub" => sub}, resource),
+    do: AshAuthentication.subject_to_primary_key(sub, resource)
 
   defp extract_primary_keys_from_subject(_, _),
     do: {:error, "The token does not contain a subject"}
