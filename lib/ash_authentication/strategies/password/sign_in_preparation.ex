@@ -18,7 +18,14 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   """
   use Ash.Resource.Preparation
   alias Ash.{Error.Unknown, Query, Resource.Preparation}
-  alias AshAuthentication.{Errors.AuthenticationFailed, Errors.UnconfirmedUser, Info, Jwt}
+
+  alias AshAuthentication.{
+    Errors.AuthenticationFailed,
+    Info,
+    Jwt,
+    Strategy.Password.RequireConfirmed
+  }
+
   require Ash.Query
 
   @doc false
@@ -42,6 +49,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
 
     query
     |> check_sign_in_token_configuration(strategy)
+    |> RequireConfirmed.add_calculation(strategy)
     |> Query.before_action(fn query ->
       Ash.Query.ensure_selected(query, [strategy.hashed_password_field])
     end)
@@ -119,20 +127,10 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
   end
 
   defp validate_user_confirmed(strategy, record, query) do
-    if user_confirmed_if_needed(record, strategy) do
+    if RequireConfirmed.confirmed?(record, strategy) do
       :ok
     else
-      {:error,
-       AuthenticationFailed.exception(
-         strategy: strategy,
-         query: query,
-         caused_by:
-           UnconfirmedUser.exception(
-             resource: query.resource,
-             field: strategy.identity_field,
-             confirmation_field: strategy.require_confirmed_with
-           )
-       )}
+      {:error, RequireConfirmed.error(strategy, query)}
     end
   end
 
@@ -220,8 +218,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     end
   end
 
-  def user_confirmed_if_needed(_user, %{require_confirmed_with: nil} = _strategy), do: true
-
-  def user_confirmed_if_needed(user, %{require_confirmed_with: field} = _strategy),
-    do: Map.get(user, field) != nil
+  @doc false
+  @deprecated "Use `AshAuthentication.Strategy.Password.RequireConfirmed.confirmed?/2` instead."
+  def user_confirmed_if_needed(user, strategy), do: RequireConfirmed.confirmed?(user, strategy)
 end
