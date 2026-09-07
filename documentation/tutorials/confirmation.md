@@ -234,6 +234,27 @@ With this configuration, users whose `confirmed_at` field is `nil` will not be a
 
 If `require_confirmed_with` is not set or set to `nil`, no confirmation check is enforced - unconfirmed users will be allowed to log in.
 
+### How the check reads the field
+
+The check does not read the confirmation attribute from the record that the sign
+in action returns. It asks the data layer whether the field is set, using an
+expression calculation on the sign in query.
+
+This matters because the attribute is not always readable on that record. It is
+absent when the attribute sets `select_by_default?: false`, when an API layer
+narrows the read's `select`, and when a field policy hides it from the sign in
+actor. `AshGraphql` narrows `select` on its own, because the sign in token is
+metadata rather than an attribute. The calculation needs no attribute to be
+selected, so the check gives the same answer in all of these configurations.
+
+> #### A field policy does not disable the check {: .info}
+>
+> `require_confirmed_with` still applies when a field policy hides the field it
+> names. Sign in reads with no actor, so a policy which denies an absent actor
+> hides the field from every sign in. The library never returns the hidden
+> value; it evaluates the confirmation requirement over it. Set
+> `require_confirmed_with` to `nil` if you do not want the requirement enforced.
+
 ## Confirming changes to monitored fields
 
 You may want to require a user to perform a confirmation when a certain field changes. For example if a user changes their email address we can send them a new confirmation request.

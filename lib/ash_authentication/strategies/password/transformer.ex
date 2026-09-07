@@ -168,6 +168,11 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
           change: GenerateTokenChange,
           description:
             "If token generation is enabled, generate a token and store it in the user's metadata."
+        ),
+        Transformer.build_entity!(Resource.Dsl, [:actions, :create], :change,
+          change: Password.RequireConfirmedChange,
+          description:
+            "If `require_confirmed_with` is set, refuse to register a user who has not confirmed."
         )
       ])
 

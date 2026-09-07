@@ -8,10 +8,22 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
 
   This preparation first validates the token argument and extracts the subject
   from it and constrains the query to a matching user.
+
+  It then refuses a user who has not confirmed, when the strategy sets
+  `require_confirmed_with`. See
+  `AshAuthentication.Strategy.Password.RequireConfirmed`.
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource, Resource.Preparation}
-  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
+
+  alias AshAuthentication.{
+    Errors.AuthenticationFailed,
+    Info,
+    Jwt,
+    Strategy.Password.RequireConfirmed,
+    TokenResource
+  }
+
   require Ash.Query
 
   @doc false
@@ -22,6 +34,7 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
 
     query
     |> check_sign_in_token_configuration(strategy)
+    |> RequireConfirmed.add_calculation(strategy)
     |> Query.before_action(&verify_token_and_constrain_query(&1, strategy, context))
     |> Query.after_action(&revoke_sign_in_token(&1, &2, strategy, context))
     |> Query.after_action(&verify_result(&1, &2, strategy, context))
@@ -105,27 +118,31 @@ defmodule AshAuthentication.Strategy.Password.SignInWithTokenPreparation do
   end
 
   defp verify_result(query, [user], strategy, context) do
-    claims =
-      query.context
-      |> Map.get(:token_claims, %{})
-      |> Map.take(["tenant"])
+    if RequireConfirmed.confirmed?(user, strategy) do
+      claims =
+        query.context
+        |> Map.get(:token_claims, %{})
+        |> Map.take(["tenant"])
 
-    case Jwt.token_for_user(user, claims, Ash.Context.to_opts(context)) do
-      {:ok, token, _claims} ->
-        {:ok, [Resource.put_metadata(user, :token, token)]}
+      case Jwt.token_for_user(user, claims, Ash.Context.to_opts(context)) do
+        {:ok, token, _claims} ->
+          {:ok, [Resource.put_metadata(user, :token, token)]}
 
-      :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: strategy,
-           query: query,
-           caused_by: %{
-             module: __MODULE__,
-             action: query.action,
-             resource: query.resource,
-             message: "Unable to generate token for user"
-           }
-         )}
+        :error ->
+          {:error,
+           AuthenticationFailed.exception(
+             strategy: strategy,
+             query: query,
+             caused_by: %{
+               module: __MODULE__,
+               action: query.action,
+               resource: query.resource,
+               message: "Unable to generate token for user"
+             }
+           )}
+      end
+    else
+      {:error, RequireConfirmed.error(strategy, query)}
     end
   end
 

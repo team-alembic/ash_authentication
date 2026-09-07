@@ -15,6 +15,7 @@ defmodule Example do
     resource Example.OAuthAuditLogUserIdentity
     resource Example.UserIdentity
     resource Example.UserWithAuditLog
+    resource Example.UserWithConfirmationFieldPolicy
     resource Example.UserWithEmptyIncludes
     resource Example.UserWithExcludedActions
     resource Example.UserWithExcludedStrategies
@@ -22,11 +23,13 @@ defmodule Example do
     resource Example.UserWithOAuthAuditLog
     resource Example.UserWithGenericPasswordReset
     resource Example.UserWithRegisterMagicLink
+    resource Example.UserWithRequiredConfirmation
     resource Example.UserWithRememberMe
     resource Example.UserWithRememberMeTokenOptional
     resource Example.UserWithRenamedAuditLog
     resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired
+    resource Example.UserWithUnselectedConfirmation
     resource Example.UserWithUnstoredSignInTokens
     resource Example.UserWithWildcardAndExclusions
   end
