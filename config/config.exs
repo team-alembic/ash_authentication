@@ -13,3 +13,5 @@ config :ash, :utc_datetime_type, :datetime
 config :ash_authentication, bypass_require_interaction_for_magic_link?: true
 
 import_config "#{config_env()}.exs"
+
+config :ash, default_string_length_count: :codepoints
