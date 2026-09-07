@@ -11,3 +11,5 @@ config :mime, :types, %{
 config :ash, :utc_datetime_type, :datetime
 
 import_config "#{config_env()}.exs"
+
+config :ash, default_string_length_count: :codepoints
