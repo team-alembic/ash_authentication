@@ -64,3 +64,20 @@ end
 
 Now we have enough in place to register and sign-in users using the
 `AshAuthentication.Strategy` protocol.
+
+## Reset request timing and account enumeration
+
+When you configure `resettable` with a sender, the strategy adds a reset request
+action. That action returns `:ok` whether or not the identity matches a user, so
+the response body does not reveal which accounts exist. The response *time* does.
+On a match, the action mints a reset token and then calls your sender inline. On a
+miss, it returns straight away. There is no registration option here, so the miss
+path always short-circuits. A synchronous SMTP or HTTP-API send adds tens to
+hundreds of milliseconds, which is enough to tell the two paths apart.
+
+An asynchronous sender closes that gap. A sender that enqueues a job and returns
+`:ok` immediately keeps delivery latency off both paths. The difference then falls
+to one JWT signing operation, about 27 microseconds. Neither path writes to the
+database unless you enable `store_all_tokens?`. At that size the difference is not
+measurable across a network. See `AshAuthentication.Sender`, which recommends the
+same pattern for retries.
