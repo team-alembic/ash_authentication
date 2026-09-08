@@ -21,7 +21,7 @@ defmodule AshAuthentication.TokenResource.GetTokenPreparation do
     purpose = Query.get_argument(query, :purpose)
 
     query
-    |> Query.filter(jti: jti)
+    |> Query.filter(jti == ^jti)
     |> then(fn query ->
       if purpose, do: Query.filter(query, purpose: purpose), else: query
     end)
@@ -37,7 +37,7 @@ defmodule AshAuthentication.TokenResource.GetTokenPreparation do
     token
     |> Jwt.peek()
     |> case do
-      {:ok, %{"jti" => jti}} -> jti
+      {:ok, %{"jti" => jti}} when is_binary(jti) and byte_size(jti) > 0 -> jti
       _ -> get_jti(nil, nil)
     end
   end

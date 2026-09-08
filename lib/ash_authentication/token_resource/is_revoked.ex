@@ -23,9 +23,14 @@ defmodule AshAuthentication.TokenResource.IsRevoked do
 
   def run(%{arguments: %{token: token}} = input, opts, context) when is_binary(token) do
     case Jwt.peek(token) do
-      {:ok, %{"jti" => jti}} -> run(%{input | arguments: %{jti: jti}}, opts, context)
-      {:ok, _} -> {:error, InvalidToken.exception(type: :revocation)}
-      {:error, reason} -> {:error, reason}
+      {:ok, %{"jti" => jti}} when is_binary(jti) and byte_size(jti) > 0 ->
+        run(%{input | arguments: %{jti: jti}}, opts, context)
+
+      {:ok, _} ->
+        {:error, InvalidToken.exception(type: :revocation)}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

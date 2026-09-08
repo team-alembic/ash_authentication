@@ -260,6 +260,9 @@ defmodule AshAuthentication.TokenResource.Actions do
   Extracts the JTI from the provided token and uses it to generate a revocation
   record.
 
+  The caller must verify the token before it calls this function.  The token
+  resource cannot verify a token itself.
+
   ## Options
 
     * `:single_use?` — set this when the token grants something that exactly one
@@ -306,11 +309,15 @@ defmodule AshAuthentication.TokenResource.Actions do
     end
   end
 
-  defp revocation_opts(false), do: [upsert?: true]
+  # A stored token record already carries a trustworthy `expires_at`, written
+  # when this library minted the token.  Both clauses only flip the purpose, so
+  # that a claim read from the token cannot rewrite that value.
+  defp revocation_opts(false), do: [upsert?: true, upsert_fields: [:purpose]]
 
   defp revocation_opts(true),
     do: [
       upsert?: true,
+      upsert_fields: [:purpose],
       upsert_condition: expr(purpose != "revocation"),
       return_skipped_upsert?: true
     ]

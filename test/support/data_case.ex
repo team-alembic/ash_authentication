@@ -191,6 +191,23 @@ defmodule DataCase do
     end
   end
 
+  @doc "A unix timestamp one hour in the past"
+  @spec past_unix :: integer
+  def past_unix, do: DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.to_unix()
+
+  @doc """
+  Sign a set of claims with a secret which is not the resource's signing secret.
+
+  The result decodes like a real token but fails signature verification.
+  """
+  @spec forge_token(map, String.t()) :: String.t()
+  def forge_token(claims, secret \\ "not the signing secret") do
+    {:ok, token, _claims} =
+      Joken.encode_and_sign(claims, Joken.Signer.create("HS256", secret))
+
+    token
+  end
+
   @doc "User with audit log factory"
   @spec build_user_with_audit_log(keyword) :: Example.UserWithAuditLog.t() | no_return
   def build_user_with_audit_log(attrs \\ []) do

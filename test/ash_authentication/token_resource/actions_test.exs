@@ -5,6 +5,7 @@
 defmodule AshAuthentication.TokenResource.ActionsTest do
   @moduledoc false
   use DataCase, async: false
+  require Ash.Query
   alias AshAuthentication.{Jwt, TokenResource.Actions}
 
   describe "read_expired/1..2" do
@@ -126,5 +127,103 @@ defmodule AshAuthentication.TokenResource.ActionsTest do
 
       refute Actions.valid_jti?(Example.Token, jti)
     end
+  end
+
+  describe "revoke/3 with unverified claims" do
+    test "a legitimate revocation keeps the token's own expiry" do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti, "exp" => exp}} = Jwt.peek(token)
+
+      assert :ok = Actions.revoke(Example.Token, token)
+
+      record = token_record(jti)
+      assert record.purpose == "revocation"
+      assert DateTime.to_unix(record.expires_at) == exp
+
+      assert :ok = Actions.expunge_expired(Example.Token)
+      assert Actions.token_revoked?(Example.Token, token)
+    end
+
+    test "a manipulated `exp` cannot shorten an existing revocation record" do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti} = claims} = Jwt.peek(token)
+
+      assert :ok = Actions.revoke(Example.Token, token)
+      %{expires_at: expires_at} = token_record(jti)
+
+      forged = forge_token(%{claims | "exp" => past_unix()})
+      assert :ok = Actions.revoke(Example.Token, forged)
+
+      assert %{purpose: "revocation", expires_at: ^expires_at} = token_record(jti)
+
+      assert :ok = Actions.expunge_expired(Example.Token)
+      assert Actions.token_revoked?(Example.Token, token)
+    end
+
+    test "a manipulated `exp` cannot pre-empt a revocation with a shorter one" do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti} = claims} = Jwt.peek(token)
+
+      assert %{purpose: "user", expires_at: stored_expires_at} = token_record(jti)
+
+      forged = forge_token(%{claims | "exp" => past_unix()})
+      assert :ok = Actions.revoke(Example.Token, forged)
+
+      assert %{purpose: "revocation", expires_at: ^stored_expires_at} = token_record(jti)
+
+      assert :ok = Actions.expunge_expired(Example.Token)
+      assert Actions.token_revoked?(Example.Token, token)
+    end
+
+    test "a token whose `jti` claim is not a string is refused" do
+      user = build_user()
+      {:ok, claims} = Jwt.peek(user.__metadata__.token)
+
+      forged = forge_token(%{claims | "jti" => %{"greater_than" => ""}})
+
+      assert {:error, _} = Actions.revoke(Example.Token, forged)
+    end
+
+    test "a token whose `exp` claim is not an integer is refused" do
+      user = build_user()
+      {:ok, claims} = Jwt.peek(user.__metadata__.token)
+
+      forged = forge_token(%{claims | "exp" => "soon"})
+
+      assert {:error, _} = Actions.revoke(Example.Token, forged)
+    end
+  end
+
+  describe "get_token/3 with unverified claims" do
+    test "it returns the record matching a jti" do
+      user = build_user()
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+
+      assert {:ok, [%{jti: ^jti}]} = Actions.get_token(Example.Token, %{"jti" => jti})
+    end
+
+    test "a non-string `jti` claim cannot alter the query filter" do
+      user = build_user()
+      {:ok, claims} = Jwt.peek(user.__metadata__.token)
+
+      # A second stored token means an injected `jti > ""` predicate matches
+      # more than one record.
+      {:ok, _token, _claims} = Jwt.token_for_user(user)
+
+      forged = forge_token(%{claims | "jti" => %{"greater_than" => ""}})
+
+      assert_raise Ash.Error.Query.InvalidArgument, fn ->
+        Actions.get_token(Example.Token, %{"token" => forged})
+      end
+    end
+  end
+
+  defp token_record(jti) do
+    Example.Token
+    |> Ash.Query.filter(jti == ^jti)
+    |> Ash.read_one!(authorize?: false)
   end
 end

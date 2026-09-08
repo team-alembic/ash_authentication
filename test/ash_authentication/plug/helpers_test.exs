@@ -339,6 +339,40 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       assert AshAuthentication.TokenResource.jti_revoked?(user.__struct__, jti)
     end
+
+    test "it ignores a header which does not hold a verifiable token", %{conn: conn} do
+      user = build_user()
+      {:ok, %{"jti" => jti} = claims} = Jwt.peek(user.__metadata__.token)
+
+      forged = forge_token(%{claims | "exp" => past_unix()})
+
+      conn
+      |> Conn.put_req_header("authorization", "Bearer #{forged}")
+      |> Helpers.revoke_bearer_tokens(:ash_authentication)
+
+      refute TokenResource.jti_revoked?(Example.Token, jti)
+    end
+
+    test "an unverifiable token cannot undo a genuine revocation", %{conn: conn} do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti} = claims} = Jwt.peek(token)
+
+      conn
+      |> Conn.put_req_header("authorization", "Bearer #{token}")
+      |> Helpers.revoke_bearer_tokens(:ash_authentication)
+
+      assert TokenResource.jti_revoked?(Example.Token, jti)
+
+      forged = forge_token(%{claims | "exp" => past_unix()})
+
+      conn
+      |> Conn.put_req_header("authorization", "Bearer #{forged}")
+      |> Helpers.revoke_bearer_tokens(:ash_authentication)
+
+      assert :ok = TokenResource.expunge_expired(Example.Token)
+      assert TokenResource.jti_revoked?(Example.Token, jti)
+    end
   end
 
   describe "revoke_session_tokens/3" do

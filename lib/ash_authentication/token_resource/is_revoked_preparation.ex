@@ -20,7 +20,7 @@ defmodule AshAuthentication.TokenResource.IsRevokedPreparation do
     case get_jti(query) do
       {:ok, jti} ->
         query
-        |> Query.filter(purpose: "revocation", jti: jti)
+        |> Query.filter(purpose == "revocation" and jti == ^jti)
         |> Query.limit(1)
 
       :error ->
@@ -38,7 +38,7 @@ defmodule AshAuthentication.TokenResource.IsRevokedPreparation do
 
       {:token, token}, _ ->
         case Jwt.peek(token) do
-          {:ok, %{"jti" => jti}} -> {:halt, {:ok, jti}}
+          {:ok, %{"jti" => jti}} when is_binary(jti) and byte_size(jti) > 0 -> {:halt, {:ok, jti}}
           _ -> {:cont, :error}
         end
     end)
