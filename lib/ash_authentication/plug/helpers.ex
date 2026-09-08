@@ -403,7 +403,8 @@ defmodule AshAuthentication.Plug.Helpers do
   @doc """
   Revoke all authorization header(s).
 
-  Any bearer-style authorization headers will have their tokens revoked.
+  Any bearer-style authorization headers will have their tokens revoked.  A
+  header which does not hold a verifiable token is ignored.
   """
   @spec revoke_bearer_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
   def revoke_bearer_tokens(conn, otp_app, opts \\ []) do
@@ -417,7 +418,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, resource} <- Jwt.token_to_resource(token, otp_app),
+      with {:ok, _claims, resource} <- Jwt.verify(token, otp_app, opts),
            {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
         revoke_opts =
           Keyword.put(
