@@ -8,7 +8,16 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{AddOn.Confirmation.Actions, Info, Jwt, Strategy.OAuth2, UserIdentity}
+
+  alias AshAuthentication.{
+    AddOn.Confirmation.Actions,
+    Errors.InvalidToken,
+    Info,
+    Jwt,
+    Strategy.OAuth2,
+    TokenResource,
+    UserIdentity
+  }
 
   alias Ash.{
     Changeset,
@@ -42,13 +51,19 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   end
 
   defp apply_confirmation_token(changeset, strategy, context) do
+    opts = Ash.Context.to_opts(context)
+
     with token when is_binary(token) <-
            Changeset.get_argument(changeset, :confirm),
-         {:ok, %{"act" => action, "jti" => jti}, _} <-
-           Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context)),
+         {:ok, %{"act" => action, "jti" => jti, "sub" => subject}, _} <-
+           Jwt.verify(token, changeset.resource, opts),
          true <-
            to_string(strategy.confirm_action_name) == action,
-         {:ok, changes} <- Actions.get_changes(strategy, jti, Ash.Context.to_opts(context)) do
+         true <-
+           subject_matches_record?(changeset, subject),
+         {:ok, token_resource} <-
+           Info.authentication_tokens_token_resource(changeset.resource),
+         {:ok, changes} <- Actions.get_changes(strategy, jti, opts) do
       allowed_changes =
         if strategy.inhibit_updates?,
           do: Map.take(changes, Enum.map(strategy.monitor_fields, &to_string/1)),
@@ -58,6 +73,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
       |> Changeset.force_change_attributes(allowed_changes)
       |> Changeset.force_change_attribute(strategy.confirmed_at_field, DateTime.utc_now())
       |> maybe_link_identity(strategy, jti, context)
+      |> revoke_token(token_resource, token, opts)
     else
       _ ->
         Changeset.add_error(
@@ -67,10 +83,54 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
     end
   end
 
+  # The token names the record it was issued for in its `sub` claim. Without
+  # this comparison the stored changes for one user are applied to whichever
+  # record the caller points the action at.
+  #
+  # The primary key is compared against `changeset.data` rather than resolved
+  # with `AshAuthentication.subject_to_user/3`: the record is already loaded,
+  # so a second read only adds a query which a customised `get_by_subject`
+  # action could answer with a different record.
+  defp subject_matches_record?(changeset, subject) do
+    subject_name =
+      changeset.resource
+      |> Info.authentication_subject_name!()
+      |> to_string()
+
+    with %URI{path: ^subject_name, query: query} when is_binary(query) <- URI.parse(subject),
+         [_ | _] = primary_key <- Ash.Resource.Info.primary_key(changeset.resource) do
+      token_primary_key = URI.decode_query(query)
+
+      Enum.all?(primary_key, fn field ->
+        Map.get(token_primary_key, to_string(field)) ==
+          to_string(Map.get(changeset.data, field))
+      end)
+    else
+      _ -> false
+    end
+  end
+
+  # Confirmation tokens are single use. `Confirmation.Actions.confirm/3` also
+  # revokes, and its hook runs first, so an existing revocation means the token
+  # is already spent rather than that something went wrong. This mirrors the
+  # concurrent revocation tolerance in `AshAuthentication.Plug.Helpers`.
+  #
+  # `Actions.store_changes/4` always stores confirmation tokens, so take the
+  # lock-and-update revocation path.
+  defp revoke_token(changeset, token_resource, token, opts) do
+    revoke_opts = Keyword.put(opts, :store_all_tokens?, true)
+
+    Changeset.after_action(changeset, fn _changeset, record ->
+      case TokenResource.revoke(token_resource, token, revoke_opts) do
+        :ok -> {:ok, record}
+        {:error, %InvalidToken{type: :revocation}} -> {:ok, record}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
+  end
+
   # `on_untrusted_email_match :confirm`: when the confirmed token carries a
-  # pending provider identity link, create it once the user is confirmed. The
-  # token itself is revoked by `Confirmation.Actions.confirm/3`, so the link
-  # cannot be replayed.
+  # pending provider identity link, create it once the user is confirmed.
   defp maybe_link_identity(changeset, strategy, jti, context) do
     case Actions.get_identity_link(strategy, jti, Ash.Context.to_opts(context)) do
       {:ok, payload} ->
