@@ -155,7 +155,7 @@ defmodule MyApp.Accounts.User do
   actions do
     read :sign_in_with_example do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
 
       filter expr(email == get_path(^arg(:user_info), [:email]))
@@ -184,7 +184,7 @@ defmodule MyApp.Accounts.User do
   actions do
     create :register_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :email
 
