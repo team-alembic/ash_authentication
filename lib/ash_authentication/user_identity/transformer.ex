@@ -75,7 +75,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, access_token, Type.String,
              allow_nil?: true,
-             writable?: true
+             writable?: true,
+             sensitive?: true
            ),
          :ok <- validate_token_field(dsl_state, access_token),
          {:ok, dsl_state} <-
@@ -87,7 +88,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, refresh_token, Type.String,
              allow_nil?: true,
-             writable?: true
+             writable?: true,
+             sensitive?: true
            ),
          :ok <- validate_token_field(dsl_state, refresh_token),
          {:ok, user_resource} <- UserIdentity.Info.user_identity_user_resource(dsl_state),
@@ -244,7 +246,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
         Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
           name: :oauth_tokens,
           type: Type.Map,
-          allow_nil?: false
+          allow_nil?: false,
+          sensitive?: true
         ),
         Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
           name: user_id,

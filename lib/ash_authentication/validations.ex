@@ -223,12 +223,20 @@ defmodule AshAuthentication.Validations do
       (`trust_email_verified?` is `false`) and no confirmation add-on is
       configured. Accounts created via this strategy would carry an unverified
       email address with no way to verify ownership.
+
+    * The `oauth_tokens` argument on the strategy's register or sign-in action
+      is not marked `sensitive?: true`. The argument carries the provider's
+      whole token response, so anything which reads the flag as a credential
+      classification - the audit log add-on, the `Inspect` protocol - treats
+      the access and refresh tokens as safe to display and to persist. This
+      will become a hard requirement in a future release.
   """
   @spec oauth2_strategy_warnings(struct, Dsl.t() | map) :: :ok | {:warn, [String.t()]}
   def oauth2_strategy_warnings(strategy, dsl_state) do
     [
       identity_resource_warning(strategy),
-      email_verification_warning(strategy, dsl_state)
+      email_verification_warning(strategy, dsl_state),
+      oauth_tokens_sensitivity_warning(strategy, dsl_state)
     ]
     |> Enum.reject(&is_nil/1)
     |> case do
@@ -269,6 +277,33 @@ defmodule AshAuthentication.Validations do
   end
 
   defp email_verification_warning(_strategy, _dsl_state), do: nil
+
+  defp oauth_tokens_sensitivity_warning(strategy, dsl_state) do
+    action_name =
+      if strategy.registration_enabled?,
+        do: strategy.register_action_name,
+        else: strategy.sign_in_action_name
+
+    with action when is_map(action) <- Ash.Resource.Info.action(dsl_state, action_name),
+         argument when is_map(argument) <-
+           Enum.find(action.arguments, &(&1.name == :oauth_tokens)),
+         false <- argument.sensitive? do
+      """
+      The `:oauth_tokens` argument on the `#{inspect(action_name)}` action of `#{inspect(strategy.resource)}` is not marked `sensitive?: true`.
+
+      It carries the identity provider's whole token response, including the
+      access and refresh tokens. Without the flag the audit log add-on records
+      the tokens in plain text and they appear in `inspect/1` output. Add
+      `sensitive?: true` to the argument:
+
+          argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+
+      This will become a hard requirement in a future release.
+      """
+    else
+      _ -> nil
+    end
+  end
 
   defp has_confirmation_add_on?(dsl_state) do
     dsl_state
