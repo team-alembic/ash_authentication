@@ -19,6 +19,7 @@ defmodule Example do
     resource Example.UserWithEmptyIncludes
     resource Example.UserWithExcludedActions
     resource Example.UserWithExcludedStrategies
+    resource Example.UserWithOAuthAuditLog
     resource Example.UserWithOtp
     resource Example.UserWithRegisterOtp
     resource Example.UserWithExplicitIncludes
