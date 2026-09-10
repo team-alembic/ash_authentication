@@ -142,6 +142,35 @@ end
 > namespaces the value as `"<strategy_name>/<connection_id>"`, keeping
 > per-IdP identities distinct.
 
+## The connection id is the identity namespace
+
+The connection row's id, not the IdP's `iss` claim, names the namespace. Two
+things follow.
+
+**A connection row cannot be recreated in place.** Delete a connection and add
+it again and its new row gets a new id, so every identity written under the old
+id is orphaned. Those users are then refused on their next sign-in, or get a
+second account. Edit the existing row instead. If you must replace it, move the
+rows across first:
+
+```sql
+UPDATE user_identities
+   SET strategy = 'sso/' || '<new connection id>'
+ WHERE strategy = 'sso/' || '<old connection id>';
+```
+
+**The namespace only reaches the action through the request.**
+`DynamicOidc.Plug` reads the connection id from the request path, stores it in
+the session between the request and the callback, and puts it into the
+changeset's or query's context. It is deliberately not an action argument: the
+id has to come from the connection lookup, never from something the caller can
+set. A caller-chosen namespace would be no namespace at all.
+
+A custom controller that drives the actions itself must therefore pass the
+populated strategy to `AshAuthentication.Strategy.action/4`, the way the plug
+does. An action that runs with no connection id in context is refused rather
+than falling back to the bare strategy name.
+
 If you also use the password strategy, ensure `hashed_password` is nullable:
 
 ```elixir

@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
 
   use Ash.Resource.Change
   alias Ash.{Changeset, Error.Framework.AssumptionFailed, Resource.Change}
-  alias AshAuthentication.{Info, Strategy, Strategy.OAuth2, UserIdentity}
+  alias AshAuthentication.{Info, Strategy.OAuth2, UserIdentity}
   import AshAuthentication.Utils, only: [is_falsy: 1]
 
   @doc false
@@ -40,11 +40,26 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
     do: changeset
 
   defp do_change(changeset, strategy, context) do
-    opts = [tenant: context.tenant, actor: context.actor]
+    # The strategy above came from the compile-time DSL. For a strategy whose
+    # identity namespace is per-connection that struct has no connection id, so
+    # restore the one the plug resolved for this request.
+    case OAuth2.put_connection_id(
+           strategy,
+           OAuth2.connection_id_from_context(changeset.context)
+         ) do
+      {:ok, strategy} ->
+        opts = [tenant: context.tenant, actor: context.actor]
 
-    changeset
-    |> Changeset.before_action(&OAuth2.UserResolver.resolve(&1, strategy, opts))
-    |> Changeset.after_action(&upsert_identity(&1, &2, strategy, opts))
+        changeset
+        |> Changeset.before_action(&OAuth2.UserResolver.resolve(&1, strategy, opts))
+        |> Changeset.after_action(&upsert_identity(&1, &2, strategy, opts))
+
+      :error ->
+        Changeset.add_error(
+          changeset,
+          OAuth2.missing_connection_id_error(strategy, changeset: changeset)
+        )
+    end
   end
 
   defp upsert_identity(changeset, user, strategy, opts) do
@@ -57,7 +72,7 @@ defmodule AshAuthentication.Strategy.OAuth2.IdentityChange do
                user_id_attribute_name => user.id,
                user_info: Changeset.get_argument(changeset, :user_info),
                oauth_tokens: Changeset.get_argument(changeset, :oauth_tokens),
-               strategy: Strategy.name(strategy)
+               strategy: OAuth2.identity_strategy_name(strategy)
              },
              opts
            ) do

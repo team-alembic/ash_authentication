@@ -8,7 +8,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
   """
 
   use Ash.Resource.Change
-  alias AshAuthentication.{AddOn.Confirmation.Actions, Info, Jwt, UserIdentity}
+  alias AshAuthentication.{AddOn.Confirmation.Actions, Info, Jwt, Strategy.OAuth2, UserIdentity}
 
   alias Ash.{
     Changeset,
@@ -85,14 +85,33 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
 
   defp link_identity(user, payload, context) do
     with {:ok, oauth_strategy} <-
-           Info.strategy(user.__struct__, String.to_existing_atom(payload["strategy"])),
-         {:ok, _identity} <-
+           Info.strategy(user.__struct__, String.to_existing_atom(payload["strategy"])) do
+      link_identity_for_strategy(user, oauth_strategy, payload, context)
+    end
+  end
+
+  # A strategy whose identity namespace is per-connection needs the connection
+  # id the pending link was issued for. A link stored before the connection
+  # namespace existed carries none, so refuse rather than write an identity into
+  # the wrong namespace.
+  defp link_identity_for_strategy(user, oauth_strategy, payload, context) do
+    case OAuth2.put_connection_id(oauth_strategy, payload["connection_id"]) do
+      {:ok, oauth_strategy} ->
+        upsert_linked_identity(user, oauth_strategy, payload, context)
+
+      :error ->
+        {:error, OAuth2.missing_connection_id_error(oauth_strategy, [])}
+    end
+  end
+
+  defp upsert_linked_identity(user, oauth_strategy, payload, context) do
+    with {:ok, _identity} <-
            UserIdentity.Actions.upsert(
              oauth_strategy.identity_resource,
              %{
                user_info: payload["user_info"],
                oauth_tokens: payload["oauth_tokens"],
-               strategy: oauth_strategy.name,
+               strategy: OAuth2.identity_strategy_name(oauth_strategy),
                user_id: user.id
              },
              Ash.Context.to_opts(context)

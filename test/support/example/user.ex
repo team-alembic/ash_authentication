@@ -168,6 +168,25 @@ defmodule Example.User do
       change AshAuthentication.Strategy.DynamicOidc.IdentityChange
     end
 
+    create :register_with_sso_confirm_link do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.DynamicOidc.IdentityChange
+    end
+
+    read :sign_in_with_sso do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
+
+      filter expr(username == get_path(^arg(:user_info), [:nickname]))
+    end
+
     read :sign_in_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
@@ -407,6 +426,13 @@ defmodule Example.User do
         connection_resource Example.OidcConnection
         identity_resource Example.UserIdentity
         redirect_uri "http://localhost:4000/auth"
+      end
+
+      dynamic_oidc :sso_confirm_link do
+        connection_resource Example.OidcConnection
+        identity_resource Example.UserIdentity
+        redirect_uri "http://localhost:4000/auth"
+        on_untrusted_email_match(:confirm)
       end
 
       slack do

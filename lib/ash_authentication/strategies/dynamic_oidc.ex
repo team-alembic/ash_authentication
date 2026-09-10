@@ -111,6 +111,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
             idp_initiated_login?: false,
             name: nil,
             nonce: true,
+            on_untrusted_email_match: :reject,
             openid_configuration: nil,
             openid_configuration_uri: "/.well-known/openid-configuration",
             prevent_hijacking?: true,
@@ -128,12 +129,15 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
             strategy_module: __MODULE__,
             team_id: nil,
             token_url: nil,
+            trust_email_verified?: false,
             trusted_audiences: nil,
             user_url: nil,
             warn_on_missing_identity_resource?: true,
-            # Set by the plug at request/callback time. Carried on the
-            # struct so `DynamicOidc.IdentityChange` can read it without
-            # plumbing it through action arguments.
+            # Set by the plug at request/callback time from the matched
+            # connection row, and carried into the action through changeset and
+            # query context by `AshAuthentication.Strategy.OAuth2.Actions`. It
+            # is never an action argument: the id has to come from the
+            # connection lookup, not from the request.
             __connection_id__: nil,
             __spark_metadata__: nil
 
@@ -155,6 +159,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
           idp_initiated_login?: boolean,
           name: atom,
           nonce: boolean | nil | binary | {module, keyword},
+          on_untrusted_email_match: :reject | :confirm,
           openid_configuration: nil | map,
           openid_configuration_uri: nil | binary | {module, keyword},
           prevent_hijacking?: boolean,
@@ -166,6 +171,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
           session_identifier: nil | :unsafe | :jti,
           sign_in_action_name: atom,
           strategy_module: module,
+          trust_email_verified?: boolean,
           trusted_audiences: nil | [String.t()] | {module, keyword},
           warn_on_missing_identity_resource?: boolean,
           __spark_metadata__: Spark.Dsl.Entity.spark_meta()

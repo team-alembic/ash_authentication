@@ -33,19 +33,38 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   def prepare(query, opts, context) do
     case Info.find_strategy(query, context, opts) do
       :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: :unknown,
-           query: query,
-           caused_by: %{
-             module: __MODULE__,
-             action: query.action,
-             message: "Unable to infer strategy"
-           }
-         )}
+        Query.add_error(
+          query,
+          AuthenticationFailed.exception(
+            strategy: :unknown,
+            query: query,
+            caused_by: %{
+              module: __MODULE__,
+              action: query.action,
+              message: "Unable to infer strategy"
+            }
+          )
+        )
 
       {:ok, strategy} ->
+        prepare_for_strategy(query, strategy, context)
+    end
+  end
+
+  defp prepare_for_strategy(query, strategy, context)
+       when is_falsy(strategy.identity_resource),
+       do: Query.after_action(query, &handle_sign_in_result(&1, &2, strategy, context))
+
+  defp prepare_for_strategy(query, strategy, context) do
+    # The strategy above came from the compile-time DSL. For a strategy whose
+    # identity namespace is per-connection that struct has no connection id, so
+    # restore the one the plug resolved for this request.
+    case OAuth2.put_connection_id(strategy, OAuth2.connection_id_from_context(query.context)) do
+      {:ok, strategy} ->
         Query.after_action(query, &handle_sign_in_result(&1, &2, strategy, context))
+
+      :error ->
+        Query.add_error(query, OAuth2.missing_connection_id_error(strategy, query: query))
     end
   end
 
@@ -153,7 +172,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
       %{
         user_info: Query.get_argument(query, :user_info),
         oauth_tokens: Query.get_argument(query, :oauth_tokens),
-        strategy: strategy.name,
+        strategy: OAuth2.identity_strategy_name(strategy),
         user_id: user.id
       },
       opts

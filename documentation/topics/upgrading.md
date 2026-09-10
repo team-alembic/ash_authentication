@@ -96,6 +96,57 @@ user_info["email_verified"] == "true"
 user_info["email_verified"] == true
 ```
 
+#### 5. `dynamic_oidc` identities are namespaced by connection
+
+A `dynamic_oidc` strategy serves many IdP connections. Each connection now gets
+its own identity namespace in the identity resource's `strategy` field:
+`"<strategy_name>/<connection_id>"` instead of the bare `"<strategy_name>"`.
+Two IdPs that issue the same `sub` claim therefore stay apart.
+
+Identity rows written by an earlier version carry the bare name. **The lookup no
+longer matches them.** Until you relink them, an existing user who signs in
+through `dynamic_oidc` is refused, or - if your register action has no
+`upsert_identity`, or its key no longer matches - gets a second, empty account.
+
+`dynamic_oidc` is the only strategy affected. Every other OAuth2 and OIDC
+strategy keeps the bare strategy name, so its rows are unchanged.
+
+**Action required, if you run `dynamic_oidc`.** Move each existing row into its
+connection's namespace. Do not delete the rows: a deleted row is not recreated
+on the next sign-in, and deleting it discards the stored refresh token.
+
+Run this in the same deploy as the upgrade, before anyone signs in. A user who
+signs in first gets a namespaced row, which can then collide with the bare row
+on the `(uid, strategy)` unique index.
+
+If your connection resource holds exactly one row, the mapping is unambiguous:
+
+```sql
+-- Check first. This procedure is only sound when the count is 1.
+SELECT count(*) FROM oidc_connections;
+
+UPDATE user_identities
+   SET strategy = 'sso/' || '<the one connection id>'
+ WHERE strategy = 'sso';
+```
+
+Replace `user_identities`, `oidc_connections`, `sso` and the connection id with
+your own. If your identity resource is multitenant and each tenant holds one
+connection, run the same statement per tenant.
+
+**If you run more than one connection, read this before you upgrade.** Nothing
+on an identity row records which connection wrote it, so the rows cannot be
+sorted automatically. Two further consequences:
+
+1. Where two connections issued the same `sub`, the two users were resolved to
+   one account. The second user's row was never written, so **no code change can
+   separate them**. The surviving account may also hold the other user's email
+   or name, because the register upsert wrote them.
+2. You cannot find those cases from your own tables. One `sub` produced one row,
+   and it looks like any other row. Export each connection's `sub` set from the
+   IdP and intersect the sets. A non-empty intersection is a pair of users that
+   were already merged.
+
 ### Igniter Task Changes
 
 #### Phoenix-specific code moved to ash_authentication_phoenix

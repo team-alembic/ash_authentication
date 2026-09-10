@@ -41,11 +41,26 @@ defmodule AshAuthentication.Strategy.DynamicOidc.IdentityChange do
     do: changeset
 
   defp do_change(changeset, strategy, context) do
-    opts = [tenant: context.tenant, actor: context.actor]
+    # The strategy above came from the compile-time DSL, so its connection id is
+    # `nil`. Restore the one the plug resolved for this request before anything
+    # reads or writes the identity's `strategy` field.
+    case OAuth2.put_connection_id(
+           strategy,
+           OAuth2.connection_id_from_context(changeset.context)
+         ) do
+      {:ok, strategy} ->
+        opts = [tenant: context.tenant, actor: context.actor]
 
-    changeset
-    |> Changeset.before_action(&OAuth2.UserResolver.resolve(&1, strategy, opts))
-    |> Changeset.after_action(&upsert_identity(&1, &2, strategy, opts))
+        changeset
+        |> Changeset.before_action(&OAuth2.UserResolver.resolve(&1, strategy, opts))
+        |> Changeset.after_action(&upsert_identity(&1, &2, strategy, opts))
+
+      :error ->
+        Changeset.add_error(
+          changeset,
+          OAuth2.missing_connection_id_error(strategy, changeset: changeset)
+        )
+    end
   end
 
   defp upsert_identity(changeset, user, strategy, opts) do
