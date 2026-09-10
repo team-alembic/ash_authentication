@@ -330,28 +330,35 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   defdelegate transform(strategy, dsl_state), to: Transformer
   defdelegate verify(strategy, dsl_state), to: Verifier
 
-  @uid_keys ["uid", "sub", "id", :uid, :sub, :id]
+  # The order of this list is the precedence order and it is load-bearing.
+  # String keys come first because a provider always sends strings; the atom
+  # keys only match when a caller builds `user_info` in Elixir.
+  @uid_keys ["sub", "uid", "id", :sub, :uid, :id]
 
   @doc """
   Extract the unique provider identifier (the OpenID Connect `sub` claim) from a
   provider's `user_info` map.
 
-  `uid` is the AshAuthentication convention, `sub` is the OpenID Connect claim,
-  and `id` is what some providers (eg Google in the past) have returned. The
-  same extraction must be used both when looking a user up by their identity and
-  when persisting the identity, so this is the single source of truth.
+  The first key present with a non-nil value wins, in this order: `sub` is the
+  OpenID Connect claim and the key the whole identity model is built on, `uid`
+  is the AshAuthentication convention for the same thing, and `id` is a fallback
+  for providers (eg Google in the past) which returned `id` instead of `sub`.
+  The same extraction must be used both when looking a user up by their identity
+  and when persisting the identity, so this is the single source of truth.
   """
   @spec uid_from_user_info(map) :: String.t() | nil
   def uid_from_user_info(user_info) do
-    user_info
-    |> Map.take(@uid_keys)
-    |> Map.values()
-    |> Enum.reject(&is_nil/1)
-    |> List.first()
-    |> case do
-      nil -> nil
-      uid -> to_string(uid)
-    end
+    # Iterate `@uid_keys` rather than `Map.take/2` plus `Map.values/1`.
+    # `Map.values/1` returns the map in Erlang term order, not the order the
+    # keys were given to `Map.take/2`, so a `Map`-based selection silently
+    # ignores the precedence above - it reverses it for these keys, and lets
+    # any atom key beat every string key.
+    Enum.find_value(@uid_keys, fn key ->
+      case Map.get(user_info, key) do
+        nil -> nil
+        uid -> to_string(uid)
+      end
+    end)
   end
 
   @doc """
