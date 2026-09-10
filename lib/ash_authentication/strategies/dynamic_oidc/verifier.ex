@@ -12,8 +12,9 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Verifier do
     - The standard `redirect_uri` secret is present.
     - `idp_initiated_login?` is not enabled — it cannot be supported here, so
       setting it is rejected at compile time with an explanatory error.
-    - The OAuth2-derived `prevent_hijacking?` guard fires when paired with
-      a password strategy without a confirmation add-on.
+    - The OAuth2-derived `prevent_hijacking?` check warns when a password
+      strategy can register users and no confirmation add-on monitors every
+      field the register action upserts on.
   """
 
   alias AshAuthentication.Strategy.{DynamicOidc, OAuth2}
@@ -26,9 +27,11 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Verifier do
     with :ok <- validate_secret(strategy, :redirect_uri),
          :ok <- validate_connection_resource(strategy),
          :ok <- reject_idp_initiated_login(strategy),
-         :ok <- OAuth2.Verifier.prevent_hijacking(dsl_state, strategy),
          :ok <- OAuth2.Verifier.validate_confirmation_for_untrusted_match(dsl_state, strategy) do
-      oauth2_strategy_warnings(strategy, dsl_state)
+      merge_warnings([
+        OAuth2.Verifier.prevent_hijacking(dsl_state, strategy),
+        oauth2_strategy_warnings(strategy, dsl_state)
+      ])
     end
   end
 
