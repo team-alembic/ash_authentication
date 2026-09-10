@@ -54,7 +54,9 @@ if Code.ensure_loaded?(Igniter) do
             &convert_revoked_read_action_to_generic/2,
             &convert_request_actions_to_generic/2,
             &add_brute_force_protection/2,
-            &require_identity_resource/2
+            &require_identity_resource/2,
+            &move_webauthn_credential_options/2,
+            &remove_dead_webauthn_action_options/2
           ]
         }
 
@@ -1000,6 +1002,220 @@ if Code.ensure_loaded?(Igniter) do
           1
         )
       )
+    end
+
+    # Options that used to exist on *both* the `webauthn` strategy and the
+    # credential resource's `webauthn_credential` section, under the same
+    # names. They only ever described the credential resource, so 5.0 keeps
+    # the credential resource's copy and drops the strategy's.
+    @webauthn_credential_options ~w[
+      credential_id_field
+      public_key_field
+      sign_count_field
+      user_handle_field
+      transports_field
+      backup_eligible_field
+      backed_up_field
+      discoverable_field
+      label_field
+      last_used_at_field
+      user_relationship_name
+    ]a
+
+    @doc """
+    Moves the credential field options off the `webauthn` strategy.
+
+    The credential resource must now use the
+    `AshAuthentication.WebAuthnCredential` extension, and is the single place
+    its attribute, relationship and action names are configured. Any of those
+    options set on the strategy are transferred to the credential resource and
+    removed from the strategy, which no longer accepts them.
+    """
+    def move_webauthn_credential_options(igniter, _opts) do
+      case find_resources_with_webauthn_strategies(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources} ->
+          Enum.reduce(resources, igniter, &move_credential_options_for_resource/2)
+      end
+    end
+
+    defp find_resources_with_webauthn_strategies(igniter) do
+      Igniter.Project.Module.find_all_matching_modules(igniter, fn _module, zipper ->
+        case enter_auth_strategies(zipper) do
+          {:ok, zipper} -> has_strategy?(zipper, :webauthn)
+          _ -> false
+        end
+      end)
+    end
+
+    defp move_credential_options_for_resource(resource, igniter) do
+      # Read the doomed options, and the `credential_resource` they need to
+      # move to, before touching anything — the values have to survive the
+      # removal pass below.
+      {igniter, zipper} = enter_webauthn_strategy(igniter, resource)
+
+      case collect_credential_options(zipper) do
+        [] ->
+          igniter
+
+        options ->
+          igniter
+          |> transfer_credential_options(resource, credential_resource(zipper), options)
+          |> remove_strategy_options(resource, @webauthn_credential_options)
+      end
+    end
+
+    # Six action-name options that were declared on the `webauthn` strategy but
+    # never read by anything — no action was ever named from them. Removed
+    # outright (nothing to preserve), unlike the credential field options above
+    # which are moved onto the credential resource.
+    @webauthn_dead_action_options ~w[
+      store_credential_action_name
+      update_sign_count_action_name
+      list_credentials_action_name
+      delete_credential_action_name
+      update_credential_label_action_name
+      add_credential_action_name
+    ]a
+
+    @doc """
+    Removes the unused credential-action-name options from the `webauthn`
+    strategy. They never named an action, so there is nothing to preserve.
+    """
+    def remove_dead_webauthn_action_options(igniter, _opts) do
+      case find_resources_with_webauthn_strategies(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources} ->
+          Enum.reduce(resources, igniter, fn resource, igniter ->
+            remove_strategy_options(igniter, resource, @webauthn_dead_action_options)
+          end)
+      end
+    end
+
+    defp enter_webauthn_strategy(igniter, resource) do
+      {igniter, zipper} = zipper_for_module(igniter, resource)
+
+      with false <- is_nil(zipper),
+           {:ok, zipper} <- enter_auth_strategies(zipper),
+           {:ok, zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :webauthn,
+               [1, 2]
+             ),
+           {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
+        {igniter, zipper}
+      else
+        _ -> {igniter, nil}
+      end
+    end
+
+    defp collect_credential_options(nil), do: []
+
+    defp collect_credential_options(zipper) do
+      Enum.flat_map(@webauthn_credential_options, fn option ->
+        case option_value(zipper, option) do
+          {:ok, value} -> [{option, value}]
+          _ -> []
+        end
+      end)
+    end
+
+    # Only reached from the non-empty branch of `collect_credential_options/1`,
+    # which returns `[]` for a nil zipper — so the zipper is always present.
+    defp credential_resource(zipper) do
+      case credential_resource_ast(zipper) do
+        {:ok, ast} -> module_from_ast(ast)
+        _ -> nil
+      end
+    end
+
+    # `find_module/2` hands back a zipper at the top of the file, so descend
+    # into the module body before anything goes looking for DSL sections in
+    # "the current scope".
+    defp zipper_for_module(igniter, module) do
+      with {:ok, {igniter, _source, zipper}} <-
+             Igniter.Project.Module.find_module(igniter, module),
+           {:ok, zipper} <- Igniter.Code.Module.move_to_defmodule(zipper),
+           {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
+        {igniter, zipper}
+      else
+        {:error, igniter} -> {igniter, nil}
+        _ -> {igniter, nil}
+      end
+    end
+
+    defp option_value(zipper, option) do
+      with {:ok, zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(zipper, option, 1),
+           {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 0) do
+        {:ok, Sourceror.Zipper.node(zipper)}
+      end
+    end
+
+    # `credential_resource` may be written against an alias, so expand it
+    # before reading the node — `Module.concat/1` on the bare `[:Credential]`
+    # of an aliased reference would name the wrong module.
+    defp credential_resource_ast(zipper) do
+      with {:ok, zipper} <-
+             Igniter.Code.Function.move_to_function_call_in_current_scope(
+               zipper,
+               :credential_resource,
+               1
+             ),
+           {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 0) do
+        {:ok, zipper |> Igniter.Code.Common.expand_alias() |> Sourceror.Zipper.node()}
+      end
+    end
+
+    defp module_from_ast({:__aliases__, _, parts}) when is_list(parts), do: Module.concat(parts)
+    defp module_from_ast(_), do: nil
+
+    defp transfer_credential_options(igniter, resource, credential_resource, options) do
+      if credential_resource do
+        Enum.reduce(options, igniter, fn {option, value}, igniter ->
+          Spark.Igniter.set_option(
+            igniter,
+            credential_resource,
+            [:webauthn_credential, option],
+            value
+          )
+        end)
+      else
+        Igniter.add_warning(igniter, """
+        Could not determine the `credential_resource` of the `webauthn` strategy on \
+        #{inspect(resource)}, so these options could not be moved to it automatically:
+
+        #{Enum.map_join(options, "\n", fn {option, _} -> "  * #{option}" end)}
+
+        They have been removed from the strategy (which no longer accepts them). Set \
+        them on the credential resource's `webauthn_credential` section instead.
+        """)
+      end
+    end
+
+    defp remove_strategy_options(igniter, resource, options) do
+      Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+        with {:ok, zipper} <- enter_auth_strategies(zipper),
+             {:ok, zipper} <-
+               Igniter.Code.Function.move_to_function_call_in_current_scope(
+                 zipper,
+                 :webauthn,
+                 [1, 2]
+               ),
+             {:ok, block_zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
+          {:ok,
+           Igniter.Code.Common.remove(block_zipper, fn zipper ->
+             Enum.any?(options, &Igniter.Code.Function.function_call?(zipper, &1, 1))
+           end)}
+        else
+          _ -> {:ok, zipper}
+        end
+      end)
     end
   end
 else
