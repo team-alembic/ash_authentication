@@ -340,19 +340,24 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
                Confirmation.Actions.confirm(confirmation, %{"confirm" => token})
     end
 
-    test "it links a new identity to an existing account when the email is trusted" do
+    test "it refuses to link a new identity to an account the trusted email did not match" do
       {:ok, strategy} = Info.strategy(Example.User, :github)
       user = build_user()
       Ash.Seed.update!(user, %{confirmed_at: DateTime.utc_now()})
+      sub = "gh:#{Ecto.UUID.generate()}"
 
-      assert {:ok, signed_in_user} =
+      # `register_with_github` is keyed on `:username`, so the account was
+      # matched by the nickname. A trusted `email_verified` claim attests
+      # ownership of an email address and says nothing about that account.
+      assert {:error, error} =
                Actions.register(
                  strategy,
                  %{
                    "user_info" => %{
                      "nickname" => to_string(user.username),
                      "uid" => Ecto.UUID.generate(),
-                     "sub" => "gh:#{Ecto.UUID.generate()}",
+                     "sub" => sub,
+                     "email" => "somebody-else@example.com",
                      "email_verified" => true
                    },
                    "oauth_tokens" => %{
@@ -364,7 +369,8 @@ defmodule AshAuthentication.Strategy.OAuth2.ActionsTest do
                  []
                )
 
-      assert signed_in_user.id == user.id
+      assert Exception.message(error) =~ ~r/authentication failed/i
+      assert :error = UserResolver.fetch_identity(strategy, sub)
     end
 
     test "it rejects linking a second identity for the same strategy" do

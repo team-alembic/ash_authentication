@@ -22,6 +22,8 @@ defmodule Example do
     resource Example.UserWithExplicitIncludes
     resource Example.UserWithOAuthAuditLog
     resource Example.UserWithGenericPasswordReset
+    resource Example.UserWithOauth2Email
+    resource Example.UserWithOauth2EmailIdentity
     resource Example.UserWithRegisterMagicLink
     resource Example.UserWithRequiredConfirmation
     resource Example.UserWithRememberMe

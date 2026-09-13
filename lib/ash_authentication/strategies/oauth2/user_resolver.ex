@@ -18,22 +18,44 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
        change a user's email).
 
     2. Otherwise (a `sub` not seen before):
-       * If no local account has the provider's email - proceed (a new account
-         is created; if the email is not trusted and a confirmation add-on is
-         present, that add-on gates it).
-       * If an account with that email already has an identity for this strategy
+       * If no local account matches the register action's `upsert_identity` -
+         proceed (a new account is created; if the email is not trusted and a
+         confirmation add-on is present, that add-on gates it).
+       * If the matched account already has an identity for this strategy
          (a *different* `sub`) - reject. A single account cannot have two
          identities for the same provider auto-linked.
        * If the strategy's `email_verified` claim can be trusted
-         (`trust_email_verified?` and the claim is true) - link the sign-in to
-         that account.
-       * Otherwise the email cannot be trusted to prove ownership. With
-         `on_untrusted_email_match :reject` (the default) the sign-in is
-         rejected and the user must sign in with their existing method to link
-         the provider. With `on_untrusted_email_match :confirm` the upsert is
-         aborted with a `ConfirmationRequired` error so the caller can issue a
-         confirmation to the existing account's email and link the provider
-         only once the recipient proves ownership.
+         (`trust_email_verified?` and the claim is true) **and** the account was
+         matched by that verified email - link the sign-in to that account.
+       * Otherwise the email cannot be trusted to prove ownership of the matched
+         account. With `on_untrusted_email_match :reject` (the default) the
+         sign-in is rejected and the user must sign in with their existing
+         method to link the provider. With `on_untrusted_email_match :confirm`
+         the upsert is aborted with a `ConfirmationRequired` error so the caller
+         can issue a confirmation to the existing account's email and link the
+         provider only once the recipient proves ownership.
+
+  ## Why the link rule compares the email
+
+  An `upsert_identity` is not necessarily the email field - it can be a username
+  or any other claim the provider supplies, and the strategy has no setting that
+  names which attribute holds the email. A trusted `email_verified` claim
+  attests only that the person signing in owns *some* email, so on its own it
+  says nothing about an account matched on a username.
+
+  The link rule therefore requires the verified email to be the value that
+  matched the account. The match is what carries the evidence: an account found
+  by a value equal to the email the provider attested holds that email by
+  construction of the query. The premise stops being an assumption and becomes a
+  tested fact, with no need to know which attribute the email lives in.
+
+  > #### Accounts matched on an email-shaped identifier {: .info}
+  >
+  > If the matched value is itself an email address - an account whose *username*
+  > is an email, say - a sign-in that verifies that same address still links. The
+  > person signing in has proven they own the identifier the account is keyed on,
+  > so they can generally already take the account by password reset. Use an
+  > email-keyed `upsert_identity` if you want the two to stay distinct.
 
   Rejections are surfaced as a generic `AuthenticationFailed` error to avoid
   leaking which email addresses are registered.
@@ -71,7 +93,8 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   defp resolve_new_identity(changeset, strategy, user_info, opts) do
     case fetch_user_by_upsert_identity(changeset, strategy, opts) do
       :error ->
-        # No local account has this email - allow the upsert to create one.
+        # No local account matches the upsert identity - allow the upsert to
+        # create one.
         changeset
 
       {:ok, user} ->
@@ -83,9 +106,8 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
               "A different #{strategy.name} identity is already linked to this account"
             )
 
-          email_trusted?(strategy, user_info) ->
-            # Verified email matches an existing account - link to it. The email
-            # already matches so the upsert resolves to this user.
+          email_trusted?(strategy, user_info) and
+              matched_by_verified_email?(changeset, user, user_info) ->
             changeset
 
           strategy.on_untrusted_email_match == :confirm ->
@@ -95,7 +117,7 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
             reject(
               changeset,
               strategy,
-              "Email could not be verified and an account with this email already exists"
+              "Email could not be verified against the existing account this sign-in matches"
             )
         end
     end
@@ -192,6 +214,32 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   end
 
   def email_trusted?(_strategy, _user_info), do: false
+
+  # The account was matched by its `upsert_identity` keys, so a key whose value
+  # equals the verified email proves the account carries that email - whatever
+  # the attribute is called. A provider that supplies no email proves nothing.
+  defp matched_by_verified_email?(changeset, user, user_info) do
+    case normalise_email(Map.get(user_info, "email", Map.get(user_info, :email))) do
+      nil ->
+        false
+
+      email ->
+        changeset
+        |> upsert_identity_keys()
+        |> Enum.any?(&(normalise_email(Map.get(user, &1)) == email))
+    end
+  end
+
+  defp normalise_email(%Ash.CiString{} = value), do: value |> to_string() |> normalise_email()
+
+  defp normalise_email(value) when is_binary(value) do
+    case value |> String.trim() |> String.downcase() do
+      "" -> nil
+      email -> email
+    end
+  end
+
+  defp normalise_email(_value), do: nil
 
   defp upsert_identity_keys(changeset) do
     with name when not is_nil(name) <- changeset.action.upsert_identity,
