@@ -188,7 +188,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
         trust_email_verified?: [
           type: :boolean,
           doc:
-            "Whether the provider's `email_verified` claim can be trusted to attach an OAuth2 sign-in to a pre-existing local account with the same email. Only enable this for providers that reliably assert email ownership. When `false`, a sign-in whose `iss`/`sub` is not yet known will never be matched to an existing account by email.",
+            "Whether the provider's `email_verified` claim can be trusted to attach an OAuth2 sign-in to a pre-existing local account with the same email. Only enable this for providers that reliably assert email ownership. The claim alone is not enough: the account is attached only when the register action's `upsert_identity` matched it *by* the verified email, because a verified email attests ownership of that address and nothing else. An action keyed on a username or another provider claim therefore never auto-attaches, whatever this setting says - use `on_untrusted_email_match :confirm` to offer those sign-ins a linking path. When `false`, a sign-in whose `iss`/`sub` is not yet known will never be matched to an existing account by email.",
           default: false
         ],
         on_untrusted_email_match: [

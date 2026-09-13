@@ -21,6 +21,8 @@ defmodule Example do
     resource Example.UserWithExcludedActions
     resource Example.UserWithExcludedStrategies
     resource Example.UserWithOAuthAuditLog
+    resource Example.UserWithOauth2Email
+    resource Example.UserWithOauth2EmailIdentity
     resource Example.UserWithOtp
     resource Example.UserWithRegisterOtp
     resource Example.UserWithExplicitIncludes

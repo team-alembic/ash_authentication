@@ -408,6 +408,11 @@ if Code.ensure_loaded?(Igniter) do
 
     The action handles both registration and sign-in via `upsert? true`.
     It satisfies the OAuth2 transformer's validation requirements.
+
+    The `:identity_field` must be `:email`. An action keyed on any other field
+    can never auto-attach a sign-in to an existing account, because a provider's
+    `email_verified` claim attests ownership of an email address and nothing
+    else - see `AshAuthentication.Strategy.OAuth2.UserResolver`.
     """
     @spec add_oauth_register_action(Igniter.t(), module(), atom(), keyword()) :: Igniter.t()
     # sobelow_skip ["DOS.BinToAtom"]
@@ -425,6 +430,36 @@ if Code.ensure_loaded?(Igniter) do
           ""
         end
 
+      if identity_field == :email do
+        add_oauth_register_action_body(
+          igniter,
+          user_resource,
+          strategy_name,
+          identity_field,
+          identity_change_line
+        )
+      else
+        Igniter.add_issue(igniter, """
+        Could not add #{strategy_name} strategy with identity field #{inspect(identity_field)}.
+
+        An OAuth2 register action keyed on anything but the email cannot attach a
+        sign-in to an existing account, so every sign-in that matches one is
+        rejected. The provider's `email_verified` claim attests ownership of an
+        email address, which says nothing about an account matched on #{inspect(identity_field)}.
+
+        Please run `mix ash_authentication.add_strategy.#{strategy_name}` without specifying an identity field.
+        """)
+      end
+    end
+
+    # sobelow_skip ["DOS.BinToAtom"]
+    defp add_oauth_register_action_body(
+           igniter,
+           user_resource,
+           strategy_name,
+           identity_field,
+           identity_change_line
+         ) do
       Ash.Resource.Igniter.add_new_action(
         igniter,
         user_resource,
