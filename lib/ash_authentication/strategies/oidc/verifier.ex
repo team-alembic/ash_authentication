@@ -17,9 +17,11 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
          :ok <- validate_secret(strategy, :client_secret, [nil]),
          :ok <- validate_secret(strategy, :base_url),
          :ok <- validate_secret(strategy, :nonce, [true, false]),
-         :ok <- OAuth2.Verifier.prevent_hijacking(dsl_state, strategy),
          :ok <- validate_private_key(strategy) do
-      oauth2_strategy_warnings(strategy, dsl_state)
+      merge_warnings([
+        OAuth2.Verifier.prevent_hijacking(dsl_state, strategy),
+        oauth2_strategy_warnings(strategy, dsl_state)
+      ])
     end
   end
 
