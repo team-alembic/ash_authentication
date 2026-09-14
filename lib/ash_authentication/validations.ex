@@ -208,6 +208,25 @@ defmodule AshAuthentication.Validations do
   end
 
   @doc """
+  Combine several validation results into a single result.
+
+  Verifiers run more than one warning-producing check. A `with` chain would stop
+  at the first `{:warn, _}` and drop the rest, so collect them all instead.
+  """
+  @spec merge_warnings([:ok | {:warn, [String.t()]}]) :: :ok | {:warn, [String.t()]}
+  def merge_warnings(results) do
+    results
+    |> Enum.flat_map(fn
+      :ok -> []
+      {:warn, warnings} -> List.wrap(warnings)
+    end)
+    |> case do
+      [] -> :ok
+      warnings -> {:warn, warnings}
+    end
+  end
+
+  @doc """
   Collect compile-time warnings for an OAuth2/OIDC strategy.
 
   Returns `{:warn, messages}` (so the configuration still compiles) for the
