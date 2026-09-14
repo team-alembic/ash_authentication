@@ -7,6 +7,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
 
   alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.Helpers
+  alias AshAuthentication.Test.WebAuthnFixtures
+
+  @moduletag feature: :webauthn
 
   describe "resolve_rp_id/2" do
     test "returns static string directly" do
@@ -85,14 +88,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
   describe "wax_opts/3" do
     test "builds Wax options from strategy" do
       strategy = %WebAuthn{
-        rp_id: "example.com",
+        rp_id: WebAuthnFixtures.default_rp_id(),
         user_verification: "required",
         attestation: "none"
       }
 
       opts = Helpers.wax_opts(strategy, nil)
-      assert opts[:origin] == "https://example.com"
-      assert opts[:rp_id] == "example.com"
+      assert opts[:origin] == WebAuthnFixtures.default_origin()
+      assert opts[:rp_id] == WebAuthnFixtures.default_rp_id()
       assert opts[:user_verification] == "required"
       assert opts[:attestation] == "none"
     end
@@ -108,40 +111,71 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       assert opts[:origin] == "https://tenant1.example.com"
       assert opts[:rp_id] == "tenant1.example.com"
     end
+  end
 
-    test "configured origin wins over the runtime fallback" do
+  # These four tests exhaustively cover every combination of
+  # `opts[:origin]` being present/absent and `strategy.origin` being
+  # configured/unconfigured, pinning down the exact precedence order:
+  #
+  #     opts[:origin]  >  strategy.origin  >  "https://#{rp_id}"
+  #
+  # Each origin value is distinct (opts vs. configured vs. rp_id-derived) so
+  # a passing assertion can only mean the intended source won — there's no
+  # way for the wrong precedence to accidentally produce the same value.
+  describe "wax_opts/3 origin precedence" do
+    setup do
+      %{rp_id: WebAuthnFixtures.default_rp_id()}
+    end
+
+    test "opts[:origin] wins when both opts[:origin] and strategy.origin are set", %{
+      rp_id: rp_id
+    } do
       strategy = %WebAuthn{
-        rp_id: "example.com",
-        origin: "https://example.com:8443",
+        rp_id: rp_id,
+        origin: "https://configured-origin.example:8443",
         user_verification: "preferred",
         attestation: "none"
       }
 
-      opts = Helpers.wax_opts(strategy, nil, origin: "http://localhost:4001")
-      assert opts[:origin] == "https://example.com:8443"
+      opts = Helpers.wax_opts(strategy, nil, origin: "http://opts-origin.example:4001")
+      assert opts[:origin] == "http://opts-origin.example:4001"
     end
 
-    test "uses opts[:origin] when the strategy has no configured origin" do
+    test "strategy.origin wins when opts[:origin] is not set", %{rp_id: rp_id} do
       strategy = %WebAuthn{
-        rp_id: "example.com",
+        rp_id: rp_id,
+        origin: "https://configured-origin.example:8443",
+        user_verification: "preferred",
+        attestation: "none"
+      }
+
+      opts = Helpers.wax_opts(strategy, nil)
+      assert opts[:origin] == "https://configured-origin.example:8443"
+    end
+
+    test "opts[:origin] is used when strategy.origin is not configured", %{rp_id: rp_id} do
+      strategy = %WebAuthn{
+        rp_id: rp_id,
         origin: nil,
         user_verification: "preferred",
         attestation: "none"
       }
 
-      opts = Helpers.wax_opts(strategy, nil, origin: "http://localhost:4001")
-      assert opts[:origin] == "http://localhost:4001"
+      opts = Helpers.wax_opts(strategy, nil, origin: "http://opts-origin.example:4001")
+      assert opts[:origin] == "http://opts-origin.example:4001"
     end
 
-    test "falls back to https://rp_id when neither configured nor runtime origin is supplied" do
+    test "falls back to https://rp_id when neither opts[:origin] nor strategy.origin is set", %{
+      rp_id: rp_id
+    } do
       strategy = %WebAuthn{
-        rp_id: "example.com",
+        rp_id: rp_id,
         origin: nil,
         user_verification: "preferred",
         attestation: "none"
       }
 
-      assert Helpers.wax_opts(strategy, nil)[:origin] == "https://example.com"
+      assert Helpers.wax_opts(strategy, nil)[:origin] == "https://#{rp_id}"
     end
   end
 

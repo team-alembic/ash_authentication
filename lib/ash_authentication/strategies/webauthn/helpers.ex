@@ -73,24 +73,27 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
 
   Origin precedence:
 
-  1. The strategy's configured origin (literal, MFA, or Secret module). This is
-     the canonical answer, and the only one that wins in production where the
-     origin is set explicitly via env var.
-  2. `opts[:origin]` — a runtime fallback supplied by callers that have access
-     to the request (Plug `conn`, LiveView `socket.host_uri`). This is what
-     makes dev/test "just work" without baking a port into config.
+  1. `opts[:origin]` — supplied by callers that have access to the actual
+     request (Plug `conn`, LiveView `socket.host_uri`). This reflects the
+     origin the browser really used, which is what WebAuthn's origin check
+     needs, and is what makes multi-tenant/multi-domain deployments and
+     dev/test "just work" without baking a port into config.
+  2. The strategy's configured origin (literal, MFA, or Secret module) — used
+     only when the caller didn't supply a runtime origin.
   3. `https://\#{rp_id}` — last-resort default, matching Wax's own behaviour.
   """
   @spec wax_opts(WebAuthn.t(), any, keyword) :: keyword
   def wax_opts(strategy, tenant, opts \\ []) do
     rp_id = resolve_rp_id(strategy, tenant)
-    origin = resolve_origin(strategy, tenant) || opts[:origin] || "https://#{rp_id}"
+    origin = opts[:origin] || resolve_origin(strategy, tenant) || "https://#{rp_id}"
 
     [
       origin: origin,
       rp_id: rp_id,
       user_verification: strategy.user_verification,
-      attestation: strategy.attestation
+      attestation: strategy.attestation,
+      trusted_attestation_types: strategy.trusted_attestation_types,
+      verify_trust_root: strategy.verify_trust_root?
     ]
   end
 end
