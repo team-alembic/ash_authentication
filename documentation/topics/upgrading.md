@@ -146,6 +146,70 @@ sorted automatically. Two further consequences:
    and it looks like any other row. Export each connection's `sub` set from the
    IdP and intersect the sets. A non-empty intersection is a pair of users that
    were already merged.
+#### 6. OAuth2 sign-in strategies must name the attribute that holds the email
+
+A sign-in-only OAuth2 strategy attaches a new provider identity to the account its read action matched. Before this version it attached whenever `trust_email_verified?` was set and the provider sent `email_verified`. It never compared the email itself. An action filtered on a username therefore attached the sign-in to an account the signer-in did not own.
+
+The rule now requires the provider's verified email to equal the account's own email. The new `email_field` option names the attribute that holds that email. It defaults to `:email`, and every strategy built on `oauth2` inherits it.
+
+**This configuration no longer compiles:**
+
+```elixir
+attributes do
+  uuid_primary_key :id
+  attribute :username, :ci_string, allow_nil?: false, public?: true
+end
+
+authentication do
+  strategies do
+    github do
+      # ...
+      registration_enabled? false
+    end
+  end
+end
+```
+
+```text
+authentication -> strategies -> github -> email_field :
+  `email_field` is set to `:email`, which is not an attribute of this resource.
+```
+
+Three things must be true together before the error appears:
+
+1. The strategy trusts the provider's claim (`trust_email_verified? true`). The `apple`, `auth0`, `github`, `google` and `slack` strategies set this by default.
+2. The strategy is sign-in only (`registration_enabled? false`).
+3. `email_field` names no attribute of the resource.
+
+A register strategy is never checked. It compares the verified email against the `upsert_identity` values that matched the account, so it needs no named attribute.
+
+**Action required:** choose one of two resolutions.
+
+- The resource holds the email under another name. Set `email_field` to that attribute:
+
+  ```elixir
+  github do
+    email_field :email_address
+    registration_enabled? false
+  end
+  ```
+
+- The resource stores no email address. Set `trust_email_verified? false`:
+
+  ```elixir
+  github do
+    trust_email_verified? false
+    registration_enabled? false
+  end
+  ```
+
+The configurations that now fail to compile are the ones that were silently attaching sign-ins to accounts the signer-in did not own. The compile error is the point of the change, not a cost of it.
+
+An action filtered on the email is unaffected. Its matched value is the provider's email, so it attaches exactly as before.
+
+**Also note:** a sign-in that no longer attaches has no linking path. `on_untrusted_email_match :confirm` is read by the register action only. The person must sign in with their existing method to link the provider.
+
+Accounts already linked under the old rule stay linked. This change prevents new links. It does not unpick existing ones. Review your `UserIdentity` rows for links whose provider email does not match the linked account's email.
 
 ### Igniter Task Changes
 

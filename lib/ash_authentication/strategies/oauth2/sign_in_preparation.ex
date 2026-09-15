@@ -12,6 +12,31 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
        returns an authentication failed error.
     2. Generates an access token if token generation is enabled.
     3. Updates the user identity resource, if one is enabled.
+
+  ## Attaching a new provider identity
+
+  The sign-in action's filter decides which account a callback matches. When the
+  provider's `iss`/`sub` is not yet linked to that account, this preparation
+  decides whether to link it:
+
+    * If a different identity for this strategy already belongs to the account -
+      refuse. One account cannot have two identities for the same provider
+      auto-linked.
+    * If the strategy trusts the provider's `email_verified` claim **and** the
+      verified email equals the account's `email_field` - link.
+    * Otherwise refuse. The person must sign in with their existing method to
+      link the provider.
+
+  The email comparison is what makes the trusted claim mean something. A verified
+  `email_verified` claim attests ownership of one address and nothing else, so on
+  an action filtered by a username it says nothing about the account the filter
+  matched. `AshAuthentication.Strategy.OAuth2.UserResolver` states the same rule
+  for the register action, where the matched `upsert_identity` values carry the
+  evidence instead.
+
+  An account whose `email_field` is empty, or a provider that supplies no email,
+  therefore never links here. So does a resource with no email attribute, which
+  is why `trust_email_verified?` requires `email_field` to name one.
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
@@ -126,14 +151,15 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
               "A different #{strategy.name} identity is already linked to this account"
             )
 
-          UserResolver.email_trusted?(strategy, user_info) ->
+          UserResolver.email_trusted?(strategy, user_info) and
+              UserResolver.email_matches_account?(strategy, user, user_info) ->
             :ok
 
           true ->
             identity_error(
               query,
               strategy,
-              "Email could not be verified and an account with this email already exists"
+              "Email could not be verified against the account this sign-in matches"
             )
         end
     end

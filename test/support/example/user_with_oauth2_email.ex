@@ -49,6 +49,26 @@ defmodule Example.UserWithOauth2Email do
       change {AshAuthentication.Strategy.OAuth2.UserInfoToAttributes, fields: [:email]}
       change AshAuthentication.Strategy.OAuth2.IdentityChange
     end
+
+    # Filtered on the username while trusting the provider's `email_verified`
+    # claim - the sign-in shape where the claim attests nothing about the
+    # account the filter matched.
+    read :sign_in_with_slack do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
+
+      filter expr(username == get_path(^arg(:user_info), [:nickname]))
+    end
+
+    # Filtered on the email, which the verified claim does attest.
+    read :sign_in_with_auth0 do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
+
+      filter expr(email == get_path(^arg(:user_info), [:email]))
+    end
   end
 
   authentication do
@@ -77,6 +97,29 @@ defmodule Example.UserWithOauth2Email do
         redirect_uri &get_config/2
         client_secret &get_config/2
         identity_resource Example.UserWithOauth2EmailIdentity
+      end
+
+      # The same two shapes on the sign-in path, where the action's filter
+      # stands in for the upsert identity. Both leave
+      # `trust_email_verified?` at the provider default of `true`.
+      slack do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        identity_resource Example.UserWithOauth2EmailIdentity
+        registration_enabled? false
+      end
+
+      auth0 do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        base_url &get_config/2
+        authorize_url &get_config/2
+        token_url &get_config/2
+        user_url &get_config/2
+        identity_resource Example.UserWithOauth2EmailIdentity
+        registration_enabled? false
       end
     end
   end
