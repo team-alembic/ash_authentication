@@ -57,6 +57,10 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   > so they can generally already take the account by password reset. Use an
   > email-keyed `upsert_identity` if you want the two to stay distinct.
 
+  A `registration_enabled? false` strategy has no upsert and no matched keys, so
+  it cannot test the premise this way. `AshAuthentication.Strategy.OAuth2.SignInPreparation`
+  applies the same rule against the strategy's `email_field` instead.
+
   Rejections are surfaced as a generic `AuthenticationFailed` error to avoid
   leaking which email addresses are registered.
   """
@@ -214,6 +218,15 @@ defmodule AshAuthentication.Strategy.OAuth2.UserResolver do
   end
 
   def email_trusted?(_strategy, _user_info), do: false
+
+  @doc false
+  @spec email_matches_account?(OAuth2.t(), Ash.Resource.Record.t(), map) :: boolean
+  def email_matches_account?(strategy, user, user_info) do
+    case normalise_email(Map.get(user_info, "email", Map.get(user_info, :email))) do
+      nil -> false
+      email -> normalise_email(Map.get(user, strategy.email_field)) == email
+    end
+  end
 
   # The account was matched by its `upsert_identity` keys, so a key whose value
   # equals the verified email proves the account carries that email - whatever

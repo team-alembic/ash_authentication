@@ -44,6 +44,7 @@ spark_locals_without_parens = [
   created_at_attribute_name: 1,
   destroy_action_name: 1,
   domain: 1,
+  email_field: 1,
   enabled?: 1,
   exclude_actions: 1,
   exclude_purposes: 1,

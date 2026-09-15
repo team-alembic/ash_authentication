@@ -25,6 +25,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
          {:ok, dsl_state} <- maybe_build_identity_relationship(dsl_state, strategy),
          :ok <- maybe_validate_register_action(dsl_state, strategy),
          :ok <- maybe_validate_sign_in_action(dsl_state, strategy),
+         :ok <- validate_email_field(dsl_state, strategy),
          {:ok, resource} <- persisted_option(dsl_state, :module) do
       strategy = %{strategy | resource: resource}
 
@@ -49,6 +50,46 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  @doc """
+  Verifies that a sign-in strategy which trusts the provider's `email_verified`
+  claim names an attribute that holds the email.
+
+  The claim attests ownership of one address, so the sign-in attaches to the
+  account its filter matched only when the verified email equals the account's
+  `email_field`. A field that names no attribute reads as absent on every
+  account, which refuses every sign-in the claim was meant to attach - so the
+  configuration is rejected rather than left inoperative.
+
+  The register action compares the `upsert_identity` values that matched instead,
+  and needs no such attribute, so only `registration_enabled? false` strategies
+  are checked.
+  """
+  @spec validate_email_field(map, OAuth2.t()) :: :ok | {:error, Exception.t()}
+  def validate_email_field(dsl_state, strategy) do
+    trusted? = Map.get(strategy, :trust_email_verified?, false)
+    field = Map.get(strategy, :email_field)
+
+    if strategy.registration_enabled? or not trusted? or
+         not is_nil(Resource.Info.attribute(dsl_state, field)) do
+      :ok
+    else
+      {:error,
+       DslError.exception(
+         path: [:authentication, :strategies, strategy.name, :email_field],
+         message: """
+         `email_field` is set to `#{inspect(field)}`, which is not an attribute of this resource.
+
+         `trust_email_verified?` attaches a sign-in to the account the action's filter matched
+         only when the provider's verified email equals the account's own email. `email_field`
+         names the attribute that holds it.
+
+         Set `email_field` to that attribute, or set `trust_email_verified? false` if this
+         resource stores no email address.
+         """
+       )}
     end
   end
 
