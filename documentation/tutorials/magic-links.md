@@ -112,3 +112,23 @@ end
 
 # ...
 ```
+
+## Request timing and account enumeration
+
+The request action returns `:ok` whether or not the identity matches a user. The
+response body therefore does not reveal which accounts exist. The response *time*
+is a different matter. When the identity matches, the action mints a token and
+calls your sender inline. When it does not match, it does neither. A synchronous
+SMTP or HTTP-API send takes tens to hundreds of milliseconds. That gap is easy to
+measure, so it separates known identities from unknown ones.
+
+The sender is the part you control, and it is the part that leaks. Make it
+asynchronous. A sender that enqueues a job and returns `:ok` immediately keeps
+delivery latency off both paths. What remains is one JWT signing operation, about
+27 microseconds. Neither path writes to the database unless you enable
+`store_all_tokens?`. A difference that small is not measurable across a network.
+See `AshAuthentication.Sender`, which recommends the same pattern for retries.
+
+This only applies when `registration_enabled?` is `false`, which is the default. With registration
+enabled, both paths mint a token and call the sender. The remaining difference is
+then around 3 microseconds.
