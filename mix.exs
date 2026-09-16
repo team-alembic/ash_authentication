@@ -249,7 +249,7 @@ defmodule AshAuthentication.MixProject do
       {:mimic, "~> 2.0", only: [:dev, :test]},
       {:simple_sat, "~> 0.1", only: [:dev, :test]},
       {:sobelow, "~> 0.12", only: [:dev, :test]},
-      {:usage_rules, "~> 0.1", only: [:dev]}
+      {:usage_rules, "~> 1.2", only: [:dev]}
     ]
   end
 
