@@ -58,7 +58,7 @@ defmodule ExampleMultiTenant.User do
 
     create :register_with_auth0 do
       argument(:user_info, :map, allow_nil?: false)
-      argument(:oauth_tokens, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
       upsert?(true)
       upsert_identity(:username)
 
@@ -69,7 +69,7 @@ defmodule ExampleMultiTenant.User do
 
     create :register_with_oauth2 do
       argument(:user_info, :map, allow_nil?: false)
-      argument(:oauth_tokens, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
       upsert?(true)
       upsert_identity(:username)
 
@@ -80,7 +80,7 @@ defmodule ExampleMultiTenant.User do
 
     create :register_with_oidc do
       argument(:user_info, :map, allow_nil?: false)
-      argument(:oauth_tokens, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
       upsert?(true)
       upsert_identity(:username)
 
@@ -91,7 +91,7 @@ defmodule ExampleMultiTenant.User do
 
     read :sign_in_with_oauth2 do
       argument(:user_info, :map, allow_nil?: false)
-      argument(:oauth_tokens, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
       prepare(AshAuthentication.Strategy.OAuth2.SignInPreparation)
 
       filter(expr(username == get_path(^arg(:user_info), [:nickname])))
@@ -99,7 +99,7 @@ defmodule ExampleMultiTenant.User do
 
     read :sign_in_with_oauth2_without_identity do
       argument(:user_info, :map, allow_nil?: false)
-      argument(:oauth_tokens, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
       prepare(AshAuthentication.Strategy.OAuth2.SignInPreparation)
 
       filter(expr(username == get_path(^arg(:user_info), [:nickname])))
@@ -107,7 +107,7 @@ defmodule ExampleMultiTenant.User do
 
     create :register_with_github do
       argument(:user_info, :map, allow_nil?: false)
-      argument(:oauth_tokens, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
       upsert?(true)
       upsert_identity(:username)
 
@@ -118,7 +118,7 @@ defmodule ExampleMultiTenant.User do
 
     create :register_with_slack do
       argument(:user_info, :map, allow_nil?: false)
-      argument(:oauth_tokens, :map, allow_nil?: false)
+      argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
       upsert?(true)
       upsert_identity(:username)
 

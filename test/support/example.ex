@@ -12,12 +12,14 @@ defmodule Example do
     resource Example.Token
     resource Example.TokenWithCustomCreateTimestamp
     resource Example.User
+    resource Example.OAuthAuditLogUserIdentity
     resource Example.UserIdentity
     resource Example.UserWithAuditLog
     resource Example.UserWithEmptyIncludes
     resource Example.UserWithExcludedActions
     resource Example.UserWithExcludedStrategies
     resource Example.UserWithExplicitIncludes
+    resource Example.UserWithOAuthAuditLog
     resource Example.UserWithRegisterMagicLink
     resource Example.UserWithRememberMe
     resource Example.UserWithRenamedAuditLog
