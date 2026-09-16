@@ -115,33 +115,41 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacy do
 
   defp transform_forwarded_header(header, _mode, _opts), do: header
 
+  # RFC 7239 section 4 states that parameter names are case-insensitive, so the
+  # name is downcased before dispatch. The value keeps its case.
+  @forwarded_ip_params ~w[for by]
+  @forwarded_verbatim_params ~w[proto host]
+
   defp transform_forwarded_param(param, mode, opts) do
     param = String.trim(param)
 
     case String.split(param, "=", parts: 2) do
-      ["for", value] ->
-        # Remove quotes and port if present
-        ip =
-          value
-          |> String.trim("\"")
-          |> extract_ip_from_forwarded()
-          |> apply_privacy(mode, opts)
+      [name, value] ->
+        case String.downcase(name) do
+          ip_param when ip_param in @forwarded_ip_params ->
+            transform_forwarded_ip(ip_param, value, mode, opts)
 
-        if ip, do: "for=#{maybe_quote_forwarded(ip)}", else: nil
+          verbatim_param when verbatim_param in @forwarded_verbatim_params ->
+            param
 
-      ["by", value] ->
-        # Remove quotes and port if present
-        ip =
-          value
-          |> String.trim("\"")
-          |> extract_ip_from_forwarded()
-          |> apply_privacy(mode, opts)
-
-        if ip, do: "by=#{maybe_quote_forwarded(ip)}", else: nil
+          _ ->
+            nil
+        end
 
       _ ->
-        param
+        nil
     end
+  end
+
+  defp transform_forwarded_ip(name, value, mode, opts) do
+    # Remove quotes and port if present
+    ip =
+      value
+      |> String.trim("\"")
+      |> extract_ip_from_forwarded()
+      |> apply_privacy(mode, opts)
+
+    if ip, do: "#{name}=#{maybe_quote_forwarded(ip)}", else: nil
   end
 
   defp extract_ip_from_forwarded(value) do

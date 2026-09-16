@@ -191,6 +191,103 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
     end
   end
 
+  describe "apply_to_request/3 forwarded parameter names" do
+    @privacy_modes [
+      {:none, %{}},
+      {:hash, %{}},
+      {:truncate, %{truncation_masks: %{ipv4: 24, ipv6: 48}}},
+      {:exclude, %{}}
+    ]
+
+    test "case variants of `for` and `by` transform like their lowercase equivalents" do
+      for {mode, opts} <- @privacy_modes do
+        expected =
+          IpPrivacy.apply_to_request(
+            %{forwarded: ["for=203.0.113.8;by=198.51.100.4"]},
+            mode,
+            opts
+          )
+
+        for header <- [
+              "For=203.0.113.8;BY=198.51.100.4",
+              "FOR=203.0.113.8;By=198.51.100.4",
+              "fOr=203.0.113.8;bY=198.51.100.4"
+            ] do
+          assert IpPrivacy.apply_to_request(%{forwarded: [header]}, mode, opts) == expected,
+                 "#{header} under #{inspect(mode)}"
+        end
+      end
+    end
+
+    test "case variants of quoted IPv6 `for` transform like their lowercase equivalents" do
+      for {mode, opts} <- @privacy_modes do
+        expected =
+          IpPrivacy.apply_to_request(
+            %{forwarded: ["for=\"[2001:db8::1]:3000\""]},
+            mode,
+            opts
+          )
+
+        assert IpPrivacy.apply_to_request(
+                 %{forwarded: ["For=\"[2001:db8::1]:3000\""]},
+                 mode,
+                 opts
+               ) == expected
+      end
+    end
+
+    test "excludes mixed-case `For` and `BY` when mode is exclude" do
+      request = %{forwarded: ["For=203.0.113.8;Proto=https;BY=198.51.100.4"]}
+
+      assert IpPrivacy.apply_to_request(request, :exclude, %{}).forwarded == ["Proto=https"]
+    end
+
+    test "drops unrecognised parameters" do
+      request = %{
+        forwarded: [
+          "for=203.0.113.8;secret=<script>alert(1)</script>;proto=https",
+          "for=203.0.113.8;no-equals-sign"
+        ]
+      }
+
+      assert IpPrivacy.apply_to_request(request, :none, %{}).forwarded == [
+               "for=203.0.113.8;proto=https",
+               "for=203.0.113.8"
+             ]
+    end
+
+    test "preserves `proto` and `host` values and names unaltered" do
+      request = %{forwarded: ["for=203.0.113.8;Proto=HTTPS;host=Example.COM"]}
+
+      for {mode, opts} <- @privacy_modes do
+        [header] = IpPrivacy.apply_to_request(request, mode, opts).forwarded
+
+        assert String.contains?(header, "Proto=HTTPS")
+        assert String.contains?(header, "host=Example.COM")
+      end
+    end
+
+    test "handles a comma-appended element without leaking either address" do
+      request = %{forwarded: ["For=6.6.6.6, for=203.0.113.8"]}
+
+      assert IpPrivacy.apply_to_request(request, :exclude, %{}).forwarded == [""]
+
+      [hashed] = IpPrivacy.apply_to_request(request, :hash, %{}).forwarded
+      assert String.starts_with?(hashed, "for=hashed:")
+      refute String.contains?(hashed, "6.6.6.6")
+      refute String.contains?(hashed, "203.0.113.8")
+
+      [truncated] =
+        IpPrivacy.apply_to_request(request, :truncate, %{truncation_masks: %{ipv4: 24}}).forwarded
+
+      assert truncated == "for=invalid-ip"
+
+      assert IpPrivacy.apply_to_request(request, :none, %{}).forwarded == [
+               "for=6.6.6.6, for=203.0.113.8"
+             ]
+    end
+  end
+
   describe "hash_ip/1" do
     test "produces consistent hashes" do
       ip = "192.168.1.100"
