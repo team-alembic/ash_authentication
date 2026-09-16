@@ -369,7 +369,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
   describe "apply_to_request/3 forwarded parameter names" do
     @privacy_modes [
       {:none, %{}},
-      {:hash, %{}},
+      {:hash, @hash_opts},
       {:truncate, %{truncation_masks: %{ipv4: 24, ipv6: 48}}},
       {:exclude, %{}}
     ]
@@ -447,7 +447,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
 
       assert IpPrivacy.apply_to_request(request, :exclude, %{}).forwarded == [""]
 
-      [hashed] = IpPrivacy.apply_to_request(request, :hash, %{}).forwarded
+      [hashed] = IpPrivacy.apply_to_request(request, :hash, @hash_opts).forwarded
       assert String.starts_with?(hashed, "for=hashed:")
       refute String.contains?(hashed, "6.6.6.6")
       refute String.contains?(hashed, "203.0.113.8")
