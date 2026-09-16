@@ -88,6 +88,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
          :ok <-
            validate_action_argument_option(action, :oauth_tokens, :type, [Type.Map, :map]),
          :ok <- validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [false]),
+         :ok <- validate_action_argument_option(action, :oauth_tokens, :sensitive?, [true]),
          :ok <- maybe_validate_action_has_token_change(dsl_state, action),
          :ok <- validate_field_in_values(action, :upsert?, [true]),
          :ok <-
@@ -151,6 +152,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
          :ok <-
            validate_action_argument_option(action, :oauth_tokens, :type, [Ash.Type.Map, :map]),
          :ok <- validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [false]),
+         :ok <- validate_action_argument_option(action, :oauth_tokens, :sensitive?, [true]),
          :ok <- validate_action_has_preparation(action, OAuth2.SignInPreparation) do
       :ok
     else

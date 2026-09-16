@@ -432,7 +432,7 @@ if Code.ensure_loaded?(Igniter) do
         """
         create :register_with_#{strategy_name} do
           argument :user_info, :map, allow_nil?: false
-          argument :oauth_tokens, :map, allow_nil?: false
+          argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
           upsert? true
           upsert_identity :unique_#{identity_field}
 

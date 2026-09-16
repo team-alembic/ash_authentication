@@ -19,6 +19,7 @@ defmodule AshAuthenticationTest do
                Example.UserWithExplicitIncludes,
                Example.UserWithExtraClaims,
                Example.UserWithFailingSender,
+               Example.UserWithOAuthAuditLog,
                Example.UserWithOtp,
                Example.UserWithRecoveryCodes,
                Example.UserWithRegisterOtp,

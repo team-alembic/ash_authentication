@@ -199,7 +199,7 @@ end
 actions do
   create :register_with_github do
     argument :user_info, :map, allow_nil?: false
-    argument :oauth_tokens, :map, allow_nil?: false
+    argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
     upsert? true
     upsert_identity :unique_email
 
@@ -318,7 +318,7 @@ When new users can register via OAuth2:
 actions do
   create :register_with_github do
     argument :user_info, :map, allow_nil?: false
-    argument :oauth_tokens, :map, allow_nil?: false
+    argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
     upsert? true
     upsert_identity :email
 

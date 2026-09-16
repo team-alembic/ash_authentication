@@ -75,7 +75,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, access_token, Type.String,
              allow_nil?: true,
-             writable?: true
+             writable?: true,
+             sensitive?: true
            ),
          :ok <- validate_token_field(dsl_state, access_token),
          {:ok, dsl_state} <-
@@ -87,7 +88,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, dsl_state} <-
            maybe_build_attribute(dsl_state, refresh_token, Type.String,
              allow_nil?: true,
-             writable?: true
+             writable?: true,
+             sensitive?: true
            ),
          :ok <- validate_token_field(dsl_state, refresh_token),
          {:ok, user_resource} <- UserIdentity.Info.user_identity_user_resource(dsl_state),
@@ -164,7 +166,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          {:ok, attribute} <- find_attribute(dsl_state, field_name),
          :ok <- validate_attribute_option(attribute, resource, :type, [Type.String, :string]),
          :ok <- validate_attribute_option(attribute, resource, :allow_nil?, [true]),
-         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]) do
+         :ok <- validate_attribute_option(attribute, resource, :writable?, [true]),
+         :ok <- validate_attribute_option(attribute, resource, :sensitive?, [true]) do
       :ok
     else
       {:error, reason} -> {:error, reason}
@@ -244,7 +247,8 @@ defmodule AshAuthentication.UserIdentity.Transformer do
         Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
           name: :oauth_tokens,
           type: Type.Map,
-          allow_nil?: false
+          allow_nil?: false,
+          sensitive?: true
         ),
         Transformer.build_entity!(Resource.Dsl, [:actions, :create], :argument,
           name: user_id,
@@ -280,6 +284,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
          :ok <- validate_action_argument_option(action, :user_info, :allow_nil?, [false]),
          :ok <- validate_action_argument_option(action, :oauth_tokens, :type, [:map, Type.Map]),
          :ok <- validate_action_argument_option(action, :oauth_tokens, :allow_nil?, [false]),
+         :ok <- validate_action_argument_option(action, :oauth_tokens, :sensitive?, [true]),
          :ok <- validate_action_has_change(action, UserIdentity.UpsertIdentityChange),
          :ok <- validate_field_in_values(action, :type, [:create]),
          :ok <- validate_field_in_values(action, :upsert?, [true]),
