@@ -113,7 +113,8 @@ defmodule AshAuthentication.Utils do
   @doc """
   Used within transformers to optionally build attributes as needed.
   """
-  @spec maybe_build_attribute(Dsl.t(), atom, atom | module, keyword) :: {:ok, Dsl.t()}
+  @spec maybe_build_attribute(Dsl.t(), atom, Ash.Type.t() | {:array, Ash.Type.t()}, keyword) ::
+          {:ok, Dsl.t()}
   def maybe_build_attribute(dsl_state, name, type, options) do
     if Resource.Info.attribute(dsl_state, name) do
       {:ok, dsl_state}
