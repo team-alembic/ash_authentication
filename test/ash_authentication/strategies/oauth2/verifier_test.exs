@@ -42,13 +42,13 @@ defmodule AshAuthentication.Strategy.OAuth2.VerifierFixture do
 
           read :sign_in_with_oauth2 do
             argument(:user_info, :map, allow_nil?: false)
-            argument(:oauth_tokens, :map, allow_nil?: false)
+            argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
             prepare(AshAuthentication.Strategy.OAuth2.SignInPreparation)
           end
 
           create :register_with_oauth2 do
             argument(:user_info, :map, allow_nil?: false)
-            argument(:oauth_tokens, :map, allow_nil?: false)
+            argument(:oauth_tokens, :map, allow_nil?: false, sensitive?: true)
             upsert?(true)
             upsert_identity(unquote(upsert_identity))
             change(AshAuthentication.GenerateTokenChange)
