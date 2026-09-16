@@ -118,6 +118,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
     strategy.resource
     |> Changeset.new()
     |> Changeset.set_context(%{
+      strategy_name: strategy,
       private: %{
         ash_authentication?: true
       }

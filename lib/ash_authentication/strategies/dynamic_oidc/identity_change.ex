@@ -24,8 +24,8 @@ defmodule AshAuthentication.Strategy.DynamicOidc.IdentityChange do
   @doc false
   @impl true
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
-  def change(changeset, _opts, context) do
-    case Info.strategy_for_action(changeset.resource, changeset.action.name) do
+  def change(changeset, opts, context) do
+    case Info.find_strategy(changeset, context, opts) do
       {:ok, strategy} ->
         do_change(changeset, strategy, context)
 

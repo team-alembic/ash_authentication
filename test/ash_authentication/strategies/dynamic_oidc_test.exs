@@ -51,6 +51,96 @@ defmodule AshAuthentication.Strategy.DynamicOidcTest do
     end
   end
 
+  describe "identity resolution" do
+    test "inherits the email-linking defaults and retains DSL configuration" do
+      defaults = %DynamicOidc{}
+      assert defaults.trust_email_verified? == false
+      assert defaults.on_untrusted_email_match == :reject
+      assert Info.strategy!(Example.User, :sso).trust_email_verified? == true
+    end
+
+    test "verified provider email links an existing account" do
+      user = build_user()
+      Ash.Seed.update!(user, %{confirmed_at: DateTime.utc_now()})
+      strategy = %{Info.strategy!(Example.User, :sso) | __connection_id__: Ash.UUID.generate()}
+
+      assert {:ok, signed_in} =
+               Strategy.action(
+                 strategy,
+                 :register,
+                 registration(user.username, "subject", true),
+                 []
+               )
+
+      assert signed_in.id == user.id
+      assert [%{strategy: identity_strategy}] = signed_in.identities
+      assert identity_strategy == "sso/#{strategy.__connection_id__}"
+    end
+
+    test "unverified email cannot link an existing account" do
+      user = build_user()
+      Ash.Seed.update!(user, %{confirmed_at: DateTime.utc_now()})
+      strategy = %{Info.strategy!(Example.User, :sso) | __connection_id__: Ash.UUID.generate()}
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               Strategy.action(
+                 strategy,
+                 :register,
+                 registration(user.username, "subject", false),
+                 []
+               )
+    end
+
+    test "disabled email trust rejects even verified matches without raising" do
+      user = build_user()
+      Ash.Seed.update!(user, %{confirmed_at: DateTime.utc_now()})
+
+      strategy =
+        Info.strategy!(Example.User, :sso)
+        |> Map.put(:trust_email_verified?, false)
+        |> Map.put(:__connection_id__, Ash.UUID.generate())
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               Strategy.action(
+                 strategy,
+                 :register,
+                 registration(user.username, "subject", true),
+                 []
+               )
+    end
+
+    test "equal subjects from different connections resolve to separate accounts" do
+      strategy = Info.strategy!(Example.User, :sso)
+      first = %{strategy | __connection_id__: Ash.UUID.generate()}
+      second = %{strategy | __connection_id__: Ash.UUID.generate()}
+      first_params = registration(username(), "shared-subject", true)
+      second_params = registration(username(), "shared-subject", true)
+
+      assert {:ok, first_user} = Strategy.action(first, :register, first_params, [])
+      assert {:ok, second_user} = Strategy.action(second, :register, second_params, [])
+      refute first_user.id == second_user.id
+      assert [%{strategy: first_strategy}] = first_user.identities
+      assert [%{strategy: second_strategy}] = second_user.identities
+      assert first_strategy == "sso/#{first.__connection_id__}"
+      assert second_strategy == "sso/#{second.__connection_id__}"
+
+      Ash.Seed.update!(first_user, %{confirmed_at: DateTime.utc_now()})
+      assert {:ok, returning} = Strategy.action(first, :register, first_params, [])
+      assert returning.id == first_user.id
+    end
+  end
+
+  defp registration(username, subject, verified?) do
+    %{
+      "user_info" => %{
+        "nickname" => to_string(username),
+        "sub" => subject,
+        "email_verified" => verified?
+      },
+      "oauth_tokens" => %{}
+    }
+  end
+
   describe "idp_initiated_login? rejection" do
     # dynamic_oidc resolves its provider config from a `connection_id` in the
     # request-phase path; an IdP-initiated callback carries no `connection_id`,

@@ -406,6 +406,7 @@ defmodule Example.User do
       dynamic_oidc :sso do
         connection_resource Example.OidcConnection
         identity_resource Example.UserIdentity
+        trust_email_verified? true
         redirect_uri "http://localhost:4000/auth"
       end
 
