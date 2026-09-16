@@ -8,6 +8,29 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
   alias AshAuthentication.{Info, Jwt, Strategy, TokenResource}
 
   describe "log_out_everywhere action" do
+    test "notifies every revocation without affecting another user's sessions" do
+      user = build_user_with_token_required()
+      other = build_user_with_token_required()
+      {:ok, _token, %{"jti" => other_jti}} = Jwt.token_for_user(other)
+      strategy = Info.strategy!(Example.UserWithTokenRequired, :log_out_everywhere)
+
+      jtis =
+        for _index <- 1..3 do
+          {:ok, _token, %{"jti" => jti}} = Jwt.token_for_user(user)
+          jti
+        end
+
+      assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user}, actor: self())
+
+      for jti <- jtis do
+        assert_receive {:token_notification, %{data: %{jti: ^jti, purpose: "revocation"}}}
+        assert TokenResource.jti_revoked?(Example.Token, jti)
+      end
+
+      refute TokenResource.jti_revoked?(Example.Token, other_jti)
+      refute_received {:token_notification, %{data: %{jti: ^other_jti}}}
+    end
+
     test "all existing tokens for a user a revoked" do
       user = build_user_with_token_required()
       strategy = Info.strategy!(Example.UserWithTokenRequired, :log_out_everywhere)

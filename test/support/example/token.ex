@@ -8,6 +8,7 @@ defmodule Example.Token do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshAuthentication.TokenResource],
     authorizers: [Ash.Policy.Authorizer],
+    simple_notifiers: [Example.TokenNotifier],
     domain: Example
 
   postgres do
