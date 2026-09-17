@@ -11,6 +11,77 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.15.0](https://github.com/team-alembic/ash_authentication/compare/v4.14.2...v4.15.0) (2026-09-17)
+### Breaking Changes:
+
+* require an `identity_resource` for all OAuth2 and OIDC strategies by James Harton
+
+* require an `identity_resource` for all OAuth2 and OIDC strategies by James Harton
+
+
+
+### Features:
+
+* password: add a `sign_in_token_via_post?` option to the password strategy by James Harton
+
+* confirm-to-link for untrusted OAuth2 email matches by James Harton
+
+### Bug Fixes:
+
+* compare the provider's email on the OAuth2 sign-in path by James Harton
+
+* compare the provider's email before attaching an OAuth2 sign-in by James Harton
+
+* audit_log: require a configured salt for `ip_privacy_mode :hash` by James Harton
+
+* serialise the actor in audit log `extra_data` by James Harton
+
+* password: enforce `require_confirmed_with` on the action itself by James Harton
+
+* validate both halves of a subject at every decode site by James Harton
+
+* plug: renew the session when a user is stored in it by James Harton
+
+* remember_me: match the sign-in guard to the key the session actually uses by James Harton
+
+* plug: consult `jti` revocation when reading a session by James Harton
+
+* stop trusting unverified token claims in the revocation path by James Harton
+
+* password: escape the identity interpolated into the reset-request log by James Harton
+
+* confirmation: bind the confirmation token to the record it updates by James Harton
+
+* oauth2: clear the callback session on every path that had one by James Harton
+
+* api_key: bound and canonicalise API key segments before decoding by James Harton
+
+* oauth2: mark the provider tokens as sensitive (#1221) by James Harton
+
+* oauth2: select the provider uid by `@uid_keys` order, not term order (#1224) by James Harton
+
+* audit_log: match `Forwarded` parameter names case-insensitively (#1219) by James Harton
+
+* oauth2: check every upsert field in the anti-hijacking verifier (#1226) by James Harton
+
+* audit_log: make `include_strategies` filter the logged actions (#1209) by James Harton
+
+* validate the `subject` attribute in audit log write actions (#1207) by James Harton
+
+* escape interpolated values in confirmation and magic link forms by James Harton
+
+* generate a user identity resource in the upgrader when one is missing by James Harton
+
+* thread tenant/actor through OAuth2 identity resolution by James Harton
+
+* resolve OAuth2/OIDC users by `iss`/`sub`, never by email by James Harton
+
+### Improvements:
+
+* generated confirmation sender demonstrates identity-link copy by James Harton
+
+* trust `email_verified` by default for Slack and Apple by James Harton
+
 ## [v4.14.2](https://github.com/team-alembic/ash_authentication/compare/v4.14.1...v4.14.2) (2026-08-25)
 ### Breaking Changes:
 
