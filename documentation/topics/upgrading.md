@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Upgrading
 
-## Upgrading to version 4.14.3
+## Upgrading to version 4.15.0
 
 ### Breaking Changes
 
