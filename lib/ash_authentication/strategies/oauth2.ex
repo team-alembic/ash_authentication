@@ -158,7 +158,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     actions do
       read :sign_in_with_example do
         argument :user_info, :map, allow_nil?: false
-        argument :oauth_tokens, :map, allow_nil?: false
+        argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
         prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
 
         filter expr(email == get_path(^arg(:user_info), [:email]))
@@ -187,7 +187,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     actions do
       create :register_with_oauth2 do
         argument :user_info, :map, allow_nil?: false
-        argument :oauth_tokens, :map, allow_nil?: false
+        argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
         upsert? true
         upsert_identity :email
 
@@ -231,6 +231,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
     client_authentication_method: nil,
     client_id: nil,
     client_secret: nil,
+    email_field: :email,
     icon: nil,
     id_token_signed_response_alg: nil,
     id_token_ttl_seconds: nil,
@@ -267,6 +268,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
 
   defstruct @struct_fields
 
+  alias AshAuthentication.Errors.AuthenticationFailed
   alias AshAuthentication.Strategy.{Custom, OAuth2}
 
   use Custom, entity: Dsl.dsl()
@@ -291,6 +293,7 @@ defmodule AshAuthentication.Strategy.OAuth2 do
           client_authentication_method: nil | binary,
           client_id: secret,
           client_secret: secret,
+          email_field: atom,
           icon: nil | atom,
           id_token_signed_response_alg: nil | binary,
           id_token_ttl_seconds: nil | pos_integer(),
@@ -330,28 +333,37 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   defdelegate transform(strategy, dsl_state), to: Transformer
   defdelegate verify(strategy, dsl_state), to: Verifier
 
-  @uid_keys ["uid", "sub", "id", :uid, :sub, :id]
+  # The order of this list is the precedence order and it is load-bearing.
+  # String keys come first because a provider always sends strings; the atom
+  # keys only match when a caller builds `user_info` in Elixir.
+  @uid_keys ["sub", "uid", "id", :sub, :uid, :id]
+
+  @connection_id_context_key :oidc_connection_id
 
   @doc """
   Extract the unique provider identifier (the OpenID Connect `sub` claim) from a
   provider's `user_info` map.
 
-  `uid` is the AshAuthentication convention, `sub` is the OpenID Connect claim,
-  and `id` is what some providers (eg Google in the past) have returned. The
-  same extraction must be used both when looking a user up by their identity and
-  when persisting the identity, so this is the single source of truth.
+  The first key present with a non-nil value wins, in this order: `sub` is the
+  OpenID Connect claim and the key the whole identity model is built on, `uid`
+  is the AshAuthentication convention for the same thing, and `id` is a fallback
+  for providers (eg Google in the past) which returned `id` instead of `sub`.
+  The same extraction must be used both when looking a user up by their identity
+  and when persisting the identity, so this is the single source of truth.
   """
   @spec uid_from_user_info(map) :: String.t() | nil
   def uid_from_user_info(user_info) do
-    user_info
-    |> Map.take(@uid_keys)
-    |> Map.values()
-    |> Enum.reject(&is_nil/1)
-    |> List.first()
-    |> case do
-      nil -> nil
-      uid -> to_string(uid)
-    end
+    # Iterate `@uid_keys` rather than `Map.take/2` plus `Map.values/1`.
+    # `Map.values/1` returns the map in Erlang term order, not the order the
+    # keys were given to `Map.take/2`, so a `Map`-based selection silently
+    # ignores the precedence above - it reverses it for these keys, and lets
+    # any atom key beat every string key.
+    Enum.find_value(@uid_keys, fn key ->
+      case Map.get(user_info, key) do
+        nil -> nil
+        uid -> to_string(uid)
+      end
+    end)
   end
 
   @doc """
@@ -362,8 +374,12 @@ defmodule AshAuthentication.Strategy.OAuth2 do
   connection configuration is data-driven per tenant/customer - it is namespaced
   with the matched connection id (`"<name>/<connection_id>"`) so that IdPs which
   may issue colliding `sub` claims are disambiguated. This is the single source
-  of truth shared by the identity write (`IdentityChange`) and read
-  (`UserResolver`) paths.
+  of truth for every read of and write to that field: `IdentityChange`,
+  `SignInPreparation`, `UserResolver` and the confirmation add-on's identity
+  link all go through it.
+
+  A namespaced strategy has to carry its connection id by the time this is
+  called. See `put_connection_id/2`.
   """
   @spec identity_strategy_name(t | map) :: String.t()
   def identity_strategy_name(strategy) do
@@ -371,5 +387,84 @@ defmodule AshAuthentication.Strategy.OAuth2 do
       nil -> to_string(strategy.name)
       connection_id -> "#{strategy.name}/#{connection_id}"
     end
+  end
+
+  @doc """
+  The changeset or query context an OAuth2-derived action runs with.
+
+  Carries the connection id of the runtime strategy, if it has one, so that
+  changes and preparations can restore it onto the strategy they rebuild from
+  the compile-time DSL. It lives under `private`, which Ash never populates from
+  action params: the id must come from the connection lookup
+  `AshAuthentication.Strategy.DynamicOidc.Plug` performs, never from the
+  request. Were it caller-supplied, the identity namespace would be
+  caller-chosen.
+  """
+  @spec action_context(t | map) :: map
+  def action_context(strategy) do
+    case Map.get(strategy, :__connection_id__) do
+      nil ->
+        %{private: %{ash_authentication?: true}}
+
+      connection_id ->
+        %{private: %{@connection_id_context_key => connection_id, ash_authentication?: true}}
+    end
+  end
+
+  @doc """
+  The connection id carried into the action by `action_context/1`.
+
+  Takes a changeset's or query's context.
+  """
+  @spec connection_id_from_context(map) :: nil | String.t()
+  def connection_id_from_context(context) do
+    context
+    |> Map.get(:private, %{})
+    |> Map.get(@connection_id_context_key)
+  end
+
+  @doc """
+  Restore a runtime connection id onto a strategy rebuilt from the
+  compile-time DSL.
+
+  A strategy whose identity namespace is per-connection carries a
+  `__connection_id__` field, which only the plug populates.
+  `AshAuthentication.Info.strategy_for_action/2` and `find_strategy/3` return
+  the DSL struct, whose field is `nil`, so the id has to be put back before
+  `identity_strategy_name/1` is used.
+
+  Returns `:error` when the strategy needs a connection id and none is
+  available. Callers must fail the action: falling back to the bare strategy
+  name collapses every connection into one identity namespace, which is what
+  the namespace exists to prevent. A strategy without the field needs no id and
+  comes back unchanged.
+  """
+  @spec put_connection_id(t | map, nil | String.t()) :: {:ok, t | map} | :error
+  def put_connection_id(strategy, connection_id)
+      when is_map_key(strategy, :__connection_id__) and is_binary(connection_id) and
+             connection_id != "",
+      do: {:ok, %{strategy | __connection_id__: connection_id}}
+
+  def put_connection_id(strategy, _connection_id)
+      when not is_map_key(strategy, :__connection_id__),
+      do: {:ok, strategy}
+
+  def put_connection_id(_strategy, _connection_id), do: :error
+
+  @doc false
+  @spec missing_connection_id_error(t | map, keyword) :: Exception.t()
+  def missing_connection_id_error(strategy, opts) do
+    AuthenticationFailed.exception(
+      Keyword.merge(opts,
+        strategy: strategy,
+        caused_by: %{
+          module: __MODULE__,
+          strategy: strategy,
+          message:
+            "No connection id reached the action, so the user identity cannot be namespaced " <>
+              "by connection"
+        }
+      )
+    )
   end
 end

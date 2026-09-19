@@ -16,20 +16,30 @@ defmodule Example do
     resource Example.User
     resource Example.UserIdentity
     resource Example.UserWithAuditLog
+    resource Example.UserWithConfirmationFieldPolicy
     resource Example.UserWithEmptyIncludes
     resource Example.UserWithExcludedActions
     resource Example.UserWithExcludedStrategies
+    resource Example.UserWithOAuthAuditLog
+    resource Example.UserWithOauth2Email
+    resource Example.UserWithOauth2EmailIdentity
     resource Example.UserWithOtp
     resource Example.UserWithRegisterOtp
     resource Example.UserWithExplicitIncludes
     resource Example.UserWithFailingSender
     resource Example.UserWithRegisterMagicLink
+    resource Example.UserWithRequiredConfirmation
     resource Example.UserWithRememberMe
+    resource Example.UserWithRememberMeTokenOptional
     resource Example.UserWithRenamedAuditLog
     resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired
+    resource Example.UserWithUnselectedConfirmation
     resource Example.UserWithTotp
     resource Example.UserWithTotpConfirmSetup
+    resource Example.UserWithUnstoredSignInTokens
+    resource Example.UserWithUnstoredWebAuthn
+    resource Example.UnstoredWebAuthnCredential
     resource Example.UserWithWildcardAndExclusions
     resource Example.UserWithExtraClaims
     resource Example.RecoveryCode

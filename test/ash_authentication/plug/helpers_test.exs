@@ -5,7 +5,7 @@
 defmodule AshAuthentication.Plug.HelpersTest do
   @moduledoc false
   use DataCase, async: true
-  alias AshAuthentication.{Info, Jwt, Plug.Helpers, Strategy.Password, TokenResource}
+  alias AshAuthentication.{Info, Jwt, Plug.Helpers, Strategy, Strategy.Password, TokenResource}
   import Plug.Test, only: [conn: 3, put_req_cookie: 3]
   alias Plug.Conn
 
@@ -101,6 +101,19 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.retrieve_from_session(:ash_authentication)
 
       assert conn.assigns.current_user.id == user.id
+    end
+
+    test "when token presence is not required and the session's jti has been revoked it doesn't load the subject",
+         %{conn: conn} do
+      user = build_user()
+
+      conn = Helpers.store_in_session(conn, user)
+
+      assert Helpers.retrieve_from_session(conn, :ash_authentication).assigns.current_user
+
+      Helpers.revoke_session_tokens(conn, :ash_authentication)
+
+      refute Helpers.retrieve_from_session(conn, :ash_authentication).assigns.current_user
     end
 
     test "when token presence is required and the token is present in the token resource it loads the token's subject",
@@ -266,8 +279,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
     test "a sign-in token cannot be replayed as a bearer token", %{conn: conn} do
       user = build_user()
 
-      {:ok, sign_in_token, _claims} =
-        Jwt.token_for_user(user, %{"purpose" => "sign_in"}, purpose: :sign_in)
+      {:ok, sign_in_token, _claims} = Jwt.token_for_user(user, %{}, purpose: :sign_in)
 
       conn =
         conn
@@ -280,8 +292,7 @@ defmodule AshAuthentication.Plug.HelpersTest do
     test "a remember-me token cannot be replayed as a bearer token", %{conn: conn} do
       user = build_user()
 
-      {:ok, remember_me_token, _claims} =
-        Jwt.token_for_user(user, %{"purpose" => "remember_me"}, purpose: :remember_me)
+      {:ok, remember_me_token, _claims} = Jwt.token_for_user(user, %{}, purpose: :remember_me)
 
       conn =
         conn
@@ -292,17 +303,31 @@ defmodule AshAuthentication.Plug.HelpersTest do
     end
 
     test "a totp-setup token cannot be replayed as a bearer token", %{conn: conn} do
-      user = build_user()
+      user = build_user_with_totp_confirm_setup()
+      strategy = Info.strategy!(user.__struct__, :totp)
 
-      {:ok, totp_setup_token, _claims} =
-        Jwt.token_for_user(user, %{"purpose" => "totp_setup"}, purpose: :totp_setup)
+      {:ok, pending_setup} = Strategy.action(strategy, :setup, %{user: user}, [])
 
-      conn =
+      setup_conn =
         conn
-        |> Conn.put_req_header("authorization", "Bearer #{totp_setup_token}")
+        |> Conn.put_req_header(
+          "authorization",
+          "Bearer #{pending_setup.__metadata__.setup_token}"
+        )
         |> Helpers.retrieve_from_bearer(:ash_authentication)
 
-      refute is_map_key(conn.assigns, :current_user)
+      refute is_map_key(setup_conn.assigns, :current_user_with_totp_confirm_setup)
+
+      # Control: an ordinary token for the same resource is accepted, so the
+      # refutation above is about the token's purpose, not the resource.
+      {:ok, user_token, _claims} = Jwt.token_for_user(user, %{})
+
+      user_conn =
+        conn
+        |> Conn.put_req_header("authorization", "Bearer #{user_token}")
+        |> Helpers.retrieve_from_bearer(:ash_authentication)
+
+      assert user_conn.assigns.current_user_with_totp_confirm_setup.id == user.id
     end
 
     test "a user token minted without a purpose claim is still accepted", %{conn: conn} do
@@ -352,6 +377,40 @@ defmodule AshAuthentication.Plug.HelpersTest do
       |> Helpers.revoke_bearer_tokens(:ash_authentication)
 
       assert AshAuthentication.TokenResource.jti_revoked?(user.__struct__, jti)
+    end
+
+    test "it ignores a header which does not hold a verifiable token", %{conn: conn} do
+      user = build_user()
+      {:ok, %{"jti" => jti} = claims} = Jwt.peek(user.__metadata__.token)
+
+      forged = forge_token(%{claims | "exp" => past_unix()})
+
+      conn
+      |> Conn.put_req_header("authorization", "Bearer #{forged}")
+      |> Helpers.revoke_bearer_tokens(:ash_authentication)
+
+      refute TokenResource.jti_revoked?(Example.Token, jti)
+    end
+
+    test "an unverifiable token cannot undo a genuine revocation", %{conn: conn} do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti} = claims} = Jwt.peek(token)
+
+      conn
+      |> Conn.put_req_header("authorization", "Bearer #{token}")
+      |> Helpers.revoke_bearer_tokens(:ash_authentication)
+
+      assert TokenResource.jti_revoked?(Example.Token, jti)
+
+      forged = forge_token(%{claims | "exp" => past_unix()})
+
+      conn
+      |> Conn.put_req_header("authorization", "Bearer #{forged}")
+      |> Helpers.revoke_bearer_tokens(:ash_authentication)
+
+      assert :ok = TokenResource.expunge_expired(Example.Token)
+      assert TokenResource.jti_revoked?(Example.Token, jti)
     end
   end
 
@@ -566,6 +625,32 @@ defmodule AshAuthentication.Plug.HelpersTest do
       assert conn.private.plug_session["user_with_remember_me_token"]
     end
 
+    test "when token presence is not required, an existing session stops it signing in again" do
+      user = build_user_with_remember_me_token_optional()
+      {:ok, remember_me_token} = generate_remember_me_token(user)
+
+      first =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("remember_me_token_optional", remember_me_token)
+        |> SessionPipeline.call([])
+        |> Helpers.sign_in_using_remember_me(:ash_authentication)
+
+      assert first.private.plug_session["user_with_remember_me_token_optional"]
+
+      second =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("remember_me_token_optional", remember_me_token)
+        |> SessionPipeline.call([])
+        |> copy_session_from(first)
+        |> Helpers.sign_in_using_remember_me(:ash_authentication)
+
+      # A second sign-in mints a fresh token, so an unchanged session proves the
+      # guard stopped the remember-me sign-in from running again.
+      assert second.private.plug_session == first.private.plug_session
+    end
+
     test "it handles multiple authenticated resources", %{conn: conn} do
       # This test would require multiple resources with remember me strategies
       # For now, we'll test that it doesn't crash with the existing setup
@@ -574,5 +659,11 @@ defmodule AshAuthentication.Plug.HelpersTest do
       # Should not crash and should not have any assigns set
       refute conn.private.plug_session["user_with_remember_me"]
     end
+  end
+
+  defp copy_session_from(conn, source) do
+    Enum.reduce(source.private.plug_session, conn, fn {key, value}, conn ->
+      Conn.put_session(conn, key, value)
+    end)
   end
 end

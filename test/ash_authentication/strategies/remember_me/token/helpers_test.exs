@@ -6,7 +6,7 @@ defmodule AshAuthentication.Strategy.RememberMe.Token.HelpersTest do
   @moduledoc false
   use DataCase, async: true
 
-  alias AshAuthentication.Strategy.RememberMe.Token.Helpers
+  alias AshAuthentication.{Jwt, Strategy.RememberMe.Token.Helpers, TokenResource}
 
   describe "revoke_remember_me_token/3" do
     test "successfully revokes a valid remember me token" do
@@ -16,6 +16,17 @@ defmodule AshAuthentication.Strategy.RememberMe.Token.HelpersTest do
       refute AshAuthentication.TokenResource.token_revoked?(Example.Token, token)
       assert :ok = Helpers.revoke_remember_me_token(token, :ash_authentication)
       assert AshAuthentication.TokenResource.token_revoked?(Example.Token, token)
+    end
+
+    test "it does not revoke a token which fails verification" do
+      user = build_user_with_remember_me()
+      {:ok, token} = generate_remember_me_token(user)
+      {:ok, claims} = Jwt.peek(token)
+
+      forged = forge_token(%{claims | "exp" => past_unix()})
+
+      assert :error = Helpers.revoke_remember_me_token(forged, :ash_authentication)
+      refute TokenResource.token_revoked?(Example.Token, token)
     end
   end
 end

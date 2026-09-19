@@ -69,6 +69,7 @@ spark_locals_without_parens = [
   dynamic_oidc: 0,
   dynamic_oidc: 1,
   dynamic_oidc: 2,
+  email_field: 1,
   enabled?: 1,
   endpoints: 1,
   exclude_actions: 1,

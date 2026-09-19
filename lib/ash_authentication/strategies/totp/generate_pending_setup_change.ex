@@ -74,7 +74,8 @@ defmodule AshAuthentication.Strategy.Totp.GeneratePendingSetupChange do
       )
 
     with {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
-         {:ok, token, _claims} <- Jwt.token_for_user(user, %{}, jwt_opts) do
+         {:ok, token, _claims} <-
+           Jwt.token_for_user(user, %{"purpose" => "totp_setup"}, jwt_opts) do
       encoded_secret = Base.encode64(secret)
 
       case TokenResource.Actions.store_token(

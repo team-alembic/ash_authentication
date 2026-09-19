@@ -63,7 +63,8 @@ defmodule AshAuthentication.Strategy.Password.RequestPasswordReset do
 
         {:error, error} ->
           Logger.warning("""
-          Something went wrong resetting password for #{inspect(action_input.resource)} `#{identity}`
+          Something went wrong resetting password for #{inspect(action_input.resource)} \
+          #{inspect(identity, printable_limit: 128)}
 
           #{Exception.format(:error, error)}
           """)

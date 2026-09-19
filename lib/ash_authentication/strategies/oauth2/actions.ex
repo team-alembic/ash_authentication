@@ -45,11 +45,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
 
     strategy.resource
     |> Query.new()
-    |> Query.set_context(%{
-      private: %{
-        ash_authentication?: true
-      }
-    })
+    |> Query.set_context(OAuth2.action_context(strategy))
     |> Query.for_read(strategy.sign_in_action_name, params, options)
     |> Ash.read()
     |> case do
@@ -117,11 +113,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
 
     strategy.resource
     |> Changeset.new()
-    |> Changeset.set_context(%{
-      private: %{
-        ash_authentication?: true
-      }
-    })
+    |> Changeset.set_context(OAuth2.action_context(strategy))
     |> Changeset.for_create(
       strategy.register_action_name,
       params,
@@ -175,11 +167,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
   end
 
   defp issue_link_confirmation(strategy, %ConfirmationRequired{} = confirmation_required, opts) do
-    payload = %{
-      "strategy" => to_string(strategy.name),
-      "user_info" => confirmation_required.user_info,
-      "oauth_tokens" => confirmation_required.oauth_tokens
-    }
+    payload =
+      %{
+        "strategy" => to_string(strategy.name),
+        "user_info" => confirmation_required.user_info,
+        "oauth_tokens" => confirmation_required.oauth_tokens
+      }
+      |> maybe_put_connection_id(strategy)
 
     with {:ok, confirmation} <- find_confirmation_add_on(strategy.resource),
          {:ok, token} <-
@@ -198,6 +192,17 @@ defmodule AshAuthentication.Strategy.OAuth2.Actions do
       |> then(&sender.send(confirmation_required.user, token, &1))
 
       :ok
+    end
+  end
+
+  # The link is applied on a later request, by `Confirmation.ConfirmChange`,
+  # which has no access to this request's session. The connection id travels
+  # with the pending link in the token's server-side `extra_data` so the
+  # identity it eventually writes lands in the right connection's namespace.
+  defp maybe_put_connection_id(payload, strategy) do
+    case Map.get(strategy, :__connection_id__) do
+      nil -> payload
+      connection_id -> Map.put(payload, "connection_id", connection_id)
     end
   end
 

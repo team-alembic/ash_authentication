@@ -185,16 +185,22 @@ defmodule AshAuthentication.Strategy.OAuth2.Dsl do
             "Whether to emit a compile-time warning when no `identity_resource` is configured. Set to `false` only when you have deliberately chosen not to use an identity resource and accept that users are matched by provider claims such as email, which is unsafe and will become unsupported in a future release.",
           default: true
         ],
+        email_field: [
+          type: :atom,
+          doc:
+            "The name of the attribute which holds the user's email address. Read only by the sign-in action (`registration_enabled? false`), where it names the value the provider's verified email must equal before the sign-in attaches to the account the action's filter matched. The register action needs no such setting: it attaches only when the verified email is one of the `upsert_identity` values that matched, which is evidence of the same fact. The sign-in action's filter matches on values the strategy never sees, so the attribute must be named here. The action must also select it - an email the action leaves unselected reads as absent and the sign-in is refused. Set `trust_email_verified? false` on a resource that stores no email address.",
+          default: :email
+        ],
         trust_email_verified?: [
           type: :boolean,
           doc:
-            "Whether the provider's `email_verified` claim can be trusted to attach an OAuth2 sign-in to a pre-existing local account with the same email. Only enable this for providers that reliably assert email ownership. When `false`, a sign-in whose `iss`/`sub` is not yet known will never be matched to an existing account by email.",
+            "Whether the provider's `email_verified` claim can be trusted to attach an OAuth2 sign-in to a pre-existing local account with the same email. Only enable this for providers that reliably assert email ownership. The claim alone is not enough, because a verified email attests ownership of that address and nothing else. The register action attaches only when its `upsert_identity` matched the account *by* the verified email, so an action keyed on a username or another provider claim never auto-attaches. The sign-in action attaches only when the verified email equals the account's `email_field`. On the register action, `on_untrusted_email_match :confirm` offers the sign-ins that no longer attach a linking path; the sign-in action has no such path and refuses them. When `false`, a sign-in whose `iss`/`sub` is not yet known will never be matched to an existing account by email.",
           default: false
         ],
         on_untrusted_email_match: [
           type: {:one_of, [:reject, :confirm]},
           doc:
-            "What to do when a new `iss`/`sub` presents an email matching an existing account but the email can't be trusted (see `trust_email_verified?`). `:reject` (the default) refuses the sign-in. `:confirm` issues a confirmation to the existing account's email and links the provider only once the recipient proves ownership; requires a `confirmation` add-on. Note: confirming binds whatever provider identity initiated the flow, so the confirmation email must make clear which provider is being linked - otherwise a user can be tricked into linking an attacker's provider account.",
+            "What to do when a new `iss`/`sub` presents an email matching an existing account but the email can't be trusted (see `trust_email_verified?`). Read by the register action only; a sign-in action always refuses. `:reject` (the default) refuses the sign-in. `:confirm` issues a confirmation to the existing account's email and links the provider only once the recipient proves ownership; requires a `confirmation` add-on. Note: confirming binds whatever provider identity initiated the flow, so the confirmation email must make clear which provider is being linked - otherwise a user can be tricked into linking an attacker's provider account.",
           default: :reject
         ],
         identity_relationship_name: [

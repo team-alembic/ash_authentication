@@ -96,6 +96,121 @@ user_info["email_verified"] == "true"
 user_info["email_verified"] == true
 ```
 
+#### 5. `dynamic_oidc` identities are namespaced by connection
+
+A `dynamic_oidc` strategy serves many IdP connections. Each connection now gets
+its own identity namespace in the identity resource's `strategy` field:
+`"<strategy_name>/<connection_id>"` instead of the bare `"<strategy_name>"`.
+Two IdPs that issue the same `sub` claim therefore stay apart.
+
+Identity rows written by an earlier version carry the bare name. **The lookup no
+longer matches them.** Until you relink them, an existing user who signs in
+through `dynamic_oidc` is refused, or - if your register action has no
+`upsert_identity`, or its key no longer matches - gets a second, empty account.
+
+`dynamic_oidc` is the only strategy affected. Every other OAuth2 and OIDC
+strategy keeps the bare strategy name, so its rows are unchanged.
+
+**Action required, if you run `dynamic_oidc`.** Move each existing row into its
+connection's namespace. Do not delete the rows: a deleted row is not recreated
+on the next sign-in, and deleting it discards the stored refresh token.
+
+Run this in the same deploy as the upgrade, before anyone signs in. A user who
+signs in first gets a namespaced row, which can then collide with the bare row
+on the `(uid, strategy)` unique index.
+
+If your connection resource holds exactly one row, the mapping is unambiguous:
+
+```sql
+-- Check first. This procedure is only sound when the count is 1.
+SELECT count(*) FROM oidc_connections;
+
+UPDATE user_identities
+   SET strategy = 'sso/' || '<the one connection id>'
+ WHERE strategy = 'sso';
+```
+
+Replace `user_identities`, `oidc_connections`, `sso` and the connection id with
+your own. If your identity resource is multitenant and each tenant holds one
+connection, run the same statement per tenant.
+
+**If you run more than one connection, read this before you upgrade.** Nothing
+on an identity row records which connection wrote it, so the rows cannot be
+sorted automatically. Two further consequences:
+
+1. Where two connections issued the same `sub`, the two users were resolved to
+   one account. The second user's row was never written, so **no code change can
+   separate them**. The surviving account may also hold the other user's email
+   or name, because the register upsert wrote them.
+2. You cannot find those cases from your own tables. One `sub` produced one row,
+   and it looks like any other row. Export each connection's `sub` set from the
+   IdP and intersect the sets. A non-empty intersection is a pair of users that
+   were already merged.
+#### 6. OAuth2 sign-in strategies must name the attribute that holds the email
+
+A sign-in-only OAuth2 strategy attaches a new provider identity to the account its read action matched. Before this version it attached whenever `trust_email_verified?` was set and the provider sent `email_verified`. It never compared the email itself. An action filtered on a username therefore attached the sign-in to an account the signer-in did not own.
+
+The rule now requires the provider's verified email to equal the account's own email. The new `email_field` option names the attribute that holds that email. It defaults to `:email`, and every strategy built on `oauth2` inherits it.
+
+**This configuration no longer compiles:**
+
+```elixir
+attributes do
+  uuid_primary_key :id
+  attribute :username, :ci_string, allow_nil?: false, public?: true
+end
+
+authentication do
+  strategies do
+    github do
+      # ...
+      registration_enabled? false
+    end
+  end
+end
+```
+
+```text
+authentication -> strategies -> github -> email_field :
+  `email_field` is set to `:email`, which is not an attribute of this resource.
+```
+
+Three things must be true together before the error appears:
+
+1. The strategy trusts the provider's claim (`trust_email_verified? true`). The `apple`, `auth0`, `github`, `google` and `slack` strategies set this by default.
+2. The strategy is sign-in only (`registration_enabled? false`).
+3. `email_field` names no attribute of the resource.
+
+A register strategy is never checked. It compares the verified email against the `upsert_identity` values that matched the account, so it needs no named attribute.
+
+**Action required:** choose one of two resolutions.
+
+- The resource holds the email under another name. Set `email_field` to that attribute:
+
+  ```elixir
+  github do
+    email_field :email_address
+    registration_enabled? false
+  end
+  ```
+
+- The resource stores no email address. Set `trust_email_verified? false`:
+
+  ```elixir
+  github do
+    trust_email_verified? false
+    registration_enabled? false
+  end
+  ```
+
+The configurations that now fail to compile are the ones that were silently attaching sign-ins to accounts the signer-in did not own. The compile error is the point of the change, not a cost of it.
+
+An action filtered on the email is unaffected. Its matched value is the provider's email, so it attaches exactly as before.
+
+**Also note:** a sign-in that no longer attaches has no linking path. `on_untrusted_email_match :confirm` is read by the register action only. The person must sign in with their existing method to link the provider.
+
+Accounts already linked under the old rule stay linked. This change prevents new links. It does not unpick existing ones. Review your `UserIdentity` rows for links whose provider email does not match the linked account's email.
+
 ### Igniter Task Changes
 
 #### Phoenix-specific code moved to ash_authentication_phoenix

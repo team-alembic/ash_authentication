@@ -19,6 +19,7 @@ defmodule DataCase do
   """
 
   use ExUnit.CaseTemplate
+  alias AshAuthentication.Jwt.Config, as: JwtConfig
   alias Ecto.Adapters.SQL.Sandbox
 
   using do
@@ -175,8 +176,57 @@ defmodule DataCase do
     end)
   end
 
+  @doc "User with remember me strategy and no required token presence factory"
+  @spec build_user_with_remember_me_token_optional(keyword) ::
+          Example.UserWithRememberMeTokenOptional.t() | no_return
+  def build_user_with_remember_me_token_optional(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:username, "test_user_#{System.unique_integer([:positive])}")
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithRememberMeTokenOptional
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
+  @doc """
+  Sign a token for `resource` with the `sub` claim set verbatim.
+
+  `AshAuthentication.Jwt.token_for_user/4` always overwrites `sub` with the
+  canonical `AshAuthentication.user_to_subject/1` output, so no code path in the
+  library can mint a token whose subject names a non-primary-key field or
+  carries an empty query. This helper signs one directly so that tests can
+  present such a token to a decoder.
+  """
+  @spec sign_token_with_subject(module, String.t(), map) :: String.t()
+  def sign_token_with_subject(resource, subject, extra_claims \\ %{}) do
+    {:ok, token, _claims} =
+      Joken.generate_and_sign(
+        JwtConfig.default_claims(resource, []),
+        Map.put(extra_claims, "sub", subject),
+        JwtConfig.token_signer(resource, [], %{})
+      )
+
+    token
+  end
+
   @doc "Generate a remember me token for a user"
-  @spec generate_remember_me_token(Example.UserWithRememberMe.t()) ::
+  @spec generate_remember_me_token(
+          Example.UserWithRememberMe.t()
+          | Example.UserWithRememberMeTokenOptional.t()
+        ) ::
           {:ok, String.t()} | {:error, any()}
   def generate_remember_me_token(user) do
     claims = %{"purpose" => "remember_me"}
@@ -190,6 +240,23 @@ defmodule DataCase do
       {:ok, token, _claims} -> {:ok, token}
       {:error, error} -> {:error, error}
     end
+  end
+
+  @doc "A unix timestamp one hour in the past"
+  @spec past_unix :: integer
+  def past_unix, do: DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.to_unix()
+
+  @doc """
+  Sign a set of claims with a secret which is not the resource's signing secret.
+
+  The result decodes like a real token but fails signature verification.
+  """
+  @spec forge_token(map, String.t()) :: String.t()
+  def forge_token(claims, secret \\ "not the signing secret") do
+    {:ok, token, _claims} =
+      Joken.encode_and_sign(claims, Joken.Signer.create("HS256", secret))
+
+    token
   end
 
   @doc "User with audit log factory"

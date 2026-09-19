@@ -4,12 +4,187 @@
 
 defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
   @moduledoc false
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   alias AshAuthentication.AddOn.AuditLog.IpPrivacy
+
+  @salt "cfLD5BEUDlIcqBDsFvI3ZgNPgWfDJfz3sSHqAiKmvHk="
+
+  defmodule TestDomain do
+    @moduledoc false
+    use Ash.Domain, validate_config_inclusion?: false
+
+    resources do
+      allow_unregistered? true
+    end
+  end
+
+  defmodule TestAuditLog do
+    @moduledoc false
+    use Ash.Resource,
+      data_layer: Ash.DataLayer.Ets,
+      extensions: [AshAuthentication.AuditLogResource],
+      domain: TestDomain
+
+    attributes do
+      uuid_v7_primary_key :id, writable?: true
+      attribute :strategy, :atom, allow_nil?: false, public?: true
+      attribute :action_name, :atom, allow_nil?: false, public?: true
+      attribute :subject, :string, allow_nil?: true, public?: true
+      attribute :resource, :atom, allow_nil?: false, public?: true
+      attribute :status, :atom, allow_nil?: false, public?: true
+
+      attribute :logged_at, :utc_datetime_usec,
+        allow_nil?: false,
+        public?: true,
+        default: &DateTime.utc_now/0
+
+      attribute :extra_data, :map, allow_nil?: false, public?: true, default: %{}
+      create_timestamp :inserted_at
+    end
+
+    actions do
+      defaults [:read]
+
+      create :record_authentication_event do
+        upsert? false
+        accept [:strategy, :action_name, :subject, :resource, :status, :logged_at, :extra_data]
+      end
+    end
+  end
+
+  defmodule HashingUser do
+    @moduledoc false
+    use Ash.Resource,
+      data_layer: Ash.DataLayer.Ets,
+      extensions: [AshAuthentication],
+      domain: TestDomain
+
+    attributes do
+      uuid_primary_key :id
+      attribute :email, :ci_string, allow_nil?: false, public?: true
+
+      attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
+    end
+
+    actions do
+      defaults [:read, :create, :update, :destroy]
+    end
+
+    authentication do
+      tokens do
+        enabled? true
+        token_resource Example.Token
+        signing_secret "test_secret_at_least_64_characters_long_for_proper_security"
+      end
+
+      session_identifier :jti
+
+      add_ons do
+        audit_log do
+          audit_log_resource TestAuditLog
+          ip_privacy_mode :hash
+        end
+      end
+
+      strategies do
+        password do
+          identity_field :email
+        end
+      end
+    end
+
+    identities do
+      identity :unique_email, [:email], pre_check_with: TestDomain
+    end
+  end
+
+  defmodule TruncatingUser do
+    @moduledoc false
+    use Ash.Resource,
+      data_layer: Ash.DataLayer.Ets,
+      extensions: [AshAuthentication],
+      domain: TestDomain
+
+    attributes do
+      uuid_primary_key :id
+      attribute :email, :ci_string, allow_nil?: false, public?: true
+
+      attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
+    end
+
+    actions do
+      defaults [:read, :create, :update, :destroy]
+    end
+
+    authentication do
+      tokens do
+        enabled? true
+        token_resource Example.Token
+        signing_secret "test_secret_at_least_64_characters_long_for_proper_security"
+      end
+
+      session_identifier :jti
+
+      add_ons do
+        audit_log do
+          audit_log_resource TestAuditLog
+          ip_privacy_mode :truncate
+        end
+      end
+
+      strategies do
+        password do
+          identity_field :email
+        end
+      end
+    end
+
+    identities do
+      identity :unique_email, [:email], pre_check_with: TestDomain
+    end
+  end
+
+  @otp_app :ash_authentication_ip_privacy_test_app
+  @hash_opts %{otp_app: @otp_app}
+
+  setup do
+    put_env(@otp_app, :audit_log_ip_salt, @salt)
+    # Start from a known state. Other suites leave the deprecated keys set.
+    put_salt(:audit_log_ip_salt, nil)
+    put_salt(:secret, nil)
+    :ok
+  end
+
+  defp put_salt(key, value), do: put_env(:ash_authentication, key, value)
+
+  defp put_env(app, key, value) do
+    original = Application.fetch_env(app, key)
+
+    if is_nil(value),
+      do: Application.delete_env(app, key),
+      else: Application.put_env(app, key, value)
+
+    on_exit(fn ->
+      case original do
+        {:ok, original} -> Application.put_env(app, key, original)
+        :error -> Application.delete_env(app, key)
+      end
+    end)
+  end
+
+  defp digest(salt, ip) do
+    hash =
+      :hmac
+      |> :crypto.mac(:sha256, salt, ip)
+      |> Base.encode16(case: :lower)
+      |> String.slice(0..15)
+
+    "hashed:#{hash}"
+  end
 
   describe "apply_privacy/3" do
     test "returns nil for nil input" do
-      assert IpPrivacy.apply_privacy(nil, :hash, %{}) == nil
+      assert IpPrivacy.apply_privacy(nil, :hash, @hash_opts) == nil
       assert IpPrivacy.apply_privacy(nil, :truncate, %{}) == nil
       assert IpPrivacy.apply_privacy(nil, :exclude, %{}) == nil
       assert IpPrivacy.apply_privacy(nil, :none, %{}) == nil
@@ -26,20 +201,20 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
     end
 
     test "hash mode returns hashed IP" do
-      hashed_ipv4 = IpPrivacy.apply_privacy("192.168.1.100", :hash, %{})
+      hashed_ipv4 = IpPrivacy.apply_privacy("192.168.1.100", :hash, @hash_opts)
       assert String.starts_with?(hashed_ipv4, "hashed:")
       # "hashed:" + 16 chars
       assert String.length(hashed_ipv4) == 23
 
-      hashed_ipv6 = IpPrivacy.apply_privacy("2001:db8::1", :hash, %{})
+      hashed_ipv6 = IpPrivacy.apply_privacy("2001:db8::1", :hash, @hash_opts)
       assert String.starts_with?(hashed_ipv6, "hashed:")
       assert String.length(hashed_ipv6) == 23
 
       # Same IP should produce same hash
-      assert IpPrivacy.apply_privacy("192.168.1.100", :hash, %{}) == hashed_ipv4
+      assert IpPrivacy.apply_privacy("192.168.1.100", :hash, @hash_opts) == hashed_ipv4
 
       # Different IPs should produce different hashes
-      refute IpPrivacy.apply_privacy("192.168.1.101", :hash, %{}) == hashed_ipv4
+      refute IpPrivacy.apply_privacy("192.168.1.101", :hash, @hash_opts) == hashed_ipv4
     end
 
     test "truncate mode with IPv4" do
@@ -158,7 +333,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
         forwarded: ["for=192.168.1.100:8080;proto=https", "for=\"[2001:db8::1]:3000\""]
       }
 
-      result = IpPrivacy.apply_to_request(request, :hash, %{})
+      result = IpPrivacy.apply_to_request(request, :hash, @hash_opts)
 
       assert length(result.forwarded) == 2
       # Should hash the IP but preserve the structure
@@ -168,11 +343,11 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
     end
 
     test "handles empty request map" do
-      assert IpPrivacy.apply_to_request(%{}, :hash, %{}) == %{}
+      assert IpPrivacy.apply_to_request(%{}, :hash, @hash_opts) == %{}
     end
 
     test "handles nil request" do
-      assert IpPrivacy.apply_to_request(nil, :hash, %{}) == nil
+      assert IpPrivacy.apply_to_request(nil, :hash, @hash_opts) == nil
     end
 
     test "preserves non-IP fields" do
@@ -183,7 +358,7 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
         remote_port: 12_345
       }
 
-      result = IpPrivacy.apply_to_request(request, :hash, %{})
+      result = IpPrivacy.apply_to_request(request, :hash, @hash_opts)
       assert String.starts_with?(result.remote_ip, "hashed:")
       assert result.http_host == "example.com"
       assert result.http_method == "POST"
@@ -191,29 +366,274 @@ defmodule AshAuthentication.AddOn.AuditLog.IpPrivacyTest do
     end
   end
 
-  describe "hash_ip/1" do
+  describe "apply_to_request/3 forwarded parameter names" do
+    @privacy_modes [
+      {:none, %{}},
+      {:hash, @hash_opts},
+      {:truncate, %{truncation_masks: %{ipv4: 24, ipv6: 48}}},
+      {:exclude, %{}}
+    ]
+
+    test "case variants of `for` and `by` transform like their lowercase equivalents" do
+      for {mode, opts} <- @privacy_modes do
+        expected =
+          IpPrivacy.apply_to_request(
+            %{forwarded: ["for=203.0.113.8;by=198.51.100.4"]},
+            mode,
+            opts
+          )
+
+        for header <- [
+              "For=203.0.113.8;BY=198.51.100.4",
+              "FOR=203.0.113.8;By=198.51.100.4",
+              "fOr=203.0.113.8;bY=198.51.100.4"
+            ] do
+          assert IpPrivacy.apply_to_request(%{forwarded: [header]}, mode, opts) == expected,
+                 "#{header} under #{inspect(mode)}"
+        end
+      end
+    end
+
+    test "case variants of quoted IPv6 `for` transform like their lowercase equivalents" do
+      for {mode, opts} <- @privacy_modes do
+        expected =
+          IpPrivacy.apply_to_request(
+            %{forwarded: ["for=\"[2001:db8::1]:3000\""]},
+            mode,
+            opts
+          )
+
+        assert IpPrivacy.apply_to_request(
+                 %{forwarded: ["For=\"[2001:db8::1]:3000\""]},
+                 mode,
+                 opts
+               ) == expected
+      end
+    end
+
+    test "excludes mixed-case `For` and `BY` when mode is exclude" do
+      request = %{forwarded: ["For=203.0.113.8;Proto=https;BY=198.51.100.4"]}
+
+      assert IpPrivacy.apply_to_request(request, :exclude, %{}).forwarded == ["Proto=https"]
+    end
+
+    test "drops unrecognised parameters" do
+      request = %{
+        forwarded: [
+          "for=203.0.113.8;secret=<script>alert(1)</script>;proto=https",
+          "for=203.0.113.8;no-equals-sign"
+        ]
+      }
+
+      assert IpPrivacy.apply_to_request(request, :none, %{}).forwarded == [
+               "for=203.0.113.8;proto=https",
+               "for=203.0.113.8"
+             ]
+    end
+
+    test "preserves `proto` and `host` values and names unaltered" do
+      request = %{forwarded: ["for=203.0.113.8;Proto=HTTPS;host=Example.COM"]}
+
+      for {mode, opts} <- @privacy_modes do
+        [header] = IpPrivacy.apply_to_request(request, mode, opts).forwarded
+
+        assert String.contains?(header, "Proto=HTTPS")
+        assert String.contains?(header, "host=Example.COM")
+      end
+    end
+
+    test "handles a comma-appended element without leaking either address" do
+      request = %{forwarded: ["For=6.6.6.6, for=203.0.113.8"]}
+
+      assert IpPrivacy.apply_to_request(request, :exclude, %{}).forwarded == [""]
+
+      [hashed] = IpPrivacy.apply_to_request(request, :hash, @hash_opts).forwarded
+      assert String.starts_with?(hashed, "for=hashed:")
+      refute String.contains?(hashed, "6.6.6.6")
+      refute String.contains?(hashed, "203.0.113.8")
+
+      [truncated] =
+        IpPrivacy.apply_to_request(request, :truncate, %{truncation_masks: %{ipv4: 24}}).forwarded
+
+      assert truncated == "for=invalid-ip"
+
+      assert IpPrivacy.apply_to_request(request, :none, %{}).forwarded == [
+               "for=6.6.6.6, for=203.0.113.8"
+             ]
+    end
+  end
+
+  describe "hash_ip/2" do
     test "produces consistent hashes" do
       ip = "192.168.1.100"
-      hash1 = IpPrivacy.hash_ip(ip)
-      hash2 = IpPrivacy.hash_ip(ip)
-      assert hash1 == hash2
+      assert IpPrivacy.hash_ip(ip, @otp_app) == IpPrivacy.hash_ip(ip, @otp_app)
     end
 
     test "produces different hashes for different IPs" do
-      hash1 = IpPrivacy.hash_ip("192.168.1.100")
-      hash2 = IpPrivacy.hash_ip("192.168.1.101")
-      refute hash1 == hash2
+      refute IpPrivacy.hash_ip("192.168.1.100", @otp_app) ==
+               IpPrivacy.hash_ip("192.168.1.101", @otp_app)
     end
 
     test "handles IPv6 addresses" do
-      hash = IpPrivacy.hash_ip("2001:db8::1")
+      hash = IpPrivacy.hash_ip("2001:db8::1", @otp_app)
       assert String.starts_with?(hash, "hashed:")
       assert String.length(hash) == 23
     end
 
     test "returns nil for invalid input" do
-      assert IpPrivacy.hash_ip(nil) == nil
-      assert IpPrivacy.hash_ip(123) == nil
+      assert IpPrivacy.hash_ip(nil, @otp_app) == nil
+      assert IpPrivacy.hash_ip(123, @otp_app) == nil
+    end
+
+    test "keys the digest with the configured salt" do
+      assert IpPrivacy.hash_ip("192.168.1.100", @otp_app) == digest(@salt, "192.168.1.100")
+    end
+
+    test "different salts produce different digests for the same address" do
+      with_salt = IpPrivacy.hash_ip("192.168.1.100", @otp_app)
+
+      put_env(@otp_app, :audit_log_ip_salt, "a different salt entirely")
+
+      refute IpPrivacy.hash_ip("192.168.1.100", @otp_app) == with_salt
+    end
+
+    test "resolves a `{module, function, arguments}` salt" do
+      put_env(@otp_app, :audit_log_ip_salt, {Function, :identity, [@salt]})
+
+      assert IpPrivacy.hash_ip("192.168.1.100", @otp_app) == digest(@salt, "192.168.1.100")
+    end
+
+    test "prefers the consuming application over `:ash_authentication`" do
+      put_salt(:audit_log_ip_salt, "the deprecated salt")
+
+      assert IpPrivacy.hash_ip("192.168.1.100", @otp_app) == digest(@salt, "192.168.1.100")
+    end
+
+    test "falls back to `:ash_authentication`'s `:audit_log_ip_salt`" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+      put_salt(:audit_log_ip_salt, "the deprecated salt")
+
+      assert IpPrivacy.hash_ip("192.168.1.100", @otp_app) ==
+               digest("the deprecated salt", "192.168.1.100")
+    end
+
+    test "falls back to `:ash_authentication`'s `:secret`" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+      put_salt(:secret, "a secret used as the salt")
+
+      assert IpPrivacy.hash_ip("192.168.1.100", @otp_app) ==
+               digest("a secret used as the salt", "192.168.1.100")
+    end
+
+    test "reads only the deprecated location when no application is given" do
+      put_salt(:audit_log_ip_salt, "the deprecated salt")
+
+      assert IpPrivacy.hash_ip("192.168.1.100") == digest("the deprecated salt", "192.168.1.100")
+    end
+
+    test "raises when no salt is configured" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+
+      assert_raise RuntimeError, ~r/No salt is configured/, fn ->
+        IpPrivacy.hash_ip("192.168.1.100", @otp_app)
+      end
+    end
+
+    test "names the consuming application in the error" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+
+      error =
+        assert_raise RuntimeError, fn -> IpPrivacy.hash_ip("192.168.1.100", @otp_app) end
+
+      assert Exception.message(error) =~ "config #{inspect(@otp_app)}"
+    end
+
+    test "raises when the configured salt is blank" do
+      put_env(@otp_app, :audit_log_ip_salt, "   ")
+
+      assert_raise RuntimeError, ~r/No salt is configured/, fn ->
+        IpPrivacy.hash_ip("192.168.1.100", @otp_app)
+      end
+    end
+  end
+
+  describe "verify_hash_salt!/2" do
+    test "returns `:ok` when a salt is configured" do
+      assert :ok = IpPrivacy.verify_hash_salt!(@otp_app, [HashingUser])
+    end
+
+    test "raises when a resource hashes without a salt" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+
+      error =
+        assert_raise RuntimeError, fn ->
+          IpPrivacy.verify_hash_salt!(@otp_app, [HashingUser])
+        end
+
+      assert Exception.message(error) =~ "No salt is configured"
+      assert Exception.message(error) =~ inspect(HashingUser)
+    end
+
+    test "returns `:ok` without a salt when no resource hashes" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+
+      assert :ok = IpPrivacy.verify_hash_salt!(@otp_app, [TruncatingUser])
+    end
+
+    test "returns `:ok` without a salt when there are no resources" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+
+      assert :ok = IpPrivacy.verify_hash_salt!(@otp_app, [])
+    end
+
+    test "warns when the salt only resolves from the deprecated location" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+      put_salt(:audit_log_ip_salt, "the deprecated salt")
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = IpPrivacy.verify_hash_salt!(@otp_app, [HashingUser])
+        end)
+
+      assert log =~ "config :ash_authentication, :audit_log_ip_salt"
+      assert log =~ "deprecated"
+      assert log =~ "config #{inspect(@otp_app)}, audit_log_ip_salt:"
+      assert log =~ "mix ash_authentication.upgrade"
+    end
+
+    test "warns when the salt only resolves from the deprecated `:secret`" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+      put_salt(:secret, "a secret used as the salt")
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = IpPrivacy.verify_hash_salt!(@otp_app, [HashingUser])
+        end)
+
+      assert log =~ "config :ash_authentication, :secret"
+    end
+
+    test "does not warn when the consuming application configures the salt" do
+      put_salt(:audit_log_ip_salt, "the deprecated salt")
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = IpPrivacy.verify_hash_salt!(@otp_app, [HashingUser])
+        end)
+
+      refute log =~ "deprecated"
+    end
+
+    test "does not warn when no resource hashes" do
+      put_env(@otp_app, :audit_log_ip_salt, nil)
+      put_salt(:audit_log_ip_salt, "the deprecated salt")
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = IpPrivacy.verify_hash_salt!(@otp_app, [TruncatingUser])
+        end)
+
+      refute log =~ "deprecated"
     end
   end
 

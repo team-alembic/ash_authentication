@@ -101,7 +101,7 @@ defmodule Example.User do
 
     create :register_with_auth0 do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -112,7 +112,7 @@ defmodule Example.User do
 
     create :register_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -123,7 +123,7 @@ defmodule Example.User do
 
     create :register_with_oauth2_confirm_link do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -134,7 +134,7 @@ defmodule Example.User do
 
     create :register_with_oidc do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -145,7 +145,7 @@ defmodule Example.User do
 
     create :register_with_okta do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -159,7 +159,7 @@ defmodule Example.User do
 
     create :register_with_sso do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -168,9 +168,28 @@ defmodule Example.User do
       change AshAuthentication.Strategy.DynamicOidc.IdentityChange
     end
 
+    create :register_with_sso_confirm_link do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.DynamicOidc.IdentityChange
+    end
+
+    read :sign_in_with_sso do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
+
+      filter expr(username == get_path(^arg(:user_info), [:nickname]))
+    end
+
     read :sign_in_with_oauth2 do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
 
       filter expr(username == get_path(^arg(:user_info), [:nickname]))
@@ -178,7 +197,15 @@ defmodule Example.User do
 
     read :sign_in_with_oauth2_without_identity do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
+
+      filter expr(username == get_path(^arg(:user_info), [:nickname]))
+    end
+
+    read :sign_in_with_oauth2_untrusted do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       prepare AshAuthentication.Strategy.OAuth2.SignInPreparation
 
       filter expr(username == get_path(^arg(:user_info), [:nickname]))
@@ -186,7 +213,7 @@ defmodule Example.User do
 
     create :register_with_github do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -197,7 +224,7 @@ defmodule Example.User do
 
     create :register_with_slack do
       argument :user_info, :map, allow_nil?: false
-      argument :oauth_tokens, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
       upsert? true
       upsert_identity :username
 
@@ -337,6 +364,21 @@ defmodule Example.User do
         warn_on_missing_identity_resource? false
       end
 
+      # A sign-in strategy with an identity resource, so the identity-linking
+      # rules are reached, and `trust_email_verified?` left at its `false`
+      # default. `Example.User` has no email attribute at all.
+      oauth2 :oauth2_untrusted do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        client_secret &get_config/2
+        base_url &get_config/2
+        authorize_url &get_config/2
+        token_url &get_config/2
+        user_url &get_config/2
+        identity_resource Example.UserIdentity
+        registration_enabled? false
+      end
+
       oauth2 :oauth2_idp_initiated do
         client_id &get_config/2
         redirect_uri &get_config/2
@@ -407,6 +449,13 @@ defmodule Example.User do
         connection_resource Example.OidcConnection
         identity_resource Example.UserIdentity
         redirect_uri "http://localhost:4000/auth"
+      end
+
+      dynamic_oidc :sso_confirm_link do
+        connection_resource Example.OidcConnection
+        identity_resource Example.UserIdentity
+        redirect_uri "http://localhost:4000/auth"
+        on_untrusted_email_match(:confirm)
       end
 
       slack do

@@ -11,7 +11,15 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   """
 
   alias Ash.{Changeset, Error.Invalid.NoSuchAction, Query, Resource}
-  alias AshAuthentication.{Errors, Info, Jwt, Strategy.Password, TokenResource}
+
+  alias AshAuthentication.{
+    Errors,
+    Info,
+    Jwt,
+    Strategy.Password,
+    Strategy.Password.RequireConfirmed,
+    TokenResource
+  }
 
   @doc """
   Attempt to sign in a user.
@@ -26,6 +34,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       context
       |> Map.new()
       |> Map.merge(%{
+        strategy_name: strategy,
         private: %{
           ash_authentication?: true
         }
@@ -38,7 +47,6 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     query =
       strategy.resource
       |> Query.new()
-      |> Query.ensure_selected(List.wrap(strategy.require_confirmed_with))
       |> Query.set_context(context)
       |> Query.for_read(strategy.sign_in_action_name, params, options)
 
@@ -46,7 +54,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     |> Ash.read()
     |> case do
       {:ok, [user]} ->
-        check_confirmation(user, strategy, query)
+        {:ok, user}
 
       {:ok, []} ->
         {:error,
@@ -73,6 +81,10 @@ defmodule AshAuthentication.Strategy.Password.Actions do
          )}
 
       {:error, error} when is_struct(error, Errors.AuthenticationFailed) ->
+        {:error, error}
+
+      {:error,
+       %{errors: [%Errors.AuthenticationFailed{caused_by: %Errors.UnconfirmedUser{}} = error]}} ->
         {:error, error}
 
       {:error, error} when is_exception(error) ->
@@ -109,30 +121,6 @@ defmodule AshAuthentication.Strategy.Password.Actions do
      )}
   end
 
-  defp check_confirmation(user, strategy, query) do
-    case strategy.require_confirmed_with do
-      nil ->
-        {:ok, user}
-
-      field ->
-        if user_confirmed?(user, field) do
-          {:ok, user}
-        else
-          {:error,
-           Errors.AuthenticationFailed.exception(
-             strategy: strategy,
-             query: query,
-             caused_by:
-               Errors.UnconfirmedUser.exception(
-                 resource: strategy.resource,
-                 field: strategy.identity_field,
-                 confirmation_field: strategy.require_confirmed_with
-               )
-           )}
-        end
-    end
-  end
-
   @doc """
   Attempt to sign in a previously-authenticated user with a short-lived sign in token.
   """
@@ -146,14 +134,18 @@ defmodule AshAuthentication.Strategy.Password.Actions do
 
     strategy.resource
     |> Query.new()
-    |> Query.set_context(%{private: %{ash_authentication?: true}})
+    |> Query.set_context(%{strategy_name: strategy, private: %{ash_authentication?: true}})
     |> Query.for_read(strategy.sign_in_with_token_action_name, params, options)
     |> Ash.read()
     |> case do
       {:ok, [user]} ->
-        check_user(user, strategy)
+        {:ok, user}
 
       {:error, error} when is_struct(error, Errors.AuthenticationFailed) ->
+        {:error, error}
+
+      {:error,
+       %{errors: [%Errors.AuthenticationFailed{caused_by: %Errors.UnconfirmedUser{}} = error]}} ->
         {:error, error}
 
       {:error, error} when is_exception(error) ->
@@ -192,18 +184,29 @@ defmodule AshAuthentication.Strategy.Password.Actions do
       options
       |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
 
-    strategy.resource
-    |> Changeset.new()
-    |> Changeset.set_context(%{
-      private: %{
-        ash_authentication?: true
-      }
-    })
-    |> Changeset.for_create(strategy.register_action_name, params, options)
+    changeset =
+      strategy.resource
+      |> Changeset.new()
+      |> Changeset.set_context(%{
+        strategy_name: strategy,
+        private: %{
+          ash_authentication?: true
+        }
+      })
+      |> Changeset.for_create(strategy.register_action_name, params, options)
+
+    changeset
     |> Ash.create()
     |> case do
-      {:ok, user} -> check_user(user, strategy)
-      other -> other
+      {:ok, user} ->
+        check_registered_user(user, changeset, strategy)
+
+      {:error,
+       %{errors: [%Errors.AuthenticationFailed{caused_by: %Errors.UnconfirmedUser{}} = error]}} ->
+        {:error, error}
+
+      other ->
+        other
     end
   end
 
@@ -319,32 +322,22 @@ defmodule AshAuthentication.Strategy.Password.Actions do
     end
   end
 
-  defp user_confirmed?(user, field) do
-    case Map.get(user, field) do
-      %Ash.NotLoaded{} -> false
-      %Ash.ForbiddenField{} -> false
-      nil -> false
-      _ -> true
-    end
-  end
-
-  defp check_user(user, %Password{require_confirmed_with: nil}) do
-    {:ok, user}
-  end
-
-  defp check_user(user, %Password{require_confirmed_with: value} = strategy) do
-    if is_nil(Map.get(user, value)) do
-      {:error,
-       Errors.AuthenticationFailed.exception(
-         strategy: strategy,
-         caused_by: %Ash.Error.Forbidden{
-           errors: [
-             %AshAuthentication.Errors.UnconfirmedUser{}
-           ]
-         }
-       )}
-    else
+  # `RequireConfirmedChange` performs this check on the generated register
+  # action, and its error stops `Ash.create/2` before this point. A hand written
+  # register action does not carry the change, so the check runs here instead.
+  defp check_registered_user(user, changeset, strategy) do
+    if register_action_checks_confirmation?(strategy) or
+         RequireConfirmed.confirmed?(user, changeset, strategy) do
       {:ok, user}
+    else
+      {:error, RequireConfirmed.error(strategy)}
     end
+  end
+
+  defp register_action_checks_confirmation?(strategy) do
+    strategy.resource
+    |> Resource.Info.action(strategy.register_action_name)
+    |> Map.get(:changes, [])
+    |> Enum.any?(&match?(%{change: {Password.RequireConfirmedChange, _}}, &1))
   end
 end

@@ -23,9 +23,15 @@ defmodule AshAuthentication.Supervisor do
     end
   end
   ```
+
+  The supervisor also checks configuration which cannot be checked when the
+  resources compile. It refuses to start when a resource uses the audit log
+  add-on with `ip_privacy_mode :hash` and no IP salt is configured. See
+  `AshAuthentication.AddOn.AuditLog.IpPrivacy`.
   """
 
   use Supervisor
+  alias AshAuthentication.AddOn.AuditLog.IpPrivacy
 
   @doc false
   @spec start_link(any) :: Supervisor.on_start()
@@ -38,6 +44,8 @@ defmodule AshAuthentication.Supervisor do
     |> Keyword.fetch(:otp_app)
     |> case do
       {:ok, otp_app} ->
+        IpPrivacy.verify_hash_salt!(otp_app, AshAuthentication.authenticated_resources(otp_app))
+
         [
           {AshAuthentication.TokenResource.Expunger, otp_app: otp_app},
           {AshAuthentication.AuditLogResource.Batcher, otp_app: otp_app},

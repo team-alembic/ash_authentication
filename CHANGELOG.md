@@ -11,6 +11,199 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.14](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.13...v5.0.0-rc.14) (2026-09-16)
+### Breaking Changes:
+
+* require an `identity_resource` and resolve OAuth2/OIDC users by `iss`/`sub` by James Harton
+
+* propagate sender failures as action errors (#1126) by James Harton
+
+* convert request actions from read to generic action (#1125)
+
+BREAKING CHANGE: Password reset request and magic link request actions
+
+are now generated as `:action` type instead of `:read`. Users with
+
+custom `:read` request actions must migrate to `:action` type.
+
+Changes:
+
+- Password and magic link transformers now generate `:action` type
+
+for request actions instead of `:read`
+
+- Both strategies now auto-generate a `get_by_<identity_field>` read
+
+action for user lookup
+
+- Request action implementations use the lookup action internally
+
+- Validators now only accept `:action` type with helpful error messages
+
+- Actions modules simplified to only handle `:action` type
+
+- Added upgrade function for 5.0.0 to help migrate custom actions
+
+Closes #837 by James Harton
+
+* Support Assent v0.3.0 OIDC-based Google strategy (#1098) by Josh Price
+
+* change token revoked action from read to generic action (#1124) by James Harton
+
+
+
+### Features:
+
+* password: accept POST as well as GET for the `sign_in_with_token` phase by James Harton
+
+* oauth2: opt-in IdP-initiated login via request-phase restart (#1205) by James Harton
+
+* igniter: add ash_authentication.add_strategy.dynamic_oidc installer by Zach Daniel
+
+* add dynamic_oidc strategy + OidcConnection resource extension by Zach Daniel
+
+* register webauthn in `ash_authentication.add_strategy` dispatcher (#1167) by James Harton
+
+* add Okta authentication strategy (#1163) by Zach Daniel
+
+* add Igniter generator for the WebAuthn strategy (#1160) by James Harton
+
+* add WebAuthn/Passkey authentication strategy (#1159) by James Harton
+
+* add igniter generator for OTP strategy (#1157) by James Harton
+
+* Add OTP strategy (#1141) by Torkild Gundersen Kjevik
+
+* brute-force protection for password and magic link sign-in (#1154) by James Harton
+
+* add Igniter generators for OAuth2/OIDC strategies (#1149) by James Harton
+
+* add recovery code authentication strategy (#1135) by adamtharani
+
+* add microsoft strategy (#1136) by MikaelFangel
+
+* Add TOTP authentication strategy. (#1086) by James Harton
+
+* add support for extra JWT claims (#1122) by James Harton
+
+* make auto signout possible in AshAuthentication.Phoenix  (#1070) by Abdessabour Moutik
+
+### Improvements:
+
+* discover token and audit log resources via `ash_domains` (#1204) by James Harton
+
+* replace `mix_audit` with `mix hex.audit` in the `mix check` gate (#1202) by James Harton
+
+* escape `@reflected_param` in the oauth2 interstitial for consistency by James Harton
+
+* OAuth2/OIDC POST callback + form_post interstitial (Sign in with Apple) (#1187) by James Harton
+
+* support `private_key` in Apple strategy (#1177) by schwarz
+
+* add `warn_on_missing_identity_resource?` opt-out for OAuth2-family strategies by James Harton
+
+* generated confirmation sender demonstrates identity-link copy by James Harton
+
+* add `require_identity_resource` upgrade step for 5.0 by James Harton
+
+* move Phoenix concerns out of AA igniters (#1145) by James Harton
+
+* split igniter generators into per-strategy and per-add-on tasks (#1143) by James Harton
+
+* add `grace_period` option to TOTP strategy (#1134) by James Harton
+
+* add `remember_me` to password sign-in strategy by default (#1131) by Zach Daniel
+
+### Bug Fixes:
+
+* compare the provider's email on the OAuth2 sign-in path by James Harton
+
+* compare the provider's email before attaching an OAuth2 sign-in by James Harton
+
+* confirmation: bind the confirmation token to the record it updates by James Harton
+
+* namespace `dynamic_oidc` user identities by connection by James Harton
+
+* password: enforce `require_confirmed_with` on the action itself by James Harton
+
+* validate both halves of a subject at every decode site by James Harton
+
+* totp: stamp the purpose claim on two-step setup tokens by James Harton
+
+* plug: renew the session when a user is stored in it by James Harton
+
+* remember_me: match the sign-in guard to the key the session actually uses by James Harton
+
+* plug: consult `jti` revocation when reading a session by James Harton
+
+* stop trusting unverified token claims in the revocation path by James Harton
+
+* serialise single-use token revocation on read-action sign-in by James Harton
+
+* audit_log: require a configured salt for `ip_privacy_mode :hash` by James Harton
+
+* password: escape the identity interpolated into the reset-request log by James Harton
+
+* oauth2: clear the callback session on every path that had one by James Harton
+
+* api_key: bound and canonicalise API key segments before decoding by James Harton
+
+* oauth2: mark the provider tokens as sensitive (#1220) by James Harton
+
+* oauth2: select the provider uid by `@uid_keys` order, not term order (#1223) by James Harton
+
+* audit_log: match `Forwarded` parameter names case-insensitively (#1218) by James Harton
+
+* oauth2: check every upsert field in the anti-hijacking verifier (#1225) by James Harton
+
+* remember_me: surface a failed token revocation during logout (#1216) by James Harton
+
+* audit_log: make `include_strategies` filter the logged actions (#1208) by James Harton
+
+* return error tuple from Jwt.peek/1 on malformed tokens (#1201) by Sai Asish Y
+
+* escape interpolated values in confirmation and magic link forms by James Harton
+
+* remove a duplicate call in the installer by Dmitry Maganov
+
+* remember-me after-action hook returns query instead of empty records (#1190) (#1191) by James Harton
+
+* filter auto-generated get_by_<identity_field> lookup actions (#1186) by Tom Clarke
+
+* oauth2: wire up private_key_jwt for non-Apple OIDC strategies (#1180) by sidler92
+
+* propagate Ash context opts in TOTP setup confirmation changes (#1170) by Arjan Scherpenisse
+
+* generate a user identity resource in the upgrader when one is missing by James Harton
+
+* pass `user_id` to identity upsert as a dynamic atom key by James Harton
+
+* register `Ash.Policy.Authorizer` on the WebAuthn credential resource (#1164) by James Harton
+
+* WebAuthn optional dependency compilation (#1162) by Jechol Lee
+
+* use `conn.remote_ip` over peer data for audit log (#1156) by quintinm-dev
+
+* gracefully degrade row locks on data layers without lock support (#1158) by James Harton
+
+* atomic token revocation across auth flows (#1153) by James Harton
+
+* remove duplicate codegen in password strategy and standardize migration names (#1150) by Josh Price
+
+* skip destroy/read_expired actions when `log_lifetime` is `:infinity` by James Harton
+
+* error when `require_token_presence_for_authentication?` is set without `store_all_tokens?` by James Harton
+
+* use struct access for calculation context (#1133) by James Harton
+
+* improve TOTP documentation and calculation robustness (#1130) by James Harton
+
+* return `{:error, AuthenticationFailed.t}` from `Jwt.token_for_user/2` (#1123) by James Harton
+
+* preserve existing context when adding request context (#1121) by James Harton
+
+* add `token` to Phoenix filter_parameters during installation (#1120) by James Harton
+
 ## [v5.0.0-rc.13](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.12...v5.0.0-rc.13) (2026-08-25)
 
 

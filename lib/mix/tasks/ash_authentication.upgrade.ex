@@ -54,7 +54,8 @@ if Code.ensure_loaded?(Igniter) do
             &convert_revoked_read_action_to_generic/2,
             &convert_request_actions_to_generic/2,
             &add_brute_force_protection/2,
-            &require_identity_resource/2
+            &require_identity_resource/2,
+            &move_audit_log_ip_salt/2
           ]
         }
 
@@ -273,6 +274,153 @@ if Code.ensure_loaded?(Igniter) do
           _ -> false
         end
       end)
+    end
+
+    @config_files ~w[config.exs dev.exs test.exs prod.exs runtime.exs]
+
+    @doc """
+    Moves a configured audit log IP salt out of this library's application name
+    and into the application which owns the resources.
+
+    Rewrites `config :ash_authentication, audit_log_ip_salt: value` to
+    `config :my_app, audit_log_ip_salt: value`, keeping the value exactly as it
+    is written.
+    """
+    def move_audit_log_ip_salt(igniter, _opts) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+
+      if configures_ip_salt?(igniter, otp_app) do
+        igniter
+      else
+        Enum.reduce(@config_files, igniter, &move_ip_salt_in_file(&2, &1, otp_app))
+      end
+    end
+
+    # Deliberately not `Igniter.Project.Config.configures_key?/4`, which only
+    # looks at the top level of the file. `runtime.exs` puts its configuration
+    # inside `if config_env() == :prod do`, and missing an entry there would
+    # migrate a second, conflicting value into the same application.
+    defp configures_ip_salt?(igniter, otp_app) do
+      Enum.any?(@config_files, &file_sets_ip_salt?(igniter, &1, otp_app))
+    end
+
+    defp file_sets_ip_salt?(igniter, file_name, otp_app) do
+      path = Path.join("config", file_name)
+
+      with true <- Igniter.exists?(igniter, path),
+           included <- Igniter.include_existing_file(igniter, path),
+           {:ok, source} <- Rewrite.source(included.rewrite, path) do
+        zipper =
+          source
+          |> Rewrite.Source.get(:quoted)
+          |> Sourceror.Zipper.zip()
+
+        match?({:ok, _}, move_to_ip_salt_triple(zipper, otp_app)) or
+          match?({:ok, _}, move_to_ip_salt_keyword(zipper, otp_app))
+      else
+        _ -> false
+      end
+    end
+
+    defp move_ip_salt_in_file(igniter, file_name, otp_app) do
+      path = Path.join("config", file_name)
+
+      if Igniter.exists?(igniter, path) do
+        Igniter.update_elixir_file(igniter, path, &move_ip_salt(&1, otp_app))
+      else
+        igniter
+      end
+    end
+
+    # `config <app>, :audit_log_ip_salt, value`
+    defp move_to_ip_salt_triple(zipper, app) do
+      Igniter.Code.Function.move_to_function_call(zipper, :config, 3, fn call ->
+        Igniter.Code.Function.argument_equals?(call, 0, app) and
+          Igniter.Code.Function.argument_equals?(call, 1, :audit_log_ip_salt)
+      end)
+    end
+
+    # `config <app>, audit_log_ip_salt: value`
+    defp move_to_ip_salt_keyword(zipper, app) do
+      Igniter.Code.Function.move_to_function_call(zipper, :config, 2, fn call ->
+        Igniter.Code.Function.argument_equals?(call, 0, app) and
+          Igniter.Code.Function.argument_matches_predicate?(
+            call,
+            1,
+            &Igniter.Code.Keyword.keyword_has_path?(&1, [:audit_log_ip_salt])
+          )
+      end)
+    end
+
+    defp move_ip_salt(zipper, otp_app) do
+      zipper =
+        zipper
+        |> rewrite_ip_salt_triple(otp_app)
+        |> rewrite_ip_salt_keyword(otp_app)
+
+      {:ok, zipper}
+    end
+
+    defp rewrite_ip_salt_triple(zipper, otp_app) do
+      case move_to_ip_salt_triple(zipper, :ash_authentication) do
+        {:ok, found} -> found |> replace_config_app(otp_app) |> Sourceror.Zipper.topmost()
+        :error -> zipper
+      end
+    end
+
+    defp rewrite_ip_salt_keyword(zipper, otp_app) do
+      case move_to_ip_salt_keyword(zipper, :ash_authentication) do
+        {:ok, found} -> found |> rewrite_found_ip_salt(otp_app) |> Sourceror.Zipper.topmost()
+        :error -> zipper
+      end
+    end
+
+    defp rewrite_found_ip_salt(zipper, otp_app) do
+      case Igniter.Code.Function.move_to_nth_argument(zipper, 1) do
+        {:ok, keyword} -> rewrite_ip_salt_entry(zipper, keyword, otp_app)
+        :error -> zipper
+      end
+    end
+
+    # The salt is the only key, so the whole call can change application name.
+    defp rewrite_ip_salt_entry(zipper, %{node: [_single]}, otp_app),
+      do: replace_config_app(zipper, otp_app)
+
+    # Other keys share the call, so the salt moves into a call of its own.
+    defp rewrite_ip_salt_entry(zipper, keyword, otp_app) do
+      case Igniter.Code.Keyword.get_key(keyword, :audit_log_ip_salt) do
+        {:ok, value} -> split_ip_salt_config(zipper, value.node, otp_app)
+        :error -> zipper
+      end
+    end
+
+    defp split_ip_salt_config(zipper, value, otp_app) do
+      case Igniter.Code.Function.update_nth_argument(
+             zipper,
+             1,
+             &Igniter.Code.Keyword.remove_keyword_key(&1, :audit_log_ip_salt)
+           ) do
+        {:ok, zipper} ->
+          Igniter.Code.Common.add_code(
+            zipper,
+            "config #{inspect(otp_app)}, audit_log_ip_salt: #{Sourceror.to_string(value)}",
+            placement: :after
+          )
+
+        :error ->
+          zipper
+      end
+    end
+
+    defp replace_config_app(zipper, otp_app) do
+      case Igniter.Code.Function.update_nth_argument(
+             zipper,
+             0,
+             &{:ok, Sourceror.Zipper.replace(&1, otp_app)}
+           ) do
+        {:ok, zipper} -> zipper
+        :error -> zipper
+      end
     end
 
     @oauth2_family ~w[oauth2 oidc github google auth0 apple slack microsoft okta]a

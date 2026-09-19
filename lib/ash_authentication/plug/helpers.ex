@@ -17,10 +17,19 @@ defmodule AshAuthentication.Plug.Helpers do
   Stores both the session identifier (token, jti:subject, or subject) and any
   authentication metadata from the user. The metadata is stored separately and
   will be restored onto the user when loading from the session.
+
+  The session is renewed before the subject is written. Renewing issues a new
+  session identifier and carries the existing session contents across, so values
+  such as `return_to` and the flash survive. Without it the identifier the
+  visitor arrived with would continue into their authenticated session, and an
+  identifier an attacker planted in the visitor's browser beforehand would become
+  an authenticated one.
   """
   @spec store_in_session(Conn.t(), Resource.Record.t()) :: Conn.t()
   def store_in_session(conn, user) when is_struct(user) do
     subject_name = Info.authentication_subject_name!(user.__struct__)
+
+    conn = Conn.configure_session(conn, renew: true)
 
     conn =
       cond do
@@ -124,7 +133,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> AshAuthentication.authenticated_resources()
     |> Stream.map(&{&1, Info.authentication_options(&1)})
     |> Enum.reduce(conn, fn {resource, options}, conn ->
-      session_key = session_key(options.subject_name)
+      session_key = subject_session_key(resource, options.subject_name)
 
       if Conn.get_session(conn, session_key) do
         # Already signed in
@@ -156,8 +165,9 @@ defmodule AshAuthentication.Plug.Helpers do
     require_token? =
       Info.authentication_tokens_require_token_presence_for_authentication?(resource)
 
+    session_key = subject_session_key(resource, options.subject_name)
+
     if require_token? do
-      session_key = session_key(options.subject_name)
       token_resource = Info.authentication_tokens_token_resource!(resource)
 
       with token when is_binary(token) <- Map.get(session, session_key),
@@ -176,10 +186,9 @@ defmodule AshAuthentication.Plug.Helpers do
         _ -> :error
       end
     else
-      session_key = to_string(options.subject_name)
-
       with subject when is_binary(subject) <- Map.get(session, session_key),
-           {:ok, subject} <- split_identifier(subject, resource),
+           {:ok, jti, subject} <- split_identifier(subject, resource),
+           :ok <- validate_session_jti(resource, jti, opts),
            {:ok, user} <-
              AshAuthentication.subject_to_user(subject, resource, opts) do
         {:ok, user}
@@ -232,12 +241,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
   defp handle_session_auth_result(conn, :error, resource, options, _session) do
     current_subject_name = current_subject_name(options.subject_name)
-
-    require_token? =
-      Info.authentication_tokens_require_token_presence_for_authentication?(resource)
-
-    session_key =
-      if require_token?, do: session_key(options.subject_name), else: options.subject_name
+    session_key = subject_session_key(resource, options.subject_name)
 
     conn
     |> Conn.assign(current_subject_name, nil)
@@ -367,9 +371,9 @@ defmodule AshAuthentication.Plug.Helpers do
 
   # Rejects purpose-scoped tokens (`sign_in`, `remember_me`, `totp_setup`, …)
   # being replayed as bearer credentials. A missing `"purpose"` claim must remain
-  # valid: several sign-in paths (OAuth2, magic link, OTP, token exchange) mint
-  # user tokens without stamping the claim, so this cannot be tightened to
-  # `== "user"`.
+  # valid: tokens minted before every mint path stamped the claim are still
+  # within their lifetime, so this cannot be tightened to `== "user"` until
+  # those have aged out.
   defp usable_as_bearer_token?(claims) do
     case Map.get(claims, "purpose") do
       nil -> true
@@ -403,7 +407,8 @@ defmodule AshAuthentication.Plug.Helpers do
   @doc """
   Revoke all authorization header(s).
 
-  Any bearer-style authorization headers will have their tokens revoked.
+  Any bearer-style authorization headers will have their tokens revoked.  A
+  header which does not hold a verifiable token is ignored.
   """
   @spec revoke_bearer_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
   def revoke_bearer_tokens(conn, otp_app, opts \\ []) do
@@ -417,7 +422,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, resource} <- Jwt.token_to_resource(token, otp_app),
+      with {:ok, _claims, resource} <- Jwt.verify(token, otp_app, opts),
            {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
         revoke_opts =
           Keyword.put(
@@ -590,14 +595,39 @@ defmodule AshAuthentication.Plug.Helpers do
 
   defp session_key(subject_name), do: "#{subject_name}_token"
 
+  # The key `store_in_session/2` writes the subject under. When token presence is
+  # required it stores the token itself under `session_key/1`; otherwise it stores
+  # the subject under the bare subject name. Every reader must agree with that
+  # choice, or it looks up a key which is never written.
+  defp subject_session_key(resource, subject_name) do
+    if Info.authentication_tokens_require_token_presence_for_authentication?(resource) do
+      session_key(subject_name)
+    else
+      to_string(subject_name)
+    end
+  end
+
   defp split_identifier(subject, resource) do
     if Info.authentication_session_identifier!(resource) == :jti do
       case String.split(subject, ":", parts: 2) do
-        [_jti, subject] -> {:ok, subject}
+        [jti, subject] -> {:ok, jti, subject}
         _ -> :error
       end
     else
-      {:ok, subject}
+      {:ok, nil, subject}
+    end
+  end
+
+  # An `:unsafe` session carries no JTI, so there is nothing to consult.
+  defp validate_session_jti(_resource, nil, _opts), do: :ok
+
+  defp validate_session_jti(resource, jti, opts) do
+    token_resource = Info.authentication_tokens_token_resource!(resource)
+
+    if TokenResource.Actions.jti_revoked?(token_resource, jti, opts) do
+      :error
+    else
+      :ok
     end
   end
 end

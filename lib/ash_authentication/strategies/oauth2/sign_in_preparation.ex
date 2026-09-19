@@ -12,6 +12,31 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
        returns an authentication failed error.
     2. Generates an access token if token generation is enabled.
     3. Updates the user identity resource, if one is enabled.
+
+  ## Attaching a new provider identity
+
+  The sign-in action's filter decides which account a callback matches. When the
+  provider's `iss`/`sub` is not yet linked to that account, this preparation
+  decides whether to link it:
+
+    * If a different identity for this strategy already belongs to the account -
+      refuse. One account cannot have two identities for the same provider
+      auto-linked.
+    * If the strategy trusts the provider's `email_verified` claim **and** the
+      verified email equals the account's `email_field` - link.
+    * Otherwise refuse. The person must sign in with their existing method to
+      link the provider.
+
+  The email comparison is what makes the trusted claim mean something. A verified
+  `email_verified` claim attests ownership of one address and nothing else, so on
+  an action filtered by a username it says nothing about the account the filter
+  matched. `AshAuthentication.Strategy.OAuth2.UserResolver` states the same rule
+  for the register action, where the matched `upsert_identity` values carry the
+  evidence instead.
+
+  An account whose `email_field` is empty, or a provider that supplies no email,
+  therefore never links here. So does a resource with no email attribute, which
+  is why `trust_email_verified?` requires `email_field` to name one.
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
@@ -33,19 +58,38 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
   def prepare(query, opts, context) do
     case Info.find_strategy(query, context, opts) do
       :error ->
-        {:error,
-         AuthenticationFailed.exception(
-           strategy: :unknown,
-           query: query,
-           caused_by: %{
-             module: __MODULE__,
-             action: query.action,
-             message: "Unable to infer strategy"
-           }
-         )}
+        Query.add_error(
+          query,
+          AuthenticationFailed.exception(
+            strategy: :unknown,
+            query: query,
+            caused_by: %{
+              module: __MODULE__,
+              action: query.action,
+              message: "Unable to infer strategy"
+            }
+          )
+        )
 
       {:ok, strategy} ->
+        prepare_for_strategy(query, strategy, context)
+    end
+  end
+
+  defp prepare_for_strategy(query, strategy, context)
+       when is_falsy(strategy.identity_resource),
+       do: Query.after_action(query, &handle_sign_in_result(&1, &2, strategy, context))
+
+  defp prepare_for_strategy(query, strategy, context) do
+    # The strategy above came from the compile-time DSL. For a strategy whose
+    # identity namespace is per-connection that struct has no connection id, so
+    # restore the one the plug resolved for this request.
+    case OAuth2.put_connection_id(strategy, OAuth2.connection_id_from_context(query.context)) do
+      {:ok, strategy} ->
         Query.after_action(query, &handle_sign_in_result(&1, &2, strategy, context))
+
+      :error ->
+        Query.add_error(query, OAuth2.missing_connection_id_error(strategy, query: query))
     end
   end
 
@@ -107,14 +151,15 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
               "A different #{strategy.name} identity is already linked to this account"
             )
 
-          UserResolver.email_trusted?(strategy, user_info) ->
+          UserResolver.email_trusted?(strategy, user_info) and
+              UserResolver.email_matches_account?(strategy, user, user_info) ->
             :ok
 
           true ->
             identity_error(
               query,
               strategy,
-              "Email could not be verified and an account with this email already exists"
+              "Email could not be verified against the account this sign-in matches"
             )
         end
     end
@@ -153,7 +198,7 @@ defmodule AshAuthentication.Strategy.OAuth2.SignInPreparation do
       %{
         user_info: Query.get_argument(query, :user_info),
         oauth_tokens: Query.get_argument(query, :oauth_tokens),
-        strategy: strategy.name,
+        strategy: OAuth2.identity_strategy_name(strategy),
         user_id: user.id
       },
       opts
