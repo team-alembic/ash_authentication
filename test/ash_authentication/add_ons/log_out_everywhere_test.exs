@@ -6,29 +6,39 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
   @moduledoc false
   use DataCase, async: false
   alias AshAuthentication.{Info, Jwt, Strategy, TokenResource}
+  alias AshAuthentication.Plug.Helpers
 
   describe "log_out_everywhere action" do
-    test "notifies every revocation without affecting another user's sessions" do
+    test "notifies every revocation and rejects revoked sessions without affecting another user" do
       user = build_user_with_token_required()
+      user_id = user.id
       other = build_user_with_token_required()
-      {:ok, _token, %{"jti" => other_jti}} = Jwt.token_for_user(other)
+      other_id = other.id
+      {:ok, other_token, %{"jti" => other_jti}} = Jwt.token_for_user(other)
       strategy = Info.strategy!(Example.UserWithTokenRequired, :log_out_everywhere)
 
-      jtis =
+      sessions =
         for _index <- 1..3 do
-          {:ok, _token, %{"jti" => jti}} = Jwt.token_for_user(user)
-          jti
+          {:ok, token, %{"jti" => jti}} = Jwt.token_for_user(user)
+          session = %{"user_with_token_required_token" => token}
+          assert {:ok, %{id: ^user_id}} = authenticate_session(session)
+          {jti, session}
         end
+
+      other_session = %{"user_with_token_required_token" => other_token}
+      assert {:ok, %{id: ^other_id}} = authenticate_session(other_session)
 
       assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user}, actor: self())
 
-      for jti <- jtis do
+      for {jti, session} <- sessions do
         assert_receive {:token_notification, %{data: %{jti: ^jti, purpose: "revocation"}}}
         assert TokenResource.jti_revoked?(Example.Token, jti)
+        assert :error = authenticate_session(session)
       end
 
       refute TokenResource.jti_revoked?(Example.Token, other_jti)
       refute_received {:token_notification, %{data: %{jti: ^other_jti}}}
+      assert {:ok, %{id: ^other_id}} = authenticate_session(other_session)
     end
 
     test "all existing tokens for a user a revoked" do
@@ -81,6 +91,15 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
         assert TokenResource.jti_revoked?(Example.UserWithTokenRequired, jti)
       end
     end
+  end
+
+  defp authenticate_session(session) do
+    Helpers.authenticate_resource_from_session(
+      Example.UserWithTokenRequired,
+      session,
+      :ash_authentication,
+      []
+    )
   end
 
   test "log_out_everywhere revokes remember_me tokens" do
