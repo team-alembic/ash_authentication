@@ -17,6 +17,7 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
          :ok <- validate_secret(strategy, :client_secret, [nil]),
          :ok <- validate_secret(strategy, :base_url),
          :ok <- validate_secret(strategy, :nonce, [true, false]),
+         :ok <- OAuth2.Verifier.validate_confirmation_for_untrusted_match(dsl_state, strategy),
          :ok <- validate_private_key(strategy) do
       merge_warnings([
         OAuth2.Verifier.prevent_hijacking(dsl_state, strategy),
@@ -25,7 +26,10 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
     end
   end
 
-  defp validate_private_key(%{auth_method: :private_key_jwt} = strategy),
+  # `Assent.Strategy.OIDC.callback/3` derives `:auth_method` from
+  # `client_authentication_method` and overwrites whatever it was given, so
+  # that is the only setting which decides whether a private key is needed.
+  defp validate_private_key(%{client_authentication_method: "private_key_jwt"} = strategy),
     do: validate_exclusive_secret(strategy, [:private_key, :private_key_path])
 
   defp validate_private_key(_strategy), do: :ok

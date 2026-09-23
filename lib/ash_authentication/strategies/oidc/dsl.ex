@@ -32,14 +32,23 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
 
   defp patch_schema do
     secret_type = AshAuthentication.Dsl.secret_type()
+    secret_list_type = AshAuthentication.Dsl.secret_list_type()
+    secret_doc = AshAuthentication.Dsl.secret_doc()
 
     OAuth2.dsl()
     |> Map.get(:schema, [])
     |> make_required!(:base_url)
     |> Keyword.delete(:authorize_url)
+    |> Keyword.delete(:auth_method)
     |> Keyword.delete(:token_url)
     |> Keyword.delete(:user_url)
     |> Keyword.merge(
+      client_secret: [
+        type: secret_type,
+        doc:
+          "The OAuth2 client secret. Required if `:client_authentication_method` is `\"client_secret_basic\"`, `\"client_secret_post\"` or `\"client_secret_jwt\"`. #{secret_doc}",
+        required: false
+      ],
       openid_configuration_uri: [
         type: secret_type,
         default: "/.well-known/openid-configuration",
@@ -79,6 +88,21 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
         type: {:or, [nil, :pos_integer]},
         doc: """
         The number of seconds from `iat` that an ID Token will be considered valid.
+        """,
+        required: false,
+        default: nil
+      ],
+      openid_default_scope: [
+        type: :string,
+        doc:
+          "The default scope requested from the OpenID provider. Merged with `authorization_params[:scope]`.",
+        required: false,
+        default: "openid"
+      ],
+      trusted_audiences: [
+        type: secret_list_type,
+        doc: """
+        A list of audiences which are trusted, in addition to `client_id`. #{secret_doc}
         """,
         required: false,
         default: nil

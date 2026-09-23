@@ -328,7 +328,6 @@ defmodule Example.User do
         base_url &get_config/2
         authorize_url &get_config/2
         token_url &get_config/2
-        trusted_audiences &get_config/2
         user_url &get_config/2
         authorization_params scope: "openid profile email"
         auth_method :client_secret_post
@@ -342,7 +341,6 @@ defmodule Example.User do
         base_url &get_config/2
         authorize_url &get_config/2
         token_url &get_config/2
-        trusted_audiences &get_config/2
         user_url &get_config/2
         authorization_params scope: "openid profile email"
         auth_method :client_secret_post
@@ -400,9 +398,6 @@ defmodule Example.User do
         redirect_uri &get_config/2
         client_secret &get_config/2
         base_url &get_config/2
-        authorize_url &get_config/2
-        token_url &get_config/2
-        user_url &get_config/2
         identity_resource Example.UserIdentity
       end
 

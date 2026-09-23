@@ -10,6 +10,20 @@ defmodule AshAuthentication.Strategy.OAuth2.PlugTest do
 
   alias AshAuthentication.{Info, Strategy.OAuth2.Plug}
 
+  defmodule ConfigCapturingAssentStrategy do
+    @moduledoc false
+    @behaviour Assent.Strategy
+
+    @impl true
+    def authorize_url(config) do
+      send(self(), {:config, config})
+      {:ok, %{session_params: %{state: "s"}, url: "https://example.com/authorize"}}
+    end
+
+    @impl true
+    def callback(_config, _params), do: {:error, :not_implemented}
+  end
+
   defmodule SucceedingAssentStrategy do
     @moduledoc false
     @behaviour Assent.Strategy
@@ -221,6 +235,47 @@ defmodule AshAuthentication.Strategy.OAuth2.PlugTest do
 
       assert {:ok, _user} = conn.private[:authentication_result]
       refute get_session(conn, "user/oauth2")
+    end
+  end
+
+  describe "client assertion signing algorithm" do
+    setup do
+      {:ok, strategy} = Info.strategy(Example.User, :oauth2)
+      {:ok, strategy: %{strategy | assent_strategy: ConfigCapturingAssentStrategy}}
+    end
+
+    test "the config carries no `:jwt_algorithm`, so Assent applies its per-method default", %{
+      strategy: strategy
+    } do
+      :get
+      |> conn("/", %{})
+      |> SessionPipeline.call([])
+      |> Plug.request(strategy)
+
+      assert_received {:config, config}
+      refute Keyword.has_key?(config, :jwt_algorithm)
+    end
+
+    test "a `private_key_jwt` strategy does not inherit the token signing algorithm", %{
+      strategy: strategy
+    } do
+      strategy = %{strategy | auth_method: :private_key_jwt}
+
+      {:ok, signing_algorithm} =
+        AshAuthentication.Info.authentication_tokens_signing_algorithm(Example.User)
+
+      assert signing_algorithm == "HS256"
+
+      :get
+      |> conn("/", %{})
+      |> SessionPipeline.call([])
+      |> Plug.request(strategy)
+
+      assert_received {:config, config}
+
+      # Assent defaults `private_key_jwt` to RS256. Passing our own HS256 here
+      # would HMAC the PEM bytes instead of signing with the private key.
+      refute Keyword.has_key?(config, :jwt_algorithm)
     end
   end
 end

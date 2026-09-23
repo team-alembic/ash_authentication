@@ -1260,4 +1260,159 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
     test_project(files: files)
     |> Igniter.Project.Deps.add_dep({:simple_sat, ">= 0.0.0"})
   end
+
+  describe "strip_dead_oidc_options/2" do
+    defp user_resource_content(igniter) do
+      igniter.rewrite
+      |> Rewrite.source!("lib/test/accounts/user.ex")
+      |> Rewrite.Source.get(:content)
+    end
+
+    defp oidc_project(strategies) do
+      user_resource = """
+      defmodule Test.Accounts.User do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication],
+          data_layer: Ash.DataLayer.Ets
+
+        attributes do
+          uuid_primary_key :id
+          attribute :email, :ci_string, allow_nil?: false, public?: true
+        end
+
+        actions do
+          defaults [:read]
+        end
+
+        authentication do
+          tokens do
+            enabled? true
+            token_resource Test.Accounts.Token
+            signing_secret fn _, _ -> {:ok, "test_secret_that_is_at_least_32_bytes_long"} end
+          end
+
+          strategies do
+      #{strategies}
+          end
+        end
+      end
+      """
+
+      token_resource = """
+      defmodule Test.Accounts.Token do
+        use Ash.Resource,
+          domain: Test.Accounts,
+          extensions: [AshAuthentication.TokenResource],
+          data_layer: Ash.DataLayer.Ets
+
+        token do
+          api Test.Accounts
+        end
+      end
+      """
+
+      domain = """
+      defmodule Test.Accounts do
+        use Ash.Domain
+
+        resources do
+          resource Test.Accounts.User
+          resource Test.Accounts.Token
+        end
+      end
+      """
+
+      test_project(
+        files: %{
+          "lib/test/accounts/user.ex" => user_resource,
+          "lib/test/accounts/token.ex" => token_resource,
+          "lib/test/accounts.ex" => domain
+        }
+      )
+    end
+
+    test "removes the discovery-supplied URLs and `auth_method` from an auth0 block" do
+      igniter =
+        """
+            auth0 do
+              client_id fn _, _ -> {:ok, "id"} end
+              client_secret fn _, _ -> {:ok, "secret"} end
+              redirect_uri fn _, _ -> {:ok, "http://localhost:4000/auth"} end
+              base_url fn _, _ -> {:ok, "https://example.auth0.com"} end
+              authorize_url fn _, _ -> {:ok, "https://example.auth0.com/authorize"} end
+              token_url fn _, _ -> {:ok, "https://example.auth0.com/oauth/token"} end
+              user_url fn _, _ -> {:ok, "https://example.auth0.com/userinfo"} end
+              auth_method :client_secret_post
+            end
+        """
+        |> oidc_project()
+        |> Upgrade.strip_dead_oidc_options([])
+
+      content = user_resource_content(igniter)
+
+      refute content =~ "authorize_url"
+      refute content =~ "token_url"
+      refute content =~ "user_url"
+      refute content =~ "auth_method"
+
+      # Discovery cannot supply these, so they stay.
+      assert content =~ "base_url"
+      assert content =~ "client_id"
+      assert content =~ "client_secret"
+      assert content =~ "redirect_uri"
+    end
+
+    test "removes `auth_method` from an oidc block but keeps the URLs on oauth2" do
+      igniter =
+        """
+            oidc do
+              client_id fn _, _ -> {:ok, "id"} end
+              client_secret fn _, _ -> {:ok, "secret"} end
+              redirect_uri fn _, _ -> {:ok, "http://localhost:4000/auth"} end
+              base_url fn _, _ -> {:ok, "https://example.com"} end
+              auth_method :client_secret_post
+            end
+
+            oauth2 do
+              client_id fn _, _ -> {:ok, "id"} end
+              client_secret fn _, _ -> {:ok, "secret"} end
+              redirect_uri fn _, _ -> {:ok, "http://localhost:4000/auth"} end
+              authorize_url fn _, _ -> {:ok, "https://example.com/authorize"} end
+              token_url fn _, _ -> {:ok, "https://example.com/token"} end
+              user_url fn _, _ -> {:ok, "https://example.com/userinfo"} end
+              auth_method :client_secret_post
+              trusted_audiences fn _, _ -> {:ok, ["aud"]} end
+            end
+        """
+        |> oidc_project()
+        |> Upgrade.strip_dead_oidc_options([])
+
+      content = user_resource_content(igniter)
+
+      # `oauth2` has no ID token, so `trusted_audiences` goes. `auth_method` is
+      # the live setting there, so it stays, along with the three URLs.
+      refute content =~ "trusted_audiences"
+      assert content =~ "auth_method(:client_secret_post)"
+      assert content =~ "authorize_url"
+      assert content =~ "token_url"
+      assert content =~ "user_url"
+
+      # The `oidc` block keeps only one `auth_method`, the `oauth2` one.
+      assert content |> String.split("auth_method") |> length() == 2
+    end
+
+    test "leaves a resource with no oauth2 strategies alone" do
+      igniter =
+        """
+            password :password do
+              identity_field :email
+            end
+        """
+        |> oidc_project()
+        |> Upgrade.strip_dead_oidc_options([])
+
+      assert_unchanged(igniter)
+    end
+  end
 end

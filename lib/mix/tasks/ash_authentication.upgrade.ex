@@ -55,7 +55,8 @@ if Code.ensure_loaded?(Igniter) do
             &convert_request_actions_to_generic/2,
             &add_brute_force_protection/2,
             &require_identity_resource/2,
-            &move_audit_log_ip_salt/2
+            &move_audit_log_ip_salt/2,
+            &strip_dead_oidc_options/2
           ]
         }
 
@@ -561,6 +562,119 @@ if Code.ensure_loaded?(Igniter) do
         )
       )
     end
+
+    @oidc_family ~w[oidc google auth0 apple slack microsoft okta dynamic_oidc]a
+    @plain_oauth2_family ~w[oauth2 github]a
+
+    @doc """
+    Removes strategy options which no longer exist, and which never did
+    anything where they were set.
+
+    `auth0` is now built on the `oidc` entity, so `authorize_url`, `token_url`
+    and `user_url` are gone - OIDC discovery supplies all three. `auth_method`
+    is gone from every OIDC strategy, because Assent derives the method from
+    `client_authentication_method` and overwrites it. `trusted_audiences` is
+    gone from `oauth2` and `github`, which have no ID token to validate it
+    against.
+    """
+    def strip_dead_oidc_options(igniter, _opts) do
+      case find_resources_with_oauth2_strategies(igniter) do
+        {igniter, []} ->
+          igniter
+
+        {igniter, resources} ->
+          resources
+          |> Enum.reduce(igniter, &strip_dead_options_from_resource/2)
+          |> Igniter.add_notice("""
+          OAuth2 and OIDC strategy options were removed.
+
+          `auth0` now builds on the `oidc` entity, matching `google`. OIDC
+          discovery supplies the authorize, token and user URLs, so
+          `authorize_url`, `token_url` and `user_url` were removed from `auth0`
+          blocks. `base_url` is now required at compile time.
+
+          `auth_method` was removed from every OIDC strategy. Assent derives the
+          method from `client_authentication_method` and overwrites
+          `auth_method` before the token request, so setting it had no effect.
+          Set `client_authentication_method` instead. Note the values are
+          strings, not atoms, and the default is "client_secret_basic" rather
+          than :client_secret_post.
+
+          `trusted_audiences` was removed from `oauth2` and `github`. Assent
+          reads it only when validating an ID token, which neither strategy
+          receives.
+
+          Every option removed here was already doing nothing, so your runtime
+          behaviour does not change.
+
+          Two things do change for `auth0`: `nonce` now defaults to `true`, and
+          `client_authentication_method` is now settable. Both follow the OIDC
+          defaults the other providers already use.
+          """)
+      end
+    end
+
+    defp strip_dead_options_from_resource(resource, igniter) do
+      Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+        with {:ok, strategies_zipper} <- enter_auth_strategies(zipper),
+             {:ok, strategies_zipper} <-
+               Igniter.Code.Common.update_all_matches(
+                 strategies_zipper,
+                 &strategy_call?/1,
+                 &strip_options/1
+               ) do
+          {:ok, strategies_zipper}
+        else
+          _ -> {:ok, zipper}
+        end
+      end)
+    end
+
+    defp strategy_call?(%{node: {name, _meta, args}}) when is_atom(name) and is_list(args),
+      do: name in @oidc_family or name in @plain_oauth2_family
+
+    defp strategy_call?(_zipper), do: false
+
+    defp strip_options(%{node: {name, _meta, _args}} = zipper) do
+      {:ok, Sourceror.Zipper.update(zipper, &drop_options(&1, dead_options(name)))}
+    end
+
+    defp dead_options(:auth0), do: [:auth_method, :authorize_url, :token_url, :user_url]
+    defp dead_options(name) when name in @oidc_family, do: [:auth_method]
+    defp dead_options(name) when name in @plain_oauth2_family, do: [:trusted_audiences]
+
+    defp drop_options({name, meta, args}, options) do
+      {name, meta, Enum.map(args, &drop_options_from_arg(&1, options))}
+    end
+
+    defp drop_options_from_arg(arg, options) when is_list(arg) do
+      Enum.map(arg, fn
+        {{:__block__, key_meta, [:do]}, body} ->
+          {{:__block__, key_meta, [:do]}, drop_options_from_body(body, options)}
+
+        other ->
+          other
+      end)
+    end
+
+    defp drop_options_from_arg(arg, _options), do: arg
+
+    defp drop_options_from_body({:__block__, meta, statements}, options) do
+      {:__block__, meta, Enum.reject(statements, &dead_option?(&1, options))}
+    end
+
+    defp drop_options_from_body(statement, options) do
+      if dead_option?(statement, options) do
+        {:__block__, [], []}
+      else
+        statement
+      end
+    end
+
+    defp dead_option?({name, _meta, args}, options) when is_atom(name) and is_list(args),
+      do: name in options
+
+    defp dead_option?(_statement, _options), do: false
 
     defp enter_auth_strategies(zipper) do
       with {:ok, zipper} <-
