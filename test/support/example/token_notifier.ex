@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 defmodule Example.TokenNotifier do
+  @moduledoc false
   use Ash.Notifier
 
   @impl true
