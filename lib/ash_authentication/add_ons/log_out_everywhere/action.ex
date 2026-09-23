@@ -48,6 +48,7 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Action do
         Ash.Context.to_opts(context,
           strategy: [:atomic, :atomic_batches, :stream],
           context: %{private: %{ash_authentication?: true}},
+          notify?: true,
           return_errors?: true,
           stop_on_error?: true
         )
