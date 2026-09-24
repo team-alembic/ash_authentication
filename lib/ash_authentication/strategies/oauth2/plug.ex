@@ -20,7 +20,8 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     :client_authentication_method,
     :id_token_signed_response_alg,
     :id_token_ttl_seconds,
-    :openid_configuration_uri
+    :openid_configuration_uri,
+    :openid_default_scope
   ]
 
   @doc """
@@ -263,12 +264,9 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
              !!strategy.authorize_url || !!strategy.base_url,
              context
            ),
-         {:ok, redirect_uri} <- build_redirect_uri(strategy, context),
-         {:ok, jwt_algorithm} <-
-           Info.authentication_tokens_signing_algorithm(strategy.resource) do
+         {:ok, redirect_uri} <- build_redirect_uri(strategy, context) do
       config =
         config
-        |> Map.put(:jwt_algorithm, jwt_algorithm)
         |> Map.put(:redirect_uri, redirect_uri)
         |> Map.update(:client_authentication_method, nil, &to_string/1)
         |> Enum.reject(&is_nil(elem(&1, 1)))

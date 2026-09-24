@@ -5,25 +5,25 @@
 defmodule AshAuthentication.Strategy.Auth0.Dsl do
   @moduledoc false
 
-  alias AshAuthentication.Strategy.{Custom, OAuth2}
+  alias AshAuthentication.Strategy.{Custom, Oidc}
   alias Assent.Strategy.Auth0
 
   @doc false
   @spec dsl :: Custom.entity()
   def dsl do
-    OAuth2.dsl()
+    Oidc.dsl()
     |> Map.merge(%{
       name: :auth0,
       args: [{:optional, :name, :auth0}],
       describe: """
       Provides a pre-configured authentication strategy for [Auth0](https://auth0.com/).
 
-      This strategy is built using the `:oauth2` strategy, and thus provides all the same
-      configuration options should you need them.
+      This strategy is built using the `:oidc` strategy, and automatically
+      retrieves configuration from Auth0's discovery endpoint.
 
       #### More documentation:
       - The [Auth0 Tutorial](/documentation/tutorial/auth0.md).
-      - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
+      - The [OIDC documentation](`AshAuthentication.Strategy.Oidc`)
 
       #### Strategy defaults:
 

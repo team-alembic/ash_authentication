@@ -115,9 +115,6 @@ defmodule Example.UserWithOauth2Email do
         redirect_uri &get_config/2
         client_secret &get_config/2
         base_url &get_config/2
-        authorize_url &get_config/2
-        token_url &get_config/2
-        user_url &get_config/2
         identity_resource Example.UserWithOauth2EmailIdentity
         registration_enabled? false
       end

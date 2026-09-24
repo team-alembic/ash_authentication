@@ -8,7 +8,7 @@ defmodule AshAuthentication.Strategy.Auth0 do
   @moduledoc """
   Strategy for authenticating using [Auth0](https://auth0.com).
 
-  This strategy builds on-top of `AshAuthentication.Strategy.OAuth2` and
+  This strategy builds on-top of `AshAuthentication.Strategy.Oidc` and
   [`assent`](https://hex.pm/packages/assent).
 
   In order to use Auth0 you need to provide the following minimum configuration:
@@ -16,17 +16,21 @@ defmodule AshAuthentication.Strategy.Auth0 do
     - `client_id`
     - `redirect_uri`
     - `client_secret`
-    - `site`
+    - `base_url`
+
+  As of Assent v0.3.0, the Auth0 strategy uses OpenID Connect (OIDC) and
+  automatically retrieves configuration (token URL, user info URL, etc.) from
+  Auth0's discovery endpoint.
 
   ## More documentation:
   - The [Auth0 Tutorial](/documentation/tutorial/auth0.md).
-  - The [OAuth2 documentation](`AshAuthentication.Strategy.OAuth2`)
+  - The [OIDC documentation](`AshAuthentication.Strategy.Oidc`)
   """
 
-  alias AshAuthentication.Strategy.{Custom, OAuth2}
+  alias AshAuthentication.Strategy.{Custom, Oidc}
 
   use Custom, entity: Dsl.dsl()
 
-  defdelegate transform(strategy, dsl_state), to: OAuth2
-  defdelegate verify(strategy, dsl_state), to: OAuth2
+  defdelegate transform(strategy, dsl_state), to: Oidc
+  defdelegate verify(strategy, dsl_state), to: Oidc
 end
