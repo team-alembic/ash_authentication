@@ -462,6 +462,14 @@ section is maintained as the implementation evolves.
 - Challenges are stored in the Plug session scoped per ceremony type and
   strategy, so a registration in one tab and a sign-in in another don't
   interfere, and a sign-in can never consume a registration challenge.
+- Each challenge is paired with a token that lives as long as `timeout`, and
+  is revoked the first time the challenge is answered. A challenge can
+  therefore be used once whatever the session store, including cookie
+  sessions, where the client keeps the cookie it was issued. This relies on
+  the token resource, which the WebAuthn strategy already requires.
+- The sign-in and verify actions resolve their user from the ceremony that
+  runs them, so calling them any other way — a code interface, JSON:API,
+  GraphQL — finds no user.
 
 For the full option reference, see the
 [WebAuthn DSL documentation](/documentation/dsls/DSL-AshAuthentication.Strategy.WebAuthn.md)

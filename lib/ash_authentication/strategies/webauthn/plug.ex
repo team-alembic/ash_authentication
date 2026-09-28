@@ -8,10 +8,20 @@ if Code.ensure_loaded?(Wax.Challenge) do
     Plug handlers for the WebAuthn strategy.
 
     Handles registration challenges, registration, authentication challenges,
-    and authentication via HTTP requests. Challenges are stored in the Plug session.
+    and authentication via HTTP requests. Challenges are stored in the Plug
+    session, each paired with a short-lived token that the ceremony consumes,
+    so a challenge can only be answered once whatever the session store.
     """
 
-    alias AshAuthentication.{Errors.AuthenticationFailed, Info, Strategy, Strategy.WebAuthn}
+    alias AshAuthentication.{
+      Errors.AuthenticationFailed,
+      Info,
+      Jwt,
+      Strategy,
+      Strategy.WebAuthn,
+      TokenResource
+    }
+
     alias Plug.Conn
     import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
     import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
@@ -86,10 +96,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
         |> strategy.adapter.serialize_challenge()
         |> Map.put(:user_handle, user_descriptor.id)
 
-      conn
-      |> Conn.put_session(session_key(strategy, :attestation), challenge_data)
-      |> Conn.put_resp_content_type("application/json")
-      |> Conn.send_resp(200, Jason.encode!(response))
+      send_challenge(conn, strategy, :attestation, challenge_data, response)
     end
 
     # The user handle (`user.id`) must be an opaque byte sequence of at most
@@ -199,13 +206,9 @@ if Code.ensure_loaded?(Wax.Challenge) do
         )
 
       response = assertion_options(conn, strategy, challenge, credentials, tenant)
-
       challenge_data = strategy.adapter.serialize_challenge(challenge)
 
-      conn
-      |> Conn.put_session(session_key(strategy, :authentication), challenge_data)
-      |> Conn.put_resp_content_type("application/json")
-      |> Conn.send_resp(200, Jason.encode!(response))
+      send_challenge(conn, strategy, :authentication, challenge_data, response)
     end
 
     @doc "Exchange a short-lived sign-in token for an authenticated session."
@@ -259,13 +262,9 @@ if Code.ensure_loaded?(Wax.Challenge) do
             )
 
           response = assertion_options(conn, strategy, challenge, credentials, tenant)
-
           challenge_data = strategy.adapter.serialize_challenge(challenge)
 
-          conn
-          |> Conn.put_session(session_key(strategy, :authentication), challenge_data)
-          |> Conn.put_resp_content_type("application/json")
-          |> Conn.send_resp(200, Jason.encode!(response))
+          send_challenge(conn, strategy, :authentication, challenge_data, response)
       end
     end
 
@@ -363,13 +362,80 @@ if Code.ensure_loaded?(Wax.Challenge) do
        )}
     end
 
+    # Deleting a challenge from the session only removes it from the *next*
+    # cookie: with a cookie session store the client still holds the one it
+    # was issued, challenge and all. So each challenge is paired with a token
+    # that lives exactly as long as the ceremony may, and `reconstruct_challenge/3`
+    # revokes it on first use — the token resource then refuses the challenge
+    # in any cookie it arrives in.
+    defp send_challenge(conn, strategy, type, challenge_data, response) do
+      case challenge_token(conn, strategy) do
+        {:ok, token} ->
+          conn
+          |> Conn.put_session(session_key(strategy, type), Map.put(challenge_data, :token, token))
+          |> Conn.put_resp_content_type("application/json")
+          |> Conn.send_resp(200, Jason.encode!(response))
+
+        {:error, error} ->
+          store_authentication_result(conn, {:error, error})
+      end
+    end
+
+    defp challenge_token(conn, strategy) do
+      opts =
+        [
+          purpose: :webauthn_challenge,
+          token_lifetime: {div(strategy.timeout + 999, 1000), :seconds}
+        ] ++ Keyword.take(opts(conn), [:tenant])
+
+      case Jwt.token_for_resource(strategy.resource, %{}, opts, get_context(conn) || %{}) do
+        {:ok, token, _claims} -> {:ok, token}
+        {:error, error} -> {:error, error}
+      end
+    end
+
     # Rebuild the ceremony challenge from the serialized session data via the
     # strategy's adapter (challenges are stored as plain maps because cookie
-    # session stores cannot serialize arbitrary Elixir structs).
+    # session stores cannot serialize arbitrary Elixir structs). Consumes the
+    # challenge's token first, so a challenge that was already answered, or
+    # whose token has expired, comes back as `nil`.
     defp reconstruct_challenge(conn, type, strategy) do
-      case Conn.get_session(conn, session_key(strategy, type)) do
-        %{} = data -> strategy.adapter.deserialize_challenge(strategy, data, type)
+      with %{} = data <- Conn.get_session(conn, session_key(strategy, type)),
+           :ok <- consume_challenge_token(conn, strategy, data) do
+        strategy.adapter.deserialize_challenge(strategy, data, type)
+      else
         _ -> nil
+      end
+    end
+
+    # The revocation is the serialisation point: of any number of concurrent
+    # uses, exactly one revokes the token.
+    defp consume_challenge_token(conn, strategy, data) do
+      opts = Keyword.take(opts(conn), [:tenant, :context])
+
+      with token when is_binary(token) <- data[:token] || data["token"],
+           {:ok, %{"purpose" => "webauthn_challenge"}, _resource} <-
+             Jwt.verify(
+               token,
+               strategy.resource,
+               Keyword.take(opts, [:tenant]),
+               get_context(conn) || %{}
+             ),
+           {:ok, token_resource} when token_resource not in [nil, false] <-
+             Info.authentication_tokens_token_resource(strategy.resource),
+           :ok <-
+             TokenResource.revoke(
+               token_resource,
+               token,
+               Keyword.put(
+                 opts,
+                 :store_all_tokens?,
+                 Info.authentication_tokens_store_all_tokens?(strategy.resource)
+               )
+             ) do
+        :ok
+      else
+        _ -> :error
       end
     end
 
