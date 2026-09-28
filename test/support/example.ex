@@ -48,6 +48,8 @@ defmodule Example do
     resource Example.WebAuthnCredential
     resource Example.UserWithWebAuthnNoIdentity
     resource Example.WebAuthnNoIdentityCredential
+    resource Example.UserWithWebAuthnSecondFactor
+    resource Example.WebAuthnSecondFactorCredential
     resource Example.MultiTenantUserWithWebAuthn
     resource Example.MultiTenantWebAuthnCredential
   end
