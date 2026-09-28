@@ -67,6 +67,7 @@ defmodule AshAuthenticationTest do
                Example.UserWithRegisterMagicLink,
                Example.UserWithWebAuthn,
                Example.UserWithWebAuthnNoIdentity,
+               Example.UserWithWebAuthnSecondFactor,
                Example.UserWithWildcardAndExclusions,
                Example.MultiTenantUserWithWebAuthn,
                ExampleMultiTenant.User,
