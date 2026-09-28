@@ -201,6 +201,45 @@ defmodule AshAuthentication.Strategy.WebAuthn.SecondFactorTest do
       replay = verify_conn(strategy, user, challenge_conn, passkey, assertion)
       assert {:error, %AuthenticationFailed{}} = replay.private[:authentication_result]
     end
+
+    # Synced passkeys report a constant sign count of 0, so the counter can't
+    # tell a second use of a challenge from the first.
+    test "rejects a replayed assertion from a synced passkey", %{strategy: strategy} do
+      user = sign_in_with_password("verify-replay-synced@example.com")
+      passkey = enrol_passkey(strategy, user)
+
+      challenge_conn = verify_challenge_conn(strategy, user)
+
+      assertion =
+        WebAuthnFixtures.generate_authentication(passkey,
+          challenge_bytes: challenge_bytes(challenge_conn),
+          origin: @origin,
+          sign_count: 0
+        )
+
+      first = verify_conn(strategy, user, challenge_conn, passkey, assertion)
+      assert {:ok, _} = first.private[:authentication_result]
+
+      replay = verify_conn(strategy, user, challenge_conn, passkey, assertion)
+      assert {:error, %AuthenticationFailed{}} = replay.private[:authentication_result]
+    end
+  end
+
+  describe "the verify action" do
+    test "resolves no user when called outside the ceremony", %{strategy: strategy} do
+      user = sign_in_with_password("verify-direct@example.com")
+      passkey = enrol_passkey(strategy, user)
+      params = passkey |> WebAuthnFixtures.generate_authentication() |> assertion_params()
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Example.verify_webauthn(
+                 params["raw_id"],
+                 params["authenticator_data"],
+                 params["signature"],
+                 params["client_data_json"],
+                 actor: user
+               )
+    end
   end
 
   defp sign_in_with_password(email) do

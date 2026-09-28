@@ -137,10 +137,26 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
                tenant,
                &lookup_credential_and_user(strategy, &1, tenant)
              ),
-           :ok <- verify_identity_matches(strategy, :sign_in, params, user) do
+           :ok <- verify_identity_matches(strategy, :sign_in, params, user),
+           {:ok, user} <-
+             run_ceremony_action(
+               strategy,
+               :sign_in,
+               strategy.sign_in_action_name,
+               sign_in_arguments(strategy, user),
+               user,
+               tenant
+             ) do
         maybe_generate_token(user, strategy, opts)
       end
     end
+
+    # The action's identity argument is taken from the user the ceremony
+    # resolved, since a discoverable-credential sign-in submits none.
+    defp sign_in_arguments(%{require_identity?: true} = strategy, user),
+      do: %{strategy.identity_field => Map.get(user, strategy.identity_field)}
+
+    defp sign_in_arguments(_strategy, _user), do: %{}
 
     @doc """
     Verify that the caller can produce a valid WebAuthn assertion using one of
@@ -165,10 +181,62 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
                challenge,
                tenant,
                &lookup_credential_for_actor(strategy, &1, actor, tenant)
+             ),
+           verified_at = DateTime.utc_now(),
+           {:ok, user} <-
+             run_ceremony_action(
+               strategy,
+               :verify,
+               strategy.verify_action_name,
+               Map.take(params, ~w[raw_id authenticator_data signature client_data_json]),
+               actor,
+               tenant,
+               %{webauthn_verified_at: verified_at}
              ) do
-        verified_at = DateTime.utc_now()
-        actor = Ash.Resource.put_metadata(actor, :webauthn_verified_at, verified_at)
-        maybe_generate_verified_token(actor, strategy, opts, verified_at)
+        maybe_generate_verified_token(user, strategy, opts, verified_at)
+      end
+    end
+
+    # Run the strategy's declared read action for the user the ceremony just
+    # proved. The action resolves nothing without that user in its private
+    # context — see `AshAuthentication.Strategy.WebAuthn.CeremonyUser`.
+    defp run_ceremony_action(
+           strategy,
+           action_label,
+           action_name,
+           arguments,
+           user,
+           tenant,
+           extra_context \\ %{}
+         ) do
+      private =
+        Map.merge(
+          %{WebAuthn.CeremonyUser.context_key() => user, ash_authentication?: true},
+          extra_context
+        )
+
+      strategy.resource
+      |> Query.new()
+      |> Query.set_context(%{private: private})
+      |> Query.for_read(action_name, arguments)
+      |> Ash.read_one(lookup_ash_opts(strategy, tenant))
+      |> case do
+        # A user-declared action might not constrain the query to the ceremony
+        # user, so the record it returns has to be checked against them.
+        {:ok, %{} = found} ->
+          primary_key = Ash.Resource.Info.primary_key(strategy.resource)
+
+          if Map.take(found, primary_key) == Map.take(user, primary_key) do
+            {:ok, found}
+          else
+            {:error, auth_failed(strategy, action_label, "Action resolved a different user")}
+          end
+
+        {:ok, nil} ->
+          {:error, auth_failed(strategy, action_label, "Unknown user")}
+
+        {:error, error} ->
+          {:error, auth_failed(strategy, action_label, inspect(error))}
       end
     end
 

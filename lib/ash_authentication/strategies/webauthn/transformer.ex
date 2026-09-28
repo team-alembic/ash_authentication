@@ -333,9 +333,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Transformer do
       )
     ]
 
+    preparations = [
+      Transformer.build_entity!(Resource.Dsl, [:actions, :read], :prepare,
+        preparation: WebAuthn.VerifyPreparation
+      )
+    ]
+
     Transformer.build_entity(Resource.Dsl, [:actions], :read,
       name: strategy.verify_action_name,
       arguments: arguments,
+      preparations: preparations,
       metadata: metadata,
       get?: true,
       description:

@@ -44,11 +44,29 @@ defmodule Example do
     resource Example.UserWithExtraClaims
     resource Example.RecoveryCode
     resource Example.UserWithRecoveryCodes
-    resource Example.UserWithWebAuthn
+
+    resource Example.UserWithWebAuthn do
+      # How an app would expose the strategy's action outside the ceremony.
+      define :sign_in_with_webauthn, action: :sign_in_with_webauthn, args: [:email]
+    end
+
     resource Example.WebAuthnCredential
-    resource Example.UserWithWebAuthnNoIdentity
+
+    resource Example.UserWithWebAuthnNoIdentity do
+      define :create_user_with_webauthn_no_identity, action: :create
+      # How an app would expose the strategy's action outside the ceremony.
+      define :sign_in_with_webauthn_no_identity, action: :sign_in_with_webauthn
+    end
+
     resource Example.WebAuthnNoIdentityCredential
-    resource Example.UserWithWebAuthnSecondFactor
+
+    resource Example.UserWithWebAuthnSecondFactor do
+      # How an app would expose the strategy's action outside the ceremony.
+      define :verify_webauthn,
+        action: :verify_webauthn,
+        args: [:raw_id, :authenticator_data, :signature, :client_data_json]
+    end
+
     resource Example.WebAuthnSecondFactorCredential
     resource Example.MultiTenantUserWithWebAuthn
     resource Example.MultiTenantWebAuthnCredential
