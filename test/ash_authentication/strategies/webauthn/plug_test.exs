@@ -261,6 +261,47 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     end
   end
 
+  describe "sign_in/2" do
+    test "full round trip: challenge then sign in", %{strategy: strategy} do
+      email = "sign-in@example.com"
+      passkey = register_passkey(strategy, email)
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+      conn = sign_in_conn(strategy, challenge_conn, email, passkey, sign_count: 1)
+
+      assert {:ok, user} = conn.private[:authentication_result]
+      assert to_string(user.email) == email
+      assert user.__metadata__.token
+    end
+
+    # Synced passkeys report a constant sign count of 0, so the counter can't
+    # tell a second use of a challenge from the first.
+    test "rejects a replayed assertion from a synced passkey", %{strategy: strategy} do
+      email = "sign-in-replay@example.com"
+      passkey = register_passkey(strategy, email)
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+      assertion = sign_assertion(challenge_conn, passkey, sign_count: 0)
+
+      first = sign_in_conn(strategy, challenge_conn, email, passkey, assertion: assertion)
+      assert {:ok, _} = first.private[:authentication_result]
+
+      replay = sign_in_conn(strategy, challenge_conn, email, passkey, assertion: assertion)
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               replay.private[:authentication_result]
+    end
+  end
+
+  describe "the sign-in action" do
+    test "resolves no user when called outside the ceremony", %{strategy: strategy} do
+      email = "sign-in-direct@example.com"
+      register_passkey(strategy, email)
+
+      assert {:error, %Ash.Error.Forbidden{}} = Example.sign_in_with_webauthn(email)
+    end
+  end
+
   describe "authentication_challenge/2" do
     test "includes transports hints in allowCredentials when stored", %{strategy: strategy} do
       user =
@@ -581,6 +622,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
   end
 
   @attestation_session_key "webauthn_attestation_challenge_webauthn"
+  @authentication_session_key "webauthn_authentication_challenge_webauthn"
 
   defp registration_challenge_conn(strategy, email) do
     :get
@@ -616,5 +658,88 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     |> SessionPipeline.call([])
     |> Plug.Conn.put_session(@attestation_session_key, session_data)
     |> WebAuthn.Plug.register(strategy)
+  end
+
+  # Registers `email` through the registration ceremony, and returns the
+  # registration fixture so tests can sign assertions with it.
+  defp register_passkey(strategy, email) do
+    challenge_conn = registration_challenge_conn(strategy, email)
+
+    passkey =
+      WebAuthnFixtures.generate_registration(
+        origin: "http://www.example.com",
+        rp_id: "example.com",
+        challenge_bytes: challenge_bytes(challenge_conn)
+      )
+
+    conn =
+      :post
+      |> conn("/user_with_web_authn/webauthn/register", %{
+        "user_with_web_authn" => %{
+          "email" => email,
+          "attestation_object" => passkey.attestation_object,
+          "client_data_json" => passkey.client_data_json,
+          "raw_id" => passkey.raw_id
+        }
+      })
+      |> SessionPipeline.call([])
+      |> Plug.Conn.put_session(
+        @attestation_session_key,
+        Plug.Conn.get_session(challenge_conn, @attestation_session_key)
+      )
+      |> WebAuthn.Plug.register(strategy)
+
+    assert {:ok, _user} = conn.private[:authentication_result]
+    passkey
+  end
+
+  defp authentication_challenge_conn(strategy, email) do
+    :get
+    |> conn("/user_with_web_authn/webauthn/authentication_challenge", %{"email" => email})
+    |> SessionPipeline.call([])
+    |> WebAuthn.Plug.authentication_challenge(strategy)
+  end
+
+  defp sign_assertion(challenge_conn, passkey, opts) do
+    WebAuthnFixtures.generate_authentication(
+      passkey,
+      Keyword.merge(opts,
+        challenge_bytes: challenge_bytes(challenge_conn),
+        origin: "http://www.example.com"
+      )
+    )
+  end
+
+  # Answers the challenge issued by `challenge_conn`, transplanting its
+  # session entry as `register_conn/3` does.
+  defp sign_in_conn(strategy, challenge_conn, email, passkey, opts) do
+    assertion =
+      Keyword.get_lazy(opts, :assertion, fn ->
+        sign_assertion(challenge_conn, passkey, Keyword.take(opts, [:sign_count]))
+      end)
+
+    :post
+    |> conn("/user_with_web_authn/webauthn/sign_in", %{
+      "user_with_web_authn" => %{
+        "email" => email,
+        "raw_id" => Base.url_encode64(assertion.raw_id, padding: false),
+        "authenticator_data" => assertion.authenticator_data,
+        "signature" => assertion.signature,
+        "client_data_json" => assertion.client_data_json
+      }
+    })
+    |> SessionPipeline.call([])
+    |> Plug.Conn.put_session(
+      @authentication_session_key,
+      Plug.Conn.get_session(challenge_conn, @authentication_session_key)
+    )
+    |> WebAuthn.Plug.sign_in(strategy)
+  end
+
+  defp challenge_bytes(challenge_conn) do
+    challenge_conn.resp_body
+    |> Jason.decode!()
+    |> Map.fetch!("challenge")
+    |> Base.url_decode64!(padding: false)
   end
 end

@@ -6,14 +6,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
   @moduledoc """
   Prepare a query for WebAuthn sign in.
 
-  Constrains the query to match the identity field passed to the action.
-  Unlike the Password strategy's SignInPreparation, this module does NOT
+  Resolves the user proved by the sign-in ceremony — see
+  `AshAuthentication.Strategy.WebAuthn.CeremonyUser` — and, when the strategy
+  requires an identity, constrains the query to the one passed to the action
+  too. Unlike the Password strategy's SignInPreparation, this module does NOT
   handle credential verification or token generation - those happen in
   the Actions module after Wax assertion verification.
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info}
+  alias AshAuthentication.Strategy.WebAuthn.CeremonyUser
   require Ash.Query
 
   @doc false
@@ -22,16 +25,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
   def prepare(query, options, context) do
     case Info.find_strategy(query, context, options) do
       {:ok, %_{identity_field: identity_field, require_identity?: true}} ->
+        query = constrain_to_ceremony_user(query)
+
         case Query.get_argument(query, identity_field) do
           nil -> Query.filter(query, false)
           identity -> Query.filter(query, ^ref(identity_field) == ^identity)
         end
 
       {:ok, %_{require_identity?: false}} ->
-        # Passkey-first mode: the user is resolved from the credential id in
-        # `Actions.sign_in/3`, not by this query. Constrain to nothing so a
-        # direct read of the sign-in action can never enumerate every user.
-        Query.filter(query, false)
+        # Passkey-first mode: the ceremony resolved the user from the
+        # credential id, so that user is the only constraint.
+        constrain_to_ceremony_user(query)
 
       :error ->
         # No strategy resolved for this query: fail closed rather than
@@ -49,5 +53,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
           )
         )
     end
+  end
+
+  defp constrain_to_ceremony_user(query) do
+    CeremonyUser.constrain(query, "WebAuthn sign-in runs through the sign-in ceremony.")
   end
 end
