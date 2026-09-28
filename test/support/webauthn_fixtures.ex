@@ -115,8 +115,9 @@ defmodule AshAuthentication.Test.WebAuthnFixtures do
     rp_id = Keyword.get(opts, :rp_id, registration.rp_id)
     sign_count = Keyword.get(opts, :sign_count, 1)
 
-    # Generate new challenge
-    challenge_bytes = :crypto.strong_rand_bytes(32)
+    # Generate challenge (or sign a server-issued one, for plug round trips)
+    challenge_bytes =
+      Keyword.get_lazy(opts, :challenge_bytes, fn -> :crypto.strong_rand_bytes(32) end)
 
     # Build clientDataJSON
     client_data =

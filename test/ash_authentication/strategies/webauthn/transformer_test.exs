@@ -6,6 +6,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
   use ExUnit.Case, async: true
 
   alias Ash.Resource.Info, as: ResourceInfo
+  alias AshAuthentication.Strategy
   alias Spark.Error.DslError
 
   @moduletag feature: :webauthn
@@ -133,6 +134,33 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
 
       # Registration is independent and stays available.
       assert ResourceInfo.action(user_module, :register_with_webauthn)
+    end
+  end
+
+  describe "verify action gating (verify_enabled?)" do
+    test "the verify action and phases exist when verify is enabled (the default)" do
+      {user_module, _credential_module} = compile_pair!()
+
+      assert ResourceInfo.action(user_module, :verify_webauthn)
+
+      phases = user_module |> AshAuthentication.Info.strategy!(:webauthn) |> Strategy.phases()
+      assert :verify_challenge in phases
+      assert :verify in phases
+    end
+
+    test "the verify action and phases are NOT built when verify_enabled? is false" do
+      {user_module, _credential_module} =
+        compile_pair!(strategy_extra: "verify_enabled? false")
+
+      refute ResourceInfo.action(user_module, :verify_webauthn)
+
+      strategy = AshAuthentication.Info.strategy!(user_module, :webauthn)
+      refute :verify_challenge in Strategy.phases(strategy)
+      refute :verify in Strategy.phases(strategy)
+      refute :verify in Strategy.actions(strategy)
+
+      # Sign-in is independent and stays available.
+      assert ResourceInfo.action(user_module, :sign_in_with_webauthn)
     end
   end
 
