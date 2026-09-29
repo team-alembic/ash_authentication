@@ -292,7 +292,7 @@ defmodule AshAuthentication.MixProject do
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
       {:ex_check, "~> 0.15", only: [:dev, :test]},
-      {:ex_doc, "~> 0.39", only: [:dev, :test]},
+      {:ex_doc, "~> 0.40.4", only: [:dev, :test]},
       {:git_ops, "~> 2.4", only: [:dev, :test], runtime: false},
       {:mimic, "~> 2.0", only: [:dev, :test]},
       {:simple_sat, "~> 0.1", only: [:dev, :test]},
