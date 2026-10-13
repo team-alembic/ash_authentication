@@ -9,7 +9,7 @@ defmodule AshAuthentication.TokenResource do
     %Spark.Dsl.Section{
       name: :token,
       describe: "Configuration options for this token resource",
-      no_depend_modules: [:domain],
+      no_depend_modules: [:domain, :endpoints],
       schema: [
         domain: [
           type: {:behaviour, Ash.Domain},
