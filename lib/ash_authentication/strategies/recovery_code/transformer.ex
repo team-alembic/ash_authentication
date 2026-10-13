@@ -181,6 +181,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.Transformer do
       name: strategy.verify_action_name,
       arguments: arguments,
       returns: :term,
+      allow_nil?: true,
       transaction?: true,
       description: "Verify a recovery code and return the user if valid, nil otherwise.",
       touches_resources: touches_resources,

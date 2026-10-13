@@ -65,8 +65,24 @@ defmodule AshAuthentication.Strategy.RecoveryCode.ActionsTest do
 
       {_user, _codes} = generate_codes(strategy, user)
 
-      assert {:error, %AuthenticationFailed{}} =
+      assert {:error, %AuthenticationFailed{caused_by: %{message: "Invalid recovery code"}}} =
                Actions.verify(strategy, %{user: user, code: "invalidcode"}, [])
+    end
+
+    test "the verify action returns nil for an invalid code" do
+      user = build_user_with_recovery_codes()
+      {:ok, strategy} = Info.strategy(Example.UserWithRecoveryCodes, :recovery_code)
+
+      {_user, _codes} = generate_codes(strategy, user)
+
+      assert {:ok, nil} =
+               Example.UserWithRecoveryCodes
+               |> Ash.ActionInput.for_action(
+                 strategy.verify_action_name,
+                 %{user: user, code: "invalidcode"},
+                 authorize?: false
+               )
+               |> Ash.run_action()
     end
 
     test "recovery codes are single-use (deleted after verification)" do
@@ -78,7 +94,7 @@ defmodule AshAuthentication.Strategy.RecoveryCode.ActionsTest do
 
       assert {:ok, _user} = Actions.verify(strategy, %{user: user, code: code}, [])
 
-      assert {:error, %AuthenticationFailed{}} =
+      assert {:error, %AuthenticationFailed{caused_by: %{message: "Invalid recovery code"}}} =
                Actions.verify(strategy, %{user: user, code: code}, [])
     end
 
