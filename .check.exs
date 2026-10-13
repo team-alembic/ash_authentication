@@ -39,6 +39,7 @@
     {:reuse,
      command: ["pipx", "run", "--spec", "reuse[charset-normalizer]", "reuse", "lint", "-q"]},
     {:mix_audit, false},
-    {:hex_audit, command: "mix hex.audit"}
+    {:hex_audit, command: "mix hex.audit"},
+    {:usage_rules, false}
   ]
 ]
