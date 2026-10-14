@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -30,7 +31,13 @@ defmodule AshAuthentication.MixProject do
       docs: &docs/0,
       aliases: aliases(),
       description: @description,
-      consolidate_protocols: Mix.env() == :prod
+      consolidate_protocols: Mix.env() == :prod,
+      hex: [
+        ignore_advisories: [
+          # Choice of cipher is up to the user
+          "CVE-2026-95105"
+        ]
+      ]
     ]
   end
 
@@ -269,6 +276,7 @@ defmodule AshAuthentication.MixProject do
     [
       {:argon2_elixir, "~> 4.0", optional: true},
       {:ash, ash_version("~> 3.7")},
+      {:ash_cloak, "~> 0.4.0 or ~> 0.5.0", optional: true},
       {:assent, "~> 0.3.2"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
@@ -289,6 +297,7 @@ defmodule AshAuthentication.MixProject do
       {:ash_postgres, "~> 2.6 and >= 2.6.8", optional: true},
       {:ash_rate_limiter, "~> 2.0", only: [:dev, :test]},
       {:bandit, "~> 1.0", only: [:dev, :test]},
+      {:cloak, "~> 1.1", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},
