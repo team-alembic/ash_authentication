@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -269,6 +270,7 @@ defmodule AshAuthentication.MixProject do
     [
       {:argon2_elixir, "~> 4.0", optional: true},
       {:ash, ash_version("~> 3.7")},
+      {:ash_cloak, "~> 0.4", optional: true},
       {:assent, "~> 0.3.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
@@ -288,6 +290,7 @@ defmodule AshAuthentication.MixProject do
       {:ash_json_api, "~> 1.5", only: [:dev, :test]},
       {:ash_postgres, "~> 2.6 and >= 2.6.8", optional: true},
       {:bandit, "~> 1.0", only: [:dev, :test]},
+      {:cloak, "~> 1.1", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.18", only: [:dev, :test]},

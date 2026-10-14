@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -263,6 +264,12 @@ defmodule AshAuthentication.UserIdentity.Transformer do
         )
       ]
 
+      upsert_fields =
+        Enum.map(
+          [access_token, access_token_expires_at, refresh_token],
+          &backing_attribute(dsl_state, &1)
+        )
+
       Transformer.build_entity(Resource.Dsl, [:actions], :create,
         name: action_name,
         upsert?: true,
@@ -270,7 +277,7 @@ defmodule AshAuthentication.UserIdentity.Transformer do
         # Only refresh the tokens on conflict. The `user_id` binding is set once,
         # on insert, and is never re-pointed - a provider identity belongs to
         # exactly one local user, permanently.
-        upsert_fields: [access_token, access_token_expires_at, refresh_token],
+        upsert_fields: upsert_fields,
         arguments: arguments,
         changes: changes,
         accept: [strategy]
@@ -381,6 +388,18 @@ defmodule AshAuthentication.UserIdentity.Transformer do
           )
 
         {:ok, Transformer.add_entity(dsl_state, [:identities], identity)}
+    end
+  end
+
+  # `AshCloak` moves an encrypted attribute's value into a backing
+  # `encrypted_*` attribute. An upsert must refresh that attribute, because the
+  # original name is only a calculation once `AshCloak`'s transformer has run.
+  # sobelow_skip ["DOS.BinToAtom"]
+  defp backing_attribute(dsl_state, field) do
+    if field in cloaked_attributes(dsl_state) do
+      :"encrypted_#{field}"
+    else
+      field
     end
   end
 
