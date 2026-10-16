@@ -103,7 +103,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
       [
         actor: get_actor(conn),
         tenant: get_tenant(conn),
-        context: get_context(conn) || %{}
+        context: authentication_context(conn)
       ]
       |> Enum.reject(&is_nil(elem(&1, 1)))
 
@@ -117,6 +117,17 @@ defmodule AshAuthentication.Strategy.DynamicOidc.Plug do
            caused_by: %{reason: "could not load OIDC connection: #{inspect(reason)}"}
          )}
     end
+  end
+
+  defp authentication_context(conn) do
+    conn
+    |> get_context()
+    |> Kernel.||(%{})
+    |> Map.update(
+      :private,
+      %{ash_authentication?: true},
+      &Map.put(&1, :ash_authentication?, true)
+    )
   end
 
   defp field_names(strategy) do

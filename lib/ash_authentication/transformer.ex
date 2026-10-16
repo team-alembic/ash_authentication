@@ -21,13 +21,13 @@ defmodule AshAuthentication.Transformer do
   @doc false
   @impl true
   @spec after?(any) :: boolean()
-  def after?(Resource.Transformers.ValidatePrimaryActions), do: true
   def after?(_), do: false
 
   @doc false
   @impl true
   @spec before?(any) :: boolean
   def before?(Resource.Transformers.DefaultAccept), do: true
+  def before?(Resource.Transformers.SetPrimaryActions), do: true
   def before?(_), do: false
 
   @doc false
