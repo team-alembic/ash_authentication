@@ -6,6 +6,7 @@ defmodule Example.OidcConnection do
   @moduledoc false
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshAuthentication.OidcConnection],
     domain: Example
 
@@ -19,5 +20,11 @@ defmodule Example.OidcConnection do
 
   ets do
     private?(true)
+  end
+
+  policies do
+    bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+      authorize_if(always())
+    end
   end
 end
