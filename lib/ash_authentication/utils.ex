@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -121,6 +122,27 @@ defmodule AshAuthentication.Utils do
       {name, _accept} -> name == action_name
       name -> name == action_name
     end)
+  end
+
+  @doc """
+  The attributes which `AshCloak` encrypts on a resource.
+
+  `AshCloak` replaces each of these attributes with a backing
+  `encrypted_{attribute}` attribute and a calculation of the original name.
+  Returns `[]` when `AshCloak` is not installed or the resource does not use it.
+
+  Accepts either a resource module or a DSL state, so it can be called from a
+  transformer as well as at runtime.
+  """
+  @spec cloaked_attributes(Dsl.t() | Resource.t()) :: [atom]
+  if Code.ensure_loaded?(AshCloak.Info) do
+    def cloaked_attributes(resource_or_dsl_state) do
+      AshCloak.Info.cloak_attributes!(resource_or_dsl_state)
+    end
+  else
+    def cloaked_attributes(_resource_or_dsl_state) do
+      []
+    end
   end
 
   @doc """
