@@ -59,6 +59,7 @@ defmodule Example.MultiTenantUserWithWebAuthn do
         rp_id({Example.MultiTenantUserWithWebAuthn, :rp_id_for_tenant, []})
         rp_name({Example.MultiTenantUserWithWebAuthn, :rp_name_for_tenant, []})
         identity_field :email
+        require_identity? true
       end
     end
   end

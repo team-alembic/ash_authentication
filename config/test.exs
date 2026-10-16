@@ -4,7 +4,13 @@
 
 import Config
 
-config :ash_authentication, ecto_repos: [Example.Repo], ash_domains: [Example, ExampleMultiTenant]
+config :ash_authentication,
+  ecto_repos: [Example.Repo],
+  ash_domains: [
+    AshAuthentication.Test.PermissiveDomain,
+    Example,
+    ExampleMultiTenant
+  ]
 
 config :ash_authentication, Example.Repo,
   username: "postgres",

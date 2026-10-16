@@ -66,6 +66,8 @@ defmodule AshAuthenticationTest do
                Example.UserWithRememberMeTokenOptional,
                Example.UserWithRegisterMagicLink,
                Example.UserWithWebAuthn,
+               Example.UserWithWebAuthnNoIdentity,
+               Example.UserWithWebAuthnSecondFactor,
                Example.UserWithWildcardAndExclusions,
                Example.MultiTenantUserWithWebAuthn,
                ExampleMultiTenant.User,
