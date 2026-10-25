@@ -153,6 +153,9 @@ if Code.ensure_loaded?(Igniter) do
           description "The identity to send a one-time password to."
         end
 
+        prepare {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+                 action_name: #{inspect(request_action)}}
+
         run AshAuthentication.Strategy.Otp.Request
         description "Send a one-time password to a user if they exist."
       end
@@ -170,6 +173,9 @@ if Code.ensure_loaded?(Igniter) do
           allow_nil? false
           sensitive? true
         end
+
+        prepare {AshAuthentication.AddOn.AuditLog.BruteForcePreparation,
+                 action_name: #{inspect(sign_in_action)}}
 
         prepare AshAuthentication.Strategy.Otp.SignInPreparation
 

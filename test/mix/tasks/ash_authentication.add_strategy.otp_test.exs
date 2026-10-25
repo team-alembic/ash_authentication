@@ -85,6 +85,11 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.OtpTest do
       + |        description("The identity to send a one-time password to.")
       + |      end
       + |
+      + |      prepare(
+      + |        {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+      + |         action_name: :request_otp}
+      + |      )
+      + |
       + |      run(AshAuthentication.Strategy.Otp.Request)
       + |      description("Send a one-time password to a user if they exist.")
       + |    end
@@ -107,6 +112,10 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.OtpTest do
       + |        allow_nil?(false)
       + |        sensitive?(true)
       + |      end
+      + |
+      + |      prepare(
+      + |        {AshAuthentication.AddOn.AuditLog.BruteForcePreparation, action_name: :sign_in_with_otp}
+      + |      )
       + |
       + |      prepare(AshAuthentication.Strategy.Otp.SignInPreparation)
       + |

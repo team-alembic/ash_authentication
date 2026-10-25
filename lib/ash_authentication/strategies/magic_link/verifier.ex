@@ -71,6 +71,12 @@ defmodule AshAuthentication.Strategy.MagicLink.Verifier do
              false
            ]),
          :ok <- validate_action_type(action, :action, strategy),
+         :ok <-
+           validate_brute_force_preparation(
+             action,
+             strategy,
+             AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation
+           ),
          {:ok, lookup_action} <- validate_action_exists(dsl_state, strategy.lookup_action_name),
          :ok <- validate_action_has_argument(lookup_action, identity_attribute.name),
          :ok <-

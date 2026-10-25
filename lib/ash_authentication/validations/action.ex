@@ -216,6 +216,61 @@ defmodule AshAuthentication.Validations.Action do
   end
 
   @doc """
+  Validate that an action carries its strategy's brute-force preparation.
+
+  A strategy adds the preparation to the actions it builds. An action defined
+  on the resource instead, by hand or by a generator, has only what was written
+  for it, so without this check a configured `brute_force_strategy` would
+  protect nothing.
+
+  `audit_log_preparation` is the preparation the strategy uses for
+  `brute_force_strategy {:audit_log, name}`.
+  """
+  @spec validate_brute_force_preparation(Actions.action(), map, module) ::
+          :ok | {:error, Exception.t()}
+  def validate_brute_force_preparation(action, strategy, audit_log_preparation) do
+    case Map.get(strategy, :brute_force_strategy) do
+      {:audit_log, _audit_log_name} ->
+        require_brute_force_preparation(
+          action,
+          strategy,
+          audit_log_preparation,
+          "{#{inspect(audit_log_preparation)}, action_name: #{inspect(action.name)}}"
+        )
+
+      {:preparation, preparation} ->
+        require_brute_force_preparation(action, strategy, preparation, inspect(preparation))
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp require_brute_force_preparation(action, strategy, preparation, prepare_line) do
+    case validate_action_has_preparation(action, preparation) do
+      :ok ->
+        :ok
+
+      {:error, _} ->
+        {:error,
+         DslError.exception(
+           path: [:actions, action.name],
+           message: """
+           The `brute_force_strategy` of the #{inspect(strategy.name)} strategy applies to the
+           action `#{inspect(action.name)}`, but that action is defined without the
+           `#{inspect(preparation)}` preparation, so attempts on it would not be limited.
+
+           Add this to the action:
+
+               prepare #{prepare_line}
+
+           or remove the action definition to use the one the strategy generates.
+           """
+         )}
+    end
+  end
+
+  @doc """
   Validate the action has the provided option.
   """
   @spec validate_action_option(Actions.action(), atom, [any]) :: :ok | {:error, Exception.t()}

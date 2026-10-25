@@ -1095,6 +1095,17 @@ if Code.ensure_loaded?(Igniter) do
       `exclude_actions` or `exclude_strategies` to skip the protected
       actions, the compile-time verifier will report which actions need
       to be tracked.
+
+      The protection is a preparation on each protected action. Actions the
+      strategies generate already have it; an action your resource defines
+      itself (the installer writes `sign_in_with_password`,
+      `request_password_reset_token` and `request_magic_link`) needs it
+      added, for example:
+
+          prepare {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+                   action_name: :sign_in_with_password}
+
+      Compilation fails, naming each action, until it has.
       """
     end
 

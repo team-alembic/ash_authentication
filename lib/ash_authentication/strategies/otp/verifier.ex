@@ -229,10 +229,12 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
          %{brute_force_strategy: {:audit_log, audit_log_name}} = strategy
        ) do
     with :ok <- validate_audit_log_with_registration(dsl_state, strategy),
-         {:ok, audit_log} <- validate_audit_log_exists(dsl_state, strategy, audit_log_name) do
-      reduce_action_validations(strategy, fn action_name ->
-        validate_action_audit_logged(dsl_state, strategy, action_name, audit_log)
-      end)
+         {:ok, audit_log} <- validate_audit_log_exists(dsl_state, strategy, audit_log_name),
+         :ok <-
+           reduce_action_validations(strategy, fn action_name ->
+             validate_action_audit_logged(dsl_state, strategy, action_name, audit_log)
+           end) do
+      validate_brute_force_preparations(dsl_state, strategy)
     end
   end
 
@@ -240,8 +242,36 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
          dsl_state,
          %{brute_force_strategy: {:preparation, module}} = strategy
        ) do
-    validate_preparation_supports_query(dsl_state, strategy, module)
+    with :ok <- validate_preparation_supports_query(dsl_state, strategy, module) do
+      validate_brute_force_preparations(dsl_state, strategy)
+    end
   end
+
+  # The check has to be on each action, not only configured: an action written
+  # by hand, or by `mix ash_authentication.add_strategy.otp`, has only the
+  # preparations written for it. A sign-in that registers is a create action,
+  # which takes no preparations, so only a read sign-in is checked.
+  defp validate_brute_force_preparations(dsl_state, strategy) do
+    with {:ok, sign_in} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
+         :ok <- validate_sign_in_brute_force_preparation(sign_in, strategy),
+         {:ok, request} <- validate_action_exists(dsl_state, strategy.request_action_name) do
+      validate_brute_force_preparation(
+        request,
+        strategy,
+        AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation
+      )
+    end
+  end
+
+  defp validate_sign_in_brute_force_preparation(%{type: :read} = sign_in, strategy) do
+    validate_brute_force_preparation(
+      sign_in,
+      strategy,
+      AshAuthentication.AddOn.AuditLog.BruteForcePreparation
+    )
+  end
+
+  defp validate_sign_in_brute_force_preparation(_sign_in, _strategy), do: :ok
 
   defp actions_to_protect(strategy),
     do: [strategy.sign_in_action_name, strategy.request_action_name]

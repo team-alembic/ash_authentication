@@ -319,7 +319,13 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   defp validate_sign_in_action(dsl_state, strategy) when strategy.sign_in_enabled? == true do
     with {:ok, action} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
          :ok <- validate_identity_argument(dsl_state, action, strategy.identity_field),
-         :ok <- validate_password_argument(action, strategy.password_field, true) do
+         :ok <- validate_password_argument(action, strategy.password_field, true),
+         :ok <-
+           validate_brute_force_preparation(
+             action,
+             strategy,
+             AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation
+           ) do
       validate_action_has_preparation(action, Password.SignInPreparation)
     end
   end
@@ -529,8 +535,13 @@ defmodule AshAuthentication.Strategy.Password.Transformer do
   defp validate_reset_request_action(dsl_state, resettable, strategy) do
     with {:ok, action} <-
            validate_action_exists(dsl_state, resettable.request_password_reset_action_name),
-         :ok <- validate_identity_argument(dsl_state, action, strategy.identity_field) do
-      validate_action_type(action, :action)
+         :ok <- validate_identity_argument(dsl_state, action, strategy.identity_field),
+         :ok <- validate_action_type(action, :action) do
+      validate_brute_force_preparation(
+        action,
+        strategy,
+        AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation
+      )
     end
   end
 
