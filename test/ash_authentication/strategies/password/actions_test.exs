@@ -325,6 +325,36 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert {:error, %InvalidToken{}} = Actions.reset(strategy, params, [])
     end
 
+    test "a reset that fails validation does not spend the token" do
+      user = build_user()
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      assert {:ok, token} = Password.reset_token_for(strategy, user)
+
+      new_password = password()
+
+      assert {:error, _} =
+               Actions.reset(
+                 strategy,
+                 %{
+                   "reset_token" => token,
+                   "password" => new_password,
+                   "password_confirmation" => new_password <> "!"
+                 },
+                 []
+               )
+
+      assert {:ok, _} =
+               Actions.reset(
+                 strategy,
+                 %{
+                   "reset_token" => token,
+                   "password" => new_password,
+                   "password_confirmation" => new_password
+                 },
+                 []
+               )
+    end
+
     test "the password update rolls back when token revocation fails mid-transaction" do
       user = build_user()
       original_hashed_password = user.hashed_password

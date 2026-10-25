@@ -69,6 +69,20 @@ defmodule Example.UserWithTokenRequired do
       require_atomic? false
       accept [:email]
     end
+
+    update :change_password_atomic do
+      require_atomic? true
+      accept []
+      argument :password, :string, allow_nil?: false, sensitive?: true
+      change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+    end
+
+    update :change_password_nonatomic do
+      require_atomic? false
+      accept []
+      argument :password, :string, allow_nil?: false, sensitive?: true
+      change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+    end
   end
 
   calculations do
