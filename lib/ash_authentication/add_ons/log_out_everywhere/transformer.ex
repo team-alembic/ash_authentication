@@ -127,44 +127,41 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.Transformer do
   end
 
   defp maybe_build_password_change_change(dsl, hashed_password_field) do
-    dsl
-    |> matching_changes(OnPasswordChange,
-      on: [:update],
-      where: [{Ash.Resource.Validation.Changing, [field: hashed_password_field, touching?: true]}]
-    )
-    |> case do
-      [] -> build_password_change_change(dsl, hashed_password_field)
-      _ -> {:ok, dsl}
+    if dsl |> Resource.Info.changes() |> Enum.any?(&watches?(&1, hashed_password_field)) do
+      {:ok, dsl}
+    else
+      build_password_change_change(dsl, hashed_password_field)
     end
   end
 
+  # The change checks for a changed hash itself, after the action has run
+  # (see `OnPasswordChange`), so it has no `where`: a `where` would be evaluated
+  # before `HashPasswordChange` sets the hash in its `before_action` hook.
   defp build_password_change_change(dsl, hashed_password_field) do
     with {:ok, change} <-
            Transformer.build_entity(Resource.Dsl, [:changes], :change,
-             change: {OnPasswordChange, []},
-             on: [:update],
-             where: [
-               {Ash.Resource.Validation.Changing, [field: hashed_password_field, touching?: true]}
-             ]
+             change: {OnPasswordChange, [hashed_password_field: hashed_password_field]},
+             on: [:update]
            ) do
       {:ok, Transformer.add_entity(dsl, [:changes], change)}
     end
   end
 
-  defp matching_changes(dsl, module, options) do
-    dsl
-    |> Resource.Info.changes()
-    |> Enum.filter(fn
-      %{change: {^module, _}} = change -> all_change_options_match?(change, options)
-      %{change: ^module} = change -> all_change_options_match?(change, options)
-      _ -> false
-    end)
+  # An `OnPasswordChange` already watching this field, whether added by an
+  # earlier run of this transformer or by hand with a `where` on the field.
+  defp watches?(%{change: {OnPasswordChange, opts}} = change, field) do
+    Keyword.get(opts, :hashed_password_field) == field or where_changing?(change, field)
   end
 
-  defp all_change_options_match?(change, options) do
-    options
-    |> Enum.all?(fn {key, value} ->
-      Map.get(change, key) == value
+  defp watches?(%{change: OnPasswordChange} = change, field), do: where_changing?(change, field)
+  defp watches?(_change, _field), do: false
+
+  defp where_changing?(change, field) do
+    change
+    |> Map.get(:where, [])
+    |> Enum.any?(fn
+      {Ash.Resource.Validation.Changing, opts} -> opts[:field] == field
+      _ -> false
     end)
   end
 end
