@@ -105,6 +105,7 @@ if Code.ensure_loaded?(Igniter) do
           |> add_wax_dependency()
           |> add_credential_resource(secrets_module, options)
           |> add_webauthn_secrets(secrets_module, options)
+          |> maybe_note_passkey_only_in_2fa(options)
           |> AshAuthentication.Igniter.codegen_for_strategy(options[:name])
 
         {false, igniter} ->
@@ -132,6 +133,24 @@ if Code.ensure_loaded?(Igniter) do
       |> Keyword.update(:name, :webauthn, &String.to_atom/1)
       |> Keyword.update!(:accounts, &AshAuthentication.Igniter.maybe_parse_module/1)
       |> Keyword.update!(:user, &AshAuthentication.Igniter.maybe_parse_module/1)
+    end
+
+    # `require_identity?` only shapes WebAuthn's own registration and sign-in,
+    # and `--mode 2fa` turns both off, so the combination is valid but the
+    # flag changes nothing. Say so rather than leave it looking meaningful.
+    defp maybe_note_passkey_only_in_2fa(igniter, options) do
+      if options[:passkey_only] and options[:mode] == :"2fa" do
+        Igniter.add_notice(igniter, """
+        `--passkey-only` has no effect with `--mode 2fa`.
+
+        `require_identity? false` only changes WebAuthn's own registration and
+        sign-in, which second-factor mode disables: users register and sign in
+        through your primary strategy, and WebAuthn only verifies and enrols
+        passkeys for them. The generated strategy sets it anyway, as asked.
+        """)
+      else
+        igniter
+      end
     end
 
     defp add_wax_dependency(igniter) do
