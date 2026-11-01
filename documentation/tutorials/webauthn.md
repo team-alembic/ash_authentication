@@ -499,7 +499,8 @@ end
   (individually identifying; needs browser/authenticator support). This is a
   request, not a requirement: the client may answer any of them with a
   `"none"` statement (synced passkeys always do), and whatever it conveys is
-  verified as such.
+  verified as such. Under `"none"`, a statement the client sends anyway is
+  discarded, as the client itself should have done.
 - `trusted_attestation_types` — which verified attestation types are
   accepted, and so the setting that actually enforces attestation policy. The
   default (`[:none, :basic, :self, :uncertain]`) accepts everything a consumer
