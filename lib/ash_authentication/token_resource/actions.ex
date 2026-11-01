@@ -239,9 +239,13 @@ defmodule AshAuthentication.TokenResource.Actions do
          lookup_opts =
            opts
            |> Keyword.take([:actor, :authorize?, :context, :tenant, :tracer])
+           |> Keyword.update(
+             :context,
+             %{private: %{ash_authentication?: true}},
+             &Ash.Helpers.deep_merge_maps(&1, %{private: %{ash_authentication?: true}})
+           )
            |> Keyword.merge(
              domain: domain,
-             authorize?: false,
              error?: false
            )
            |> maybe_lock_opt(resource, :for_update),
@@ -381,9 +385,13 @@ defmodule AshAuthentication.TokenResource.Actions do
          lookup_opts =
            opts
            |> Keyword.take([:actor, :authorize?, :context, :tenant, :tracer])
+           |> Keyword.update(
+             :context,
+             %{private: %{ash_authentication?: true}},
+             &Ash.Helpers.deep_merge_maps(&1, %{private: %{ash_authentication?: true}})
+           )
            |> Keyword.merge(
              domain: domain,
-             authorize?: false,
              error?: false
            )
            |> maybe_lock_opt(resource, :for_update),

@@ -251,6 +251,48 @@ defmodule AshAuthentication.TokenResource.ActionsTest do
     end
   end
 
+  describe "revoke/3 authorization" do
+    test "honors an always-authorized token domain" do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti}} = Jwt.peek(token)
+
+      assert :ok =
+               Actions.revoke(Example.AlwaysAuthorizedToken, token, store_all_tokens?: true)
+
+      assert %{purpose: "revocation"} = token_record(jti)
+    end
+
+    test "revoke_jti/5 preserves authorization in an always-authorized token domain" do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti, "sub" => subject}} = Jwt.peek(token)
+
+      assert :ok =
+               Actions.revoke_jti(Example.AlwaysAuthorizedToken, jti, subject,
+                 store_all_tokens?: true,
+                 authorize?: true
+               )
+
+      assert %{purpose: "revocation"} = token_record(jti)
+    end
+
+    test "does not bypass a domain that requires authorization" do
+      user = build_user()
+      token = user.__metadata__.token
+      {:ok, %{"jti" => jti}} = Jwt.peek(token)
+
+      assert_raise Ash.Error.Forbidden.DomainRequiresAuthorization, fn ->
+        Actions.revoke(Example.AlwaysAuthorizedToken, token,
+          store_all_tokens?: true,
+          authorize?: false
+        )
+      end
+
+      assert %{purpose: "user"} = token_record(jti)
+    end
+  end
+
   defp token_record(jti) do
     Example.Token
     |> Ash.Query.filter(jti == ^jti)
