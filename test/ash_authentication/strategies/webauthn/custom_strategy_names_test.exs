@@ -20,7 +20,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.CustomStrategyNamesTest do
   alias AshAuthentication.{Info, Strategy}
   alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.Actions
-  alias AshAuthentication.Test.WebAuthnCeremony
+  alias AshAuthentication.Test.{WebAuthnCeremony, WebAuthnFixtures}
 
   @moduletag feature: :webauthn
 
@@ -335,7 +335,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.CustomStrategyNamesTest do
       assert Map.has_key?(session, "webauthn_authentication_challenge_passkey")
 
       assertion =
-        AshAuthentication.Test.WebAuthnFixtures.generate_authentication(passkey,
+        WebAuthnFixtures.generate_authentication(passkey,
           challenge_bytes: challenge_bytes(challenge_conn),
           origin: "https://example.com",
           sign_count: 1
