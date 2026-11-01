@@ -7,6 +7,8 @@ spark_locals_without_parens = [
   access_token_expires_at_attribute_name: 1,
   action_name: 1,
   adapter: 1,
+  add_credential_enabled?: 1,
+  add_credential_max_authentication_age: 1,
   allow_hint_override?: 1,
   api_key: 0,
   api_key: 1,
