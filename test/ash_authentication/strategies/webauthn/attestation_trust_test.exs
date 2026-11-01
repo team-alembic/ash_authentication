@@ -39,6 +39,28 @@ defmodule AshAuthentication.Strategy.WebAuthn.AttestationTrustTest do
     end
   end
 
+  # Under "none" the client should strip the statement (§5.4.7); one that
+  # sends it anyway mustn't fail a registration over attestation nobody asked
+  # for.
+  test "attestation \"none\" accepts an unrequested statement as if the client had stripped it",
+       %{strategy: strategy} do
+    assert strategy.attestation == "none"
+
+    assert {:ok, user} = register_packed(strategy, "packed-under-none@example.com")
+    assert {:ok, [_credential]} = Actions.list_credentials(strategy, user, [])
+  end
+
+  test "attestation \"none\" still applies trusted_attestation_types to the result", %{
+    strategy: strategy
+  } do
+    strategy = %{strategy | trusted_attestation_types: [:basic, :attca]}
+
+    assert {:error, %AuthenticationFailed{} = error} =
+             register_packed(strategy, "packed-under-none-untrusted@example.com")
+
+    assert error.caused_by.message =~ "type: :none"
+  end
+
   test "trusted_attestation_types without :uncertain refuses an unknown authenticator", %{
     strategy: strategy
   } do

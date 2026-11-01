@@ -180,7 +180,7 @@ if Code.ensure_loaded?(Wax) do
 
     @impl Adapter
     def verify_registration(_strategy, attestation_object, client_data_json, challenge) do
-      challenge = verification_challenge(challenge, attestation_object)
+      {attestation_object, challenge} = for_verification(attestation_object, challenge)
 
       case Wax.register(attestation_object, client_data_json, challenge) do
         {:ok, {auth_data, _attestation_result}} ->
@@ -212,15 +212,46 @@ if Code.ensure_loaded?(Wax) do
     # beyond `"none"` was requested, verify against the format the client
     # actually conveyed, and leave accepting or refusing the result to
     # `trusted_attestation_types` — where the strategy's documentation puts
-    # attestation policy. Under `"none"` nothing changes.
-    defp verification_challenge(%Wax.Challenge{attestation: "none"} = challenge, _), do: challenge
-
-    defp verification_challenge(%Wax.Challenge{} = challenge, attestation_object) do
+    # attestation policy.
+    #
+    # Under `"none"` the relying party has said it doesn't want attestation,
+    # and the client is supposed to replace any statement with a `"none"` one
+    # (§5.4.7). Not every client does, and Wax refuses a real statement under
+    # `"none"`, which would fail the registration over something nobody asked
+    # for. So do the client's replacement here: keep the authenticator data,
+    # which carries the credential and the RP ID hash, and drop the statement.
+    defp for_verification(attestation_object, %Wax.Challenge{attestation: "none"} = challenge) do
       case CBOR.decode(attestation_object) do
-        {:ok, %{"fmt" => "none"}, _rest} -> %{challenge | attestation: "none"}
-        _ -> %{challenge | attestation: "direct"}
+        {:ok, %{"fmt" => fmt, "authData" => auth_data}, _rest} when fmt != "none" ->
+          {none_statement(auth_data), challenge}
+
+        _ ->
+          {attestation_object, challenge}
       end
     end
+
+    defp for_verification(attestation_object, %Wax.Challenge{} = challenge) do
+      case CBOR.decode(attestation_object) do
+        {:ok, %{"fmt" => "none"}, _rest} ->
+          {attestation_object, %{challenge | attestation: "none"}}
+
+        _ ->
+          {attestation_object, %{challenge | attestation: "direct"}}
+      end
+    end
+
+    defp none_statement(auth_data) do
+      %{
+        "fmt" => "none",
+        "attStmt" => %{},
+        "authData" => %CBOR.Tag{tag: :bytes, value: cbor_bytes(auth_data)}
+      }
+      |> CBOR.encode()
+      |> IO.iodata_to_binary()
+    end
+
+    defp cbor_bytes(%CBOR.Tag{tag: :bytes, value: value}), do: value
+    defp cbor_bytes(value) when is_binary(value), do: value
 
     @impl Adapter
     def verify_authentication(
