@@ -252,7 +252,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         resident_key: [
           type: {:in, [:required, :preferred, :discouraged]},
           doc:
-            "Whether to require discoverable credentials (passkeys). Sign-in only ever uses discoverable credentials (the public challenge endpoint never lists a user's credentials), so keep `:required` for any strategy that signs users in; the strategy warns at compile time otherwise. `:preferred`/`:discouraged` are only safe with `sign_in_enabled? false`.",
+            "Whether registration asks for a discoverable credential (a passkey stored on the authenticator, which can be offered without the server naming it) or allows a non-discoverable one (which the authenticator can only use when the server sends its id back). Sign-in only ever uses discoverable credentials (the public challenge endpoint never lists a user's credentials), so keep `:required` for any strategy that signs users in; the strategy warns at compile time otherwise. `:preferred` may still yield a non-discoverable credential (e.g. on a security key whose storage is full), and `:discouraged` usually does; both are only safe with `sign_in_enabled? false`. See \"Discoverable and non-discoverable credentials\" in the WebAuthn guide.",
           default: :required
         ],
         sign_count_policy: [
