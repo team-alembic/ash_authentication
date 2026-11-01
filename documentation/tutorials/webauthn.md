@@ -152,7 +152,7 @@ your product and use its settings as a starting point.
 
 | Mode | Key settings | User resource needs | How sign-in works |
 |------|--------------|---------------------|-------------------|
-| **Identity + passkey** (classic) | `require_identity? true` | An `identity_field` attribute (default `:email`), unique and writable | User supplies their identity and their credentials are offered via `allowCredentials`, or supplies none and uses a discoverable passkey |
+| **Identity + passkey** (classic) | `require_identity? true` | An `identity_field` attribute (default `:email`), unique and writable | Discoverable passkey; the credential id resolves the user, and an identity, if submitted, must match its owner |
 | **Passkey-first** (no identity column) | `require_identity? false`, `resident_key :required` | No identity attribute at all | Fully discoverable: the browser offers stored passkeys and the credential id resolves the user |
 | **Second factor only** | `registration_enabled? false`, `sign_in_enabled? false`, `verify_enabled? true` | Another primary strategy (e.g. password) | The `verify` phase proves possession on top of an authenticated session, stamping `webauthn_verified_at` |
 | **Multi-tenant** | `rp_id`/`rp_name`/`origin` as MFA tuples, 1-arity functions, or `AshAuthentication.Secret` modules | Same as the mode it combines with | Relying-party identity resolved per tenant at ceremony time |
@@ -169,22 +169,25 @@ webauthn do
 end
 ```
 
-Sending the identity with the authentication challenge request is optional.
-With it, the challenge lists that user's credentials in `allowCredentials`
-(with their transports), so the browser goes straight to the right
-authenticator. Without it, the browser offers any discoverable passkey for
-the site and the credential id resolves the user, just as in passkey-first
-mode.
+The identity is stored at registration. Sign-in works as in passkey-first
+mode: the authentication challenge leaves `allowCredentials` empty, the
+browser offers the discoverable passkeys it holds for the site, and the
+credential id resolves the user. An identity submitted with the `sign_in`
+request is optional, and if present must match the credential's owner.
 
-> #### `allowCredentials` reveals credential ids {: .warning}
+> #### Why `allowCredentials` is always empty {: .info}
 >
-> `authentication_challenge` is a public endpoint, and with an identity it
-> answers with that user's credential ids. Anyone who knows or guesses an
-> identity learns whether that account has passkeys and which credential ids
-> they are. This is the usual trade-off of identity-first WebAuthn. If it
-> matters for your application, don't send the identity: rely on discoverable
-> passkeys (`resident_key :required`, the default), which works in this mode
-> too.
+> `authentication_challenge` is a public, unauthenticated endpoint. Listing
+> the credentials of a submitted identity would tell anyone who knows or
+> guesses that identity whether the account exists and what its credential ids
+> are, so the challenge never lists any — the same reason the public
+> `registration_challenge` leaves `excludeCredentials` empty.
+>
+> The consequence is that only **discoverable** credentials can sign in. Keep
+> `resident_key :required` (the default); the strategy warns at compile time if
+> `resident_key` would let an authenticator create a credential that can't be
+> discovered. The second-factor `verify_challenge`, whose caller is already
+> authenticated, still lists the actor's credentials.
 
 ### Passkey-first
 
@@ -339,8 +342,10 @@ refuses that combination at compile time.
 Nothing extra is required. `registration_challenge` and
 `add_credential_challenge` carry the same hints, and the resulting credential
 is stored with `transports` including `"hybrid"` and `backup_eligible: true`.
-Those transports are echoed in `allowCredentials` on later ceremonies, which is
-what lets the browser route straight back to the phone.
+Those transports are echoed in `allowCredentials` on second-factor `verify`
+ceremonies, which lets the browser route straight back to the phone; sign-in
+challenges list no credentials (see [Identity + passkey](#identity-passkey)),
+and the browser's own picker offers the phone.
 
 One asymmetry to be aware of: `add_credential` (which requires an authenticated
 actor) populates `excludeCredentials`, so re-enrolling a phone that is already
@@ -477,11 +482,11 @@ section is maintained as the implementation evolves.
 | Spec feature | Status | Notes |
 |---|---|---|
 | Assertion verification | ✅ | Via `Wax.authenticate/6` — origin, rpId, and the UV flag when `user_verification "required"` (also enforced at registration) |
-| `allowCredentials` (identity-first) | ✅ | Per-user lookup by `identity_field`; reveals that user's credential ids to the caller (see [Identity + passkey](#identity-passkey)) |
+| `allowCredentials` (identity-first) | ➖ | Deliberately not used for sign-in: the public challenge endpoint would disclose a submitted identity's credential ids. Used for second-factor `verify`, where the actor is authenticated (see [Identity + passkey](#identity-passkey)) |
+| Discoverable / username-less flow | ✅ | How every sign-in works, in both identity modes; user resolved from the credential id. Requires discoverable credentials (`resident_key :required`, the default) |
 | Returned `userHandle` | ⚠️ | Not checked against the stored `user_handle`: the user is resolved from the credential id, which is unique, and the credential's owner is the user signed in |
-| Discoverable / username-less flow | ✅ | Empty `allowCredentials`; user resolved from the credential id |
 | Passkey-first mode (no identity column) | ✅ | `require_identity? false` |
-| `transports` hints | ✅ | Captured from the client at registration (sanitized against the spec-registered set), echoed in `allowCredentials` |
+| `transports` hints | ✅ | Captured from the client at registration (sanitized against the spec-registered set), echoed in `allowCredentials` on `verify` challenges |
 | Sign counter (clone detection) | ✅ | Enforced per §6.1.1; `sign_count_policy :reject` (default), `:log`, or `:ignore`. Synced passkeys (constant zero counters) are never flagged |
 | Backup flags (BE/BS) | ✅ | Stored as `backup_eligible`/`backed_up`; backup state refreshed on every assertion |
 | Conditional UI / autofill mediation | ⚠️ | Server-side compatible (empty `allowCredentials`); wiring is a client concern |
