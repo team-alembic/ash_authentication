@@ -279,6 +279,36 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff =~ "sign_in_enabled?(false)"
   end
 
+  # `require_identity?` only shapes WebAuthn's own registration and sign-in,
+  # both of which `--mode 2fa` turns off: the combination is accepted, keeps
+  # the second-factor shape, and says the flag does nothing.
+  test "`--passkey-only --mode 2fa` generates a second-factor strategy and says the flag has no effect",
+       %{igniter: igniter} do
+    result =
+      Igniter.compose_task(igniter, "ash_authentication.add_strategy.webauthn", [
+        "--passkey-only",
+        "--mode",
+        "2fa"
+      ])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    assert diff =~ "webauthn :webauthn"
+    assert diff =~ "registration_enabled?(false)"
+    assert diff =~ "sign_in_enabled?(false)"
+    assert diff =~ "require_identity?(false)"
+    refute diff =~ "identity_field"
+    refute diff =~ "attribute(:email"
+
+    assert_has_notice(result, &(&1 =~ "`--passkey-only` has no effect with `--mode 2fa`"))
+  end
+
+  test "neither flag alone produces the no-effect notice", %{igniter: igniter} do
+    for args <- [["--passkey-only"], ["--mode", "2fa"]] do
+      result = Igniter.compose_task(igniter, "ash_authentication.add_strategy.webauthn", args)
+      refute Enum.any?(result.notices, &(&1 =~ "has no effect with `--mode 2fa`"))
+    end
+  end
+
   test "default mode (`primary`) leaves the new flags at their defaults", %{igniter: igniter} do
     result =
       igniter
