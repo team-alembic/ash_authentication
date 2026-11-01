@@ -440,6 +440,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     Options must include:
     - `challenge:` - The Wax.Challenge used for this ceremony
     - `user:` - The existing user to attach the credential to
+
+    And may include:
+    - `authenticated_at:` - when the user last authenticated, as a `DateTime`,
+      for `add_credential_max_authentication_age`; see
+      `AshAuthentication.Strategy.WebAuthn.RecentAuthentication`
+
+    Fails without touching the challenge when `add_credential_enabled?` is
+    off or the user hasn't authenticated recently enough.
     """
     @spec add_credential(WebAuthn.t(), map, keyword) ::
             {:ok, Ash.Resource.Record.t()} | {:error, any}
@@ -448,7 +456,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       user = Keyword.fetch!(opts, :user)
       tenant = Keyword.get(opts, :tenant)
 
-      with {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
+      with :ok <- WebAuthn.RecentAuthentication.check(strategy, user, opts),
+           {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
            {:ok, registration} <-
              verify_registration(

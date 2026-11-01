@@ -36,7 +36,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
       :sign_in_with_token
     ])
     |> maybe_concat(strategy.verify_enabled?, [:verify_challenge, :verify])
-    |> Kernel.++([:add_credential_challenge, :add_credential])
+    |> maybe_concat(strategy.add_credential_enabled?, [:add_credential_challenge, :add_credential])
   end
 
   @doc false
@@ -46,7 +46,7 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
     |> maybe_append(strategy.registration_enabled?, :register)
     |> maybe_concat(strategy.sign_in_enabled?, [:sign_in, :sign_in_with_token])
     |> maybe_append(strategy.verify_enabled?, :verify)
-    |> Kernel.++([:add_credential])
+    |> maybe_append(strategy.add_credential_enabled?, :add_credential)
   end
 
   @doc false

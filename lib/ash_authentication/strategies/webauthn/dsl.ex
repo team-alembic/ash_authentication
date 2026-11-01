@@ -298,6 +298,41 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             "Whether the strategy exposes a `:verify` phase that proves possession of a passkey for an already-authenticated user. Used for second-factor and step-up flows.",
           default: true
         ],
+        add_credential_enabled?: [
+          type: :boolean,
+          doc: """
+          Whether an authenticated user can add another passkey to their
+          account (the `add_credential_challenge` and `add_credential` phases).
+          Turn it off when passkeys are enrolled only at registration, or only
+          through your own flow.
+          """,
+          default: true
+        ],
+        add_credential_max_authentication_age: [
+          type:
+            {:or,
+             [
+               nil,
+               :pos_integer,
+               {:tuple, [:pos_integer, {:in, [:days, :hours, :minutes, :seconds]}]}
+             ]},
+          doc: """
+          When set, adding a passkey requires the user to have authenticated
+          within this long (seconds, or e.g. `{5, :minutes}`); otherwise both
+          `add_credential` phases fail, and the UI should ask the user to sign
+          in again or complete a second-factor verification first.
+
+          A new passkey is a lasting way into the account, so this stops a
+          stolen or long-lived session from being used to plant one. What
+          counts as authenticating: signing in (the session token's issue
+          time), a second-factor verification (`webauthn_verified_at`,
+          `totp_verified_at`), or a time the caller passes explicitly. See
+          `AshAuthentication.Strategy.WebAuthn.RecentAuthentication`.
+
+          Defaults to `nil`: any authenticated user may add a passkey.
+          """,
+          default: nil
+        ],
         register_action_name: [
           type: :atom,
           doc:
