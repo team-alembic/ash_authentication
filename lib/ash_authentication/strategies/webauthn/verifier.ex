@@ -17,7 +17,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   @doc false
   @spec verify(WebAuthn.t(), map) :: :ok | {:error, Exception.t()}
   def verify(strategy, dsl_state) do
-    with :ok <- validate_wax_dependency(),
+    with :ok <- validate_adapter(strategy),
          :ok <- validate_rp_id(strategy),
          :ok <- validate_credential_resource(strategy),
          :ok <- validate_credential_resource_shape(strategy, dsl_state),
@@ -31,25 +31,28 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
     end
   end
 
-  defp validate_wax_dependency do
-    if Code.ensure_loaded?(Wax) do
-      :ok
-    else
-      {:error,
-       DslError.exception(
-         path: [:authentication, :strategies, :webauthn],
-         message: """
-         The WebAuthn strategy requires the optional `:wax_` dependency.
+  # The adapter knows what it needs to run a ceremony, so a missing backend
+  # library is its report to make — and only for the strategies that use it.
+  # The adapter is declared in `no_depend_modules`, so one defined in the
+  # same project may not be compiled yet; the check is skipped then, and the
+  # adapter's own compile warnings (missing `@behaviour` callbacks) cover a
+  # module that doesn't implement the behaviour.
+  defp validate_adapter(%{adapter: adapter} = strategy) do
+    cond do
+      not (Code.ensure_loaded?(adapter) and function_exported?(adapter, :check_dependencies, 0)) ->
+        :ok
 
-         Add it to your dependencies:
+      match?(:ok, adapter.check_dependencies()) ->
+        :ok
 
-             {:wax_, "~> 0.7"}
+      true ->
+        {:error, message} = adapter.check_dependencies()
 
-         If `ash_authentication` was already compiled without `:wax_`, recompile it:
-
-             mix deps.compile ash_authentication --force
-         """
-       )}
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, strategy.name, :adapter],
+           message: message
+         )}
     end
   end
 

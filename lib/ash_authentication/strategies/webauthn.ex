@@ -358,15 +358,19 @@ defmodule AshAuthentication.Strategy.WebAuthn do
     `"https://localhost:4001"`); the fallback `"https://{rp_id}"` omits it.
   - **Signing secret must return `{:ok, value}`**, not a raw string. A common mistake
     is `fn _, _ -> "my_secret" end` -- it must be `fn _, _ -> {:ok, "my_secret"} end`.
-  - **Challenge data is stored in the session as plain maps**, not `Wax.Challenge` structs,
-    because cookie session stores cannot serialize arbitrary Elixir structs. The adapter
-    serializes the challenge and rebuilds it, re-applying the strategy's settings, before
-    verification.
-  - **`origin_verify_fun`** is `{Wax, :origins_match?, []}` (an exact match) in the default
+  - **Challenge data is stored in the session as plain maps**, not the adapter's own
+    challenge structs, because cookie session stores cannot serialize arbitrary Elixir
+    structs. The adapter serializes the challenge and rebuilds it, re-applying the
+    strategy's settings, before verification.
+  - **Origin verification is an exact match** against the expected origin in the default
     adapter. For custom origin verification, configure your own `adapter`.
   - **Token generation happens in `Actions.sign_in`** via `Jwt.token_for_user/3`, not in
-    an Ash preparation like the Password strategy. This is because Wax verification
-    happens outside the Ash action pipeline.
+    an Ash preparation like the Password strategy. This is because the adapter verifies
+    the ceremony outside the Ash action pipeline.
+  - **Only the default adapter needs `wax_`.** The strategy, its plugs and the credential
+    extension have no dependency on it; a custom `adapter` brings its own backend. The
+    credential extension does need the `cbor` codec for the stored COSE keys, which
+    `wax_` depends on — add `{:cbor, "~> 1.0"}` yourself when `wax_` isn't there.
 
   ## Credential resource configuration
 

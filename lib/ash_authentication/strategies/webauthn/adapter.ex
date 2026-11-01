@@ -9,7 +9,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
   All cryptographic ceremony work — challenge generation, attestation and
   assertion verification, and challenge (de)serialization for session
   storage — goes through an adapter, so the underlying implementation can be
-  swapped without touching the strategy, its actions, or its plugs.
+  swapped without touching the strategy, its actions, or its plugs. The
+  adapter is also where the backend's dependencies live: nothing outside the
+  adapter module refers to them, so a strategy configured with another
+  adapter doesn't need the default adapter's library installed.
 
   The default adapter is `AshAuthentication.Strategy.WebAuthn.Adapters.Wax`,
   backed by the optional `wax_` dependency. Configure a different one per
@@ -22,19 +25,44 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
   end
   ```
 
+  ## What the strategy asks of an adapter
+
+  * `c:check_dependencies/0` — whether the backend is usable at all. The
+    strategy's compile-time verifier calls it, so a missing library is
+    reported where it is configured and only for the adapter that needs it.
+  * `c:pub_key_cred_params/0` — the signature algorithms the backend can
+    verify, advertised to the browser as `pubKeyCredParams` on every
+    registration challenge. An authenticator only creates credentials with
+    an algorithm the server lists, so this is what keeps registrations
+    verifiable.
+  * Challenge generation, serialization and verification, below.
+
+  The adapter is the single place the WebAuthn verification procedure runs:
+  challenge match, origin, RP ID hash, the user-present and user-verified
+  flags, expiry, and the attestation or assertion signature itself. Of the
+  strategy's options, `user_verification`, `timeout`, `attestation`,
+  `trusted_attestation_types` and `verify_trust_root?` are the adapter's to
+  enforce. The strategy enforces what needs its data — the sign count
+  policy, the `userHandle` check and the ownership of the credential — after
+  the adapter has accepted the response.
+
   ## Challenges are opaque
 
   A challenge is whatever term the adapter returns from
   `c:registration_challenge/3` / `c:authentication_challenge/4`; the strategy
-  never inspects it. When a challenge must survive between requests it is
-  round-tripped through `c:serialize_challenge/1` (which must return a
-  session-safe map of plain values) and `c:deserialize_challenge/3`.
+  never inspects it beyond asking for `c:challenge_bytes/1`. When a challenge
+  must survive between requests it is round-tripped through
+  `c:serialize_challenge/1` (which must return a session-safe map of plain
+  values) and `c:deserialize_challenge/3`. Everything verification depends on
+  — the expiry, the RP ID, the expected origin — has to survive that round
+  trip, or be re-derived from the strategy when the challenge is rebuilt.
 
   ## Verification results are normalized
 
   Verification callbacks return `t:registration/0` / `t:assertion/0` maps so
   the strategy can persist credentials without knowing the backend's data
-  structures.
+  structures. The public key is a COSE key as a map (integer labels), which
+  is what the credential resource's `CoseKey` type stores.
   """
 
   alias AshAuthentication.Strategy.WebAuthn
@@ -47,6 +75,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
 
   @typedoc "`{credential_id, cose_key}` pairs for assertion verification."
   @type allow_credentials :: [{binary, cose_key}]
+
+  @typedoc """
+  A `pubKeyCredParams` entry: a COSE algorithm identifier the adapter can
+  verify signatures for.
+  """
+  @type pub_key_cred_param :: %{type: String.t(), alg: integer}
 
   @typedoc """
   Normalized result of a verified registration ceremony.
@@ -69,10 +103,26 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
         }
 
   @doc """
+  Whether the adapter's backend is available.
+
+  Called by the strategy's compile-time verifier. Return `{:error, message}`
+  when a dependency is missing; the message is shown as the configuration
+  error, so say what to add.
+  """
+  @callback check_dependencies() :: :ok | {:error, String.t()}
+
+  @doc """
+  The COSE algorithms the adapter can verify, in preference order.
+
+  Sent to the browser as `pubKeyCredParams` on registration challenges.
+  """
+  @callback pub_key_cred_params() :: [pub_key_cred_param]
+
+  @doc """
   Generate a registration (attestation) challenge.
 
-  `opts` may carry `:origin` (the request's actual origin) and any other
-  caller-supplied overrides.
+  `opts` carries caller-supplied, adapter-specific options; the strategy's
+  own plugs pass none.
   """
   @callback registration_challenge(WebAuthn.t(), tenant :: any, opts :: keyword) :: challenge
 

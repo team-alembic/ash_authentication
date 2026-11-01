@@ -37,7 +37,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         adapter: [
           type: {:behaviour, AshAuthentication.Strategy.WebAuthn.Adapter},
           doc:
-            "The ceremony backend adapter — handles challenge generation, verification, and challenge (de)serialization. See `AshAuthentication.Strategy.WebAuthn.Adapter`.",
+            "The ceremony backend adapter — handles challenge generation, verification, and challenge (de)serialization, and brings its own dependencies: the default needs the optional `wax_` package, a custom adapter does not. See `AshAuthentication.Strategy.WebAuthn.Adapter`.",
           default: AshAuthentication.Strategy.WebAuthn.Adapters.Wax
         ],
         name: [
@@ -124,8 +124,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           This option is used when the actions are driven without a request to read
           the origin from (e.g. from a LiveView that doesn't pass `origin:`). If it is
           not set either, the origin defaults to `"https://{rp_id}"`. That default
-          **omits the port**, which works for production on port 443 but makes Wax
-          reject ceremonies in development where the port is non-standard.
+          **omits the port**, which works for production on port 443 but makes the
+          adapter reject ceremonies in development where the port is non-standard.
 
           **Production:**
 
@@ -228,19 +228,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         attestation: [
           type: {:in, ["none", "indirect", "direct", "enterprise"]},
           doc:
-            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"indirect\"` allows the client to substitute an anonymized attestation, `\"direct\"` requests the authenticator's attestation statement verbatim, and `\"enterprise\"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `\"direct\"` only asks the client to *convey* an attestation statement; it does not verify it. A client may answer any preference with a `\"none\"` statement (synced passkeys always do); whatever it conveys is verified as such and accepted or refused by `trusted_attestation_types`. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and configure FIDO metadata for `:wax_`.",
+            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"indirect\"` allows the client to substitute an anonymized attestation, `\"direct\"` requests the authenticator's attestation statement verbatim, and `\"enterprise\"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `\"direct\"` only asks the client to *convey* an attestation statement; it does not verify it. A client may answer any preference with a `\"none\"` statement (synced passkeys always do); whatever it conveys is verified as such and accepted or refused by `trusted_attestation_types`. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and give the adapter FIDO metadata (for the default adapter, configure the `:wax_` application).",
           default: "none"
         ],
         trusted_attestation_types: [
           type: {:list, {:in, [:none, :basic, :self, :attca, :anonca, :uncertain]}},
           doc:
-            "The attestation types accepted at registration (see `t:Wax.Attestation.type/0`). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata to be configured for the `:wax_` application.",
+            "The attestation types accepted at registration, as the adapter classifies the verified statement: `:none` (no statement), `:self` (signed with the credential's own key), `:basic`, `:attca` and `:anonca` (chaining to a known root), or `:uncertain` (a chain the adapter has no metadata to judge). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata (for the default adapter, configured on the `:wax_` application).",
           default: [:none, :basic, :self, :uncertain]
         ],
         verify_trust_root?: [
           type: :boolean,
           doc:
-            "Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata to be configured for the `:wax_` application.",
+            "Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata (for the default adapter, configured on the `:wax_` application).",
           default: false
         ],
         timeout: [

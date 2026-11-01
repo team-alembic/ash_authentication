@@ -11,7 +11,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInPreparation do
   requires an identity, constrains the query to the one passed to the action
   too. Unlike the Password strategy's SignInPreparation, this module does NOT
   handle credential verification or token generation - those happen in
-  the Actions module after Wax assertion verification.
+  the Actions module after the adapter has verified the assertion.
   """
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource.Preparation}
