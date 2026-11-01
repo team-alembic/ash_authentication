@@ -88,9 +88,17 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   | `rp_id`   | `"example.com"`            | Domain only (Relying Party ID)   |
   | `origin`  | `"https://example.com"`    | Full URL including scheme + port |
 
-  If `origin` is not set, it defaults to `"https://{rp_id}"`. This works for
-  production on standard port 443, but **breaks in development** because the
-  browser includes the port in the origin and `Wax` will reject the mismatch.
+  Ceremonies served by the strategy's plugs take the expected origin from the
+  challenge request itself (its scheme, host and port), and that **takes
+  precedence over a configured `origin`**. The configured value is used when
+  the actions are driven without a request to read the origin from (e.g. from
+  a LiveView that doesn't pass `origin:`), and `"https://{rp_id}"` (no port)
+  when neither is available.
+
+  Behind a TLS-terminating proxy the raw connection doesn't describe the URL
+  the browser used, so restore it before the router (e.g. with
+  `Plug.RewriteOn`); otherwise the expected origin is the proxy's internal
+  `http://...:port` and every ceremony fails. See the WebAuthn guide.
 
   ### Production
 
@@ -167,17 +175,16 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
   ## Adding Credentials to Existing Users
 
-  The built-in `register` action creates a **new user** with a credential. To add
-  a passkey to an already-authenticated user, you need a custom controller that:
+  The `register` action creates a **new user** with a credential. To add a
+  passkey to an already-authenticated user, use the `add_credential_challenge`
+  (GET) and `add_credential` (POST) phases, or
+  `AshAuthentication.Strategy.WebAuthn.Actions.add_credential/3` directly.
+  Both require an authenticated actor; the challenge reuses the user handle of
+  the actor's existing passkeys and lists them in `excludeCredentials`, so the
+  same authenticator can't be enrolled twice.
 
-  1. Generates a registration challenge (via `Wax.new_registration_challenge/1`)
-  2. Sends it to the browser
-  3. Receives the attestation response
-  4. Calls `Wax.register/3` to verify it
-  5. Stores the credential directly on the credential resource
-
-  This is intentional -- the strategy's register flow is for new user sign-up,
-  not for adding keys to existing accounts.
+  These phases are always routed, whatever `registration_enabled?`,
+  `sign_in_enabled?` and `verify_enabled?` are set to.
 
   ## Accessing the User After Authentication
 
@@ -306,18 +313,19 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
   ## Gotchas
 
-  - **Origin must include the port** for non-standard ports (e.g., `"https://localhost:4001"`).
-    The default derivation from `rp_id` produces `"https://{rp_id}"` which omits the port.
+  - **The request's origin wins over a configured `origin`** in plug-served
+    ceremonies, so behind a TLS-terminating proxy the connection must be rewritten
+    to the browser-facing scheme, host and port. Where no request is available,
+    a configured origin must include the port for non-standard ports (e.g.,
+    `"https://localhost:4001"`); the fallback `"https://{rp_id}"` omits it.
   - **Signing secret must return `{:ok, value}`**, not a raw string. A common mistake
     is `fn _, _ -> "my_secret" end` -- it must be `fn _, _ -> {:ok, "my_secret"} end`.
   - **Challenge data is stored in the session as plain maps**, not `Wax.Challenge` structs,
-    because cookie session stores cannot serialize arbitrary Elixir structs. The plug
-    reconstructs the struct before passing it to Wax.
-  - **`add_credential` (adding a key to an existing user) is not built-in.** The `register`
-    action creates a new user. See "Adding Credentials to Existing Users" above.
-  - **`origin_verify_fun`** is hardcoded to `{Wax, :origins_match?, []}` when
-    reconstructing challenges from the session. If you need custom origin verification,
-    you'll need to override the plug.
+    because cookie session stores cannot serialize arbitrary Elixir structs. The adapter
+    serializes the challenge and rebuilds it, re-applying the strategy's settings, before
+    verification.
+  - **`origin_verify_fun`** is `{Wax, :origins_match?, []}` (an exact match) in the default
+    adapter. For custom origin verification, configure your own `adapter`.
   - **Token generation happens in `Actions.sign_in`** via `Jwt.token_for_user/3`, not in
     an Ash preparation like the Password strategy. This is because Wax verification
     happens outside the Ash action pipeline.
