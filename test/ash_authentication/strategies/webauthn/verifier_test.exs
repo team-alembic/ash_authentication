@@ -148,6 +148,42 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
     end
   end
 
+  # The user source above is passkey-first (`require_identity? false`).
+  describe "resident_key in passkey-first mode" do
+    for resident_key <- [:preferred, :discouraged] do
+      test "warns that #{inspect(resident_key)} can create a passkey no one can sign in with" do
+        output =
+          capture_io(:stderr, fn ->
+            compile_pair(strategy_options: "resident_key #{inspect(unquote(resident_key))}")
+          end)
+
+        assert output =~
+                 "`require_identity? false` with `resident_key #{inspect(unquote(resident_key))}`"
+      end
+    end
+
+    test "does not warn for :required" do
+      output =
+        capture_io(:stderr, fn -> compile_pair(strategy_options: "resident_key :required") end)
+
+      refute output =~ "resident_key"
+    end
+
+    test "does not warn when the strategy doesn't sign anyone in" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(
+            strategy_options: """
+            resident_key :discouraged
+            sign_in_enabled? false
+            """
+          )
+        end)
+
+      refute output =~ "resident_key"
+    end
+  end
+
   describe "manages_credentials_relationship?/2" do
     test "true when a change manages the given relationship" do
       action = %{
