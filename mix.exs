@@ -286,6 +286,9 @@ defmodule AshAuthentication.MixProject do
       {:spark, "~> 2.0"},
       {:splode, "~> 0.2"},
       {:wax_, "~> 0.7", optional: true},
+      # COSE keys are CBOR by spec; the credential extension's `CoseKey` type
+      # needs the codec whichever WebAuthn adapter verifies the ceremonies.
+      {:cbor, "~> 1.0", optional: true},
 
       # Dev/test
       {:absinthe_plug, "~> 1.5", only: [:dev, :test]},
