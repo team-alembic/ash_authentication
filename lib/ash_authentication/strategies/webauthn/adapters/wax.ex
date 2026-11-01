@@ -9,8 +9,11 @@ if Code.ensure_loaded?(Wax) do
 
     This module is the only place in the library that refers to Wax. Every
     strategy option Wax enforces is translated into a `Wax.Challenge` here:
-    the relying party ID, the ceremony timeout, `user_verification`, and the
-    attestation settings.
+    the relying party ID, the ceremony timeout, `user_verification`, the
+    attestation settings, and the origin policy. The policy
+    (`AshAuthentication.Strategy.WebAuthn.Origin`) rides in the challenge's
+    `origin` field and is applied through Wax's `origin_verify_fun`, so the
+    challenge rebuilt from the session enforces exactly what was issued.
 
     ## Attestation and FIDO metadata
 
@@ -26,9 +29,13 @@ if Code.ensure_loaded?(Wax) do
     `priv/fido2_metadata/`. See the `Wax` documentation.
     """
 
-    alias AshAuthentication.Strategy.WebAuthn.{Adapter, Helpers}
+    alias AshAuthentication.Strategy.WebAuthn.{Adapter, Helpers, Origin}
 
     @behaviour Adapter
+
+    # Wax calls this as `apply(m, f, [client_origin, challenge.origin])`,
+    # which is `Origin.allowed?/2`'s argument order.
+    @origin_verify_fun {Origin, :allowed?, []}
 
     # COSE algorithms Wax can verify, in preference order. Deliberately
     # excludes RSASSA-PKCS1-v1_5 w/ SHA-1 (-65535) and ES256K (-47).
@@ -44,16 +51,16 @@ if Code.ensure_loaded?(Wax) do
     def pub_key_cred_params, do: @pub_key_cred_params
 
     @impl Adapter
-    def registration_challenge(strategy, tenant, opts) do
+    def registration_challenge(strategy, tenant, _opts) do
       strategy
-      |> challenge_opts(tenant, opts)
+      |> challenge_opts(tenant)
       |> Wax.new_registration_challenge()
     end
 
     @impl Adapter
-    def authentication_challenge(strategy, allow_credentials, tenant, opts) do
+    def authentication_challenge(strategy, allow_credentials, tenant, _opts) do
       strategy
-      |> challenge_opts(tenant, opts)
+      |> challenge_opts(tenant)
       |> Keyword.put(:allow_credentials, allow_credentials)
       |> Wax.new_authentication_challenge()
     end
@@ -62,15 +69,14 @@ if Code.ensure_loaded?(Wax) do
     # relying-party values resolved for the tenant. The DSL's `timeout` is in
     # milliseconds; Wax counts a challenge's validity in whole seconds.
     #
-    # Origin precedence: a caller-supplied `opts[:origin]` (the request's
-    # actual origin), then the strategy's configured origin, then
-    # `https://#{rp_id}`.
-    defp challenge_opts(strategy, tenant, opts) do
-      rp_id = Helpers.resolve_rp_id(strategy, tenant)
-
+    # Wax's `origin` is typed as "a string, a list, or anything" because it
+    # only ever hands it to `origin_verify_fun`; the strategy's origin policy
+    # goes in as-is and the policy module does the comparison.
+    defp challenge_opts(strategy, tenant) do
       [
-        origin: opts[:origin] || Helpers.resolve_origin(strategy, tenant) || "https://#{rp_id}",
-        rp_id: rp_id,
+        origin: Origin.policy(strategy, tenant),
+        origin_verify_fun: @origin_verify_fun,
+        rp_id: Helpers.resolve_rp_id(strategy, tenant),
         user_verification: strategy.user_verification,
         attestation: strategy.attestation,
         trusted_attestation_types: strategy.trusted_attestation_types,
@@ -125,9 +131,9 @@ if Code.ensure_loaded?(Wax) do
 
     def deserialize_challenge(_strategy, _data, _type), do: nil
 
-    # When reconstructing from session data the origin check must accept the
-    # origin recorded at challenge time; `Wax.origins_match?/2` performs the
-    # exact comparison.
+    # The origin policy recorded at challenge time comes back as the plain
+    # map it was stored as (string-keyed if the session store went through
+    # JSON); `Origin.allowed?/2` reads either form.
     #
     # The struct is built directly rather than through `Wax.Challenge.new/1`,
     # so every field Wax verifies against has to be set here: anything left
@@ -143,7 +149,7 @@ if Code.ensure_loaded?(Wax) do
         origin: data["origin"] || data[:origin],
         rp_id: rp_id,
         issued_at: issued_at,
-        origin_verify_fun: {Wax, :origins_match?, []},
+        origin_verify_fun: @origin_verify_fun,
         user_verification: strategy.user_verification,
         timeout: Helpers.challenge_timeout_seconds(strategy)
       }

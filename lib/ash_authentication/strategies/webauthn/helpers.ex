@@ -24,23 +24,25 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
     do: resolve(:rp_name, rp_name, strategy, tenant)
 
   @doc """
-  Resolve the configured origin, if any.
+  Resolve the configured origin allowlist, if any.
 
-  Returns `nil` if the strategy has no origin configured, or if the configured
-  Secret module returns `:error` for the origin path. Adapters decide what to
-  do with `nil` — typically falling back to a runtime-derived origin before
-  finally defaulting to `"https://" <> rp_id`.
+  Returns the configured origin or list of origins, or `nil` if the strategy
+  has no origin configured or the configured Secret module returns `:error`
+  for the origin path. `nil` means the origin policy is derived from the
+  RP ID instead — see `AshAuthentication.Strategy.WebAuthn.Origin`.
 
-  Static strings, MFA tuples, and anonymous functions always return a value
-  (or raise if the user-supplied callable does).
+  Static values, MFA tuples, and anonymous functions always return a value
+  (or raise if the user-supplied callable does). A Secret module may return
+  `{:ok, origin}` or `{:ok, [origin, ...]}`.
   """
-  @spec resolve_origin(WebAuthn.t(), any) :: String.t() | nil
+  @spec resolve_origin(WebAuthn.t(), any) :: String.t() | [String.t()] | nil
   def resolve_origin(%{origin: nil}, _tenant), do: nil
 
   def resolve_origin(%{origin: origin} = strategy, tenant),
     do: resolve(:origin, origin, strategy, tenant)
 
   defp resolve(_key, value, _strategy, _tenant) when is_binary(value), do: value
+  defp resolve(:origin, origins, _strategy, _tenant) when is_list(origins), do: origins
   defp resolve(_key, {m, f, a}, _strategy, tenant), do: apply(m, f, [tenant | a])
   defp resolve(_key, fun, _strategy, tenant) when is_function(fun, 1), do: fun.(tenant)
 
@@ -57,6 +59,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
          ) do
       {:ok, value} when is_binary(value) ->
         value
+
+      {:ok, origins} when key == :origin and is_list(origins) ->
+        origins
 
       {:ok, other} ->
         raise "Expected #{inspect(secret_module)} `secret_for/4` for #{inspect(path)} to return `{:ok, binary}`, got `{:ok, #{inspect(other)}}`."

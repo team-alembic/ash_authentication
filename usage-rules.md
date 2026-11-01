@@ -22,9 +22,10 @@ SPDX-License-Identifier: MIT
 - Check existing strategies: `AshAuthentication.Info.strategies/1`
 
 ## WebAuthn Strategy Notes
-- In plug-served ceremonies the expected origin comes from the challenge request (scheme, host, port) and takes precedence over a configured `origin`; behind a TLS-terminating proxy, rewrite the conn (e.g. `Plug.RewriteOn`) or every ceremony fails
-- Without a request to read it from, a configured `origin` is used, and must include the port for non-standard ports (e.g. `"https://localhost:4001"`); the `https://{rp_id}` fallback omits the port
-- The default Wax adapter verifies origins with `origin_verify_fun: {Wax, :origins_match?, []}` (exact match); custom origin verification means a custom `adapter`
+- The origin a ceremony is accepted from never comes from the request (behind a TLS-terminating proxy the request describes the proxy, not the browser). With no `origin` configured, any `https` origin on the `rp_id` or a subdomain of it is accepted, on any port, plus `http://localhost[:port]` when `rp_id` is `"localhost"`; development on a non-standard port needs no configuration and no `Plug.RewriteOn`
+- A configured `origin` is an exact-match allowlist, port included: a string, a list of strings, a 1-arity function or MFA of the tenant returning either, or an `AshAuthentication.Secret`. `origin "https://example.com"` rejects `https://app.example.com` and `https://example.com:4001`
+- `Actions.registration_challenge/3` and `Actions.authentication_challenge/4` take no `origin:` option and raise if given one; the policy is the strategy's (`AshAuthentication.Strategy.WebAuthn.Origin`), and every adapter enforces it through `Origin.allowed?/2` and persists it in the serialized challenge
+- Only the default (Wax) adapter needs `wax_`; the strategy, plugs and credential extension don't reference it. The credential extension needs the `cbor` codec (a dependency of `wax_`; add `{:cbor, "~> 1.0"}` with a custom adapter). The adapter also supplies `pubKeyCredParams` and reports its own missing dependencies at compile time
 - Token generation happens in `Actions.sign_in` via `Jwt.token_for_user/3`, not in an Ash preparation like Password
 - The `register` action creates a new user and returns a session token; add a passkey to an existing user through the `add_credential_challenge`/`add_credential` phases (or `Actions.add_credential/3`), which require an authenticated actor. `add_credential_enabled? false` removes them; `add_credential_max_authentication_age {5, :minutes}` requires a recent sign-in or second factor first
 - Clients should send the assertion's `response.userHandle` (base64url) as `user_handle` on `sign_in`/`verify`; it is checked against the credential's stored `user_handle`

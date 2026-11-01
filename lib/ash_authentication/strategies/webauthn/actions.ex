@@ -24,24 +24,51 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   @doc """
   Generate a registration challenge.
 
-  Pass `origin: "..."` in `opts` to override the strategy's configured origin
-  (e.g. with the request's actual origin when serving from a Plug or
-  LiveView).
+  `opts` are passed to the adapter. The origin the ceremony is accepted from
+  is not among them: it is the strategy's origin policy, derived from its
+  configured `origin` or its `rp_id` (see
+  `AshAuthentication.Strategy.WebAuthn.Origin`), never from the request. An
+  `origin:` option is refused rather than ignored, since silently dropping
+  it would hide a caller that still expects the request to decide.
   """
   @spec registration_challenge(WebAuthn.t(), any, keyword) :: {:ok, Adapter.challenge()}
   def registration_challenge(strategy, tenant, opts \\ []) do
-    {:ok, strategy.adapter.registration_challenge(strategy, tenant, opts)}
+    {:ok, strategy.adapter.registration_challenge(strategy, tenant, challenge_opts!(opts))}
   end
 
   @doc """
   Generate an authentication challenge.
 
-  Pass `origin: "..."` in `opts` to override the strategy's configured origin.
+  `opts` are passed to the adapter; as for `registration_challenge/3`, an
+  `origin:` option is refused.
   """
   @spec authentication_challenge(WebAuthn.t(), list, any, keyword) ::
           {:ok, Adapter.challenge()}
   def authentication_challenge(strategy, allow_credentials, tenant, opts \\ []) do
-    {:ok, strategy.adapter.authentication_challenge(strategy, allow_credentials, tenant, opts)}
+    {:ok,
+     strategy.adapter.authentication_challenge(
+       strategy,
+       allow_credentials,
+       tenant,
+       challenge_opts!(opts)
+     )}
+  end
+
+  defp challenge_opts!(opts) do
+    if Keyword.has_key?(opts, :origin) do
+      raise ArgumentError, """
+      The `origin:` option is no longer accepted when generating a WebAuthn challenge.
+
+      The origin a ceremony is accepted from is the strategy's policy: the configured
+      `origin` allowlist, or — when none is configured — any `https` origin on the
+      `rp_id` or a subdomain of it. It is never taken from the request, so it needs
+      no help from the caller and works behind a TLS-terminating proxy.
+
+      Drop the option. To accept specific origins, configure `origin` on the strategy.
+      """
+    end
+
+    opts
   end
 
   @doc "Register a new user with a WebAuthn credential."
