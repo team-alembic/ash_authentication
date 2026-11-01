@@ -22,6 +22,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
          :ok <- validate_credential_resource(strategy),
          :ok <- validate_credential_resource_shape(strategy, dsl_state),
          :ok <- validate_hints(strategy),
+         :ok <- validate_resident_key(strategy),
          :ok <- validate_tokens_enabled(dsl_state),
          :ok <- validate_verify_action(strategy, dsl_state),
          :ok <- validate_register_action_manages_credential(strategy, dsl_state),
@@ -124,6 +125,34 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
         :ok
     end
   end
+
+  # Passkey-first sign-in has no identity to look credentials up by, so it
+  # can only find a credential the authenticator can discover by itself.
+  # Anything short of `:required` lets an authenticator create one it can't,
+  # and its owner is then registered with a passkey they can never sign in
+  # with. A warning rather than an error: `:preferred` still produces a
+  # discoverable credential on almost every current authenticator, and the
+  # `discoverable` field records which ones didn't.
+  defp validate_resident_key(
+         %{require_identity?: false, sign_in_enabled?: true, resident_key: resident_key} =
+           strategy
+       )
+       when resident_key != :required do
+    IO.warn("""
+    The WebAuthn strategy `#{inspect(strategy.name)}` uses `require_identity? false` with \
+    `resident_key #{inspect(resident_key)}`.
+
+    Without an identity, sign-in can only use a credential the authenticator
+    discovers by itself. An authenticator honouring `#{inspect(resident_key)}`
+    may create one it can't, leaving its owner with a passkey they can never
+    sign in with. Use `resident_key :required` (the default) for passkey-first
+    sign-in.
+    """)
+
+    :ok
+  end
+
+  defp validate_resident_key(_strategy), do: :ok
 
   defp validate_credential_resource(%{credential_resource: nil}) do
     {:error,
