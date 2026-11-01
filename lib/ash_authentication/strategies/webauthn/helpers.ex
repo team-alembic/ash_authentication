@@ -6,7 +6,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
   @moduledoc """
   Helper functions for the WebAuthn strategy.
 
-  Handles multi-tenant rp_id/rp_name resolution and Wax option building.
+  Resolves the relying-party settings that may vary per tenant (`rp_id`,
+  `rp_name`, `origin`), and converts the ceremony timeout for the server
+  side. Adapters use these to build their challenges.
   """
 
   alias AshAuthentication.Strategy.WebAuthn
@@ -25,9 +27,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
   Resolve the configured origin, if any.
 
   Returns `nil` if the strategy has no origin configured, or if the configured
-  Secret module returns `:error` for the origin path. Callers (e.g.
-  `wax_opts/3`) decide what to do with `nil` — typically falling back to a
-  runtime-derived origin (Plug `conn` / LiveView `socket.host_uri`) before
+  Secret module returns `:error` for the origin path. Adapters decide what to
+  do with `nil` — typically falling back to a runtime-derived origin before
   finally defaulting to `"https://" <> rp_id`.
 
   Static strings, MFA tuples, and anonymous functions always return a value
@@ -66,36 +67,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
       :error ->
         raise "#{inspect(secret_module)} `secret_for/4` returned `:error` for #{inspect(path)} on resource #{inspect(strategy.resource)}."
     end
-  end
-
-  @doc """
-  Build Wax options from the strategy, resolving dynamic values for the given tenant.
-
-  Origin precedence:
-
-  1. `opts[:origin]` — supplied by callers that have access to the actual
-     request (Plug `conn`, LiveView `socket.host_uri`). This reflects the
-     origin the browser really used, which is what WebAuthn's origin check
-     needs, and is what makes multi-tenant/multi-domain deployments and
-     dev/test "just work" without baking a port into config.
-  2. The strategy's configured origin (literal, MFA, or Secret module) — used
-     only when the caller didn't supply a runtime origin.
-  3. `https://\#{rp_id}` — last-resort default, matching Wax's own behaviour.
-  """
-  @spec wax_opts(WebAuthn.t(), any, keyword) :: keyword
-  def wax_opts(strategy, tenant, opts \\ []) do
-    rp_id = resolve_rp_id(strategy, tenant)
-    origin = opts[:origin] || resolve_origin(strategy, tenant) || "https://#{rp_id}"
-
-    [
-      origin: origin,
-      rp_id: rp_id,
-      user_verification: strategy.user_verification,
-      attestation: strategy.attestation,
-      trusted_attestation_types: strategy.trusted_attestation_types,
-      verify_trust_root: strategy.verify_trust_root?,
-      timeout: challenge_timeout_seconds(strategy)
-    ]
   end
 
   @doc """

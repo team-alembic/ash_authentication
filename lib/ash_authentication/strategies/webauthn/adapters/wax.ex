@@ -6,25 +6,77 @@ if Code.ensure_loaded?(Wax) do
   defmodule AshAuthentication.Strategy.WebAuthn.Adapters.Wax do
     @moduledoc """
     The default WebAuthn adapter, backed by the optional `wax_` dependency.
+
+    This module is the only place in the library that refers to Wax. Every
+    strategy option Wax enforces is translated into a `Wax.Challenge` here:
+    the relying party ID, the ceremony timeout, `user_verification`, and the
+    attestation settings.
+
+    ## Attestation and FIDO metadata
+
+    Verifying attestation trust roots (`verify_trust_root? true`, or
+    `trusted_attestation_types` without `:none`/`:uncertain`) needs FIDO
+    metadata, which Wax loads itself:
+
+    ```elixir
+    config :wax_, update_metadata: true
+    ```
+
+    or `config :wax_, metadata_dir: :my_app` to ship statements from
+    `priv/fido2_metadata/`. See the `Wax` documentation.
     """
 
     alias AshAuthentication.Strategy.WebAuthn.{Adapter, Helpers}
 
     @behaviour Adapter
 
+    # COSE algorithms Wax can verify, in preference order. Deliberately
+    # excludes RSASSA-PKCS1-v1_5 w/ SHA-1 (-65535) and ES256K (-47).
+    @pub_key_cred_params Enum.map(
+                           [-7, -8, -35, -36, -37, -38, -39, -257, -258, -259],
+                           &%{type: "public-key", alg: &1}
+                         )
+
+    @impl Adapter
+    def check_dependencies, do: :ok
+
+    @impl Adapter
+    def pub_key_cred_params, do: @pub_key_cred_params
+
     @impl Adapter
     def registration_challenge(strategy, tenant, opts) do
       strategy
-      |> Helpers.wax_opts(tenant, opts)
+      |> challenge_opts(tenant, opts)
       |> Wax.new_registration_challenge()
     end
 
     @impl Adapter
     def authentication_challenge(strategy, allow_credentials, tenant, opts) do
       strategy
-      |> Helpers.wax_opts(tenant, opts)
+      |> challenge_opts(tenant, opts)
       |> Keyword.put(:allow_credentials, allow_credentials)
       |> Wax.new_authentication_challenge()
+    end
+
+    # The strategy's settings as Wax challenge options, with the dynamic
+    # relying-party values resolved for the tenant. The DSL's `timeout` is in
+    # milliseconds; Wax counts a challenge's validity in whole seconds.
+    #
+    # Origin precedence: a caller-supplied `opts[:origin]` (the request's
+    # actual origin), then the strategy's configured origin, then
+    # `https://#{rp_id}`.
+    defp challenge_opts(strategy, tenant, opts) do
+      rp_id = Helpers.resolve_rp_id(strategy, tenant)
+
+      [
+        origin: opts[:origin] || Helpers.resolve_origin(strategy, tenant) || "https://#{rp_id}",
+        rp_id: rp_id,
+        user_verification: strategy.user_verification,
+        attestation: strategy.attestation,
+        trusted_attestation_types: strategy.trusted_attestation_types,
+        verify_trust_root: strategy.verify_trust_root?,
+        timeout: Helpers.challenge_timeout_seconds(strategy)
+      ]
     end
 
     @impl Adapter
@@ -57,11 +109,17 @@ if Code.ensure_loaded?(Wax) do
       end
     end
 
+    # Everything Wax's verification reads has to be present and well-formed;
+    # a half-built challenge (no bytes, no issue time) must not come back as
+    # one the ceremony could be verified against.
     @impl Adapter
     def deserialize_challenge(strategy, data, type) when is_map(data) do
-      case Base.decode64(data["bytes"] || data[:bytes] || "") do
-        {:ok, bytes} -> build_challenge(strategy, data, bytes, type)
-        :error -> nil
+      with {:ok, bytes} when bytes != <<>> <- Base.decode64(data["bytes"] || data[:bytes] || ""),
+           rp_id when is_binary(rp_id) <- data["rp_id"] || data[:rp_id],
+           issued_at when is_integer(issued_at) <- data["issued_at"] || data[:issued_at] do
+        build_challenge(strategy, data, bytes, rp_id, issued_at, type)
+      else
+        _ -> nil
       end
     end
 
@@ -78,13 +136,13 @@ if Code.ensure_loaded?(Wax) do
     # `"preferred"` (Wax then never checks the UV flag, so `"required"` would
     # only be a request to the browser) and `timeout` to 120 seconds (cutting
     # off any ceremony configured to last longer).
-    defp build_challenge(strategy, data, bytes, type) do
+    defp build_challenge(strategy, data, bytes, rp_id, issued_at, type) do
       base = %Wax.Challenge{
         type: type,
         bytes: bytes,
         origin: data["origin"] || data[:origin],
-        rp_id: data["rp_id"] || data[:rp_id],
-        issued_at: data["issued_at"] || data[:issued_at],
+        rp_id: rp_id,
+        issued_at: issued_at,
         origin_verify_fun: {Wax, :origins_match?, []},
         user_verification: strategy.user_verification,
         timeout: Helpers.challenge_timeout_seconds(strategy)
@@ -193,30 +251,58 @@ else
     @moduledoc """
     The default WebAuthn adapter, backed by the optional `wax_` dependency.
 
-    The `:wax_` dependency is not present, so every callback returns an
-    error. The strategy's own missing-dependency handling reports this before
-    the adapter is ever reached.
+    The `:wax_` dependency was not present when `ash_authentication` was
+    compiled, so this adapter cannot run a ceremony. `check_dependencies/0`
+    says so, which the strategy's verifier reports as a configuration error
+    for any strategy that uses this adapter; the other callbacks refuse to
+    do anything, so a strategy that somehow reaches them fails closed.
     """
 
-    @behaviour AshAuthentication.Strategy.WebAuthn.Adapter
+    alias AshAuthentication.Strategy.WebAuthn.Adapter
 
-    @error {:error, "The WebAuthn strategy requires the optional `:wax_` dependency"}
+    @behaviour Adapter
 
-    @impl true
-    def registration_challenge(_strategy, _tenant, _opts), do: @error
-    @impl true
-    def authentication_challenge(_strategy, _allow_credentials, _tenant, _opts), do: @error
-    @impl true
+    @message """
+    The WebAuthn strategy's default adapter requires the optional `:wax_` dependency.
+
+    Add it to your dependencies:
+
+        {:wax_, "~> 0.7"}
+
+    If `ash_authentication` was already compiled without `:wax_`, recompile it:
+
+        mix deps.compile ash_authentication --force
+
+    Or configure a different `adapter` on the strategy.
+    """
+
+    @impl Adapter
+    def check_dependencies, do: {:error, @message}
+
+    @impl Adapter
+    def pub_key_cred_params, do: []
+
+    @impl Adapter
+    def registration_challenge(_strategy, _tenant, _opts), do: raise(@message)
+
+    @impl Adapter
+    def authentication_challenge(_strategy, _allow_credentials, _tenant, _opts),
+      do: raise(@message)
+
+    @impl Adapter
     def challenge_bytes(_challenge), do: <<>>
-    @impl true
-    def serialize_challenge(_challenge), do: %{}
-    @impl true
-    def deserialize_challenge(_strategy, _data, _type), do: nil
-    @impl true
-    def verify_registration(_strategy, _attestation_object, _client_data_json, _challenge),
-      do: @error
 
-    @impl true
+    @impl Adapter
+    def serialize_challenge(_challenge), do: %{}
+
+    @impl Adapter
+    def deserialize_challenge(_strategy, _data, _type), do: nil
+
+    @impl Adapter
+    def verify_registration(_strategy, _attestation_object, _client_data_json, _challenge),
+      do: {:error, @message}
+
+    @impl Adapter
     def verify_authentication(
           _strategy,
           _credential_id,
@@ -226,6 +312,6 @@ else
           _challenge,
           _allow_credentials
         ),
-        do: @error
+        do: {:error, @message}
   end
 end

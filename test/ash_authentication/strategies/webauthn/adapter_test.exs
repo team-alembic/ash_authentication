@@ -13,30 +13,37 @@ defmodule AshAuthentication.Strategy.WebAuthn.AdapterTest do
 
   defmodule StubAdapter do
     @moduledoc false
-    @behaviour AshAuthentication.Strategy.WebAuthn.Adapter
+    alias AshAuthentication.Strategy.WebAuthn.Adapter
+    @behaviour Adapter
 
-    @impl true
+    @impl Adapter
+    def check_dependencies, do: :ok
+
+    @impl Adapter
+    def pub_key_cred_params, do: [%{type: "public-key", alg: -7}]
+
+    @impl Adapter
     def registration_challenge(_strategy, _tenant, _opts), do: {:stub, :registration}
 
-    @impl true
+    @impl Adapter
     def authentication_challenge(_strategy, allow_credentials, _tenant, _opts),
       do: {:stub, :authentication, allow_credentials}
 
-    @impl true
+    @impl Adapter
     def challenge_bytes(_challenge), do: "stub-bytes"
 
-    @impl true
+    @impl Adapter
     def serialize_challenge(_challenge), do: %{stub: true}
 
-    @impl true
+    @impl Adapter
     def deserialize_challenge(_strategy, %{stub: true}, type), do: {:stub, type}
     def deserialize_challenge(_strategy, _data, _type), do: nil
 
-    @impl true
+    @impl Adapter
     def verify_registration(_strategy, _attestation_object, _client_data_json, _challenge),
       do: {:error, :stub_rejection}
 
-    @impl true
+    @impl Adapter
     def verify_authentication(
           _strategy,
           _credential_id,
@@ -54,30 +61,37 @@ defmodule AshAuthentication.Strategy.WebAuthn.AdapterTest do
   # test can hand the adapter real (fixture-derived) credential material.
   defmodule SuccessStubAdapter do
     @moduledoc false
-    @behaviour AshAuthentication.Strategy.WebAuthn.Adapter
+    alias AshAuthentication.Strategy.WebAuthn.Adapter
+    @behaviour Adapter
 
-    @impl true
+    @impl Adapter
+    def check_dependencies, do: :ok
+
+    @impl Adapter
+    def pub_key_cred_params, do: [%{type: "public-key", alg: -7}]
+
+    @impl Adapter
     def registration_challenge(_strategy, _tenant, _opts), do: :stub_challenge
 
-    @impl true
+    @impl Adapter
     def authentication_challenge(_strategy, allow_credentials, _tenant, _opts),
       do: {:stub_challenge, allow_credentials}
 
-    @impl true
+    @impl Adapter
     def challenge_bytes(_challenge), do: "stub-bytes"
 
-    @impl true
+    @impl Adapter
     def serialize_challenge(_challenge), do: %{stub: true}
 
-    @impl true
+    @impl Adapter
     def deserialize_challenge(_strategy, %{stub: true}, type), do: {:stub, type}
     def deserialize_challenge(_strategy, _data, _type), do: nil
 
-    @impl true
+    @impl Adapter
     def verify_registration(_strategy, _attestation_object, _client_data_json, _challenge),
       do: {:ok, Process.get(:stub_registration)}
 
-    @impl true
+    @impl Adapter
     def verify_authentication(
           _strategy,
           _credential_id,

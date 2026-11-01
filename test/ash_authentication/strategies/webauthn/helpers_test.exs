@@ -7,7 +7,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
 
   alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.Helpers
-  alias AshAuthentication.Test.WebAuthnFixtures
 
   @moduletag feature: :webauthn
 
@@ -85,105 +84,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
     end
   end
 
-  describe "wax_opts/3" do
-    test "builds Wax options from strategy" do
-      strategy = %WebAuthn{
-        rp_id: WebAuthnFixtures.default_rp_id(),
-        user_verification: "required",
-        attestation: "none"
-      }
-
-      opts = Helpers.wax_opts(strategy, nil)
-      assert opts[:origin] == WebAuthnFixtures.default_origin()
-      assert opts[:rp_id] == WebAuthnFixtures.default_rp_id()
-      assert opts[:user_verification] == "required"
-      assert opts[:attestation] == "none"
-      # The DSL's milliseconds, as Wax's seconds
-      assert opts[:timeout] == 60
+  describe "challenge_timeout_seconds/1" do
+    test "converts the DSL's milliseconds to whole seconds" do
+      assert Helpers.challenge_timeout_seconds(%WebAuthn{timeout: 60_000}) == 60
     end
 
-    test "rounds a sub-second timeout remainder up to a whole second" do
-      strategy = %WebAuthn{rp_id: WebAuthnFixtures.default_rp_id(), timeout: 120_001}
-
-      assert Helpers.wax_opts(strategy, nil)[:timeout] == 121
-    end
-
-    test "resolves dynamic rp_id for tenant" do
-      strategy = %WebAuthn{
-        rp_id: {__MODULE__, :rp_id_for_tenant, []},
-        user_verification: "preferred",
-        attestation: "none"
-      }
-
-      opts = Helpers.wax_opts(strategy, "tenant1")
-      assert opts[:origin] == "https://tenant1.example.com"
-      assert opts[:rp_id] == "tenant1.example.com"
-    end
-  end
-
-  # These four tests exhaustively cover every combination of
-  # `opts[:origin]` being present/absent and `strategy.origin` being
-  # configured/unconfigured, pinning down the exact precedence order:
-  #
-  #     opts[:origin]  >  strategy.origin  >  "https://#{rp_id}"
-  #
-  # Each origin value is distinct (opts vs. configured vs. rp_id-derived) so
-  # a passing assertion can only mean the intended source won — there's no
-  # way for the wrong precedence to accidentally produce the same value.
-  describe "wax_opts/3 origin precedence" do
-    setup do
-      %{rp_id: WebAuthnFixtures.default_rp_id()}
-    end
-
-    test "opts[:origin] wins when both opts[:origin] and strategy.origin are set", %{
-      rp_id: rp_id
-    } do
-      strategy = %WebAuthn{
-        rp_id: rp_id,
-        origin: "https://configured-origin.example:8443",
-        user_verification: "preferred",
-        attestation: "none"
-      }
-
-      opts = Helpers.wax_opts(strategy, nil, origin: "http://opts-origin.example:4001")
-      assert opts[:origin] == "http://opts-origin.example:4001"
-    end
-
-    test "strategy.origin wins when opts[:origin] is not set", %{rp_id: rp_id} do
-      strategy = %WebAuthn{
-        rp_id: rp_id,
-        origin: "https://configured-origin.example:8443",
-        user_verification: "preferred",
-        attestation: "none"
-      }
-
-      opts = Helpers.wax_opts(strategy, nil)
-      assert opts[:origin] == "https://configured-origin.example:8443"
-    end
-
-    test "opts[:origin] is used when strategy.origin is not configured", %{rp_id: rp_id} do
-      strategy = %WebAuthn{
-        rp_id: rp_id,
-        origin: nil,
-        user_verification: "preferred",
-        attestation: "none"
-      }
-
-      opts = Helpers.wax_opts(strategy, nil, origin: "http://opts-origin.example:4001")
-      assert opts[:origin] == "http://opts-origin.example:4001"
-    end
-
-    test "falls back to https://rp_id when neither opts[:origin] nor strategy.origin is set", %{
-      rp_id: rp_id
-    } do
-      strategy = %WebAuthn{
-        rp_id: rp_id,
-        origin: nil,
-        user_verification: "preferred",
-        attestation: "none"
-      }
-
-      assert Helpers.wax_opts(strategy, nil)[:origin] == "https://#{rp_id}"
+    test "rounds a sub-second remainder up, so the server outlives the browser dialog" do
+      assert Helpers.challenge_timeout_seconds(%WebAuthn{timeout: 120_001}) == 121
     end
   end
 

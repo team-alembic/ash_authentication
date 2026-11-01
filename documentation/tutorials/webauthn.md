@@ -13,11 +13,16 @@ browser and authenticator rather than a shared secret.
 ## Prerequisites
 
 - AshAuthentication configured with a User resource
-- The optional [`wax_`](https://hex.pm/packages/wax_) dependency:
+- The optional [`wax_`](https://hex.pm/packages/wax_) dependency, which
+  backs the default ceremony adapter:
 
   ```elixir
   {:wax_, "~> 0.7"}
   ```
+
+  It brings the `cbor` codec the credential resource stores public keys
+  with. A project on a [custom adapter](#the-ceremony-adapter) needs
+  `{:cbor, "~> 1.0"}` instead of `wax_`.
 
 - Tokens enabled (WebAuthn sign-in issues a token on success)
 
@@ -128,6 +133,8 @@ for you.
 > another factor). New deployments are unaffected: the U2F API was removed
 > from browsers in 2022, so no new U2F credentials can exist.
 
+### The ceremony adapter
+
 All cryptographic ceremony work goes through a swappable backend adapter
 (see `AshAuthentication.Strategy.WebAuthn.Adapter`). The default uses the
 `wax_` library; you only need to care about this if you want to replace or
@@ -140,10 +147,14 @@ webauthn do
 end
 ```
 
-The adapter replaces the ceremony *implementation*, not the dependency: the
-strategy, its plugs and the credential extension still require `wax_` to be
-installed, and the algorithms advertised in `pubKeyCredParams` are the ones
-`wax_` can verify, whichever adapter is configured.
+The adapter owns the whole backend. It generates and verifies challenges,
+says which signature algorithms it can verify (sent to the browser as
+`pubKeyCredParams`), and reports its own dependencies: a strategy on a
+custom adapter doesn't need `wax_` installed, and a missing `wax_` is only a
+compile error for strategies using the default adapter. The one dependency
+that stays is `cbor`, which the credential extension's `CoseKey` type uses
+to store public keys — COSE keys are CBOR by specification, whatever
+verifies them.
 
 ## Discoverable and non-discoverable credentials
 
@@ -481,8 +492,8 @@ end
 - `verify_trust_root?` — whether `packed`/`u2f` attestation statements are
   checked against trust anchors (`tpm` always is).
 
-Verifying trust roots requires FIDO metadata, which is loaded by the
-underlying `wax_` library. Enable the FIDO Alliance MDS3 service:
+Verifying trust roots requires FIDO metadata, which the default adapter's
+`wax_` library loads. Enable the FIDO Alliance MDS3 service:
 
 ```elixir
 config :wax_, update_metadata: true
@@ -581,10 +592,10 @@ section is maintained as the implementation evolves.
 
 | Spec feature | Status | Notes |
 |---|---|---|
-| Attestation verification | ✅ | Via `Wax.register/3` |
+| Attestation verification | ✅ | By the adapter (`Wax.register/3` in the default one) |
 | `rp` (id/name) | ✅ | Static or per-tenant |
 | `user` (id/name/displayName) | ✅ | Random ≤64-byte handle for new users (no PII, per spec); stable, shared handle when adding credentials to an existing user. Persisted on the credential as `user_handle` |
-| `pubKeyCredParams` | ✅ | ES256, EdDSA, ES384/512, PS256/384/512, RS256/384/512 in preference order |
+| `pubKeyCredParams` | ✅ | Whatever the adapter can verify; the default adapter lists ES256, EdDSA, ES384/512, PS256/384/512, RS256/384/512 in preference order |
 | `excludeCredentials` | ✅ | The actor's credentials when adding a passkey. Always empty on the public `registration_challenge` endpoint, so it can't reveal credential ids; a duplicate enrolment there is refused by the unique credential id |
 | `authenticatorSelection` (attachment, residentKey, userVerification) | ✅ | All configurable. Whether a credential actually ended up discoverable is captured via `credProps` (see Extensions) |
 | Attestation conveyance | ✅ | `"none"`, `"indirect"`, `"direct"`, `"enterprise"`; whatever statement is conveyed is verified and accepted per `trusted_attestation_types` (see [Attestation](#attestation)) |
@@ -594,7 +605,7 @@ section is maintained as the implementation evolves.
 
 | Spec feature | Status | Notes |
 |---|---|---|
-| Assertion verification | ✅ | Via `Wax.authenticate/6` — origin, rpId, and the UV flag when `user_verification "required"` (also enforced at registration) |
+| Assertion verification | ✅ | By the adapter (`Wax.authenticate/6` in the default one) — origin, rpId, and the UV flag when `user_verification "required"` (also enforced at registration) |
 | `allowCredentials` (identity-first) | ➖ | Deliberately not used for sign-in: the public challenge endpoint would disclose a submitted identity's credential ids. Used for second-factor `verify`, where the actor is authenticated (see [Identity + passkey](#identity-passkey)) |
 | Discoverable / username-less flow | ✅ | How every sign-in works, in both identity modes; user resolved from the credential id. Requires discoverable credentials (`resident_key :required`, the default) |
 | Returned `userHandle` | ✅ | Checked against the stored `user_handle` when the client sends it (`user_handle` param). Not required: non-discoverable credentials return none, and the user is always resolved from the credential id |
