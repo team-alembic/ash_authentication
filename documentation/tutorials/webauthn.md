@@ -305,6 +305,21 @@ configuration.
 
 ### Multi-tenant
 
+Multi-tenancy combines with any of the modes above. What it needs:
+
+- **The credential resource shares the user resource's multitenancy.** Use
+  the same strategy (`:context` or `:attribute`) on both, so a credential
+  lives in the same tenant as its user. Every credential lookup in a ceremony
+  (by credential id, by actor, when listing) runs in the request's tenant, so
+  a passkey registered in one tenant is unknown in every other.
+- **The tenant is set on the connection** (`Ash.PlugHelpers.set_tenant/2`)
+  before the strategy's routes, as for any multi-tenant AshAuthentication
+  resource. Drivers of `Actions` pass `tenant:`.
+- **A relying party per tenant, if tenants have their own domains.** `rp_id`,
+  `rp_name` and `origin` each take a 1-arity function or an MFA receiving the
+  tenant. Passkeys are bound to their `rp_id`, so a tenant that changes domain
+  can't use the passkeys registered under the old one.
+
 ```elixir
 webauthn do
   credential_resource MyApp.Accounts.WebAuthnCredential
@@ -534,6 +549,29 @@ The `verify` (second factor) and `add_credential` (enroll another passkey)
 ceremonies follow the same challenge-then-verify shape; they differ only in
 requiring an already-authenticated actor and in what the POST does on success.
 
+The `sign_in` and `verify` POSTs accept an optional `user_handle`, the
+base64url-encoded `response.userHandle` from the assertion. When the
+credential has a stored `user_handle` and the client sends one, they must
+match (WebAuthn §7.2). Clients should always send it; a non-discoverable
+credential returns none, which is accepted.
+
+### Adding passkeys to an existing account
+
+A passkey is a lasting way into an account, so who may add one deserves
+thought. Two options control it:
+
+- `add_credential_enabled? false` removes both `add_credential` phases, for
+  apps that only enrol passkeys at registration or through their own flow.
+- `add_credential_max_authentication_age {5, :minutes}` (seconds or a
+  `{n, unit}` tuple) requires the user to have authenticated within that
+  window; otherwise both phases fail before any challenge is issued, and the
+  UI should ask them to sign in again or complete a second factor first.
+  Signing in, a second-factor verification (`webauthn_verified_at` or
+  `totp_verified_at`), or the issue time of the bearer token presented with
+  the request all count; see
+  `AshAuthentication.Strategy.WebAuthn.RecentAuthentication`. Unset by
+  default, which lets any authenticated session add a passkey.
+
 ## Feature matrix
 
 Status of this strategy against the WebAuthn specification (Level 2/3). This
@@ -559,7 +597,7 @@ section is maintained as the implementation evolves.
 | Assertion verification | ✅ | Via `Wax.authenticate/6` — origin, rpId, and the UV flag when `user_verification "required"` (also enforced at registration) |
 | `allowCredentials` (identity-first) | ➖ | Deliberately not used for sign-in: the public challenge endpoint would disclose a submitted identity's credential ids. Used for second-factor `verify`, where the actor is authenticated (see [Identity + passkey](#identity-passkey)) |
 | Discoverable / username-less flow | ✅ | How every sign-in works, in both identity modes; user resolved from the credential id. Requires discoverable credentials (`resident_key :required`, the default) |
-| Returned `userHandle` | ⚠️ | Not checked against the stored `user_handle`: the user is resolved from the credential id, which is unique, and the credential's owner is the user signed in |
+| Returned `userHandle` | ✅ | Checked against the stored `user_handle` when the client sends it (`user_handle` param). Not required: non-discoverable credentials return none, and the user is always resolved from the credential id |
 | Passkey-first mode (no identity column) | ✅ | `require_identity? false` |
 | `transports` hints | ✅ | Captured from the client at registration (sanitized against the spec-registered set), echoed in `allowCredentials` on `verify` challenges |
 | Sign counter (clone detection) | ✅ | Enforced per §6.1.1; `sign_count_policy :reject` (default), `:log`, or `:ignore`. Synced passkeys (constant zero counters) are never flagged |
@@ -581,7 +619,7 @@ section is maintained as the implementation evolves.
 | Register new user (incl. custom `register_action_accept` fields) | ✅ |
 | Sign in + short-lived token exchange | ✅ |
 | Second-factor / step-up verification | ✅ |
-| Add additional passkeys to an existing user | ✅ |
+| Add additional passkeys to an existing user (can be disabled, or require recent authentication) | ✅ |
 | List / relabel / delete credentials (last-credential protection) | ✅ |
 | `last_used_at` tracking | ✅ |
 
@@ -597,6 +635,10 @@ section is maintained as the implementation evolves.
   high-security deployments.
 - Deleting a user's last credential is refused, so an account with WebAuthn
   as its only strategy cannot lock itself out.
+- Any authenticated session can add a passkey unless
+  `add_credential_max_authentication_age` is set. Set it so a stolen or
+  long-lived session can't plant a passkey of its own; see
+  [Adding passkeys to an existing account](#adding-passkeys-to-an-existing-account).
 - Client-reported `transports` are sanitized against the spec-registered
   transport set before storage.
 - Challenges are stored in the Plug session scoped per ceremony type and

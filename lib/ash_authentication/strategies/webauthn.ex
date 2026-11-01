@@ -183,8 +183,15 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   the actor's existing passkeys and lists them in `excludeCredentials`, so the
   same authenticator can't be enrolled twice.
 
-  These phases are always routed, whatever `registration_enabled?`,
-  `sign_in_enabled?` and `verify_enabled?` are set to.
+  These phases are independent of `registration_enabled?`, `sign_in_enabled?`
+  and `verify_enabled?`. They are controlled by their own options:
+
+  - `add_credential_enabled? false` removes them.
+  - `add_credential_max_authentication_age` (e.g. `{5, :minutes}`) requires the
+    actor to have authenticated within that window: signed in, completed a
+    second factor, or presented a bearer token issued in it. See
+    `AshAuthentication.Strategy.WebAuthn.RecentAuthentication`. Unset by
+    default; set it so a stolen or long-lived session can't plant a passkey.
 
   ## Accessing the User After Authentication
 

@@ -26,7 +26,9 @@ SPDX-License-Identifier: MIT
 - Without a request to read it from, a configured `origin` is used, and must include the port for non-standard ports (e.g. `"https://localhost:4001"`); the `https://{rp_id}` fallback omits the port
 - The default Wax adapter verifies origins with `origin_verify_fun: {Wax, :origins_match?, []}` (exact match); custom origin verification means a custom `adapter`
 - Token generation happens in `Actions.sign_in` via `Jwt.token_for_user/3`, not in an Ash preparation like Password
-- The `register` action creates a new user and returns a session token; add a passkey to an existing user through the `add_credential_challenge`/`add_credential` phases (or `Actions.add_credential/3`), which require an authenticated actor
+- The `register` action creates a new user and returns a session token; add a passkey to an existing user through the `add_credential_challenge`/`add_credential` phases (or `Actions.add_credential/3`), which require an authenticated actor. `add_credential_enabled? false` removes them; `add_credential_max_authentication_age {5, :minutes}` requires a recent sign-in or second factor first
+- Clients should send the assertion's `response.userHandle` (base64url) as `user_handle` on `sign_in`/`verify`; it is checked against the credential's stored `user_handle`
+- Multi-tenant: give the credential resource the same multitenancy as the user resource and set the tenant on the conn; `rp_id`/`rp_name`/`origin` take a function or MFA of the tenant
 - Second-factor only: set both `registration_enabled? false` and `sign_in_enabled? false`. Leaving registration on lets anyone create a passwordless account and be signed in without the primary factor
 - Sign-in challenges never list credentials (`allowCredentials` is always empty, so the public endpoint can't disclose them); every sign-in uses a discoverable credential, so keep `resident_key :required` whenever `sign_in_enabled?`
 - `attestation` is only a conveyance request; `trusted_attestation_types` is what enforces attestation policy (a `"none"` statement can answer any preference)
