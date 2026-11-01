@@ -28,6 +28,7 @@ SPDX-License-Identifier: MIT
 - Token generation happens in `Actions.sign_in` via `Jwt.token_for_user/3`, not in an Ash preparation like Password
 - The `register` action creates a new user and returns a session token; add a passkey to an existing user through the `add_credential_challenge`/`add_credential` phases (or `Actions.add_credential/3`), which require an authenticated actor
 - Second-factor only: set both `registration_enabled? false` and `sign_in_enabled? false`. Leaving registration on lets anyone create a passwordless account and be signed in without the primary factor
+- Sign-in challenges never list credentials (`allowCredentials` is always empty, so the public endpoint can't disclose them); every sign-in uses a discoverable credential, so keep `resident_key :required` whenever `sign_in_enabled?`
 - `attestation` is only a conveyance request; `trusted_attestation_types` is what enforces attestation policy (a `"none"` statement can answer any preference)
 - Passkey-first mode (no identity column): set `require_identity? false` on the `webauthn` block. The user resource needs no `identity_field` attribute; users are resolved from the WebAuthn credential id at verification time. Pairs with `resident_key: :required`
 - `require_identity?` defaults to `true` (the classic identity-required flow); set it to `false` only for passkey-first mode

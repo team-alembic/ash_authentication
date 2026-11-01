@@ -432,6 +432,55 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
   end
 
   describe "authentication_challenge/2" do
+    # The endpoint is public. Listing a submitted identity's credentials would
+    # disclose them — and the account's existence — to anyone who asks.
+    test "never discloses credentials, even when the identity is known", %{
+      strategy: strategy
+    } do
+      email = "no-allow-credentials@example.com"
+      register_passkey(strategy, email)
+
+      known = authentication_challenge_conn(strategy, email)
+      unknown = authentication_challenge_conn(strategy, "nobody@example.com")
+
+      assert Jason.decode!(known.resp_body)["allowCredentials"] == []
+      assert Jason.decode!(unknown.resp_body)["allowCredentials"] == []
+
+      # Nor does the stored challenge carry them for the server side.
+      stored = Plug.Conn.get_session(known, "webauthn_authentication_challenge_webauthn")
+      assert stored.allow_credentials == []
+    end
+
+    test "a known user still signs in with the discoverable credential", %{
+      strategy: strategy
+    } do
+      email = "discoverable-identity-mode@example.com"
+      passkey = register_passkey(strategy, email)
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+      conn = sign_in_conn(strategy, challenge_conn, email, passkey, sign_count: 1)
+
+      assert {:ok, user} = conn.private[:authentication_result]
+      assert to_string(user.email) == email
+    end
+
+    test "a submitted identity must still match the credential's owner", %{
+      strategy: strategy
+    } do
+      passkey = register_passkey(strategy, "owner@example.com")
+      register_passkey(strategy, "someone-else@example.com")
+
+      challenge_conn = authentication_challenge_conn(strategy, "someone-else@example.com")
+
+      conn =
+        sign_in_conn(strategy, challenge_conn, "someone-else@example.com", passkey, sign_count: 1)
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               conn.private[:authentication_result]
+    end
+  end
+
+  describe "verify_challenge/2" do
     test "includes transports hints in allowCredentials when stored", %{strategy: strategy} do
       user =
         Example.UserWithWebAuthn
@@ -454,11 +503,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
 
       conn =
         :get
-        |> conn("/user_with_webauthn/webauthn/authentication_challenge", %{
-          "email" => "transports@example.com"
-        })
+        |> conn("/user_with_webauthn/webauthn/verify_challenge", %{})
         |> SessionPipeline.call([])
-        |> WebAuthn.Plug.authentication_challenge(strategy)
+        |> Ash.PlugHelpers.set_actor(user)
+        |> WebAuthn.Plug.verify_challenge(strategy)
 
       body = Jason.decode!(conn.resp_body)
       entries = Map.new(body["allowCredentials"], &{&1["id"], &1})

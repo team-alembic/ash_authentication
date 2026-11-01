@@ -25,8 +25,6 @@ if Code.ensure_loaded?(Wax.Challenge) do
     alias Plug.Conn
     import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
     import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
-    import Ash.Expr, only: [ref: 1]
-    require Ash.Query
     require Logger
 
     # Challenges are stored per ceremony type and per strategy so concurrent
@@ -182,30 +180,32 @@ if Code.ensure_loaded?(Wax.Challenge) do
       end
     end
 
-    @doc "Generate and return an authentication challenge."
+    @doc """
+    Generate and return an authentication challenge.
+
+    The challenge never lists credentials (`allowCredentials` is empty), so
+    sign-in always uses a discoverable credential and the user is resolved
+    from the credential id the authenticator returns. Any identity in the
+    request is ignored here; `sign_in/2` still checks a submitted identity
+    against the credential's owner.
+    """
     @spec authentication_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
     def authentication_challenge(conn, strategy) do
       tenant = get_tenant(conn)
-      params = conn.params
-      identity_value = params[to_string(strategy.identity_field)]
 
-      # FIXED: Look up credentials for a SPECIFIC user, not all credentials
-      credentials =
-        if identity_value do
-          lookup_user_credentials(strategy, identity_value, tenant)
-        else
-          # Discoverable credential flow (passkeys) - no allow_credentials needed
-          []
-        end
-
-      allow_credentials = assertion_allow_credentials(strategy, credentials)
-
+      # `allowCredentials` is intentionally left empty, for the same reason as
+      # `excludeCredentials` in `registration_challenge/2`: this endpoint is
+      # public and unauthenticated, so filling it from a submitted identity
+      # would hand that user's credential ids — and whether the account
+      # exists — to anyone who knows or guesses the identity. The cost is that
+      # only discoverable credentials can sign in; the verifier warns when
+      # `resident_key` allows any other kind to be created.
       {:ok, challenge} =
-        WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
+        WebAuthn.Actions.authentication_challenge(strategy, [], tenant,
           origin: origin_from_conn(conn)
         )
 
-      response = assertion_options(conn, strategy, challenge, credentials, tenant)
+      response = assertion_options(conn, strategy, challenge, [], tenant)
       challenge_data = strategy.adapter.serialize_challenge(challenge)
 
       send_challenge(conn, strategy, :authentication, challenge_data, response)
@@ -592,41 +592,6 @@ if Code.ensure_loaded?(Wax.Challenge) do
       ] ->
         Logger.warning("WebAuthn actor-credential lookup failed: #{Exception.message(error)}")
 
-        []
-    end
-
-    # FIXED: Look up credentials for a SPECIFIC user by identity field.
-    # The original version read ALL credentials for ALL users.
-    defp lookup_user_credentials(strategy, identity_value, tenant) do
-      context = %{private: %{ash_authentication?: true}}
-      ash_opts = [authorize?: false]
-      ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
-
-      identity_field = strategy.identity_field
-
-      # First find the user by identity
-      with {:ok, user} when not is_nil(user) <-
-             strategy.resource
-             |> Ash.Query.new()
-             |> Ash.Query.set_context(context)
-             |> Ash.Query.filter(^ref(identity_field) == ^identity_value)
-             |> Ash.Query.for_read(:read, %{}, ash_opts)
-             |> Ash.read_one(),
-           # Then load their credentials via the relationship
-           {:ok, user} <-
-             Ash.load(user, [strategy.credentials_relationship_name], ash_opts) do
-        Map.get(user, strategy.credentials_relationship_name, [])
-      else
-        _ -> []
-      end
-    rescue
-      error in [
-        Ash.Error.Invalid,
-        Ash.Error.Forbidden,
-        Ash.Error.Framework,
-        Ash.Error.Unknown
-      ] ->
-        Logger.warning("WebAuthn credential lookup failed: #{Exception.message(error)}")
         []
     end
   end

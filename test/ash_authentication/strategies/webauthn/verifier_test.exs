@@ -21,7 +21,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
 
     attributes do
       uuid_primary_key :id
+      <%= user_attributes %>
     end
+
+    <%= user_body %>
 
     ets do
       private?(true)
@@ -42,7 +45,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
           rp_id "example.com"
           rp_name "Test App"
           origin "https://example.com"
-          require_identity? false
+          <%= identity_options %>
           <%= strategy_options %>
         end
       end
@@ -148,8 +151,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
     end
   end
 
-  # The user source above is passkey-first (`require_identity? false`).
-  describe "resident_key in passkey-first mode" do
+  # The sign-in challenge never lists credentials, so sign-in needs a
+  # discoverable credential whether or not the strategy requires an identity.
+  describe "resident_key" do
     for resident_key <- [:preferred, :discouraged] do
       test "warns that #{inspect(resident_key)} can create a passkey no one can sign in with" do
         output =
@@ -157,9 +161,36 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
             compile_pair(strategy_options: "resident_key #{inspect(unquote(resident_key))}")
           end)
 
-        assert output =~
-                 "`require_identity? false` with `resident_key #{inspect(unquote(resident_key))}`"
+        assert output =~ "signs users in with `resident_key #{inspect(unquote(resident_key))}`"
       end
+    end
+
+    test "warns in identity mode too" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(
+            identity_options: """
+            identity_field :email
+            require_identity? true
+            """,
+            user_attributes: "attribute :email, :ci_string, allow_nil?: false, public?: true",
+            user_body: """
+            actions do
+              defaults [:read]
+            end
+
+            identities do
+              identity :unique_email, [:email],
+                pre_check_with: AshAuthentication.Test.PermissiveDomain
+            end
+            """,
+            strategy_options: "resident_key :preferred"
+          )
+        end)
+
+      assert output =~ "signs users in with `resident_key :preferred`"
+      # The identity-mode resource is otherwise valid: the warning is all.
+      refute output =~ "DslError"
     end
 
     test "does not warn for :required" do
@@ -285,6 +316,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
     |> String.replace("<%= user_module %>", user_module)
     |> String.replace("<%= credential_module %>", credential_module)
     |> String.replace("<%= strategy_options %>", Keyword.get(opts, :strategy_options, ""))
+    |> String.replace(
+      "<%= identity_options %>",
+      Keyword.get(opts, :identity_options, "require_identity? false")
+    )
+    |> String.replace("<%= user_attributes %>", Keyword.get(opts, :user_attributes, ""))
+    |> String.replace("<%= user_body %>", Keyword.get(opts, :user_body, ""))
     |> Code.compile_string()
   end
 end

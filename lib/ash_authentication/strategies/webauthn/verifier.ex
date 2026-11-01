@@ -126,27 +126,28 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
     end
   end
 
-  # Passkey-first sign-in has no identity to look credentials up by, so it
-  # can only find a credential the authenticator can discover by itself.
-  # Anything short of `:required` lets an authenticator create one it can't,
-  # and its owner is then registered with a passkey they can never sign in
-  # with. A warning rather than an error: `:preferred` still produces a
-  # discoverable credential on almost every current authenticator, and the
-  # `discoverable` field records which ones didn't.
-  defp validate_resident_key(
-         %{require_identity?: false, sign_in_enabled?: true, resident_key: resident_key} =
-           strategy
-       )
+  # The sign-in challenge never lists credentials — the endpoint is public, so
+  # listing a submitted identity's credentials would disclose them — so
+  # sign-in, in either identity mode, can only use a credential the
+  # authenticator discovers by itself. Anything short of `:required` lets an
+  # authenticator create one it can't, and its owner is then registered with
+  # a passkey they can never sign in with. A warning rather than an error:
+  # `:preferred` still produces a discoverable credential on almost every
+  # current authenticator, the `discoverable` field records which ones
+  # didn't, and a strategy used only through `verify` (which does list the
+  # authenticated actor's credentials) is unaffected.
+  defp validate_resident_key(%{sign_in_enabled?: true, resident_key: resident_key} = strategy)
        when resident_key != :required do
     IO.warn("""
-    The WebAuthn strategy `#{inspect(strategy.name)}` uses `require_identity? false` with \
+    The WebAuthn strategy `#{inspect(strategy.name)}` signs users in with \
     `resident_key #{inspect(resident_key)}`.
 
-    Without an identity, sign-in can only use a credential the authenticator
-    discovers by itself. An authenticator honouring `#{inspect(resident_key)}`
-    may create one it can't, leaving its owner with a passkey they can never
-    sign in with. Use `resident_key :required` (the default) for passkey-first
-    sign-in.
+    The sign-in challenge doesn't list a user's credentials (that would disclose
+    them to anyone who submits the identity), so sign-in can only use a
+    credential the authenticator discovers by itself. An authenticator honouring
+    `#{inspect(resident_key)}` may create one it can't, leaving its owner with a
+    passkey they can never sign in with. Use `resident_key :required` (the
+    default), or `sign_in_enabled? false` if this strategy is only a second factor.
     """)
 
     :ok
