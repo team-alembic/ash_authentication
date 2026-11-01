@@ -58,6 +58,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
   `c:serialize_challenge/1` / `c:deserialize_challenge/3` (it is a plain
   map) so the rebuilt challenge enforces what the issued one did.
 
+  The repository's `test/support/webauthn_mock_adapter.ex` is a complete
+  adapter with no cryptographic backend — HMAC "signatures" over a JSON
+  authenticator data — that the strategy's test suite drives through every
+  ceremony. It is the shortest worked example of the whole contract.
+
   ## Challenges are opaque
 
   A challenge is whatever term the adapter returns from
