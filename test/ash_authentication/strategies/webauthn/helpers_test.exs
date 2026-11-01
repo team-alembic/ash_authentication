@@ -98,6 +98,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       assert opts[:rp_id] == WebAuthnFixtures.default_rp_id()
       assert opts[:user_verification] == "required"
       assert opts[:attestation] == "none"
+      # The DSL's milliseconds, as Wax's seconds
+      assert opts[:timeout] == 60
+    end
+
+    test "rounds a sub-second timeout remainder up to a whole second" do
+      strategy = %WebAuthn{rp_id: WebAuthnFixtures.default_rp_id(), timeout: 120_001}
+
+      assert Helpers.wax_opts(strategy, nil)[:timeout] == 121
     end
 
     test "resolves dynamic rp_id for tenant" do

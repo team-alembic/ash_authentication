@@ -385,7 +385,7 @@ if Code.ensure_loaded?(Wax.Challenge) do
       opts =
         [
           purpose: :webauthn_challenge,
-          token_lifetime: {div(strategy.timeout + 999, 1000), :seconds}
+          token_lifetime: {WebAuthn.Helpers.challenge_timeout_seconds(strategy), :seconds}
         ] ++ Keyword.take(opts(conn), [:tenant])
 
       case Jwt.token_for_resource(strategy.resource, %{}, opts, get_context(conn) || %{}) do
