@@ -405,7 +405,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       with {:ok, credentials} <- list_credentials(strategy, user, opts),
            :ok <- ensure_not_last_credential(strategy, credentials),
            {:ok, credential} <- find_credential(strategy, credentials, credential_id) do
-        destroy_credential(credential, opts)
+        destroy_credential(strategy, credential, opts)
       end
     end
 
@@ -420,7 +420,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         credential
         |> Changeset.new()
         |> Changeset.set_context(auth_context())
-        |> Changeset.for_update(action, %{label: new_label}, ash_opts)
+        |> Changeset.for_update(action, %{WebAuthn.label_field(strategy) => new_label}, ash_opts)
         |> Ash.update()
       end
     end
@@ -673,22 +673,29 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       end
     end
 
+    # `credential_id` is the record's primary key, as `update_credential_label/4`
+    # takes it — not necessarily an attribute called `:id`.
     defp find_credential(strategy, credentials, credential_id) do
-      case Enum.find(credentials, &(&1.id == credential_id)) do
+      primary_key = Ash.Resource.Info.primary_key(strategy.credential_resource)
+
+      case Enum.find(credentials, &(primary_key_value(&1, primary_key) == credential_id)) do
         nil -> {:error, auth_failed(strategy, :delete_credential, "Credential not found")}
         credential -> {:ok, credential}
       end
     end
 
-    defp destroy_credential(credential, opts) do
-      tenant = Keyword.get(opts, :tenant)
-      ash_opts = [authorize?: false]
-      ash_opts = if tenant, do: Keyword.put(ash_opts, :tenant, tenant), else: ash_opts
+    defp primary_key_value(record, [field]), do: Map.get(record, field)
+    defp primary_key_value(record, fields), do: Map.take(record, fields)
+
+    defp destroy_credential(strategy, credential, opts) do
+      ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+      action = credential_action_name(strategy.credential_resource, :destroy_action_name)
 
       credential
       |> Changeset.new()
       |> Changeset.set_context(auth_context())
-      |> Ash.destroy(ash_opts)
+      |> Changeset.for_destroy(action, %{}, ash_opts)
+      |> Ash.destroy()
     end
 
     defp build_ash_opts(strategy, opts, tenant) do
@@ -796,6 +803,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     defp apply_credential_info(resource, :update_action_name),
       do:
         AshAuthentication.WebAuthnCredential.Info.webauthn_credential_update_action_name(resource)
+
+    defp apply_credential_info(resource, :destroy_action_name),
+      do:
+        AshAuthentication.WebAuthnCredential.Info.webauthn_credential_destroy_action_name(
+          resource
+        )
 
     defp maybe_generate_token(user, strategy, opts) do
       if Info.authentication_tokens_enabled?(strategy.resource) do
