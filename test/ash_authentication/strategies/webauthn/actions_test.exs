@@ -23,12 +23,27 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       assert {:ok, %Wax.Challenge{type: :attestation}} =
                Actions.registration_challenge(strategy, nil)
     end
+
+    # The origin policy is the strategy's; a caller passing the request's
+    # origin is the pre-proxy-fix calling convention and must not be
+    # silently ignored.
+    test "refuses an origin: option", %{strategy: strategy} do
+      assert_raise ArgumentError, ~r/`origin:` option is no longer accepted/, fn ->
+        Actions.registration_challenge(strategy, nil, origin: "https://example.com")
+      end
+    end
   end
 
   describe "authentication_challenge/3" do
     test "returns a Wax.Challenge with type :authentication", %{strategy: strategy} do
       assert {:ok, %Wax.Challenge{type: :authentication}} =
                Actions.authentication_challenge(strategy, [], nil)
+    end
+
+    test "refuses an origin: option", %{strategy: strategy} do
+      assert_raise ArgumentError, ~r/`origin:` option is no longer accepted/, fn ->
+        Actions.authentication_challenge(strategy, [], nil, origin: "https://example.com")
+      end
     end
   end
 

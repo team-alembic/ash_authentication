@@ -44,7 +44,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
           credential_resource <%= credential_module %>
           rp_id "example.com"
           rp_name "Test App"
-          origin "https://example.com"
+          <%= origin %>
           <%= identity_options %>
           <%= strategy_options %>
         end
@@ -53,11 +53,82 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
   end
   """
 
+  # An adapter whose backend isn't installed.
+  defmodule UnavailableAdapter do
+    @moduledoc false
+    alias AshAuthentication.Strategy.WebAuthn.Adapter
+    @behaviour Adapter
+
+    @impl Adapter
+    def check_dependencies, do: {:error, "The `:imaginary_fido` dependency is missing"}
+    @impl Adapter
+    def pub_key_cred_params, do: []
+    @impl Adapter
+    def registration_challenge(_strategy, _tenant, _opts), do: :challenge
+    @impl Adapter
+    def authentication_challenge(_strategy, _allow_credentials, _tenant, _opts), do: :challenge
+    @impl Adapter
+    def challenge_bytes(_challenge), do: <<>>
+    @impl Adapter
+    def serialize_challenge(_challenge), do: %{}
+    @impl Adapter
+    def deserialize_challenge(_strategy, _data, _type), do: nil
+    @impl Adapter
+    def verify_registration(_strategy, _attestation_object, _client_data_json, _challenge),
+      do: {:error, :unavailable}
+
+    @impl Adapter
+    def verify_authentication(_strategy, _id, _auth_data, _sig, _client_data, _challenge, _creds),
+      do: {:error, :unavailable}
+  end
+
   describe "verify/2" do
     test "passes for valid configuration" do
       # Example.UserWithWebAuthn should compile without errors
       # The fact that it compiled means the verifier passed
       assert Example.UserWithWebAuthn.__info__(:module)
+    end
+
+    test "reports the adapter's missing dependency on the strategy that uses it" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(
+            strategy_options:
+              "adapter AshAuthentication.Strategy.WebAuthn.VerifierTest.UnavailableAdapter"
+          )
+        end)
+
+      assert output =~ "The `:imaginary_fido` dependency is missing"
+      assert output =~ "adapter"
+    end
+
+    test "accepts an origin allowlist" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(origin: ~s(origin ["https://a.example.com", "https://b.example.com:4001"]))
+        end)
+
+      refute output =~ "origin"
+    end
+
+    test "accepts no origin at all" do
+      output = capture_io(:stderr, fn -> compile_pair(origin: "") end)
+      refute output =~ "origin"
+    end
+
+    test "rejects a malformed origin" do
+      output =
+        capture_io(:stderr, fn ->
+          compile_pair(origin: ~s(origin ["https://a.example.com", "https://b.example.com/auth"]))
+        end)
+
+      assert output =~ "`origin` entries must be web origins"
+      assert output =~ "https://b.example.com/auth"
+    end
+
+    test "rejects an empty origin list" do
+      output = capture_io(:stderr, fn -> compile_pair(origin: "origin []") end)
+      assert output =~ "would accept no origin at all"
     end
 
     # As of 5.0 the credential resource must use the `WebAuthnCredential`
@@ -316,6 +387,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.VerifierTest do
     |> String.replace("<%= user_module %>", user_module)
     |> String.replace("<%= credential_module %>", credential_module)
     |> String.replace("<%= strategy_options %>", Keyword.get(opts, :strategy_options, ""))
+    |> String.replace(
+      "<%= origin %>",
+      Keyword.get(opts, :origin, ~s(origin "https://example.com"))
+    )
     |> String.replace(
       "<%= identity_options %>",
       Keyword.get(opts, :identity_options, "require_identity? false")

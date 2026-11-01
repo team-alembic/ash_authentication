@@ -808,6 +808,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     |> WebAuthn.Plug.registration_challenge(strategy)
   end
 
+  # The origin the browser signs. `Example.UserWithWebAuthn` configures
+  # `origin "https://example.com"`, an exact allowlist; the request's own
+  # host (Plug.Test's www.example.com) plays no part.
+  @origin "https://example.com"
+
   # Build a register POST that answers the server-issued challenge. The test
   # SessionPipeline mints a fresh secret_key_base per conn, so cookies can't
   # round-trip; the session entry is transplanted instead.
@@ -819,7 +824,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     fixture =
       WebAuthnFixtures.generate_registration(
         Keyword.merge(fixture_opts,
-          origin: "http://www.example.com",
+          origin: @origin,
           rp_id: "example.com",
           challenge_bytes: challenge_bytes
         )
@@ -846,7 +851,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
 
     passkey =
       WebAuthnFixtures.generate_registration(
-        origin: "http://www.example.com",
+        origin: @origin,
         rp_id: "example.com",
         challenge_bytes: challenge_bytes(challenge_conn)
       )
@@ -884,7 +889,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       passkey,
       Keyword.merge(opts,
         challenge_bytes: challenge_bytes(challenge_conn),
-        origin: "http://www.example.com"
+        origin: @origin
       )
     )
   end

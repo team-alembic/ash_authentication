@@ -25,7 +25,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.MultiTenantTest do
       strategy = Info.strategy!(Example.MultiTenantUserWithWebAuthn, :webauthn)
       {:ok, challenge} = Actions.registration_challenge(strategy, "acme")
       assert challenge.rp_id == "acme.example.com"
-      assert challenge.origin == "https://acme.example.com"
+      # No origin configured: any https origin on the tenant's rp_id
+      assert challenge.origin == %{rp_id: "acme.example.com"}
     end
   end
 end

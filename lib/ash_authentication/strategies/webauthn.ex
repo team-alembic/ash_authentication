@@ -64,7 +64,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           credential_resource MyApp.Accounts.Credential
           rp_id "example.com"
           rp_name "My App"
-          origin "https://example.com"
           identity_field :email
           require_identity? true
         end
@@ -79,38 +78,48 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
   ## Origin Configuration
 
-  The **origin** is the full URL the browser sends during WebAuthn ceremonies
-  (scheme + domain + port). The **rp_id** is the domain name only. These are
-  related but distinct:
+  The **origin** is the full URL the browser signs into every WebAuthn
+  ceremony (scheme + host + port). The **rp_id** is the domain name only.
+  These are related but distinct:
 
   | Setting   | Example                    | What it is                       |
   |-----------|----------------------------|----------------------------------|
   | `rp_id`   | `"example.com"`            | Domain only (Relying Party ID)   |
   | `origin`  | `"https://example.com"`    | Full URL including scheme + port |
 
-  Ceremonies served by the strategy's plugs take the expected origin from the
-  challenge request itself (its scheme, host and port), and that **takes
-  precedence over a configured `origin`**. The configured value is used when
-  the actions are driven without a request to read the origin from (e.g. from
-  a LiveView that doesn't pass `origin:`), and `"https://{rp_id}"` (no port)
-  when neither is available.
+  Which origins a ceremony is accepted from is decided from configuration
+  alone — never from the request that minted the challenge, whose scheme,
+  host and port describe the proxy in front of the app as often as the
+  browser's address bar. See `AshAuthentication.Strategy.WebAuthn.Origin`.
 
-  Behind a TLS-terminating proxy the raw connection doesn't describe the URL
-  the browser used, so restore it before the router (e.g. with
-  `Plug.RewriteOn`); otherwise the expected origin is the proxy's internal
-  `http://...:port` and every ceremony fails. See the WebAuthn guide.
+  **`origin` not set** (the default): any `https` origin whose host is the
+  `rp_id` or a subdomain of it, on any port — the same set of origins a
+  browser lets use that RP ID. With `rp_id "example.com"`,
+  `https://example.com`, `https://app.example.com` and
+  `https://app.example.com:4001` are accepted; `http://app.example.com` and
+  `https://evil.com` are not. `http://localhost[:port]` is also accepted
+  when the `rp_id` is `"localhost"`. The signed RP ID hash is still checked
+  separately, so phishing protection does not rest on the origin alone.
 
-  ### Production
+  **`origin` set**: an allowlist. The browser's origin must match one of the
+  configured origins exactly, port included.
 
-      origin "https://example.com"
+  ### Narrowing to specific hosts
 
-  ### Development (non-standard port)
+      origin "https://app.example.com"
+      origin ["https://app.example.com", "https://admin.example.com"]
 
-      origin "https://localhost:4001"
+  ### Development on a non-standard port
+
+  Nothing to configure: `https://localhost:4001` is under `rp_id "localhost"`,
+  and so is `http://localhost:4000`.
 
   ### Multi-tenant (dynamic per tenant)
 
-      origin {MyApp.WebAuthn, :origin_for_tenant, []}
+      origin {MyApp.WebAuthn, :origins_for_tenant, []}
+
+  Behind a TLS-terminating proxy nothing needs rewriting: the connection's
+  own scheme, host and port play no part.
 
   ## Credential Resource
 
@@ -220,7 +229,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
     credential_resource MyApp.Accounts.Credential
     rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []}
     rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []}
-    origin {MyApp.WebAuthn, :origin_for_tenant, []}
     identity_field :email
     require_identity? true
   end
@@ -232,9 +240,21 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   defmodule MyApp.WebAuthn do
     def rp_id_for_tenant(tenant), do: "\#{tenant}.example.com"
     def rp_name_for_tenant(tenant), do: "MyApp - \#{tenant}"
-    def origin_for_tenant(tenant), do: "https://\#{tenant}.example.com"
   end
   ```
+
+  With no `origin` configured, each tenant's ceremonies are accepted from
+  any `https` origin on that tenant's `rp_id` or a subdomain of it. To pin
+  a tenant to particular origins, add a per-tenant allowlist:
+
+  ```elixir
+  origin {MyApp.WebAuthn, :origins_for_tenant, []}
+
+  def origins_for_tenant(tenant), do: ["https://\#{tenant}.example.com"]
+  ```
+
+  The RP ID is the only per-tenant input; a request-derived `rp_id` (serving
+  unrelated domains without tenancy) is not supported.
 
   ## Passkey-First (No Identity) Flow
 
@@ -265,7 +285,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           credential_resource MyApp.Accounts.Credential
           rp_id "example.com"
           rp_name "My App"
-          origin "https://example.com"
           require_identity? false
         end
       end
@@ -351,19 +370,19 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
   ## Gotchas
 
-  - **The request's origin wins over a configured `origin`** in plug-served
-    ceremonies, so behind a TLS-terminating proxy the connection must be rewritten
-    to the browser-facing scheme, host and port. Where no request is available,
-    a configured origin must include the port for non-standard ports (e.g.,
-    `"https://localhost:4001"`); the fallback `"https://{rp_id}"` omits it.
+  - **A configured `origin` is an exact-match allowlist**, port included: with
+    `origin "https://example.com"` a ceremony from `https://app.example.com` or
+    `https://example.com:4001` is rejected. Leave it unset to accept every `https`
+    origin on the `rp_id` or a subdomain of it, or list every origin you serve.
+  - **The request's scheme, host and port are never consulted**, so a proxy needs no
+    `Plug.RewriteOn` for WebAuthn's sake, and callers of the `Actions` challenge
+    functions must not pass `origin:` (they raise if one does).
   - **Signing secret must return `{:ok, value}`**, not a raw string. A common mistake
     is `fn _, _ -> "my_secret" end` -- it must be `fn _, _ -> {:ok, "my_secret"} end`.
   - **Challenge data is stored in the session as plain maps**, not the adapter's own
     challenge structs, because cookie session stores cannot serialize arbitrary Elixir
-    structs. The adapter serializes the challenge and rebuilds it, re-applying the
-    strategy's settings, before verification.
-  - **Origin verification is an exact match** against the expected origin in the default
-    adapter. For custom origin verification, configure your own `adapter`.
+    structs. The adapter serializes the challenge — origin policy included — and
+    rebuilds it, re-applying the strategy's settings, before verification.
   - **Token generation happens in `Actions.sign_in`** via `Jwt.token_for_user/3`, not in
     an Ash preparation like the Password strategy. This is because the adapter verifies
     the ceremony outside the Ash action pipeline.
@@ -436,9 +455,15 @@ defmodule AshAuthentication.Strategy.WebAuthn do
           adapter: module,
           resource: module,
           credential_resource: module,
-          rp_id: String.t() | {module, atom, list} | {module, keyword},
-          rp_name: String.t() | {module, atom, list} | {module, keyword},
-          origin: String.t() | {module, atom, list} | {module, keyword} | nil,
+          rp_id: String.t() | (any -> String.t()) | {module, atom, list} | {module, keyword},
+          rp_name: String.t() | (any -> String.t()) | {module, atom, list} | {module, keyword},
+          origin:
+            String.t()
+            | [String.t()]
+            | (any -> String.t() | [String.t()])
+            | {module, atom, list}
+            | {module, keyword}
+            | nil,
           identity_field: atom,
           require_identity?: boolean,
           authenticator_attachment: nil | :platform | :cross_platform,

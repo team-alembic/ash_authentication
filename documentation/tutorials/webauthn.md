@@ -227,7 +227,7 @@ resource. Passkey-first mode is an explicit opt-in with
 | **Identity + passkey** (classic) | `require_identity? true` | An `identity_field` attribute (default `:email`), unique and writable | Discoverable passkey; the credential id resolves the user, and an identity, if submitted, must match its owner |
 | **Passkey-first** (no identity column) | `require_identity? false`, `resident_key :required` | No identity attribute at all | Fully discoverable: the browser offers stored passkeys and the credential id resolves the user |
 | **Second factor only** | `registration_enabled? false`, `sign_in_enabled? false`, `verify_enabled? true` | Another primary strategy (e.g. password) | The `verify` phase proves possession on top of an authenticated session, stamping `webauthn_verified_at` |
-| **Multi-tenant** | `rp_id`/`rp_name`/`origin` as MFA tuples, 1-arity functions, or `AshAuthentication.Secret` modules | Same as the mode it combines with | Relying-party identity resolved per tenant at ceremony time |
+| **Multi-tenant** | `rp_id`/`rp_name` (and optionally `origin`) as MFA tuples, 1-arity functions, or `AshAuthentication.Secret` modules | Same as the mode it combines with | Relying-party identity resolved per tenant at ceremony time |
 
 ### Identity + passkey
 
@@ -336,35 +336,51 @@ webauthn do
   credential_resource MyApp.Accounts.WebAuthnCredential
   rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []}
   rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []}
-  origin {MyApp.WebAuthn, :origin_for_tenant, []}
   require_identity? true
 end
 ```
 
-> ### Origins, ports and proxies {: .warning}
+Each tenant's ceremonies are then accepted from any `https` origin on that
+tenant's RP ID or a subdomain of it. To pin a tenant to particular origins,
+give `origin` a per-tenant function too:
+
+```elixir
+origin {MyApp.WebAuthn, :origins_for_tenant, []}
+
+def origins_for_tenant(tenant), do: ["https://#{tenant}.example.com"]
+```
+
+The RP ID is the one thing that varies per tenant. Serving several unrelated
+domains from one strategy *without* tenancy would need an RP ID taken from
+the request, which the strategy doesn't do: the RP ID scopes every credential
+and must be a fixed property of the relying party, not of whichever host a
+request happened to arrive on.
+
+> ### Origins, ports and proxies {: .info}
 >
-> The WebAuthn origin is scheme + host + port, and the server checks it
-> against the origin the browser reports. Where the expected origin comes
-> from, in order:
+> The WebAuthn origin is scheme + host + port. The browser signs it into
+> every ceremony and the server must check it — but what the server checks
+> it *against* comes from configuration, never from the request that minted
+> the challenge. Behind a TLS-terminating proxy or load balancer that
+> request says `http://10.0.0.5:4000` while the browser truthfully reports
+> `https://app.example.com`; a check built on the request would reject
+> every ceremony, so none is made.
 >
-> 1. **The request**, for every ceremony served by the strategy's plugs. The
->    origin is rebuilt from the challenge request's `scheme`, `host` and
->    `port`, and **takes precedence over a configured `origin`**.
-> 2. **The configured `origin`**, when there is no request to read it from:
->    the actions driven directly, e.g. from a LiveView that doesn't pass
->    `origin:`.
-> 3. **`https://{rp_id}`** otherwise. This omits the port, so it fails for a
->    development server on a non-standard port.
+> - **`origin` not set** (the default): accept any `https` origin whose host
+>   is the `rp_id` or a subdomain of it, on any port. That is exactly the set
+>   of origins a browser lets use that RP ID, so nothing is granted the browser
+>   hadn't already — and the RP ID hash in the signed authenticator data is
+>   checked separately. `http://localhost[:port]` is accepted too when the
+>   `rp_id` is `"localhost"`. Development on a non-standard port needs no
+>   configuration.
+> - **`origin` set**: an allowlist of exact origins, port included. Use it to
+>   restrict ceremonies to specific hosts or ports: a string, a list, a
+>   per-tenant function or MFA returning either, or an
+>   `AshAuthentication.Secret`.
 >
-> Because the request wins, the connection has to describe the URL the
-> browser actually used. Behind a TLS-terminating proxy or load balancer the
-> raw connection is usually `http` on an internal port, so the expected origin
-> becomes something like `http://example.com:4000`, the browser reports
-> `https://example.com`, and every ceremony fails. Restore the original
-> scheme, host and port before the router, for example with `Plug.RewriteOn`
-> (`plug Plug.RewriteOn, [:x_forwarded_proto, :x_forwarded_host, :x_forwarded_port]`)
-> or Phoenix's `force_ssl: [rewrite_on: ...]`, and only for headers your proxy
-> sets.
+> No `Plug.RewriteOn` is needed for WebAuthn's sake, and the `Actions`
+> challenge functions take no `origin:` option (they raise if given one).
+> See `AshAuthentication.Strategy.WebAuthn.Origin`.
 
 ## Cross-device sign-in (QR code / hybrid transport)
 

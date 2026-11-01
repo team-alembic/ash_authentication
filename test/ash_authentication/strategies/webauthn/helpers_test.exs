@@ -52,6 +52,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       def secret_for([:authentication, :strategies, :webauthn, :origin], _, _, _),
         do: {:ok, "https://secret.example.com:4001"}
 
+      def secret_for([:authentication, :strategies, :several, :origin], _, _, _),
+        do: {:ok, ["https://a.example.com", "https://b.example.com"]}
+
+      def secret_for([:authentication, :strategies, :bad_origin, :origin], _, _, _),
+        do: {:ok, :not_an_origin}
+
       def secret_for(_, _, _, _), do: :error
     end
 
@@ -70,6 +76,21 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       assert "https://secret.example.com:4001" = Helpers.resolve_origin(strategy, nil)
     end
 
+    test "resolve_origin accepts a list of origins from a Secret module" do
+      strategy = %WebAuthn{name: :several, resource: __MODULE__, origin: {TestSecrets, []}}
+
+      assert ["https://a.example.com", "https://b.example.com"] =
+               Helpers.resolve_origin(strategy, nil)
+    end
+
+    test "resolve_origin raises when a Secret module returns something else" do
+      strategy = %WebAuthn{name: :bad_origin, resource: __MODULE__, origin: {TestSecrets, []}}
+
+      assert_raise RuntimeError, ~r/to return `\{:ok, binary\}`/, fn ->
+        Helpers.resolve_origin(strategy, nil)
+      end
+    end
+
     test "resolve_origin returns nil when the Secret module returns `:error`" do
       strategy = %WebAuthn{name: :other, resource: __MODULE__, origin: {TestSecrets, []}}
       assert is_nil(Helpers.resolve_origin(strategy, nil))
@@ -81,6 +102,34 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       assert_raise RuntimeError, ~r/returned `:error`/, fn ->
         Helpers.resolve_rp_id(strategy, nil)
       end
+    end
+  end
+
+  describe "resolve_origin/2" do
+    test "returns nil when no origin is configured" do
+      assert is_nil(Helpers.resolve_origin(%WebAuthn{origin: nil}, nil))
+    end
+
+    test "returns a configured string or list as is" do
+      assert "https://example.com" =
+               Helpers.resolve_origin(%WebAuthn{origin: "https://example.com"}, nil)
+
+      assert ["https://a.example.com"] =
+               Helpers.resolve_origin(%WebAuthn{origin: ["https://a.example.com"]}, nil)
+    end
+
+    test "calls a function or MFA with the tenant, which may return a list" do
+      assert ["https://acme.example.com"] =
+               Helpers.resolve_origin(
+                 %WebAuthn{origin: fn t -> ["https://#{t}.example.com"] end},
+                 "acme"
+               )
+
+      assert "https://acme.example.com" =
+               Helpers.resolve_origin(
+                 %WebAuthn{origin: {__MODULE__, :origin_for_tenant, []}},
+                 "acme"
+               )
     end
   end
 
@@ -97,4 +146,5 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
   # Test helper functions for MFA resolution
   def rp_id_for_tenant(tenant), do: "#{tenant}.example.com"
   def rp_name_for_tenant(tenant), do: "#{String.capitalize(tenant)} App"
+  def origin_for_tenant(tenant), do: "https://#{tenant}.example.com"
 end
