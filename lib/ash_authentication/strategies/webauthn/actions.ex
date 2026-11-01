@@ -433,7 +433,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
   end
 
-  @doc "List all credentials for a user."
+  @doc """
+  List all credentials for a user.
+
+  `opts[:sort]` takes anything `Ash.Query.sort/2` does, e.g.
+  `sort: [last_used_at: :desc]` for most recently used first. Without it,
+  credentials come in the order they were created, by the credential
+  resource's create timestamp (`inserted_at`, or any other
+  `create_timestamp`), or in the data layer's order if it has none.
+
+  Creation order is the default because it's stable: `updated_at` changes on
+  every sign-in, when the sign count is written, so a list sorted by it
+  reshuffles with each use.
+  """
   @spec list_credentials(WebAuthn.t(), Ash.Resource.Record.t(), keyword) ::
           {:ok, [Ash.Resource.Record.t()]} | {:error, any}
   def list_credentials(strategy, user, opts) do
@@ -446,19 +458,38 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     |> Query.set_context(auth_context())
     |> Query.for_read(action, %{}, ash_opts)
     |> Query.filter(^ref(foreign_key) == ^user_id)
-    |> maybe_sort_by_inserted_at(strategy)
+    |> sort_credentials(strategy, Keyword.get(opts, :sort))
     |> Ash.read()
   end
 
-  # Sort by `:inserted_at` when the credential resource has it (the default
-  # for fresh installs). Older / hand-rolled credential resources without
-  # timestamps fall back to whatever order the data layer produces.
-  defp maybe_sort_by_inserted_at(query, strategy) do
-    if Ash.Resource.Info.attribute(strategy.credential_resource, :inserted_at) do
-      Query.sort(query, inserted_at: :asc)
-    else
-      query
+  defp sort_credentials(query, _strategy, sort) when not is_nil(sort),
+    do: Query.sort(query, sort)
+
+  defp sort_credentials(query, strategy, nil) do
+    case creation_timestamp(strategy.credential_resource) do
+      nil -> query
+      field -> Query.sort(query, [{field, :asc}])
     end
+  end
+
+  defp creation_timestamp(resource) do
+    if Ash.Resource.Info.attribute(resource, :inserted_at) do
+      :inserted_at
+    else
+      resource
+      |> Ash.Resource.Info.attributes()
+      |> Enum.find_value(&(create_timestamp?(&1) && &1.name))
+    end
+  end
+
+  @datetime_types [Ash.Type.UtcDatetimeUsec, Ash.Type.UtcDatetime, Ash.Type.DateTime]
+
+  # The shape `create_timestamp` declares: a datetime set to the current time
+  # on create, never written by callers and never touched on update. (An
+  # `update_timestamp` has an `update_default`.)
+  defp create_timestamp?(attribute) do
+    Ash.Type.get_type(attribute.type) in @datetime_types and not attribute.writable? and
+      is_function(attribute.default, 0) and is_nil(attribute.update_default)
   end
 
   @doc "Delete a credential, refusing to delete the last one."
