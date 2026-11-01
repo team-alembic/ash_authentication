@@ -293,6 +293,101 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     end
   end
 
+  # The challenge a ceremony is verified against is rebuilt from the session,
+  # so these go through the plugs rather than handing `Actions` a
+  # hand-built `Wax.Challenge`: a setting the rebuild drops is only visible
+  # on this path.
+  describe "user_verification" do
+    @up 0x01
+    @up_uv 0x05
+    @up_at 0x41
+    @up_uv_at 0x45
+
+    test "\"required\" rejects an assertion without the UV flag", %{strategy: strategy} do
+      email = "uv-required-sign-in@example.com"
+      passkey = register_passkey(strategy, email)
+      strategy = %{strategy | user_verification: "required"}
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+      conn = sign_in_conn(strategy, challenge_conn, email, passkey, sign_count: 1, flags: @up)
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               conn.private[:authentication_result]
+    end
+
+    test "\"required\" accepts an assertion with the UV flag", %{strategy: strategy} do
+      email = "uv-required-sign-in-ok@example.com"
+      passkey = register_passkey(strategy, email)
+      strategy = %{strategy | user_verification: "required"}
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+      conn = sign_in_conn(strategy, challenge_conn, email, passkey, sign_count: 1, flags: @up_uv)
+
+      assert {:ok, _user} = conn.private[:authentication_result]
+    end
+
+    test "\"preferred\" accepts an assertion without the UV flag", %{strategy: strategy} do
+      email = "uv-preferred-sign-in@example.com"
+      passkey = register_passkey(strategy, email)
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+      conn = sign_in_conn(strategy, challenge_conn, email, passkey, sign_count: 1, flags: @up)
+
+      assert {:ok, _user} = conn.private[:authentication_result]
+    end
+
+    test "\"required\" rejects a registration without the UV flag", %{strategy: strategy} do
+      strategy = %{strategy | user_verification: "required"}
+      email = "uv-required-register@example.com"
+
+      challenge_conn = registration_challenge_conn(strategy, email)
+      conn = register_conn(strategy, challenge_conn, email, flags: @up_at)
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               conn.private[:authentication_result]
+    end
+
+    test "\"required\" accepts a registration with the UV flag", %{strategy: strategy} do
+      strategy = %{strategy | user_verification: "required"}
+      email = "uv-required-register-ok@example.com"
+
+      challenge_conn = registration_challenge_conn(strategy, email)
+      conn = register_conn(strategy, challenge_conn, email, flags: @up_uv_at)
+
+      assert {:ok, _user} = conn.private[:authentication_result]
+    end
+  end
+
+  describe "timeout" do
+    test "a ceremony may run past two minutes when the timeout allows it", %{
+      strategy: strategy
+    } do
+      email = "long-timeout@example.com"
+      passkey = register_passkey(strategy, email)
+      strategy = %{strategy | timeout: 300_000}
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+
+      conn =
+        sign_in_conn(strategy, challenge_conn, email, passkey, sign_count: 1, challenge_age: 200)
+
+      assert {:ok, _user} = conn.private[:authentication_result]
+    end
+
+    test "a ceremony that outlives the timeout is rejected", %{strategy: strategy} do
+      email = "short-timeout@example.com"
+      passkey = register_passkey(strategy, email)
+
+      challenge_conn = authentication_challenge_conn(strategy, email)
+
+      conn =
+        sign_in_conn(strategy, challenge_conn, email, passkey, sign_count: 1, challenge_age: 90)
+
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               conn.private[:authentication_result]
+    end
+  end
+
   describe "the sign-in action" do
     test "resolves no user when called outside the ceremony", %{strategy: strategy} do
       email = "sign-in-direct@example.com"
@@ -634,16 +729,18 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
   # Build a register POST that answers the server-issued challenge. The test
   # SessionPipeline mints a fresh secret_key_base per conn, so cookies can't
   # round-trip; the session entry is transplanted instead.
-  defp register_conn(strategy, challenge_conn, email) do
+  defp register_conn(strategy, challenge_conn, email, fixture_opts \\ []) do
     body = Jason.decode!(challenge_conn.resp_body)
     challenge_bytes = Base.url_decode64!(body["challenge"], padding: false)
     session_data = Plug.Conn.get_session(challenge_conn, @attestation_session_key)
 
     fixture =
       WebAuthnFixtures.generate_registration(
-        origin: "http://www.example.com",
-        rp_id: "example.com",
-        challenge_bytes: challenge_bytes
+        Keyword.merge(fixture_opts,
+          origin: "http://www.example.com",
+          rp_id: "example.com",
+          challenge_bytes: challenge_bytes
+        )
       )
 
     :post
@@ -712,11 +809,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
 
   # Answers the challenge issued by `challenge_conn`, transplanting its
   # session entry as `register_conn/3` does.
+  #
+  # `challenge_age: seconds` backdates the stored challenge's issue time, as
+  # if the user had spent that long in the browser's dialog. Only the
+  # server-side challenge ages; its token keeps its real expiry.
   defp sign_in_conn(strategy, challenge_conn, email, passkey, opts) do
     assertion =
       Keyword.get_lazy(opts, :assertion, fn ->
-        sign_assertion(challenge_conn, passkey, Keyword.take(opts, [:sign_count]))
+        sign_assertion(challenge_conn, passkey, Keyword.take(opts, [:sign_count, :flags]))
       end)
+
+    session_data =
+      challenge_conn
+      |> Plug.Conn.get_session(@authentication_session_key)
+      |> Map.update!(:issued_at, &(&1 - Keyword.get(opts, :challenge_age, 0)))
 
     :post
     |> conn("/user_with_web_authn/webauthn/sign_in", %{
@@ -729,10 +835,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       }
     })
     |> SessionPipeline.call([])
-    |> Plug.Conn.put_session(
-      @authentication_session_key,
-      Plug.Conn.get_session(challenge_conn, @authentication_session_key)
-    )
+    |> Plug.Conn.put_session(@authentication_session_key, session_data)
     |> WebAuthn.Plug.sign_in(strategy)
   end
 

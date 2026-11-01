@@ -93,7 +93,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
       user_verification: strategy.user_verification,
       attestation: strategy.attestation,
       trusted_attestation_types: strategy.trusted_attestation_types,
-      verify_trust_root: strategy.verify_trust_root?
+      verify_trust_root: strategy.verify_trust_root?,
+      timeout: challenge_timeout_seconds(strategy)
     ]
   end
+
+  @doc """
+  The ceremony `timeout` in whole seconds, rounded up.
+
+  The DSL takes milliseconds, as the browser's `timeout` member does; the
+  server-side challenge expiry and the challenge token's lifetime are both
+  measured in seconds, and rounding up keeps them from expiring before the
+  browser gives up.
+  """
+  @spec challenge_timeout_seconds(WebAuthn.t()) :: pos_integer
+  def challenge_timeout_seconds(%{timeout: timeout}), do: div(timeout + 999, 1000)
 end

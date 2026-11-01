@@ -70,6 +70,14 @@ if Code.ensure_loaded?(Wax) do
     # When reconstructing from session data the origin check must accept the
     # origin recorded at challenge time; `Wax.origins_match?/2` performs the
     # exact comparison.
+    #
+    # The struct is built directly rather than through `Wax.Challenge.new/1`,
+    # so every field Wax verifies against has to be set here: anything left
+    # out silently takes the struct default instead of the strategy's
+    # setting. In particular `user_verification` would fall back to
+    # `"preferred"` (Wax then never checks the UV flag, so `"required"` would
+    # only be a request to the browser) and `timeout` to 120 seconds (cutting
+    # off any ceremony configured to last longer).
     defp build_challenge(strategy, data, bytes, type) do
       base = %Wax.Challenge{
         type: type,
@@ -77,7 +85,9 @@ if Code.ensure_loaded?(Wax) do
         origin: data["origin"] || data[:origin],
         rp_id: data["rp_id"] || data[:rp_id],
         issued_at: data["issued_at"] || data[:issued_at],
-        origin_verify_fun: {Wax, :origins_match?, []}
+        origin_verify_fun: {Wax, :origins_match?, []},
+        user_verification: strategy.user_verification,
+        timeout: Helpers.challenge_timeout_seconds(strategy)
       }
 
       case type do
