@@ -145,6 +145,62 @@ strategy, its plugs and the credential extension still require `wax_` to be
 installed, and the algorithms advertised in `pubKeyCredParams` are the ones
 `wax_` can verify, whichever adapter is configured.
 
+## Discoverable and non-discoverable credentials
+
+Every WebAuthn credential is one of two kinds, and the kind decides how its
+owner can sign in.
+
+**Discoverable credentials**, also called *resident keys*, are what "passkey"
+usually means. The authenticator stores them: for each site it keeps a record
+holding the private key, the relying party ID and the user handle. When the
+browser asks for a credential for `example.com` without naming any, the
+authenticator looks through its own records and offers what it finds. That is
+how "sign in with a passkey" works without typing a username first. Every
+synced passkey (iCloud Keychain, Google Password Manager, password managers
+such as 1Password) is discoverable.
+
+**Non-discoverable credentials**, also called *server-side credentials*, are
+not stored on the authenticator. On a typical security key the credential ID
+handed back at registration *is* the private key, encrypted with a secret that
+never leaves the key, and the server keeps that ID. To sign in, the server has
+to send the ID back in `allowCredentials`; the key decrypts it and signs.
+Without the ID, the key has nothing to offer. This is how the legacy FIDO U2F
+API worked, and why it always needed a username first.
+
+### Which kind this strategy needs
+
+Sign-in challenges never list credentials: `allowCredentials` is always empty,
+because the challenge endpoint is public and listing a submitted identity's
+credentials would disclose them (see [Identity + passkey](#identity-passkey)).
+So **only discoverable credentials can sign in**, whether or not the strategy
+requires an identity.
+
+The second-factor `verify_challenge` is different. Its caller is already
+authenticated, so it lists that user's credentials, and both kinds work there.
+
+### How the kind is decided
+
+`resident_key` controls what registration asks the authenticator for:
+
+| `resident_key` | Asks for | What you get |
+|---|---|---|
+| `:required` (default) | A discoverable credential | Discoverable, or registration fails. Nobody silently ends up with a passkey that can't sign in |
+| `:preferred` | Discoverable if possible | Usually discoverable, but the authenticator may fall back to non-discoverable, e.g. a security key whose storage for discoverable credentials is full (older YubiKeys hold 25) |
+| `:discouraged` | A non-discoverable credential | Usually non-discoverable, so it can't sign in |
+
+Keep `:required` for any strategy that signs users in; the strategy warns at
+compile time otherwise. `:preferred` or `:discouraged` make sense only for a
+second-factor-only strategy (`sign_in_enabled? false`), where they also spare
+the limited storage on hardware keys.
+
+### Telling them apart afterwards
+
+At registration the strategy asks the browser to report whether the
+credential it created is discoverable (the `credProps` extension), and stores
+the answer in the credential's `discoverable` attribute: `true`, `false`, or
+`nil` when the browser didn't report. A credential with `discoverable: false`
+can be used for `verify` but not to sign in.
+
 ## Configuration modes
 
 The strategy supports four distinct configurations. Pick the row that matches
@@ -188,11 +244,12 @@ request is optional, and if present must match the credential's owner.
 > are, so the challenge never lists any — the same reason the public
 > `registration_challenge` leaves `excludeCredentials` empty.
 >
-> The consequence is that only **discoverable** credentials can sign in. Keep
-> `resident_key :required` (the default); the strategy warns at compile time if
-> `resident_key` would let an authenticator create a credential that can't be
-> discovered. The second-factor `verify_challenge`, whose caller is already
-> authenticated, still lists the actor's credentials.
+> The consequence is that only **discoverable** credentials can sign in (see
+> [Discoverable and non-discoverable credentials](#discoverable-and-non-discoverable-credentials)).
+> Keep `resident_key :required` (the default); the strategy warns at compile
+> time if `resident_key` would let an authenticator create a credential that
+> can't be discovered. The second-factor `verify_challenge`, whose caller is
+> already authenticated, still lists the actor's credentials.
 
 ### Passkey-first
 

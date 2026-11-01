@@ -286,6 +286,34 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   unsuitable when paired with strategies that need an email on the same
   resource (e.g. password with resettable, magic link, or confirmation).
 
+  ## Discoverable and Non-Discoverable Credentials
+
+  A **discoverable** credential (a "resident key"; what "passkey" usually
+  means) is stored on the authenticator, which keeps a record per site with
+  the private key, the relying party ID and the user handle. Asked for a
+  credential without being told which, the authenticator offers the ones it
+  holds for the site. All synced passkeys are discoverable.
+
+  A **non-discoverable** credential (a "server-side credential") is not
+  stored. On a typical security key the credential ID *is* the private key,
+  encrypted with a secret that never leaves the key. The server must send
+  that ID back in `allowCredentials` before the key can use it.
+
+  The sign-in challenge never lists credentials, so **only discoverable
+  credentials can sign in**; the second-factor `verify_challenge`, whose
+  caller is authenticated, lists the user's credentials and works with
+  both. `resident_key` decides which kind registration asks for:
+
+  - `:required` (default): discoverable, or registration fails.
+  - `:preferred`: usually discoverable, but the authenticator may fall back
+    to non-discoverable (e.g. a security key whose storage is full).
+  - `:discouraged`: usually non-discoverable.
+
+  Keep `:required` for any strategy that signs users in; the strategy warns
+  at compile time otherwise. The credential's `discoverable` attribute
+  records what the browser reported at registration (`true`, `false`, or
+  `nil` when it didn't say). See the WebAuthn guide for more.
+
   ## Cross-Device (Hybrid) Passkeys
 
   Hybrid transport -- "use your phone or tablet", the option that shows a QR

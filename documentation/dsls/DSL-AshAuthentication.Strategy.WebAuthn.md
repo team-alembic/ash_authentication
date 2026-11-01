@@ -283,6 +283,34 @@ input in its sign-in components for this mode — see its documentation.
 unsuitable when paired with strategies that need an email on the same
 resource (e.g. password with resettable, magic link, or confirmation).
 
+## Discoverable and Non-Discoverable Credentials
+
+A **discoverable** credential (a "resident key"; what "passkey" usually
+means) is stored on the authenticator, which keeps a record per site with
+the private key, the relying party ID and the user handle. Asked for a
+credential without being told which, the authenticator offers the ones it
+holds for the site. All synced passkeys are discoverable.
+
+A **non-discoverable** credential (a "server-side credential") is not
+stored. On a typical security key the credential ID *is* the private key,
+encrypted with a secret that never leaves the key. The server must send
+that ID back in `allowCredentials` before the key can use it.
+
+The sign-in challenge never lists credentials, so **only discoverable
+credentials can sign in**; the second-factor `verify_challenge`, whose
+caller is authenticated, lists the user's credentials and works with
+both. `resident_key` decides which kind registration asks for:
+
+- `:required` (default): discoverable, or registration fails.
+- `:preferred`: usually discoverable, but the authenticator may fall back
+  to non-discoverable (e.g. a security key whose storage is full).
+- `:discouraged`: usually non-discoverable.
+
+Keep `:required` for any strategy that signs users in; the strategy warns
+at compile time otherwise. The credential's `discoverable` attribute
+records what the browser reported at registration (`true`, `false`, or
+`nil` when it didn't say). See the WebAuthn guide for more.
+
 ## Cross-Device (Hybrid) Passkeys
 
 Hybrid transport -- "use your phone or tablet", the option that shows a QR
@@ -393,7 +421,7 @@ end
 | [`trusted_attestation_types`](#authentication-strategies-webauthn-trusted_attestation_types){: #authentication-strategies-webauthn-trusted_attestation_types } | `list(:none \| :basic \| :self \| :attca \| :anonca \| :uncertain)` | `[:none, :basic, :self, :uncertain]` | The attestation types accepted at registration (see `t:Wax.Attestation.type/0`). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata to be configured for the `:wax_` application. |
 | [`verify_trust_root?`](#authentication-strategies-webauthn-verify_trust_root?){: #authentication-strategies-webauthn-verify_trust_root? } | `boolean` | `false` | Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata to be configured for the `:wax_` application. |
 | [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. Sent to the browser, and enforced on the server: a challenge answered after it has elapsed (rounded up to whole seconds) is rejected. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`. |
-| [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether to require discoverable credentials (passkeys). Sign-in only ever uses discoverable credentials (the public challenge endpoint never lists a user's credentials), so keep `:required` for any strategy that signs users in; the strategy warns at compile time otherwise. `:preferred`/`:discouraged` are only safe with `sign_in_enabled? false`. |
+| [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether registration asks for a discoverable credential (a passkey stored on the authenticator, which can be offered without the server naming it) or allows a non-discoverable one (which the authenticator can only use when the server sends its id back). Sign-in only ever uses discoverable credentials (the public challenge endpoint never lists a user's credentials), so keep `:required` for any strategy that signs users in; the strategy warns at compile time otherwise. `:preferred` may still yield a non-discoverable credential (e.g. on a security key whose storage is full), and `:discouraged` usually does; both are only safe with `sign_in_enabled? false`. See "Discoverable and non-discoverable credentials" in the WebAuthn guide. |
 | [`sign_count_policy`](#authentication-strategies-webauthn-sign_count_policy){: #authentication-strategies-webauthn-sign_count_policy } | `:reject \| :log \| :ignore` | `:reject` | How to react when an assertion's sign count has not increased over the stored value — the WebAuthn signal that the authenticator may have been cloned (§6.1.1). The check only fires when the authenticator actually implements a counter: synced passkeys report a constant `0` on both sides and are never flagged. - `:reject` (default) — fail the ceremony with an authentication error. - `:log` — allow the ceremony but log a warning; the stored sign count   is deliberately **not** lowered, so a cloned authenticator keeps   tripping the check. The credential record is left untouched for that   assertion, so `last_used_at` and `backed_up` aren't refreshed either. - `:ignore` — no check; the stored count is simply overwritten. |
 | [`credentials_relationship_name`](#authentication-strategies-webauthn-credentials_relationship_name){: #authentication-strategies-webauthn-credentials_relationship_name } | `atom` | `:webauthn_credentials` | The name of the has_many relationship on the user resource pointing to credentials. |
 | [`registration_enabled?`](#authentication-strategies-webauthn-registration_enabled?){: #authentication-strategies-webauthn-registration_enabled? } | `boolean` | `true` | Whether to allow new user registration via WebAuthn. |
