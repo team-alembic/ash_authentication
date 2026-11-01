@@ -26,9 +26,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.SecondFactorTest do
 
   @resource Example.UserWithWebAuthnSecondFactor
   @password "correct horse battery staple"
-  # `Plug.Test` requests arrive on http://www.example.com, which is the
-  # origin the challenge endpoints record.
-  @origin "http://www.example.com"
+  # The origin the browser signs. The resource configures no `origin`, so
+  # any https origin on the rp_id or a subdomain of it is accepted; the
+  # request's own host plays no part.
+  @origin "https://www.example.com"
   @rp_id "example.com"
   @attestation_key "webauthn_attestation_challenge_webauthn"
   @authentication_key "webauthn_authentication_challenge_webauthn"

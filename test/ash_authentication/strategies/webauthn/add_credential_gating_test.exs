@@ -24,7 +24,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.AddCredentialGatingTest do
 
   @resource Example.UserWithWebAuthnSecondFactor
   @password "correct horse battery staple"
-  @origin "http://www.example.com"
+  # The resource configures no `origin`, so any https origin on the rp_id or
+  # a subdomain of it is accepted.
+  @origin "https://www.example.com"
   @rp_id "example.com"
   @attestation_key "webauthn_attestation_challenge_webauthn"
 

@@ -12,6 +12,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapters.WaxTest do
 
   alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.Adapters.Wax, as: Adapter
+  alias AshAuthentication.Strategy.WebAuthn.Origin
   alias AshAuthentication.Test.WebAuthnFixtures
 
   @moduletag feature: :webauthn
@@ -66,7 +67,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapters.WaxTest do
       assert %Wax.Challenge{type: :attestation} = challenge
       assert byte_size(challenge.bytes) == 32
       assert challenge.rp_id == @rp_id
-      assert challenge.origin == "https://example.com"
+      # The configured origin, as the strategy's allowlist policy, enforced
+      # through the policy module rather than Wax's own exact match
+      assert challenge.origin == %{allow: ["https://example.com"]}
+      assert challenge.origin_verify_fun == {Origin, :allowed?, []}
       assert challenge.user_verification == "required"
       assert challenge.attestation == "direct"
       assert challenge.trusted_attestation_types == [:basic]
@@ -85,7 +89,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapters.WaxTest do
       challenge = Adapter.registration_challenge(strategy, "acme", [])
 
       assert challenge.rp_id == "acme.example.com"
-      assert challenge.origin == "https://acme.example.com"
+      # No origin configured: the policy derives from the tenant's rp_id
+      assert challenge.origin == %{rp_id: "acme.example.com"}
+    end
+
+    test "ignores an origin in opts: the policy is the strategy's" do
+      challenge = Adapter.registration_challenge(strategy(), nil, origin: "https://evil.com")
+      assert challenge.origin == %{allow: ["https://example.com"]}
     end
 
     test "every challenge gets fresh bytes" do
@@ -132,7 +142,39 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapters.WaxTest do
       assert restored.attestation == challenge.attestation
       assert restored.trusted_attestation_types == challenge.trusted_attestation_types
       assert restored.verify_trust_root == challenge.verify_trust_root
-      assert restored.origin_verify_fun == {Wax, :origins_match?, []}
+      assert restored.origin_verify_fun == {Origin, :allowed?, []}
+    end
+
+    test "the origin policy survives the round trip, in either key form" do
+      strategy = strategy(origin: nil)
+      challenge = Adapter.registration_challenge(strategy, nil, [])
+      data = Adapter.serialize_challenge(challenge)
+
+      assert data.origin == %{rp_id: @rp_id}
+
+      assert Adapter.deserialize_challenge(strategy, data, :attestation).origin == %{
+               rp_id: @rp_id
+             }
+
+      stringified = %{data | origin: %{"rp_id" => @rp_id}}
+      restored = Adapter.deserialize_challenge(strategy, stringified, :attestation)
+      assert restored.origin == %{"rp_id" => @rp_id}
+
+      # ...and the rebuilt challenge enforces it
+      fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://app.example.com",
+          rp_id: @rp_id,
+          challenge_bytes: challenge.bytes
+        )
+
+      assert {:ok, _} =
+               Adapter.verify_registration(
+                 strategy,
+                 decode(fixture.attestation_object),
+                 decode(fixture.client_data_json),
+                 restored
+               )
     end
 
     test "the rebuilt challenge takes user_verification and timeout from the strategy" do
@@ -229,24 +271,53 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapters.WaxTest do
                )
     end
 
-    test "rejects an attestation from an unexpected origin" do
+    test "rejects an attestation from an origin outside the allowlist" do
       strategy = strategy()
       challenge = Adapter.registration_challenge(strategy, nil, [])
 
-      fixture =
-        WebAuthnFixtures.generate_registration(
-          origin: "https://evil.example.org",
-          rp_id: @rp_id,
-          challenge_bytes: challenge.bytes
-        )
+      for origin <- ["https://evil.example.org", "https://app.example.com", "http://example.com"] do
+        fixture =
+          WebAuthnFixtures.generate_registration(
+            origin: origin,
+            rp_id: @rp_id,
+            challenge_bytes: challenge.bytes
+          )
 
-      assert {:error, _} =
-               Adapter.verify_registration(
-                 strategy,
-                 decode(fixture.attestation_object),
-                 decode(fixture.client_data_json),
-                 challenge
-               )
+        assert {:error, %Wax.InvalidClientDataError{reason: :origin_mismatch}} =
+                 Adapter.verify_registration(
+                   strategy,
+                   decode(fixture.attestation_object),
+                   decode(fixture.client_data_json),
+                   challenge
+                 ),
+               "#{origin} should have been rejected"
+      end
+    end
+
+    test "with no origin configured, accepts https under the rp_id and nothing else" do
+      strategy = strategy(origin: nil)
+      challenge = Adapter.registration_challenge(strategy, nil, [])
+
+      verify = fn origin ->
+        fixture =
+          WebAuthnFixtures.generate_registration(
+            origin: origin,
+            rp_id: @rp_id,
+            challenge_bytes: challenge.bytes
+          )
+
+        Adapter.verify_registration(
+          strategy,
+          decode(fixture.attestation_object),
+          decode(fixture.client_data_json),
+          challenge
+        )
+      end
+
+      assert {:ok, _} = verify.("https://example.com")
+      assert {:ok, _} = verify.("https://app.example.com:4001")
+      assert {:error, _} = verify.("http://app.example.com")
+      assert {:error, _} = verify.("https://evil.com")
     end
   end
 

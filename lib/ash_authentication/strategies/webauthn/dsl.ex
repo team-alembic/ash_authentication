@@ -103,43 +103,47 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
             {:or,
              [
                :string,
+               {:list, :string},
                {:mfa_or_fun, 1},
                {:spark_function_behaviour, AshAuthentication.Secret,
                 {AshAuthentication.SecretFunction, 2}}
              ]},
           doc: """
-          The expected origin for WebAuthn ceremonies.
+          The origins WebAuthn ceremonies are accepted from — an allowlist.
 
-          In WebAuthn, the **origin** is the scheme + domain + port that the browser
-          reports during registration and authentication. It is distinct from `rp_id`:
+          In WebAuthn, the **origin** is the scheme + host + port the browser
+          reports (and signs) during registration and authentication. It is distinct
+          from `rp_id`:
 
           - `rp_id` = domain only (e.g. `"example.com"`)
           - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`)
 
-          Ceremonies served by the strategy's plugs take the expected origin from the
-          challenge request (scheme, host and port), and that **takes precedence over
-          this option**. Behind a TLS-terminating proxy, rewrite the connection to the
-          browser-facing URL (e.g. with `Plug.RewriteOn`) or every ceremony fails.
+          **When set**, the browser's origin must match one of the configured origins
+          exactly, port included. The request that minted the challenge plays no part,
+          so this works unchanged behind a TLS-terminating proxy.
 
-          This option is used when the actions are driven without a request to read
-          the origin from (e.g. from a LiveView that doesn't pass `origin:`). If it is
-          not set either, the origin defaults to `"https://{rp_id}"`. That default
-          **omits the port**, which works for production on port 443 but makes the
-          adapter reject ceremonies in development where the port is non-standard.
+          **When not set** (the default), an origin is accepted when its scheme is
+          `https` and its host is the `rp_id` or a subdomain of it, on any port —
+          which is exactly the set of origins a browser lets use that RP ID.
+          `http://localhost[:port]` is accepted too when `rp_id` is `"localhost"`.
+          Most deployments, including development on a non-standard port, need no
+          `origin` at all; set it to narrow the policy to specific hosts or ports.
 
-          **Production:**
+          **One origin:**
 
-              origin "https://example.com"
+              origin "https://app.example.com"
 
-          **Development (non-standard port):**
+          **Several:**
 
-              origin "https://localhost:4001"
+              origin ["https://app.example.com", "https://admin.example.com"]
 
-          **Dynamic (multi-tenant):**
+          **Dynamic (multi-tenant)** — a 1-arity function or MFA of the tenant
+          returning a string or list:
 
-              origin {MyApp.WebAuthn, :origin_for_tenant, []}
+              origin {MyApp.WebAuthn, :origins_for_tenant, []}
 
-          **Application-environment-driven:**
+          **Application-environment-driven** — an `AshAuthentication.Secret`
+          returning `{:ok, origin}` or `{:ok, [origin, ...]}`:
 
               origin MyApp.Secrets
           """,

@@ -13,7 +13,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
 
   Everything that depends on the ceremony backend — the challenge itself,
   the algorithms advertised to the browser, verification — goes through the
-  strategy's adapter.
+  strategy's adapter. Nothing is taken from the request's own scheme, host
+  or port: the origin a ceremony is accepted from is the strategy's policy
+  (see `AshAuthentication.Strategy.WebAuthn.Origin`), so the plugs behave
+  the same behind a TLS-terminating proxy as without one.
   """
 
   alias AshAuthentication.{
@@ -58,8 +61,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
   defp send_registration_challenge(conn, strategy, user_descriptor, exclude_credential_ids) do
     tenant = get_tenant(conn)
 
-    {:ok, challenge} =
-      WebAuthn.Actions.registration_challenge(strategy, tenant, origin: origin_from_conn(conn))
+    {:ok, challenge} = WebAuthn.Actions.registration_challenge(strategy, tenant)
 
     rp_id = WebAuthn.Helpers.resolve_rp_id(strategy, tenant)
     rp_name = WebAuthn.Helpers.resolve_rp_name(strategy, tenant)
@@ -198,10 +200,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
     # exists — to anyone who knows or guesses the identity. The cost is that
     # only discoverable credentials can sign in; the verifier warns when
     # `resident_key` allows any other kind to be created.
-    {:ok, challenge} =
-      WebAuthn.Actions.authentication_challenge(strategy, [], tenant,
-        origin: origin_from_conn(conn)
-      )
+    {:ok, challenge} = WebAuthn.Actions.authentication_challenge(strategy, [], tenant)
 
     response = assertion_options(conn, strategy, challenge, [], tenant)
     challenge_data = strategy.adapter.serialize_challenge(challenge)
@@ -255,9 +254,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
         allow_credentials = assertion_allow_credentials(strategy, credentials)
 
         {:ok, challenge} =
-          WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
-            origin: origin_from_conn(conn)
-          )
+          WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant)
 
         response = assertion_options(conn, strategy, challenge, credentials, tenant)
         challenge_data = strategy.adapter.serialize_challenge(challenge)
@@ -475,17 +472,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
   defp opts(conn) do
     [actor: get_actor(conn), tenant: get_tenant(conn), context: get_context(conn)]
     |> Enum.reject(&is_nil(elem(&1, 1)))
-  end
-
-  defp origin_from_conn(%Conn{scheme: scheme, host: host, port: port}) do
-    port_segment =
-      cond do
-        scheme == :http and port == 80 -> ""
-        scheme == :https and port == 443 -> ""
-        true -> ":#{port}"
-      end
-
-    "#{scheme}://#{host}#{port_segment}"
   end
 
   # The `PublicKeyCredentialRequestOptions` sent to the browser. Shared by

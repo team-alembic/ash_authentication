@@ -19,6 +19,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   def verify(strategy, dsl_state) do
     with :ok <- validate_adapter(strategy),
          :ok <- validate_rp_id(strategy),
+         :ok <- validate_origin(strategy),
          :ok <- validate_credential_resource(strategy),
          :ok <- validate_credential_resource_shape(strategy, dsl_state),
          :ok <- validate_hints(strategy),
@@ -80,6 +81,44 @@ defmodule AshAuthentication.Strategy.WebAuthn.Verifier do
   end
 
   defp validate_rp_id(_), do: :ok
+
+  # A static allowlist can be checked now; a malformed entry would otherwise
+  # reject every ceremony at runtime with nothing to say why. Dynamic
+  # origins (functions, MFAs, Secrets) are only known per tenant.
+  defp validate_origin(%{origin: origin} = strategy) when is_binary(origin) or is_list(origin) do
+    origins = List.wrap(origin)
+    malformed = Enum.reject(origins, &WebAuthn.Origin.well_formed?/1)
+
+    cond do
+      origins == [] ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, strategy.name, :origin],
+           message: """
+           `origin []` would accept no origin at all, so no ceremony could ever succeed.
+
+           Leave `origin` unset to accept any https origin on the `rp_id` or a \
+           subdomain of it, or list the origins to accept.
+           """
+         )}
+
+      malformed != [] ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, strategy.name, :origin],
+           message: """
+           `origin` entries must be web origins — a scheme, a host and an optional \
+           port, with no path (e.g. `"https://app.example.com"` or \
+           `"https://localhost:4001"`). These are not: #{inspect(malformed)}
+           """
+         )}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_origin(_), do: :ok
 
   defp validate_hints(%{hints: []}), do: :ok
 

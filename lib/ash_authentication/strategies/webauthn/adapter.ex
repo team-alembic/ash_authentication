@@ -46,6 +46,18 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
   policy, the `userHandle` check and the ownership of the credential — after
   the adapter has accepted the response.
 
+  ## Origins
+
+  The expected origin is a *policy*, not a value, and it comes from
+  configuration rather than from the request:
+  `AshAuthentication.Strategy.WebAuthn.Origin.policy/2` resolves it for the
+  strategy and tenant, and
+  `AshAuthentication.Strategy.WebAuthn.Origin.allowed?/2` decides whether the
+  origin the browser signed satisfies it. An adapter must call the latter
+  on every verification, and must carry the policy through
+  `c:serialize_challenge/1` / `c:deserialize_challenge/3` (it is a plain
+  map) so the rebuilt challenge enforces what the issued one did.
+
   ## Challenges are opaque
 
   A challenge is whatever term the adapter returns from
