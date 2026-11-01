@@ -18,7 +18,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.AddCredentialGatingTest do
   alias AshAuthentication.{Info, Strategy}
   alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.{Actions, RecentAuthentication}
-  alias AshAuthentication.Test.WebAuthnFixtures
+  alias AshAuthentication.Test.{WebAuthnCeremony, WebAuthnFixtures}
 
   @moduletag feature: :webauthn
 
@@ -66,6 +66,32 @@ defmodule AshAuthentication.Strategy.WebAuthn.AddCredentialGatingTest do
                )
 
       assert {:ok, []} = Actions.list_credentials(strategy, user, [])
+    end
+  end
+
+  describe "the actor" do
+    test "must be a record of the strategy's resource", %{strategy: strategy} do
+      # A signed-in user of another resource, whose primary key could well
+      # match one of this resource's users.
+      other_strategy = Info.strategy!(Example.UserWithWebAuthn, :webauthn)
+
+      {{:ok, outsider}, _} =
+        WebAuthnCeremony.register(other_strategy, %{"email" => "outsider@example.com"})
+
+      challenge_conn = add_credential_challenge_conn(strategy, outsider)
+
+      assert {:error, %AuthenticationFailed{} = error} =
+               challenge_conn.private[:authentication_result]
+
+      assert error.caused_by.message =~ "Only a Example.UserWithWebAuthnSecondFactor"
+
+      passkey = WebAuthnFixtures.generate_registration(origin: @origin, rp_id: @rp_id)
+
+      assert {:error, %AuthenticationFailed{}} =
+               Actions.add_credential(strategy, registration_params(passkey),
+                 challenge: attestation_challenge(passkey),
+                 user: outsider
+               )
     end
   end
 

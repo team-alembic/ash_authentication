@@ -10,7 +10,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.RecentAuthentication do
   reach `add_credential` with a stolen or long-lived session could leave
   themselves a permanent key. The strategy's `add_credential_enabled?` turns
   the flow off entirely, and `add_credential_max_authentication_age`
-  requires the actor to have authenticated recently.
+  requires the actor to have authenticated recently. The actor must also be
+  a record of the strategy's own resource.
 
   ## What counts as authenticating
 
@@ -37,6 +38,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.RecentAuthentication do
   @spec check(WebAuthn.t(), Ash.Resource.Record.t(), keyword) :: :ok | {:error, Exception.t()}
   def check(%{add_credential_enabled?: false} = strategy, _actor, _opts),
     do: {:error, failure(strategy, "Adding a passkey is disabled for this strategy")}
+
+  # The credential is attached through the strategy's `belongs_to`, keyed by
+  # the actor's primary key. An actor of another resource (an admin, an API
+  # client) would attach it to whichever user happens to share that key.
+  def check(%{resource: resource} = strategy, %struct{}, _opts) when struct != resource,
+    do:
+      {:error,
+       failure(strategy, "Only a #{inspect(resource)} can add a passkey through this strategy")}
 
   def check(%{add_credential_max_authentication_age: nil}, _actor, _opts), do: :ok
 
