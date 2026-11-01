@@ -47,7 +47,7 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
   @doc false
   @impl Transformer
   def transform(dsl_state) do
-    with :ok <- validate_wax_dependency(),
+    with :ok <- validate_cbor_dependency(),
          {:ok, credential_id_field} <- Info.webauthn_credential_credential_id_field(dsl_state),
          {:ok, public_key_field} <- Info.webauthn_credential_public_key_field(dsl_state),
          {:ok, sign_count_field} <- Info.webauthn_credential_sign_count_field(dsl_state),
@@ -317,19 +317,30 @@ defmodule AshAuthentication.WebAuthnCredential.Transformer do
       Ash.DataLayer.Verifiers.RequirePreCheckWith in data_layer.verifiers()
   end
 
-  defp validate_wax_dependency do
-    if Code.ensure_loaded?(Wax) do
+  # The public key attribute is a COSE key, which is CBOR by spec, so the
+  # `CoseKey` type needs the codec whichever adapter verifies the ceremonies.
+  # The default (Wax) adapter's `wax_` dependency brings `cbor` with it; a
+  # project on a different adapter declares it directly.
+  defp validate_cbor_dependency do
+    if Code.ensure_loaded?(CBOR) do
       :ok
     else
       {:error,
        DslError.exception(
          path: [:webauthn_credential],
          message: """
-         The WebAuthn credential extension requires the optional `:wax_` dependency.
+         The WebAuthn credential extension requires the optional `:cbor` dependency, \
+         which encodes the stored COSE public keys.
 
          Add it to your dependencies:
 
-             {:wax_, "~> 0.7"}
+             {:cbor, "~> 1.0"}
+
+         (`wax_`, the default adapter's dependency, already depends on it.)
+
+         If `ash_authentication` was already compiled without `:cbor`, recompile it:
+
+             mix deps.compile ash_authentication --force
          """
        )}
     end
