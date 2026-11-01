@@ -250,6 +250,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
            {:ok, signature} <- safe_url_decode64(params["signature"]),
            {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
            {:ok, credential, user} <- lookup_fn.(raw_id),
+           :ok <- verify_user_handle(strategy, action_name, params["user_handle"], credential),
            {:ok, assertion} <-
              verify_authentication(
                strategy,
@@ -266,6 +267,43 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       else
         :error -> base64_error(strategy, action_name)
         {:error, error} -> {:error, error}
+      end
+    end
+
+    # WebAuthn §7.2 step 6: the `userHandle` an assertion returns must identify
+    # the owner of the credential it was made with. The handle is the
+    # `user.id` baked into the passkey at registration, which is stored on the
+    # credential, so a mismatch means the authenticator holds this credential
+    # for a different account than ours.
+    #
+    # Checked only when both sides are known. The handle isn't covered by the
+    # assertion signature, and a non-discoverable credential returns none,
+    # so its absence proves nothing; and a credential created without one
+    # (by driving the actions directly, which mints none) has nothing to
+    # compare against. The user is always resolved from the credential id,
+    # never from the handle, so skipping the comparison can't select a
+    # different account.
+    defp verify_user_handle(_strategy, _action_name, handle, _credential)
+         when handle in [nil, ""],
+         do: :ok
+
+    defp verify_user_handle(strategy, action_name, handle, credential) do
+      with {:ok, handle} <- safe_url_decode64(handle) do
+        case Map.get(credential, WebAuthn.user_handle_field(strategy)) do
+          nil ->
+            :ok
+
+          ^handle ->
+            :ok
+
+          _other ->
+            {:error,
+             auth_failed(
+               strategy,
+               action_name,
+               "The assertion's user handle does not match the credential's owner"
+             )}
+        end
       end
     end
 

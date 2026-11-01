@@ -278,6 +278,71 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
     end
   end
 
+  describe "sign_in/3 user handle" do
+    setup %{strategy: strategy} do
+      reg_fixture =
+        WebAuthnFixtures.generate_registration(
+          origin: "https://example.com",
+          rp_id: "example.com"
+        )
+
+      user_handle = :crypto.strong_rand_bytes(32)
+      email = "user-handle-#{System.unique_integer([:positive])}@example.com"
+
+      {:ok, _user} =
+        Actions.register(
+          strategy,
+          %{
+            "email" => email,
+            "attestation_object" => reg_fixture.attestation_object,
+            "client_data_json" => reg_fixture.client_data_json,
+            "raw_id" => reg_fixture.raw_id
+          },
+          challenge: registration_challenge(reg_fixture),
+          user_handle: user_handle
+        )
+
+      %{reg_fixture: reg_fixture, user_handle: user_handle, email: email}
+    end
+
+    test "accepts the handle stored with the credential", ctx do
+      assert {:ok, _user} =
+               sign_in_with_count(ctx.strategy, ctx.reg_fixture, ctx.email, 1,
+                 user_handle: ctx.user_handle
+               )
+    end
+
+    test "rejects a handle naming a different account", ctx do
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{} = error} =
+               sign_in_with_count(ctx.strategy, ctx.reg_fixture, ctx.email, 1,
+                 user_handle: :crypto.strong_rand_bytes(32)
+               )
+
+      assert error.caused_by.message =~ "user handle does not match"
+    end
+
+    test "accepts an assertion without a handle (non-discoverable credentials send none)",
+         ctx do
+      assert {:ok, _user} = sign_in_with_count(ctx.strategy, ctx.reg_fixture, ctx.email, 1)
+    end
+
+    test "rejects a handle that isn't base64url", ctx do
+      assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+               sign_in_with_count(ctx.strategy, ctx.reg_fixture, ctx.email, 1,
+                 user_handle_param: "not base64url!"
+               )
+    end
+
+    test "has nothing to compare when the credential stored no handle", %{strategy: strategy} do
+      {_user, reg_fixture} = register_user(strategy, "no-stored-handle@example.com")
+
+      assert {:ok, _user} =
+               sign_in_with_count(strategy, reg_fixture, "no-stored-handle@example.com", 1,
+                 user_handle: :crypto.strong_rand_bytes(32)
+               )
+    end
+  end
+
   defp register_user(strategy, email) do
     reg_fixture =
       WebAuthnFixtures.generate_registration(
@@ -300,7 +365,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
     {user, reg_fixture}
   end
 
-  defp sign_in_with_count(strategy, reg_fixture, email, sign_count) do
+  defp sign_in_with_count(strategy, reg_fixture, email, sign_count, opts \\ []) do
     auth_fixture = WebAuthnFixtures.generate_authentication(reg_fixture, sign_count: sign_count)
 
     auth_challenge = %Wax.Challenge{
@@ -320,6 +385,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.ActionsTest do
       "signature" => auth_fixture.signature,
       "client_data_json" => auth_fixture.client_data_json
     }
+
+    # `user_handle:` is the handle's bytes, sent base64url-encoded as a client
+    # would; `user_handle_param:` is sent verbatim.
+    params =
+      cond do
+        handle = opts[:user_handle] ->
+          Map.put(params, "user_handle", Base.url_encode64(handle, padding: false))
+
+        param = opts[:user_handle_param] ->
+          Map.put(params, "user_handle", param)
+
+        true ->
+          params
+      end
 
     Actions.sign_in(strategy, params, challenge: auth_challenge)
   end
