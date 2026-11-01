@@ -160,16 +160,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
 
           When `true` (identity-required mode), the user resource must expose an
           `identity_field` attribute (default `:email`) that is writable, public,
-          and uniquely constrained. Registration stores the identity, and a user
-          signing in may supply it at challenge time to have their credentials
-          returned via `allowCredentials`, or leave it out and use a
-          discoverable credential.
+          and uniquely constrained. Registration stores the identity. Sign-in
+          uses a discoverable credential, as in passkey-first mode (the
+          challenge endpoint is public, so it never lists a user's
+          credentials); an identity submitted with the sign-in must match the
+          credential's owner.
 
           When `false` (passkey-first mode), the user resource needs no identity
           column, and the register and sign-in actions take none. Users sign in
           via a discoverable credential only; the credential id resolves the
-          user at verification time. Pairs with `resident_key: :required`; the
-          strategy warns at compile time otherwise.
+          user at verification time.
           """
         ],
         authenticator_attachment: [
@@ -252,7 +252,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         resident_key: [
           type: {:in, [:required, :preferred, :discouraged]},
           doc:
-            "Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication.",
+            "Whether to require discoverable credentials (passkeys). Sign-in only ever uses discoverable credentials (the public challenge endpoint never lists a user's credentials), so keep `:required` for any strategy that signs users in; the strategy warns at compile time otherwise. `:preferred`/`:discouraged` are only safe with `sign_in_enabled? false`.",
           default: :required
         ],
         sign_count_policy: [

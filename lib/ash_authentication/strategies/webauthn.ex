@@ -266,15 +266,18 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   end
   ```
 
-  No `:email` attribute, no unique identity. At challenge time no identity is
-  sent to the server, so the browser surfaces a discoverable credential
-  (passkey); at verification time the credential id alone resolves the user.
+  No `:email` attribute, no unique identity. The browser surfaces a
+  discoverable credential (passkey), and at verification time the credential
+  id alone resolves the user.
 
-  This composes with `resident_key: :required` (the default): `resident_key`
-  controls whether the browser is asked to create a discoverable credential
-  during registration, while `require_identity?` controls whether the
-  user resource must expose an identity column. Set both for the full
-  passkey-first experience.
+  Sign-in works that way in identity mode too: the authentication challenge
+  endpoint is public, so it never lists a user's credentials in
+  `allowCredentials` (that would disclose them to anyone who submits the
+  identity). Every sign-in therefore needs a discoverable credential, which is
+  what `resident_key: :required` (the default) asks the authenticator to
+  create; the strategy warns at compile time if a strategy that signs users in
+  relaxes it. `require_identity?` only controls whether the user resource must
+  expose an identity column.
 
   The companion package `ash_authentication_phoenix` needs to skip the email
   input in its sign-in components for this mode — see its documentation.
