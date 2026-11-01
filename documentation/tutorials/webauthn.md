@@ -150,6 +150,11 @@ installed, and the algorithms advertised in `pubKeyCredParams` are the ones
 The strategy supports four distinct configurations. Pick the row that matches
 your product and use its settings as a starting point.
 
+Identity mode is the default: `require_identity?` defaults to `true`, so a
+`webauthn` block that doesn't set it expects an `identity_field` on the user
+resource. Passkey-first mode is an explicit opt-in with
+`require_identity? false`.
+
 | Mode | Key settings | User resource needs | How sign-in works |
 |------|--------------|---------------------|-------------------|
 | **Identity + passkey** (classic) | `require_identity? true` | An `identity_field` attribute (default `:email`), unique and writable | Discoverable passkey; the credential id resolves the user, and an identity, if submitted, must match its owner |
@@ -205,6 +210,19 @@ Since there is no identity to display, the client should pass a
 `display_name` parameter with the registration challenge request — it becomes
 the account name shown in the passkey picker. (This is distinct from the
 credential's `label`, which names the individual key/device in your own UI.)
+
+> #### New devices and account recovery {: .warning}
+>
+> With no identity and no other strategy, a user's passkeys are the only way
+> into the account, and enrolling another one (`add_credential`) requires
+> being signed in. A new device can be bootstrapped by a synced passkey (the
+> platform's passkey manager carries it over) or by signing in with a phone
+> through cross-device `hints [:hybrid, ...]` and then enrolling. A user whose
+> only passkeys are device-bound (a security key, or a platform authenticator
+> that doesn't sync), on a site that doesn't offer `:hybrid`, has neither:
+> losing those devices loses the account. Recovery in that case is the
+> application's responsibility, e.g. encouraging a second passkey at
+> registration, or providing an out-of-band recovery flow.
 
 ### Second factor
 
