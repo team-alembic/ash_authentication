@@ -85,9 +85,17 @@ related but distinct:
 | `rp_id`   | `"example.com"`            | Domain only (Relying Party ID)   |
 | `origin`  | `"https://example.com"`    | Full URL including scheme + port |
 
-If `origin` is not set, it defaults to `"https://{rp_id}"`. This works for
-production on standard port 443, but **breaks in development** because the
-browser includes the port in the origin and `Wax` will reject the mismatch.
+Ceremonies served by the strategy's plugs take the expected origin from the
+challenge request itself (its scheme, host and port), and that **takes
+precedence over a configured `origin`**. The configured value is used when
+the actions are driven without a request to read the origin from (e.g. from
+a LiveView that doesn't pass `origin:`), and `"https://{rp_id}"` (no port)
+when neither is available.
+
+Behind a TLS-terminating proxy the raw connection doesn't describe the URL
+the browser used, so restore it before the router (e.g. with
+`Plug.RewriteOn`); otherwise the expected origin is the proxy's internal
+`http://...:port` and every ceremony fails. See the WebAuthn guide.
 
 ### Production
 
@@ -164,17 +172,16 @@ end
 
 ## Adding Credentials to Existing Users
 
-The built-in `register` action creates a **new user** with a credential. To add
-a passkey to an already-authenticated user, you need a custom controller that:
+The `register` action creates a **new user** with a credential. To add a
+passkey to an already-authenticated user, use the `add_credential_challenge`
+(GET) and `add_credential` (POST) phases, or
+`AshAuthentication.Strategy.WebAuthn.Actions.add_credential/3` directly.
+Both require an authenticated actor; the challenge reuses the user handle of
+the actor's existing passkeys and lists them in `excludeCredentials`, so the
+same authenticator can't be enrolled twice.
 
-1. Generates a registration challenge (via `Wax.new_registration_challenge/1`)
-2. Sends it to the browser
-3. Receives the attestation response
-4. Calls `Wax.register/3` to verify it
-5. Stores the credential directly on the credential resource
-
-This is intentional -- the strategy's register flow is for new user sign-up,
-not for adding keys to existing accounts.
+These phases are always routed, whatever `registration_enabled?`,
+`sign_in_enabled?` and `verify_enabled?` are set to.
 
 ## Accessing the User After Authentication
 
@@ -303,18 +310,19 @@ which do not implement it ignore it and show their default picker.
 
 ## Gotchas
 
-- **Origin must include the port** for non-standard ports (e.g., `"https://localhost:4001"`).
-  The default derivation from `rp_id` produces `"https://{rp_id}"` which omits the port.
+- **The request's origin wins over a configured `origin`** in plug-served
+  ceremonies, so behind a TLS-terminating proxy the connection must be rewritten
+  to the browser-facing scheme, host and port. Where no request is available,
+  a configured origin must include the port for non-standard ports (e.g.,
+  `"https://localhost:4001"`); the fallback `"https://{rp_id}"` omits it.
 - **Signing secret must return `{:ok, value}`**, not a raw string. A common mistake
   is `fn _, _ -> "my_secret" end` -- it must be `fn _, _ -> {:ok, "my_secret"} end`.
 - **Challenge data is stored in the session as plain maps**, not `Wax.Challenge` structs,
-  because cookie session stores cannot serialize arbitrary Elixir structs. The plug
-  reconstructs the struct before passing it to Wax.
-- **`add_credential` (adding a key to an existing user) is not built-in.** The `register`
-  action creates a new user. See "Adding Credentials to Existing Users" above.
-- **`origin_verify_fun`** is hardcoded to `{Wax, :origins_match?, []}` when
-  reconstructing challenges from the session. If you need custom origin verification,
-  you'll need to override the plug.
+  because cookie session stores cannot serialize arbitrary Elixir structs. The adapter
+  serializes the challenge and rebuilds it, re-applying the strategy's settings, before
+  verification.
+- **`origin_verify_fun`** is `{Wax, :origins_match?, []}` (an exact match) in the default
+  adapter. For custom origin verification, configure your own `adapter`.
 - **Token generation happens in `Actions.sign_in`** via `Jwt.token_for_user/3`, not in
   an Ash preparation like the Password strategy. This is because Wax verification
   happens outside the Ash action pipeline.
@@ -371,19 +379,19 @@ end
 | [`rp_id`](#authentication-strategies-webauthn-rp_id){: #authentication-strategies-webauthn-rp_id .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party ID - your domain name (e.g. "example.com"). For multi-tenant setups, pass an MFA tuple or 1-arity function that receives the tenant and returns the domain string:     rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_id MyApp.Secrets |
 | [`rp_name`](#authentication-strategies-webauthn-rp_name){: #authentication-strategies-webauthn-rp_name .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party display name shown to the user during registration. For multi-tenant setups, pass an MFA tuple or 1-arity function:     rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_name MyApp.Secrets |
 | [`adapter`](#authentication-strategies-webauthn-adapter){: #authentication-strategies-webauthn-adapter } | `module` | `AshAuthentication.Strategy.WebAuthn.Adapters.Wax` | The ceremony backend adapter — handles challenge generation, verification, and challenge (de)serialization. See `AshAuthentication.Strategy.WebAuthn.Adapter`. |
-| [`origin`](#authentication-strategies-webauthn-origin){: #authentication-strategies-webauthn-origin } | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | The expected origin for WebAuthn ceremonies. In WebAuthn, the **origin** is the scheme + domain + port that the browser reports during registration and authentication. It is distinct from `rp_id`: - `rp_id` = domain only (e.g. `"example.com"`) - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`) If not set, defaults to `"https://{rp_id}"`. This default **omits the port**, which works for production on port 443 but will cause Wax to reject ceremonies in development where the port is non-standard. **Production:**     origin "https://example.com" **Development (non-standard port):**     origin "https://localhost:4001" **Dynamic (multi-tenant):**     origin {MyApp.WebAuthn, :origin_for_tenant, []} **Application-environment-driven:**     origin MyApp.Secrets |
-| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. Ignored when `require_identity?` is `false`. |
-| [`require_identity?`](#authentication-strategies-webauthn-require_identity?){: #authentication-strategies-webauthn-require_identity? } | `boolean` | `true` | Defaults to `true` (identity-required mode). Set to `false` for passkey-only mode. When `true` (identity-required mode), the user resource must expose an `identity_field` attribute (default `:email`) that is writable, public, and uniquely constrained. Users sign in by supplying this identity at challenge time; their credentials are returned via `allowCredentials`. When `false` (passkey-first mode), the user resource needs no identity column. Users sign in via a discoverable credential only; the credential id resolves the user at verification time. Pairs with `resident_key: :required`. Note: the runtime in `Actions.sign_in/3` and `Plug.authentication_challenge/2` supports both modes; this option only relaxes the compile-time checks in the transformer and the sign-in preparation. |
+| [`origin`](#authentication-strategies-webauthn-origin){: #authentication-strategies-webauthn-origin } | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | The expected origin for WebAuthn ceremonies. In WebAuthn, the **origin** is the scheme + domain + port that the browser reports during registration and authentication. It is distinct from `rp_id`: - `rp_id` = domain only (e.g. `"example.com"`) - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`) Ceremonies served by the strategy's plugs take the expected origin from the challenge request (scheme, host and port), and that **takes precedence over this option**. Behind a TLS-terminating proxy, rewrite the connection to the browser-facing URL (e.g. with `Plug.RewriteOn`) or every ceremony fails. This option is used when the actions are driven without a request to read the origin from (e.g. from a LiveView that doesn't pass `origin:`). If it is not set either, the origin defaults to `"https://{rp_id}"`. That default **omits the port**, which works for production on port 443 but makes Wax reject ceremonies in development where the port is non-standard. **Production:**     origin "https://example.com" **Development (non-standard port):**     origin "https://localhost:4001" **Dynamic (multi-tenant):**     origin {MyApp.WebAuthn, :origin_for_tenant, []} **Application-environment-driven:**     origin MyApp.Secrets |
+| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. When `require_identity?` is `false` the user resource needn't have it. |
+| [`require_identity?`](#authentication-strategies-webauthn-require_identity?){: #authentication-strategies-webauthn-require_identity? } | `boolean` | `true` | Defaults to `true` (identity-required mode). Set to `false` for passkey-only mode. When `true` (identity-required mode), the user resource must expose an `identity_field` attribute (default `:email`) that is writable, public, and uniquely constrained. Registration stores the identity, and a user signing in may supply it at challenge time to have their credentials returned via `allowCredentials`, or leave it out and use a discoverable credential. When `false` (passkey-first mode), the user resource needs no identity column, and the register and sign-in actions take none. Users sign in via a discoverable credential only; the credential id resolves the user at verification time. Pairs with `resident_key: :required`; the strategy warns at compile time otherwise. |
 | [`authenticator_attachment`](#authentication-strategies-webauthn-authenticator_attachment){: #authentication-strategies-webauthn-authenticator_attachment } | `nil \| :platform \| :cross_platform` |  | Restricts authenticator type. `nil` allows any, `:platform` limits to built-in (Touch ID, Windows Hello), `:cross_platform` limits to USB/NFC keys (YubiKey). |
 | [`hints`](#authentication-strategies-webauthn-hints){: #authentication-strategies-webauthn-hints } | `list(:security_key \| :client_device \| :hybrid)` | `[]` | Which kinds of authenticator the browser should offer, in order of preference (the WebAuthn Level 3 `hints` member). * `:hybrid` -- another device, reached by scanning a QR code with a   phone or tablet ("use your phone or tablet"). * `:security_key` -- a removable USB/NFC key. * `:client_device` -- the authenticator built in to this device   (Touch ID, Windows Hello). `hints [:hybrid, :security_key]` produces the two-option cross-device dialog. This is a presentation hint only -- it changes which options the browser leads with and never relaxes verification. Clients which do not implement `hints` (currently everything but Chromium >= 128) ignore it and fall back to their default picker. Cross-device ceremonies involve a QR scan, a Bluetooth handshake and a prompt on the second device, so raise `timeout` to at least `120_000` when `:hybrid` is offered. |
 | [`allow_hint_override?`](#authentication-strategies-webauthn-allow_hint_override?){: #authentication-strategies-webauthn-allow_hint_override? } | `boolean` | `false` | Whether a `hints` request parameter on the challenge endpoints overrides the configured `hints`. Lets a UI offer separate entry points ("sign in with a phone", "use a security key") which jump straight to one kind of authenticator, by requesting e.g. `?hints=hybrid`. Values outside the `hints` enum are discarded, and a request which names none of them falls back to the configured value. The parameter only affects the dialog the requesting browser shows itself; every security-relevant option stays server-derived. |
 | [`user_verification`](#authentication-strategies-webauthn-user_verification){: #authentication-strategies-webauthn-user_verification } | `"required" \| "preferred" \| "discouraged"` | `"preferred"` | Whether user verification (PIN/biometric) is required. Use `"required"` for highest security. |
-| [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "indirect" \| "direct" \| "enterprise"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"indirect"` allows the client to substitute an anonymized attestation, `"direct"` requests the authenticator's attestation statement verbatim, and `"enterprise"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `"direct"` only asks the client to *convey* an attestation statement; it does not verify it. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and configure FIDO metadata for `:wax_`. |
+| [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "indirect" \| "direct" \| "enterprise"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"indirect"` allows the client to substitute an anonymized attestation, `"direct"` requests the authenticator's attestation statement verbatim, and `"enterprise"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `"direct"` only asks the client to *convey* an attestation statement; it does not verify it. A client may answer any preference with a `"none"` statement (synced passkeys always do); whatever it conveys is verified as such and accepted or refused by `trusted_attestation_types`. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and configure FIDO metadata for `:wax_`. |
 | [`trusted_attestation_types`](#authentication-strategies-webauthn-trusted_attestation_types){: #authentication-strategies-webauthn-trusted_attestation_types } | `list(:none \| :basic \| :self \| :attca \| :anonca \| :uncertain)` | `[:none, :basic, :self, :uncertain]` | The attestation types accepted at registration (see `t:Wax.Attestation.type/0`). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata to be configured for the `:wax_` application. |
 | [`verify_trust_root?`](#authentication-strategies-webauthn-verify_trust_root?){: #authentication-strategies-webauthn-verify_trust_root? } | `boolean` | `false` | Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata to be configured for the `:wax_` application. |
-| [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`. |
+| [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. Sent to the browser, and enforced on the server: a challenge answered after it has elapsed (rounded up to whole seconds) is rejected. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`. |
 | [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication. |
-| [`sign_count_policy`](#authentication-strategies-webauthn-sign_count_policy){: #authentication-strategies-webauthn-sign_count_policy } | `:reject \| :log \| :ignore` | `:reject` | How to react when an assertion's sign count has not increased over the stored value — the WebAuthn signal that the authenticator may have been cloned (§6.1.1). The check only fires when the authenticator actually implements a counter: synced passkeys report a constant `0` on both sides and are never flagged. - `:reject` (default) — fail the ceremony with an authentication error. - `:log` — allow the ceremony but log a warning; the stored sign count   is deliberately **not** lowered, so a cloned authenticator keeps   tripping the check. - `:ignore` — no check; the stored count is simply overwritten. |
+| [`sign_count_policy`](#authentication-strategies-webauthn-sign_count_policy){: #authentication-strategies-webauthn-sign_count_policy } | `:reject \| :log \| :ignore` | `:reject` | How to react when an assertion's sign count has not increased over the stored value — the WebAuthn signal that the authenticator may have been cloned (§6.1.1). The check only fires when the authenticator actually implements a counter: synced passkeys report a constant `0` on both sides and are never flagged. - `:reject` (default) — fail the ceremony with an authentication error. - `:log` — allow the ceremony but log a warning; the stored sign count   is deliberately **not** lowered, so a cloned authenticator keeps   tripping the check. The credential record is left untouched for that   assertion, so `last_used_at` and `backed_up` aren't refreshed either. - `:ignore` — no check; the stored count is simply overwritten. |
 | [`credentials_relationship_name`](#authentication-strategies-webauthn-credentials_relationship_name){: #authentication-strategies-webauthn-credentials_relationship_name } | `atom` | `:webauthn_credentials` | The name of the has_many relationship on the user resource pointing to credentials. |
 | [`registration_enabled?`](#authentication-strategies-webauthn-registration_enabled?){: #authentication-strategies-webauthn-registration_enabled? } | `boolean` | `true` | Whether to allow new user registration via WebAuthn. |
 | [`sign_in_enabled?`](#authentication-strategies-webauthn-sign_in_enabled?){: #authentication-strategies-webauthn-sign_in_enabled? } | `boolean` | `true` | Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor. |

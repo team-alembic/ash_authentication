@@ -140,6 +140,11 @@ webauthn do
 end
 ```
 
+The adapter replaces the ceremony *implementation*, not the dependency: the
+strategy, its plugs and the credential extension still require `wax_` to be
+installed, and the algorithms advertised in `pubKeyCredParams` are the ones
+`wax_` can verify, whichever adapter is configured.
+
 ## Configuration modes
 
 The strategy supports four distinct configurations. Pick the row that matches
@@ -147,9 +152,9 @@ your product and use its settings as a starting point.
 
 | Mode | Key settings | User resource needs | How sign-in works |
 |------|--------------|---------------------|-------------------|
-| **Identity + passkey** (classic) | `require_identity? true` | An `identity_field` attribute (default `:email`), unique and writable | User supplies their identity; their credentials are offered via `allowCredentials` |
+| **Identity + passkey** (classic) | `require_identity? true` | An `identity_field` attribute (default `:email`), unique and writable | User supplies their identity and their credentials are offered via `allowCredentials`, or supplies none and uses a discoverable passkey |
 | **Passkey-first** (no identity column) | `require_identity? false`, `resident_key :required` | No identity attribute at all | Fully discoverable: the browser offers stored passkeys and the credential id resolves the user |
-| **Second factor only** | `require_identity? true`, `sign_in_enabled? false`, `verify_enabled? true` | Another primary strategy (e.g. password) | The `verify` phase proves possession on top of an authenticated session, stamping `webauthn_verified_at` |
+| **Second factor only** | `registration_enabled? false`, `sign_in_enabled? false`, `verify_enabled? true` | Another primary strategy (e.g. password) | The `verify` phase proves possession on top of an authenticated session, stamping `webauthn_verified_at` |
 | **Multi-tenant** | `rp_id`/`rp_name`/`origin` as MFA tuples, 1-arity functions, or `AshAuthentication.Secret` modules | Same as the mode it combines with | Relying-party identity resolved per tenant at ceremony time |
 
 ### Identity + passkey
@@ -163,6 +168,23 @@ webauthn do
   require_identity? true
 end
 ```
+
+Sending the identity with the authentication challenge request is optional.
+With it, the challenge lists that user's credentials in `allowCredentials`
+(with their transports), so the browser goes straight to the right
+authenticator. Without it, the browser offers any discoverable passkey for
+the site and the credential id resolves the user, just as in passkey-first
+mode.
+
+> #### `allowCredentials` reveals credential ids {: .warning}
+>
+> `authentication_challenge` is a public endpoint, and with an identity it
+> answers with that user's credential ids. Anyone who knows or guesses an
+> identity learns whether that account has passkeys and which credential ids
+> they are. This is the usual trade-off of identity-first WebAuthn. If it
+> matters for your application, don't send the identity: rely on discoverable
+> passkeys (`resident_key :required`, the default), which works in this mode
+> too.
 
 ### Passkey-first
 
@@ -189,9 +211,19 @@ webauthn do
   rp_id "example.com"
   rp_name "My App"
   require_identity? true
+  registration_enabled? false
   sign_in_enabled? false
 end
 ```
+
+Both flags matter. Registration is a sign-in in its own right: a successful
+`register` creates the user and returns a session token. Leaving
+`registration_enabled?` at its default would let anyone create a passwordless
+account through the public `registration_challenge`/`register` endpoints and be
+signed in without the primary factor. With both off, the strategy exposes only
+`verify` and `add_credential`, and both require an authenticated actor.
+`mix ash_authentication.add_strategy.webauthn --mode 2fa` generates this
+configuration.
 
 ### Multi-tenant
 
@@ -205,12 +237,30 @@ webauthn do
 end
 ```
 
-> ### Origins and ports {: .warning}
+> ### Origins, ports and proxies {: .warning}
 >
-> The WebAuthn origin is scheme + host + port. When unset, the origin is
-> derived from the actual request; the static fallback `https://{rp_id}`
-> omits the port, so set `origin "https://localhost:4001"` explicitly if you
-> terminate ceremonies somewhere without request context in development.
+> The WebAuthn origin is scheme + host + port, and the server checks it
+> against the origin the browser reports. Where the expected origin comes
+> from, in order:
+>
+> 1. **The request**, for every ceremony served by the strategy's plugs. The
+>    origin is rebuilt from the challenge request's `scheme`, `host` and
+>    `port`, and **takes precedence over a configured `origin`**.
+> 2. **The configured `origin`**, when there is no request to read it from:
+>    the actions driven directly, e.g. from a LiveView that doesn't pass
+>    `origin:`.
+> 3. **`https://{rp_id}`** otherwise. This omits the port, so it fails for a
+>    development server on a non-standard port.
+>
+> Because the request wins, the connection has to describe the URL the
+> browser actually used. Behind a TLS-terminating proxy or load balancer the
+> raw connection is usually `http` on an internal port, so the expected origin
+> becomes something like `http://example.com:4000`, the browser reports
+> `https://example.com`, and every ceremony fails. Restore the original
+> scheme, host and port before the router, for example with `Plug.RewriteOn`
+> (`plug Plug.RewriteOn, [:x_forwarded_proto, :x_forwarded_host, :x_forwarded_port]`)
+> or Phoenix's `force_ssl: [rewrite_on: ...]`, and only for headers your proxy
+> sets.
 
 ## Cross-device sign-in (QR code / hybrid transport)
 
@@ -252,7 +302,9 @@ own can enrol a passkey held on a phone and then use it.
 **Raise the timeout.** The 60 second default cannot accommodate a QR scan, a
 Bluetooth handshake and a biometric prompt on the second device; the ceremony
 expires mid-scan. Allow at least 120 seconds. The strategy warns at compile
-time if you offer `:hybrid` with less.
+time if you offer `:hybrid` with less. `timeout` bounds the whole ceremony:
+the browser's dialog, the server-side challenge expiry, and the lifetime of
+the token that makes each challenge single-use.
 
 The phone needs no network route to your application — it talks to the browser,
 not to you — so this works against `localhost` in development without a tunnel.
@@ -322,11 +374,15 @@ end
 
 - `attestation` — what the client is asked to convey: `"none"`,
   `"indirect"` (anonymized allowed), `"direct"`, or `"enterprise"`
-  (individually identifying; needs browser/authenticator support).
+  (individually identifying; needs browser/authenticator support). This is a
+  request, not a requirement: the client may answer any of them with a
+  `"none"` statement (synced passkeys always do), and whatever it conveys is
+  verified as such.
 - `trusted_attestation_types` — which verified attestation types are
-  accepted. The default (`[:none, :basic, :self, :uncertain]`) accepts
-  everything a consumer flow produces; restricting to `[:basic, :attca]`
-  refuses registrations that don't chain to a known root.
+  accepted, and so the setting that actually enforces attestation policy. The
+  default (`[:none, :basic, :self, :uncertain]`) accepts everything a consumer
+  flow produces; restricting to `[:basic, :attca]` refuses registrations that
+  don't chain to a known root, including `"none"` statements.
 - `verify_trust_root?` — whether `packed`/`u2f` attestation statements are
   checked against trust anchors (`tpm` always is).
 
@@ -411,17 +467,18 @@ section is maintained as the implementation evolves.
 | `rp` (id/name) | ✅ | Static or per-tenant |
 | `user` (id/name/displayName) | ✅ | Random ≤64-byte handle for new users (no PII, per spec); stable, shared handle when adding credentials to an existing user. Persisted on the credential as `user_handle` |
 | `pubKeyCredParams` | ✅ | ES256, EdDSA, ES384/512, PS256/384/512, RS256/384/512 in preference order |
-| `excludeCredentials` | ✅ | The actor's credentials when adding a passkey; identity-matched credentials on registration in identity mode |
+| `excludeCredentials` | ✅ | The actor's credentials when adding a passkey. Always empty on the public `registration_challenge` endpoint, so it can't reveal credential ids; a duplicate enrolment there is refused by the unique credential id |
 | `authenticatorSelection` (attachment, residentKey, userVerification) | ✅ | All configurable. Whether a credential actually ended up discoverable is captured via `credProps` (see Extensions) |
-| Attestation conveyance | ✅ | `"none"`, `"indirect"`, `"direct"`, `"enterprise"`; accepted attestation types and trust-root verification configurable (see [Attestation](#attestation)) |
-| `timeout` | ✅ | Configurable |
+| Attestation conveyance | ✅ | `"none"`, `"indirect"`, `"direct"`, `"enterprise"`; whatever statement is conveyed is verified and accepted per `trusted_attestation_types` (see [Attestation](#attestation)) |
+| `timeout` | ✅ | Configurable; bounds the browser dialog and the server-side challenge alike |
 
 ### Authentication ceremony
 
 | Spec feature | Status | Notes |
 |---|---|---|
-| Assertion verification | ✅ | Via `Wax.authenticate/6` — origin, rpId, and user-verification checks |
-| `allowCredentials` (identity-first) | ✅ | Per-user lookup by `identity_field` |
+| Assertion verification | ✅ | Via `Wax.authenticate/6` — origin, rpId, and the UV flag when `user_verification "required"` (also enforced at registration) |
+| `allowCredentials` (identity-first) | ✅ | Per-user lookup by `identity_field`; reveals that user's credential ids to the caller (see [Identity + passkey](#identity-passkey)) |
+| Returned `userHandle` | ⚠️ | Not checked against the stored `user_handle`: the user is resolved from the credential id, which is unique, and the credential's owner is the user signed in |
 | Discoverable / username-less flow | ✅ | Empty `allowCredentials`; user resolved from the credential id |
 | Passkey-first mode (no identity column) | ✅ | `require_identity? false` |
 | `transports` hints | ✅ | Captured from the client at registration (sanitized against the spec-registered set), echoed in `allowCredentials` |
@@ -452,7 +509,10 @@ section is maintained as the implementation evolves.
 
 - `sign_count_policy :reject` — assertions whose signature counter did not
   increase are rejected as possible cloned authenticators. Use `:log` for a
-  monitoring-only rollout.
+  monitoring-only rollout. Under `:log` a flagged assertion is allowed but
+  leaves the credential record untouched: the stored count stays at its
+  high-water mark so a clone keeps tripping the check, and `last_used_at` and
+  `backed_up` aren't refreshed for that use either.
 - `user_verification "preferred"` — raise to `"required"` for step-up or
   high-security deployments.
 - Deleting a user's last credential is refused, so an account with WebAuthn

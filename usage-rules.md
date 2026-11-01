@@ -22,10 +22,13 @@ SPDX-License-Identifier: MIT
 - Check existing strategies: `AshAuthentication.Info.strategies/1`
 
 ## WebAuthn Strategy Notes
-- Origin must include the port for non-standard ports (e.g. `"https://localhost:4001"`); default derivation from `rp_id` omits the port
-- When reconstructing challenges from session data, `origin_verify_fun: {Wax, :origins_match?, []}` is hardcoded in the Plug
+- In plug-served ceremonies the expected origin comes from the challenge request (scheme, host, port) and takes precedence over a configured `origin`; behind a TLS-terminating proxy, rewrite the conn (e.g. `Plug.RewriteOn`) or every ceremony fails
+- Without a request to read it from, a configured `origin` is used, and must include the port for non-standard ports (e.g. `"https://localhost:4001"`); the `https://{rp_id}` fallback omits the port
+- The default Wax adapter verifies origins with `origin_verify_fun: {Wax, :origins_match?, []}` (exact match); custom origin verification means a custom `adapter`
 - Token generation happens in `Actions.sign_in` via `Jwt.token_for_user/3`, not in an Ash preparation like Password
-- The `register` action creates a new user; adding a credential to an existing user requires a custom controller calling `Wax.register/3` directly
+- The `register` action creates a new user and returns a session token; add a passkey to an existing user through the `add_credential_challenge`/`add_credential` phases (or `Actions.add_credential/3`), which require an authenticated actor
+- Second-factor only: set both `registration_enabled? false` and `sign_in_enabled? false`. Leaving registration on lets anyone create a passwordless account and be signed in without the primary factor
+- `attestation` is only a conveyance request; `trusted_attestation_types` is what enforces attestation policy (a `"none"` statement can answer any preference)
 - Passkey-first mode (no identity column): set `require_identity? false` on the `webauthn` block. The user resource needs no `identity_field` attribute; users are resolved from the WebAuthn credential id at verification time. Pairs with `resident_key: :required`
 - `require_identity?` defaults to `true` (the classic identity-required flow); set it to `false` only for passkey-first mode
 - Cross-device ("use your phone or tablet", QR code) is hybrid transport, implemented by the browser and the phone — the server only asks for it via `hints [:hybrid, :security_key]`. Raise `timeout` to at least `120_000`, or the ceremony expires mid-scan
