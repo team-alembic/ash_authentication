@@ -116,6 +116,8 @@ if Code.ensure_loaded?(Wax) do
 
     @impl Adapter
     def verify_registration(_strategy, attestation_object, client_data_json, challenge) do
+      challenge = verification_challenge(challenge, attestation_object)
+
       case Wax.register(attestation_object, client_data_json, challenge) do
         {:ok, {auth_data, _attestation_result}} ->
           cred_data = auth_data.attested_credential_data
@@ -131,6 +133,28 @@ if Code.ensure_loaded?(Wax) do
 
         {:error, _} = error ->
           error
+      end
+    end
+
+    # The strategy's `attestation` is the WebAuthn conveyance preference: what
+    # the browser is *asked* to convey. Wax reads the same field as the one
+    # statement format it will accept — a `"none"` statement only under
+    # `"none"`, every other format only under `"direct"` — and has no notion of
+    # `"indirect"` or `"enterprise"`.
+    #
+    # Whatever was requested, the client may answer with a `"none"` statement
+    # (synced passkeys always do, and `"indirect"` lets the client strip it),
+    # and under `"indirect"`/`"enterprise"` with a full one. So once anything
+    # beyond `"none"` was requested, verify against the format the client
+    # actually conveyed, and leave accepting or refusing the result to
+    # `trusted_attestation_types` — where the strategy's documentation puts
+    # attestation policy. Under `"none"` nothing changes.
+    defp verification_challenge(%Wax.Challenge{attestation: "none"} = challenge, _), do: challenge
+
+    defp verification_challenge(%Wax.Challenge{} = challenge, attestation_object) do
+      case CBOR.decode(attestation_object) do
+        {:ok, %{"fmt" => "none"}, _rest} -> %{challenge | attestation: "none"}
+        _ -> %{challenge | attestation: "direct"}
       end
     end
 

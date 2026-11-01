@@ -207,6 +207,40 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
       assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
                register_conn.private[:authentication_result]
     end
+
+    # A client may answer any conveyance preference with a "none" statement
+    # (synced passkeys always do); whether that's acceptable is
+    # `trusted_attestation_types`' call, not the conveyance preference's.
+    for conveyance <- ["direct", "indirect", "enterprise"] do
+      test "attestation #{inspect(conveyance)} requests that conveyance and accepts a \"none\" statement",
+           %{strategy: strategy} do
+        strategy = %{strategy | attestation: unquote(conveyance)}
+        email = "attestation-#{unquote(conveyance)}@example.com"
+
+        challenge_conn = registration_challenge_conn(strategy, email)
+        assert Jason.decode!(challenge_conn.resp_body)["attestation"] == unquote(conveyance)
+
+        register_conn = register_conn(strategy, challenge_conn, email)
+        assert {:ok, _user} = register_conn.private[:authentication_result]
+      end
+
+      test "attestation #{inspect(conveyance)} still refuses a \"none\" statement the trusted types exclude",
+           %{strategy: strategy} do
+        strategy = %{
+          strategy
+          | attestation: unquote(conveyance),
+            trusted_attestation_types: [:basic, :attca]
+        }
+
+        email = "attestation-#{unquote(conveyance)}-untrusted@example.com"
+
+        challenge_conn = registration_challenge_conn(strategy, email)
+        register_conn = register_conn(strategy, challenge_conn, email)
+
+        assert {:error, %AshAuthentication.Errors.AuthenticationFailed{}} =
+                 register_conn.private[:authentication_result]
+      end
+    end
   end
 
   describe "challenge session scoping" do
