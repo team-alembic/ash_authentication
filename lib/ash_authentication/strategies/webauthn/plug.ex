@@ -298,18 +298,39 @@ if Code.ensure_loaded?(Wax.Challenge) do
     """
     @spec add_credential_challenge(Conn.t(), WebAuthn.t()) :: Conn.t()
     def add_credential_challenge(conn, strategy) do
-      case get_actor(conn) do
-        nil ->
-          store_authentication_result(conn, unauthenticated_error(strategy, :add_credential))
+      with actor when not is_nil(actor) <- get_actor(conn),
+           :ok <-
+             WebAuthn.RecentAuthentication.check(
+               strategy,
+               actor,
+               authentication_opts(conn, actor)
+             ) do
+        credentials = load_actor_credentials(strategy, actor, get_tenant(conn))
+        user_descriptor = actor_user_descriptor(strategy, actor, credentials)
 
-        actor ->
-          credentials = load_actor_credentials(strategy, actor, get_tenant(conn))
-          user_descriptor = actor_user_descriptor(strategy, actor, credentials)
+        exclude_ids =
+          Enum.map(credentials, &Map.get(&1, WebAuthn.credential_id_field(strategy)))
 
-          exclude_ids =
-            Enum.map(credentials, &Map.get(&1, WebAuthn.credential_id_field(strategy)))
+        send_registration_challenge(conn, strategy, user_descriptor, exclude_ids)
+      else
+        nil -> store_authentication_result(conn, unauthenticated_error(strategy, :add_credential))
+        {:error, error} -> store_authentication_result(conn, {:error, error})
+      end
+    end
 
-          send_registration_challenge(conn, strategy, user_descriptor, exclude_ids)
+    # A bearer-authenticated actor carries no session token in its metadata,
+    # so hand `RecentAuthentication` the issue time of the bearer token the
+    # request presented — provided it was issued to this actor.
+    defp authentication_opts(conn, actor) do
+      conn
+      |> Conn.get_req_header("authorization")
+      |> Enum.find_value(fn
+        "Bearer " <> token -> WebAuthn.RecentAuthentication.token_issued_at(token, actor)
+        _ -> nil
+      end)
+      |> case do
+        nil -> []
+        at -> [authenticated_at: at]
       end
     end
 
@@ -327,7 +348,12 @@ if Code.ensure_loaded?(Wax.Challenge) do
         user_handle = session_user_handle(conn, strategy)
         conn = Conn.delete_session(conn, session_key(strategy, :attestation))
         params = subject_params(conn, strategy)
-        opts = opts(conn) ++ [challenge: challenge, user: actor, user_handle: user_handle]
+
+        opts =
+          opts(conn) ++
+            [challenge: challenge, user: actor, user_handle: user_handle] ++
+            authentication_opts(conn, actor)
+
         result = WebAuthn.Actions.add_credential(strategy, params, opts)
         store_authentication_result(conn, result)
       else
