@@ -116,9 +116,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           - `rp_id` = domain only (e.g. `"example.com"`)
           - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`)
 
-          If not set, defaults to `"https://{rp_id}"`. This default **omits the port**,
-          which works for production on port 443 but will cause Wax to reject ceremonies
-          in development where the port is non-standard.
+          Ceremonies served by the strategy's plugs take the expected origin from the
+          challenge request (scheme, host and port), and that **takes precedence over
+          this option**. Behind a TLS-terminating proxy, rewrite the connection to the
+          browser-facing URL (e.g. with `Plug.RewriteOn`) or every ceremony fails.
+
+          This option is used when the actions are driven without a request to read
+          the origin from (e.g. from a LiveView that doesn't pass `origin:`). If it is
+          not set either, the origin defaults to `"https://{rp_id}"`. That default
+          **omits the port**, which works for production on port 443 but makes Wax
+          reject ceremonies in development where the port is non-standard.
 
           **Production:**
 
@@ -141,7 +148,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         identity_field: [
           type: :atom,
           doc:
-            "The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. Ignored when `require_identity?` is `false`.",
+            "The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. When `require_identity?` is `false` the user resource needn't have it.",
           default: :email
         ],
         require_identity?: [
@@ -153,17 +160,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
 
           When `true` (identity-required mode), the user resource must expose an
           `identity_field` attribute (default `:email`) that is writable, public,
-          and uniquely constrained. Users sign in by supplying this identity at
-          challenge time; their credentials are returned via `allowCredentials`.
+          and uniquely constrained. Registration stores the identity, and a user
+          signing in may supply it at challenge time to have their credentials
+          returned via `allowCredentials`, or leave it out and use a
+          discoverable credential.
 
           When `false` (passkey-first mode), the user resource needs no identity
-          column. Users sign in via a discoverable credential only; the
-          credential id resolves the user at verification time. Pairs with
-          `resident_key: :required`.
-
-          Note: the runtime in `Actions.sign_in/3` and `Plug.authentication_challenge/2`
-          supports both modes; this option only relaxes the compile-time checks
-          in the transformer and the sign-in preparation.
+          column, and the register and sign-in actions take none. Users sign in
+          via a discoverable credential only; the credential id resolves the
+          user at verification time. Pairs with `resident_key: :required`; the
+          strategy warns at compile time otherwise.
           """
         ],
         authenticator_attachment: [
@@ -222,7 +228,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         attestation: [
           type: {:in, ["none", "indirect", "direct", "enterprise"]},
           doc:
-            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"indirect\"` allows the client to substitute an anonymized attestation, `\"direct\"` requests the authenticator's attestation statement verbatim, and `\"enterprise\"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `\"direct\"` only asks the client to *convey* an attestation statement; it does not verify it. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and configure FIDO metadata for `:wax_`.",
+            "Attestation conveyance preference. `\"none\"` is recommended for most use cases. `\"indirect\"` allows the client to substitute an anonymized attestation, `\"direct\"` requests the authenticator's attestation statement verbatim, and `\"enterprise\"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `\"direct\"` only asks the client to *convey* an attestation statement; it does not verify it. A client may answer any preference with a `\"none\"` statement (synced passkeys always do); whatever it conveys is verified as such and accepted or refused by `trusted_attestation_types`. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and configure FIDO metadata for `:wax_`.",
           default: "none"
         ],
         trusted_attestation_types: [
@@ -240,7 +246,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         timeout: [
           type: :pos_integer,
           doc:
-            "Timeout for WebAuthn ceremonies in milliseconds. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`.",
+            "Timeout for WebAuthn ceremonies in milliseconds. Sent to the browser, and enforced on the server: a challenge answered after it has elapsed (rounded up to whole seconds) is rejected. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`.",
           default: 60_000
         ],
         resident_key: [
@@ -263,7 +269,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           - `:reject` (default) — fail the ceremony with an authentication error.
           - `:log` — allow the ceremony but log a warning; the stored sign count
             is deliberately **not** lowered, so a cloned authenticator keeps
-            tripping the check.
+            tripping the check. The credential record is left untouched for that
+            assertion, so `last_used_at` and `backed_up` aren't refreshed either.
           - `:ignore` — no check; the stored count is simply overwritten.
           """,
           default: :reject
