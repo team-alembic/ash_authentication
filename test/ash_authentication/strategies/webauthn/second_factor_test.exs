@@ -39,8 +39,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.SecondFactorTest do
   end
 
   describe "configuration" do
-    test "exposes only the verify and add-credential ceremonies", %{strategy: strategy} do
+    test "exposes only the verify, token-exchange and add-credential phases", %{
+      strategy: strategy
+    } do
+      # `sign_in_with_token` stays: it is the only way to turn the short-lived
+      # token `verify` answers with into a session token.
       assert Strategy.phases(strategy) == [
+               :sign_in_with_token,
                :verify_challenge,
                :verify,
                :add_credential_challenge,
@@ -55,11 +60,100 @@ defmodule AshAuthentication.Strategy.WebAuthn.SecondFactorTest do
       end
     end
 
-    test "builds the verify action but no WebAuthn sign-in or registration actions" do
+    test "builds the verify and token-exchange actions but no WebAuthn sign-in or registration" do
       assert Ash.Resource.Info.action(@resource, :verify_webauthn)
+      assert Ash.Resource.Info.action(@resource, :sign_in_with_webauthn_token)
       refute Ash.Resource.Info.action(@resource, :sign_in_with_webauthn)
-      refute Ash.Resource.Info.action(@resource, :sign_in_with_webauthn_token)
       refute Ash.Resource.Info.action(@resource, :register_with_webauthn)
+    end
+  end
+
+  describe "disabled phases called directly" do
+    test "sign_in is refused before the ceremony touches the credential", %{
+      strategy: strategy
+    } do
+      user = sign_in_with_password("direct-sign-in@example.com")
+      passkey = enrol_passkey(strategy, user)
+      {:ok, challenge} = WebAuthn.Actions.authentication_challenge(strategy, [], nil)
+
+      assertion =
+        WebAuthnFixtures.generate_authentication(passkey,
+          challenge_bytes: strategy.adapter.challenge_bytes(challenge),
+          origin: @origin,
+          sign_count: 5
+        )
+
+      assert {:error, %AuthenticationFailed{caused_by: %{reason: :disabled, action: :sign_in}}} =
+               WebAuthn.Actions.sign_in(strategy, assertion_params(assertion),
+                 challenge: challenge
+               )
+
+      assert {:ok, [credential]} = WebAuthn.Actions.list_credentials(strategy, user, [])
+      assert Map.get(credential, WebAuthn.sign_count_field(strategy)) != 5
+    end
+
+    test "register is refused", %{strategy: strategy} do
+      {:ok, challenge} = WebAuthn.Actions.registration_challenge(strategy, nil)
+
+      assert {:error, %AuthenticationFailed{caused_by: %{reason: :disabled, action: :register}}} =
+               WebAuthn.Actions.register(strategy, %{}, challenge: challenge)
+    end
+
+    test "verify is refused when verify_enabled? is off", %{strategy: strategy} do
+      user = sign_in_with_password("direct-verify@example.com")
+      strategy = %{strategy | verify_enabled?: false}
+      {:ok, challenge} = WebAuthn.Actions.authentication_challenge(strategy, [], nil)
+
+      assert {:error, %AuthenticationFailed{caused_by: %{reason: :disabled, action: :verify}}} =
+               WebAuthn.Actions.verify(strategy, %{}, challenge: challenge, actor: user)
+
+      # With neither sign-in nor verify there is no token to exchange either.
+      assert {:error,
+              %AuthenticationFailed{caused_by: %{reason: :disabled, action: :sign_in_with_token}}} =
+               WebAuthn.Actions.sign_in_with_token(strategy, %{"token" => "anything"}, [])
+    end
+  end
+
+  describe "completing a verification" do
+    test "the verified token is exchanged for a session token carrying the claim", %{
+      strategy: strategy
+    } do
+      user = sign_in_with_password("verify-exchange@example.com")
+      passkey = enrol_passkey(strategy, user)
+
+      challenge_conn = verify_challenge_conn(strategy, user)
+      conn = verify_conn(strategy, user, challenge_conn, passkey)
+      assert {:ok, verified} = conn.private[:authentication_result]
+
+      # What `verify` answers with is a sign-in token, which no session or
+      # bearer check accepts until it has been exchanged.
+      sign_in_token = verified.__metadata__.token
+      assert {:ok, %{"purpose" => "sign_in"}} = Jwt.peek(sign_in_token)
+
+      exchanged =
+        :post
+        |> conn(path(strategy, :sign_in_with_token), %{"token" => sign_in_token})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.sign_in_with_token(strategy)
+
+      assert {:ok, session_user} = exchanged.private[:authentication_result]
+      assert session_user.id == user.id
+
+      assert session_user.__metadata__.webauthn_verified_at ==
+               verified.__metadata__.webauthn_verified_at
+
+      {:ok, claims} = Jwt.peek(session_user.__metadata__.token)
+      assert claims["purpose"] == "user"
+      assert claims["webauthn_verified_at"]
+
+      # The sign-in token is single-use.
+      replayed =
+        :post
+        |> conn(path(strategy, :sign_in_with_token), %{"token" => sign_in_token})
+        |> SessionPipeline.call([])
+        |> WebAuthn.Plug.sign_in_with_token(strategy)
+
+      assert {:error, %AuthenticationFailed{}} = replayed.private[:authentication_result]
     end
   end
 

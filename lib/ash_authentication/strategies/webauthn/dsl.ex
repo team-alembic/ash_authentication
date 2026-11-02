@@ -299,7 +299,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         sign_in_enabled?: [
           type: :boolean,
           doc:
-            "Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor.",
+            "Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor. The `sign_in_with_token` exchange stays while `verify_enabled?` is on, since `verify` answers with a sign-in token too.",
           default: true
         ],
         verify_enabled?: [
@@ -367,7 +367,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
         sign_in_with_token_action_name: [
           type: :atom,
           doc:
-            "The name of the action used to sign in with a short-lived token issued by a successful WebAuthn ceremony. Defaults to `sign_in_with_<strategy_name>_token`.",
+            "The name of the action used to sign in with a short-lived token issued by a successful WebAuthn `sign_in` or `verify`. Built while either of them is enabled. Defaults to `sign_in_with_<strategy_name>_token`.",
           required: false
         ],
         verify_action_name: [
