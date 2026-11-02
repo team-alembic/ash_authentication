@@ -279,8 +279,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.CustomStrategyNamesTest do
       assert Ash.Resource.Info.action(ctx.dual_resource, :verify_security_key)
       refute Ash.Resource.Info.action(ctx.dual_resource, :register_with_security_key)
       refute Ash.Resource.Info.action(ctx.dual_resource, :sign_in_with_security_key)
+      # The second-factor strategy keeps its own exchange for its verify token.
+      assert Ash.Resource.Info.action(ctx.dual_resource, :sign_in_with_security_key_token)
 
       assert Strategy.phases(ctx.security_key) == [
+               :sign_in_with_token,
                :verify_challenge,
                :verify,
                :add_credential_challenge,

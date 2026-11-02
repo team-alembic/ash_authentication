@@ -56,12 +56,15 @@ defmodule AshAuthentication.Strategy.WebAuthn.AddCredentialGatingTest do
       user = sign_in_with_password("disabled@example.com")
 
       challenge_conn = add_credential_challenge_conn(strategy, user)
-      assert {:error, %AuthenticationFailed{}} = challenge_conn.private[:authentication_result]
+
+      assert {:error, %AuthenticationFailed{caused_by: %{reason: :disabled}}} =
+               challenge_conn.private[:authentication_result]
+
       refute Plug.Conn.get_session(challenge_conn, @attestation_key)
 
       passkey = WebAuthnFixtures.generate_registration(origin: @origin, rp_id: @rp_id)
 
-      assert {:error, %AuthenticationFailed{}} =
+      assert {:error, %AuthenticationFailed{caused_by: %{reason: :disabled}}} =
                Actions.add_credential(strategy, registration_params(passkey),
                  challenge: attestation_challenge(passkey),
                  user: user
@@ -86,6 +89,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.AddCredentialGatingTest do
                challenge_conn.private[:authentication_result]
 
       assert error.caused_by.message =~ "Only a Example.UserWithWebAuthnSecondFactor"
+      assert error.caused_by.reason == :foreign_actor
 
       passkey = WebAuthnFixtures.generate_registration(origin: @origin, rp_id: @rp_id)
 
@@ -130,6 +134,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.AddCredentialGatingTest do
                challenge_conn.private[:authentication_result]
 
       assert error.caused_by.message =~ "recent authentication"
+      assert error.caused_by.reason == :stale
       refute Plug.Conn.get_session(challenge_conn, @attestation_key)
     end
 
