@@ -34,10 +34,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.RecentAuthentication do
 
   @doc """
   Check that `actor` may add a passkey through `strategy` right now.
+
+  A refusal is an `AshAuthentication.Errors.AuthenticationFailed` whose
+  `caused_by.reason` says why, so a UI can choose what to offer:
+
+  - `:stale`: the actor hasn't authenticated within
+    `add_credential_max_authentication_age`. Signing in again or completing a
+    second factor fixes it.
+  - `:disabled`: `add_credential_enabled?` is off.
+  - `:foreign_actor`: the actor isn't a record of the strategy's resource.
   """
   @spec check(WebAuthn.t(), Ash.Resource.Record.t(), keyword) :: :ok | {:error, Exception.t()}
   def check(%{add_credential_enabled?: false} = strategy, _actor, _opts),
-    do: {:error, failure(strategy, "Adding a passkey is disabled for this strategy")}
+    do: {:error, failure(strategy, :disabled, "Adding a passkey is disabled for this strategy")}
 
   # The credential is attached through the strategy's `belongs_to`, keyed by
   # the actor's primary key. An actor of another resource (an admin, an API
@@ -45,7 +54,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.RecentAuthentication do
   def check(%{resource: resource} = strategy, %struct{}, _opts) when struct != resource,
     do:
       {:error,
-       failure(strategy, "Only a #{inspect(resource)} can add a passkey through this strategy")}
+       failure(
+         strategy,
+         :foreign_actor,
+         "Only a #{inspect(resource)} can add a passkey through this strategy"
+       )}
 
   def check(%{add_credential_max_authentication_age: nil}, _actor, _opts), do: :ok
 
@@ -57,13 +70,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.RecentAuthentication do
         if DateTime.diff(DateTime.utc_now(), at, :second) <= max_age do
           :ok
         else
-          {:error, failure(strategy, "A recent authentication is required to add a passkey")}
+          {:error, stale(strategy)}
         end
 
       nil ->
-        {:error, failure(strategy, "A recent authentication is required to add a passkey")}
+        {:error, stale(strategy)}
     end
   end
+
+  defp stale(strategy),
+    do: failure(strategy, :stale, "A recent authentication is required to add a passkey")
 
   @doc """
   When `actor` last authenticated, as far as the request can tell, or `nil`.
@@ -114,13 +130,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.RecentAuthentication do
 
   defp to_datetime(_), do: nil
 
-  defp failure(strategy, message) do
+  defp failure(strategy, reason, message) do
     AuthenticationFailed.exception(
       strategy: strategy,
       caused_by: %{
         module: __MODULE__,
         strategy: strategy,
         action: :add_credential,
+        reason: reason,
         message: message
       }
     )

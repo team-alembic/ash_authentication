@@ -76,7 +76,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   def register(strategy, params, opts \\ []) do
     challenge = Keyword.fetch!(opts, :challenge)
 
-    with {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
+    with :ok <- ensure_enabled(strategy, :register),
+         {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
          {:ok, client_data_json} <- safe_url_decode64(params["client_data_json"]),
          {:ok, registration} <-
            verify_registration(
@@ -104,6 +105,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   @spec sign_in_with_token(WebAuthn.t(), map, keyword) ::
           {:ok, Ash.Resource.Record.t()} | {:error, any}
   def sign_in_with_token(strategy, params, opts \\ []) do
+    with :ok <- ensure_enabled(strategy, :sign_in_with_token) do
+      exchange_sign_in_token(strategy, params, opts)
+    end
+  end
+
+  defp exchange_sign_in_token(strategy, params, opts) do
     opts =
       opts
       |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
@@ -153,7 +160,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     challenge = Keyword.fetch!(opts, :challenge)
     tenant = Keyword.get(opts, :tenant)
 
-    with {:ok, _credential, user} <-
+    with :ok <- ensure_enabled(strategy, :sign_in),
+         {:ok, _credential, user} <-
            run_assertion_ceremony(
              strategy,
              :sign_in,
@@ -198,7 +206,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     challenge = Keyword.fetch!(opts, :challenge)
     tenant = Keyword.get(opts, :tenant)
 
-    with {:ok, _credential, _user} <-
+    with :ok <- ensure_enabled(strategy, :verify),
+         {:ok, _credential, _user} <-
            run_assertion_ceremony(
              strategy,
              :verify,
@@ -466,30 +475,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     do: Query.sort(query, sort)
 
   defp sort_credentials(query, strategy, nil) do
-    case creation_timestamp(strategy.credential_resource) do
+    case WebAuthn.created_at_field(strategy) do
       nil -> query
       field -> Query.sort(query, [{field, :asc}])
     end
-  end
-
-  defp creation_timestamp(resource) do
-    if Ash.Resource.Info.attribute(resource, :inserted_at) do
-      :inserted_at
-    else
-      resource
-      |> Ash.Resource.Info.attributes()
-      |> Enum.find_value(&(create_timestamp?(&1) && &1.name))
-    end
-  end
-
-  @datetime_types [Ash.Type.UtcDatetimeUsec, Ash.Type.UtcDatetime, Ash.Type.DateTime]
-
-  # The shape `create_timestamp` declares: a datetime set to the current time
-  # on create, never written by callers and never touched on update. (An
-  # `update_timestamp` has an `update_default`.)
-  defp create_timestamp?(attribute) do
-    Ash.Type.get_type(attribute.type) in @datetime_types and not attribute.writable? and
-      is_function(attribute.default, 0) and is_nil(attribute.update_default)
   end
 
   @doc "Delete a credential, refusing to delete the last one."
@@ -822,6 +811,34 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       private: %{ash_authentication?: true},
       shared: %{private: %{ash_authentication?: true}}
     }
+
+  # A disabled phase has no action to finish on. Refusing up front keeps a
+  # direct call from running the ceremony (and bumping the credential's sign
+  # count) only to fail on the missing action afterwards.
+  defp ensure_enabled(strategy, action) do
+    if enabled?(strategy, action) do
+      :ok
+    else
+      {:error,
+       AuthenticationFailed.exception(
+         strategy: strategy,
+         caused_by: %{
+           module: __MODULE__,
+           strategy: strategy,
+           action: action,
+           reason: :disabled,
+           message: "The `#{action}` phase is disabled for this strategy"
+         }
+       )}
+    end
+  end
+
+  defp enabled?(strategy, :register), do: strategy.registration_enabled?
+  defp enabled?(strategy, :sign_in), do: strategy.sign_in_enabled?
+  defp enabled?(strategy, :verify), do: strategy.verify_enabled?
+
+  defp enabled?(strategy, :sign_in_with_token),
+    do: WebAuthn.sign_in_with_token_enabled?(strategy)
 
   defp auth_failed(strategy, action, message) do
     AuthenticationFailed.exception(

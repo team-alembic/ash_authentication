@@ -461,9 +461,13 @@ Both flags matter. Registration is a sign-in in its own right: a successful
 `registration_enabled?` at its default would let anyone create a passwordless
 account through the public `registration_challenge`/`register` endpoints and be
 signed in without the primary factor. With both off, the strategy exposes only
-`verify` and `add_credential`, and both require an authenticated actor.
-`mix ash_authentication.add_strategy.webauthn --mode 2fa` generates this
-configuration.
+`verify` and `add_credential`, both of which require an authenticated actor,
+plus `sign_in_with_token`. That one stays because `verify` answers with a
+short-lived sign-in token carrying `webauthn_verified_at`. Exchanging it
+through `sign_in_with_token` gives a session token that carries the claim. The
+exchange only accepts a valid sign-in token for an existing user, so it signs
+no one in on its own. `mix ash_authentication.add_strategy.webauthn --mode 2fa`
+generates this configuration.
 
 ### Multi-tenant
 
@@ -672,7 +676,7 @@ subject name and strategy name, e.g. `/user/webauthn/...`):
 | `register` | POST | Verify attestation, create user + credential |
 | `authentication_challenge` | GET | Request options for signing in |
 | `sign_in` | POST | Verify assertion, issue token |
-| `sign_in_with_token` | POST | Exchange a short-lived sign-in token for a session |
+| `sign_in_with_token` | POST | Exchange a short-lived sign-in token (from `sign_in` or `verify`) for a session |
 | `verify_challenge` | GET | Request options for second-factor verification |
 | `verify` | POST | Prove possession as a second factor |
 | `add_credential_challenge` | GET | Creation options for enrolling another passkey |

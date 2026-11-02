@@ -31,9 +31,10 @@ defmodule AshAuthentication.Strategy.WebAuthn do
     `verify_enabled? true`) — passkeys are only used as a second factor on top
     of another primary credential (e.g. password). The strategy doesn't
     register or sign in users directly; it only verifies an assertion against
-    the *currently authenticated* user. On successful verification, a
-    `webauthn_verified_at` claim is added to the user's authentication token
-    so protected routes can require it.
+    the *currently authenticated* user. A successful verification answers
+    with a short-lived sign-in token carrying a `webauthn_verified_at` claim;
+    exchanging it through `sign_in_with_token` (kept for this mode) yields a
+    session token with that claim, so protected routes can require it.
 
   See the
   [Passkeys as 2FA](https://hexdocs.pm/ash_authentication_phoenix/webauthn-2fa.html)
@@ -493,6 +494,19 @@ defmodule AshAuthentication.Strategy.WebAuthn do
 
   alias AshAuthentication.WebAuthnCredential.Info, as: CredentialInfo
 
+  @doc """
+  Whether the strategy exchanges short-lived sign-in tokens for session tokens.
+
+  Both `sign_in` and `verify` answer with a short-lived token (purpose
+  `"sign_in"`) that is not usable as a bearer token until it is exchanged
+  through the `sign_in_with_token` phase or action. That exchange therefore
+  exists whenever either of them does, including a second-factor-only strategy
+  (`sign_in_enabled? false`, `verify_enabled? true`).
+  """
+  @spec sign_in_with_token_enabled?(t()) :: boolean
+  def sign_in_with_token_enabled?(strategy),
+    do: strategy.sign_in_enabled? || strategy.verify_enabled?
+
   @doc "The attribute on the credential resource which stores the WebAuthn credential ID."
   @spec credential_id_field(t()) :: atom
   def credential_id_field(strategy),
@@ -542,6 +556,37 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   @spec last_used_at_field(t()) :: atom
   def last_used_at_field(strategy),
     do: credential_option!(strategy, &CredentialInfo.webauthn_credential_last_used_at_field!/1)
+
+  @doc """
+  The attribute on the credential resource which records when it was created,
+  or `nil` when it has none.
+
+  `inserted_at` when the resource has one, else the first attribute shaped
+  like a `create_timestamp` (a datetime defaulted on create, not writable and
+  not touched on update). `Actions.list_credentials/3` sorts by it unless
+  given a `:sort`. The extension scaffolds no such attribute, so `nil` is a
+  normal answer.
+  """
+  @spec created_at_field(t()) :: atom | nil
+  def created_at_field(%{credential_resource: resource}) do
+    if Ash.Resource.Info.attribute(resource, :inserted_at) do
+      :inserted_at
+    else
+      resource
+      |> Ash.Resource.Info.attributes()
+      |> Enum.find_value(&(create_timestamp?(&1) && &1.name))
+    end
+  end
+
+  @datetime_types [Ash.Type.UtcDatetimeUsec, Ash.Type.UtcDatetime, Ash.Type.DateTime]
+
+  # The shape `create_timestamp` declares: a datetime set to the current time
+  # on create, never written by callers and never touched on update. (An
+  # `update_timestamp` has an `update_default`.)
+  defp create_timestamp?(attribute) do
+    Ash.Type.get_type(attribute.type) in @datetime_types and not attribute.writable? and
+      is_function(attribute.default, 0) and is_nil(attribute.update_default)
+  end
 
   @doc "The `belongs_to` relationship on the credential resource pointing at the user resource."
   @spec user_relationship_name(t()) :: atom

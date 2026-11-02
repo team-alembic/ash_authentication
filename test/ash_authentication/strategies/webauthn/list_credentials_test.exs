@@ -11,6 +11,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.ListCredentialsTest do
   use DataCase, async: false
 
   alias AshAuthentication.Info
+  alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.Actions
   alias AshAuthentication.Test.WebAuthnCeremony
 
@@ -53,6 +54,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.ListCredentialsTest do
 
     {:ok, newest_first} = Actions.list_credentials(strategy, user, sort: [created_at: :desc])
     assert Enum.map(newest_first, & &1.id) == [second.id, first.id]
+  end
+
+  test "created_at_field/1 names the attribute the default order uses", ctx do
+    assert WebAuthn.created_at_field(ctx.created_at) == :created_at
+    assert WebAuthn.created_at_field(ctx.untimed) == nil
   end
 
   test "a resource without a create timestamp is listed unsorted, without error", ctx do

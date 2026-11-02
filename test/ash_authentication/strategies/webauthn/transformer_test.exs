@@ -122,17 +122,26 @@ defmodule AshAuthentication.Strategy.WebAuthn.TransformerTest do
       assert ResourceInfo.action(user_module, :sign_in_with_webauthn_token)
     end
 
-    test "the sign-in actions are NOT built when sign_in_enabled? is false" do
+    test "the sign-in action is NOT built when sign_in_enabled? is false" do
       {user_module, _credential_module} =
         compile_pair!(strategy_extra: "sign_in_enabled? false")
 
       refute ResourceInfo.action(user_module, :sign_in_with_webauthn),
              "sign_in action must not be built for a verify-only / 2fa deployment"
 
-      refute ResourceInfo.action(user_module, :sign_in_with_webauthn_token),
-             "sign_in_with_token action must not be built for a verify-only / 2fa deployment"
+      # `verify` answers with a sign-in token too, so the exchange stays.
+      assert ResourceInfo.action(user_module, :sign_in_with_webauthn_token),
+             "sign_in_with_token must be built while verify can mint a sign-in token"
 
       # Registration is independent and stays available.
+      assert ResourceInfo.action(user_module, :register_with_webauthn)
+    end
+
+    test "the token exchange is NOT built when neither sign-in nor verify is enabled" do
+      {user_module, _credential_module} =
+        compile_pair!(strategy_extra: "sign_in_enabled? false\nverify_enabled? false")
+
+      refute ResourceInfo.action(user_module, :sign_in_with_webauthn_token)
       assert ResourceInfo.action(user_module, :register_with_webauthn)
     end
   end

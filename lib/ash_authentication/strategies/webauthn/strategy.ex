@@ -30,11 +30,8 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   def phases(strategy) do
     []
     |> maybe_concat(strategy.registration_enabled?, [:registration_challenge, :register])
-    |> maybe_concat(strategy.sign_in_enabled?, [
-      :authentication_challenge,
-      :sign_in,
-      :sign_in_with_token
-    ])
+    |> maybe_concat(strategy.sign_in_enabled?, [:authentication_challenge, :sign_in])
+    |> maybe_append(WebAuthn.sign_in_with_token_enabled?(strategy), :sign_in_with_token)
     |> maybe_concat(strategy.verify_enabled?, [:verify_challenge, :verify])
     |> maybe_concat(strategy.add_credential_enabled?, [:add_credential_challenge, :add_credential])
   end
@@ -44,7 +41,8 @@ defimpl AshAuthentication.Strategy, for: AshAuthentication.Strategy.WebAuthn do
   def actions(strategy) do
     []
     |> maybe_append(strategy.registration_enabled?, :register)
-    |> maybe_concat(strategy.sign_in_enabled?, [:sign_in, :sign_in_with_token])
+    |> maybe_append(strategy.sign_in_enabled?, :sign_in)
+    |> maybe_append(WebAuthn.sign_in_with_token_enabled?(strategy), :sign_in_with_token)
     |> maybe_append(strategy.verify_enabled?, :verify)
     |> maybe_append(strategy.add_credential_enabled?, :add_credential)
   end
