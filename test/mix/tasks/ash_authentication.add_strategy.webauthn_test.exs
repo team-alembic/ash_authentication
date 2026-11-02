@@ -217,7 +217,9 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff =~ "webauthn_rp_name: \"Test\""
   end
 
-  test "does not seed dev.exs `webauthn_origin` (it's resolved at runtime)", %{igniter: igniter} do
+  test "does not seed dev.exs `webauthn_origin` (unset: derived from the rp_id)", %{
+    igniter: igniter
+  } do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
@@ -235,7 +237,9 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff =~ "webauthn_rp_name: \"Test\""
   end
 
-  test "does not seed test.exs `webauthn_origin` (it's resolved at runtime)", %{igniter: igniter} do
+  test "does not seed test.exs `webauthn_origin` (unset: derived from the rp_id)", %{
+    igniter: igniter
+  } do
     result =
       igniter
       |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
@@ -317,6 +321,65 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     diff = diff(result, only: "lib/test/accounts/user.ex")
     refute diff =~ "registration_enabled?(false)"
     refute diff =~ "sign_in_enabled?(false)"
+  end
+
+  test "`--cross-device` leads with the phone, allows the time it needs, and lets a UI ask for it",
+       %{igniter: igniter} do
+    result =
+      Igniter.compose_task(igniter, "ash_authentication.add_strategy.webauthn", [
+        "--cross-device"
+      ])
+
+    diff = diff(result, only: "lib/test/accounts/user.ex")
+    assert diff =~ "hints([:hybrid, :security_key])"
+    assert diff =~ "timeout(180_000)"
+    assert diff =~ "allow_hint_override?(true)"
+  end
+
+  test "without `--cross-device` the strategy keeps the browser's own picker", %{
+    igniter: igniter
+  } do
+    diff =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+      |> diff(only: "lib/test/accounts/user.ex")
+
+    refute diff =~ "hints("
+    refute diff =~ "timeout("
+    refute diff =~ "allow_hint_override?"
+  end
+
+  test "`--cross-device` combines with `--mode 2fa` and `--passkey-only`", %{igniter: igniter} do
+    for args <- [["--mode", "2fa"], ["--passkey-only"]] do
+      diff =
+        igniter
+        |> Igniter.compose_task(
+          "ash_authentication.add_strategy.webauthn",
+          ["--cross-device" | args]
+        )
+        |> diff(only: "lib/test/accounts/user.ex")
+
+      assert diff =~ "hints([:hybrid, :security_key])", "with #{inspect(args)}"
+      assert diff =~ "timeout(180_000)", "with #{inspect(args)}"
+    end
+  end
+
+  # The front door declares none of WebAuthn's flags itself: Igniter merges
+  # the schemas of the tasks it composes, and hands them the same argv.
+  test "`ash_authentication.add_strategy webauthn` forwards the WebAuthn flags", %{
+    igniter: igniter
+  } do
+    diff =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy", [
+        "webauthn",
+        "--passkey-only",
+        "--cross-device"
+      ])
+      |> diff(only: "lib/test/accounts/user.ex")
+
+    assert diff =~ "require_identity?(false)"
+    assert diff =~ "hints([:hybrid, :security_key])"
   end
 
   test "default mode emits `require_identity? true`", %{igniter: igniter} do

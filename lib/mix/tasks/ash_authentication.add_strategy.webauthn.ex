@@ -19,10 +19,23 @@ if Code.ensure_loaded?(Igniter) do
     platform authenticators (Touch ID, Windows Hello), or passkeys.
 
     `rp_id`, `rp_name`, and `origin` are wired through your generated
-    `Secrets` module and read from the application environment, so you can
-    configure them per-environment via `config/dev.exs`, `config/test.exs`,
-    and `config/runtime.exs` (which is seeded with `System.get_env/1` reads
-    of `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`, and `WEBAUTHN_ORIGIN`).
+    `Secrets` module and read from the application environment
+    (`:webauthn_rp_id`, `:webauthn_rp_name`, `:webauthn_origin`), so each
+    environment configures its own:
+
+    * `config/dev.exs` and `config/test.exs` get `rp_id "localhost"` and an
+      `rp_name` from the app name.
+    * `config/runtime.exs` reads `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME` and
+      `WEBAUTHN_ORIGIN` in `:prod`.
+
+    `:webauthn_origin` is left unset everywhere, and an unset `WEBAUTHN_ORIGIN`
+    counts as unset too. Unset is the recommended default: ceremonies are
+    accepted from any `https` origin on the `rp_id` or a subdomain of it (and
+    from `http://localhost` on any port when the `rp_id` is `"localhost"`),
+    which also works behind a TLS-terminating proxy. Set `:webauthn_origin` in
+    an environment's config, as a string or a list, only to restrict that
+    environment to exact origins. See "Relying party and origin" in the WebAuthn
+    guide.
 
     ## Example
 
@@ -39,6 +52,14 @@ if Code.ensure_loaded?(Igniter) do
       on the strategy and skips adding the identity attribute and unique
       identity to the user resource. Users are resolved from the WebAuthn
       credential id alone, so the user resource needs no email-style column.
+    * `--cross-device` - Lead with signing in (and registering) with a phone
+      or tablet, by scanning a QR code ("hybrid" transport). Sets
+      `hints [:hybrid, :security_key]`, raises `timeout` to 180 seconds so
+      the ceremony survives the scan, Bluetooth check and phone prompt, and
+      sets `allow_hint_override? true` so a UI can offer a dedicated "use a
+      phone" button (`?hints=hybrid`). Combines with every mode. Without it,
+      browsers still offer cross-device as one choice among others; this
+      makes it the first.
     * `--name`, `-n` - The strategy name. Defaults to `webauthn`.
     * `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `primary`.
 
@@ -61,6 +82,7 @@ if Code.ensure_loaded?(Igniter) do
           user: :string,
           identity_field: :string,
           passkey_only: :boolean,
+          cross_device: :boolean,
           mode: :string,
           name: :string
         ],
@@ -74,6 +96,7 @@ if Code.ensure_loaded?(Igniter) do
         defaults: [
           identity_field: "email",
           passkey_only: false,
+          cross_device: false,
           mode: "primary",
           name: "webauthn"
         ]
@@ -423,13 +446,26 @@ if Code.ensure_loaded?(Igniter) do
           """
         end
 
+      # The timeout covers a QR scan, the Bluetooth proximity check and the
+      # prompt on the phone; the strategy warns below 120 seconds.
+      cross_device_lines =
+        if options[:cross_device] do
+          """
+            hints [:hybrid, :security_key]
+            timeout 180_000
+            allow_hint_override? true
+          """
+        else
+          ""
+        end
+
       """
       webauthn #{inspect(options[:name])} do
         credential_resource #{inspect(credential_resource)}
         rp_id #{inspect(secrets_module)}
         rp_name #{inspect(secrets_module)}
         origin #{inspect(secrets_module)}
-      #{identity_lines}#{mode_lines}end
+      #{identity_lines}#{mode_lines}#{cross_device_lines}end
       """
     end
 

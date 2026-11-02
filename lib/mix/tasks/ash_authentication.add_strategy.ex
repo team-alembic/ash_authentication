@@ -94,6 +94,15 @@ if Code.ensure_loaded?(Igniter) do
 
       - `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `2fa`.
       - `--name`, `-n` - The name of the TOTP strategy. Defaults to `totp`.
+
+    ## WebAuthn options
+
+      - `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `primary`.
+      - `--passkey-only` - No identity column: users are resolved from their passkey.
+      - `--cross-device` - Lead with signing in with a phone or tablet via QR code.
+      - `--name`, `-n` - The name of the WebAuthn strategy. Defaults to `webauthn`.
+
+      See `mix ash_authentication.add_strategy.webauthn` for details.
     """
 
     def info(_argv, _composing_task) do
