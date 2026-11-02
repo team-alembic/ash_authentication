@@ -26,20 +26,40 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
   @doc """
   Resolve the configured origin allowlist, if any.
 
-  Returns the configured origin or list of origins, or `nil` if the strategy
-  has no origin configured or the configured Secret module returns `:error`
-  for the origin path. `nil` means the origin policy is derived from the
-  RP ID instead — see `AshAuthentication.Strategy.WebAuthn.Origin`.
+  Returns the configured origin or list of origins, or `nil` when no origin
+  is configured. `nil` means the origin policy is derived from the RP ID
+  instead — see `AshAuthentication.Strategy.WebAuthn.Origin`.
 
-  Static values, MFA tuples, and anonymous functions always return a value
-  (or raise if the user-supplied callable does). A Secret module may return
+  "Not configured" covers every way a per-environment setting is commonly
+  left empty, so that leaving it out of one environment's config needs no
+  special handling: no `origin` on the strategy; a Secret module returning
+  `:error` or `{:ok, nil}` (what `Application.fetch_env/2` gives for
+  `config :my_app, webauthn_origin: System.get_env("WEBAUTHN_ORIGIN")` with
+  the variable unset); and an empty string or a list with no non-empty
+  entries, from any source. Empty entries in a list are dropped.
+
+  MFA tuples and anonymous functions may return a string, a list, or `nil`
+  (raising is the callable's own business). A Secret module may return
   `{:ok, origin}` or `{:ok, [origin, ...]}`.
   """
   @spec resolve_origin(WebAuthn.t(), any) :: String.t() | [String.t()] | nil
   def resolve_origin(%{origin: nil}, _tenant), do: nil
 
-  def resolve_origin(%{origin: origin} = strategy, tenant),
-    do: resolve(:origin, origin, strategy, tenant)
+  def resolve_origin(%{origin: origin} = strategy, tenant) do
+    :origin
+    |> resolve(origin, strategy, tenant)
+    |> configured_origins()
+  end
+
+  defp configured_origins(origins) when is_list(origins) do
+    case Enum.reject(origins, &(&1 in [nil, ""])) do
+      [] -> nil
+      origins -> origins
+    end
+  end
+
+  defp configured_origins(""), do: nil
+  defp configured_origins(origin), do: origin
 
   defp resolve(_key, value, _strategy, _tenant) when is_binary(value), do: value
   defp resolve(:origin, origins, _strategy, _tenant) when is_list(origins), do: origins
@@ -62,6 +82,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Helpers do
 
       {:ok, origins} when key == :origin and is_list(origins) ->
         origins
+
+      {:ok, nil} when key == :origin ->
+        nil
 
       {:ok, other} ->
         raise "Expected #{inspect(secret_module)} `secret_for/4` for #{inspect(path)} to return `{:ok, binary}`, got `{:ok, #{inspect(other)}}`."

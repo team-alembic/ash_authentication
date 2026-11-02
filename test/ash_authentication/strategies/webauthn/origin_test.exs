@@ -19,6 +19,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.OriginTest do
     def secret_for([:authentication, :strategies, :many, :origin], _, _, _),
       do: {:ok, ["https://a.example.com", "https://b.example.com"]}
 
+    def secret_for([:authentication, :strategies, nil, :origin], _, _, _), do: {:ok, nil}
+    def secret_for([:authentication, :strategies, :empty, :origin], _, _, _), do: {:ok, ""}
+    def secret_for([:authentication, :strategies, :none, :origin], _, _, _), do: {:ok, []}
+
+    def secret_for([:authentication, :strategies, :blanks, :origin], _, _, _),
+      do: {:ok, ["", nil]}
+
+    def secret_for([:authentication, :strategies, :with_blank, :origin], _, _, _),
+      do: {:ok, ["", "https://app.example.com"]}
+
     def secret_for(_, _, _, _), do: :error
   end
 
@@ -70,6 +80,27 @@ defmodule AshAuthentication.Strategy.WebAuthn.OriginTest do
     test "a Secret answering :error falls back to the rp_id policy" do
       assert Origin.policy(strategy(name: :unknown, origin: {Secrets, []}), nil) ==
                %{rp_id: "example.com"}
+    end
+
+    # `config :my_app, webauthn_origin: System.get_env("WEBAUTHN_ORIGIN")`
+    # with the variable unset stores `nil`, so `Application.fetch_env/2`
+    # answers `{:ok, nil}`. That's an environment that leaves the origin
+    # unset, not a broken Secret.
+    for {name, value} <- [nil: nil, empty: "", none: [], blanks: ["", nil]] do
+      test "a Secret answering {:ok, #{inspect(value)}} falls back to the rp_id policy" do
+        assert Origin.policy(strategy(name: unquote(name), origin: {Secrets, []}), nil) ==
+                 %{rp_id: "example.com"}
+      end
+    end
+
+    test "empty entries are dropped from a configured list" do
+      assert Origin.policy(strategy(name: :with_blank, origin: {Secrets, []}), nil) ==
+               %{allow: ["https://app.example.com"]}
+    end
+
+    test "a tenant function answering nil or \"\" falls back to the rp_id policy" do
+      assert Origin.policy(strategy(origin: fn _ -> nil end), "acme") == %{rp_id: "example.com"}
+      assert Origin.policy(strategy(origin: fn _ -> "" end), "acme") == %{rp_id: "example.com"}
     end
   end
 
