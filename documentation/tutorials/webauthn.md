@@ -84,6 +84,22 @@ end
 
 Run `mix ash.codegen add_webauthn` to generate the migrations.
 
+Literal `rp_id` and `rp_name` values keep the example short. A real
+application reads them from config, so each environment can have its own,
+which is what the generator does:
+
+```bash
+mix ash_authentication.add_strategy.webauthn                    # identity + passkey
+mix ash_authentication.add_strategy.webauthn --passkey-only     # no identity column
+mix ash_authentication.add_strategy.webauthn --mode 2fa         # second factor only
+mix ash_authentication.add_strategy.webauthn --cross-device     # lead with phone / QR code
+```
+
+The flags combine. The generator creates the credential resource, adds the
+strategy to the user resource, and wires the relying party through your
+`Secrets` module and config. See
+[Relying party and origin](#relying-party-and-origin).
+
 ### How the two resources fit together
 
 The credential resource's `webauthn_credential` section is the single source
@@ -155,6 +171,141 @@ compile error for strategies using the default adapter. The one dependency
 that stays is `cbor`, which the credential extension's `CoseKey` type uses
 to store public keys — COSE keys are CBOR by specification, whatever
 verifies them.
+
+## Relying party and origin
+
+Three settings say *who* the passkeys belong to and *where* they may be used:
+
+- **`rp_id`**: the domain passkeys are bound to, e.g. `"example.com"`. A
+  passkey only works for the RP ID it was created under, on that domain and
+  its subdomains, so changing it later strands every existing passkey. It is
+  a host name, not a URL. It can't be an IP address: use `"localhost"` in
+  development, not `127.0.0.1`.
+- **`rp_name`**: the human-readable name shown in the browser's passkey
+  dialog.
+- **`origin`**: which web origins (scheme + host + port, e.g.
+  `"https://app.example.com"`) ceremonies are accepted from. **Optional, and
+  best left unset.**
+
+### The default: no `origin`
+
+The browser signs the page's origin into every ceremony, and the server must
+check it. With `origin` unset, the check is derived from the `rp_id`:
+
+- any `https` origin whose host is the `rp_id` or a subdomain of it, on any
+  port, is accepted;
+- when the `rp_id` is `"localhost"`, `http://localhost` on any port is
+  accepted too, since browsers treat localhost as a secure context.
+
+That is exactly the set of origins a browser lets use that RP ID in the first
+place, so nothing is granted that the browser hadn't already. The RP ID hash
+in the signed authenticator data is checked separately as well.
+
+The expected origin never comes from the request. Behind a TLS-terminating
+proxy or load balancer, the request says `http://10.0.0.5:4000` while the
+browser truthfully reports `https://app.example.com`. A check built on the
+request would reject every ceremony, so none is made. The default therefore
+needs no configuration in development (any port), in production behind a
+proxy, or across several subdomains. No `Plug.RewriteOn` is needed for
+WebAuthn's sake either.
+
+### Configuring it per environment
+
+`mix ash_authentication.add_strategy.webauthn` points all three settings at
+your `Secrets` module, which reads them from the application environment:
+
+```elixir
+# the strategy, on the user resource
+webauthn do
+  credential_resource MyApp.Accounts.WebAuthnCredential
+  rp_id MyApp.Secrets
+  rp_name MyApp.Secrets
+  origin MyApp.Secrets
+  # ...
+end
+
+# lib/my_app/secrets.ex
+def secret_for([:authentication, :strategies, :webauthn, :rp_id], MyApp.Accounts.User, _, _),
+  do: Application.fetch_env(:my_app, :webauthn_rp_id)
+
+def secret_for([:authentication, :strategies, :webauthn, :rp_name], MyApp.Accounts.User, _, _),
+  do: Application.fetch_env(:my_app, :webauthn_rp_name)
+
+def secret_for([:authentication, :strategies, :webauthn, :origin], MyApp.Accounts.User, _, _),
+  do: Application.fetch_env(:my_app, :webauthn_origin)
+```
+
+and seeds each environment's config, leaving `:webauthn_origin` unset:
+
+```elixir
+# config/dev.exs and config/test.exs
+config :my_app,
+  webauthn_rp_id: "localhost",
+  webauthn_rp_name: "My App"
+
+# config/runtime.exs
+if config_env() == :prod do
+  config :my_app,
+    webauthn_rp_id: System.get_env("WEBAUTHN_RP_ID"),
+    webauthn_rp_name: System.get_env("WEBAUTHN_RP_NAME"),
+    webauthn_origin: System.get_env("WEBAUTHN_ORIGIN")
+end
+```
+
+An origin that's left out of an environment's config counts as unset, and so
+does `nil`, `""` or `[]`. So `WEBAUTHN_ORIGIN` can simply be left undefined in
+production.
+
+### Setting `origin` explicitly
+
+Set `:webauthn_origin` in an environment's config when that environment should
+accept **only** particular origins: for example, a public site whose RP ID also
+covers subdomains you don't want ceremonies on, or a development setup pinned
+to one port. The value is a string or a list of strings, and becomes an
+**exact-match allowlist, port included**:
+
+```elixir
+# config/dev.exs: only the Phoenix server, over http and the https dev cert
+config :my_app,
+  webauthn_origin: ["http://localhost:4000", "https://localhost:4001"]
+
+# config/test.exs: only the test endpoint
+config :my_app, webauthn_origin: "http://localhost:4002"
+
+# config/runtime.exs: one or more origins from the environment, comma-separated
+if config_env() == :prod do
+  config :my_app,
+    webauthn_origin:
+      "WEBAUTHN_ORIGIN"
+      |> System.get_env("")
+      |> String.split(",", trim: true)
+end
+```
+
+With `WEBAUTHN_ORIGIN="https://example.com,https://app.example.com"` that
+accepts exactly those two. With the variable undefined the list is empty, and
+the default applies.
+
+Write origins the way browsers serialize them:
+- a scheme, a host and an optional port, with no path and **no trailing
+  slash**;
+- the default port left out (`https://example.com`, not
+  `https://example.com:443`).
+
+Every entry must still be on the `rp_id` or a subdomain of it: a browser won't
+use the RP ID anywhere else, so listing another domain doesn't make it work.
+
+A literal `origin "https://example.com"` (or a list) on the strategy also
+works, and is checked at compile time. So is a 1-arity function or MFA of the
+tenant, for [multi-tenant](#multi-tenant) setups. A Secret, function or MFA is
+resolved per ceremony. See `AshAuthentication.Strategy.WebAuthn.Origin`.
+
+> #### Phoenix checks origins too {: .info}
+>
+> WebAuthn's origin check is separate from your endpoint's. A LiveView-based
+> UI also needs the endpoint's `check_origin` (and `url`) to accept every
+> origin users reach it on, behind a proxy or tunnel too, or the socket fails
+> before any ceremony starts.
 
 ## Discoverable and non-discoverable credentials
 
@@ -341,8 +492,10 @@ end
 ```
 
 Each tenant's ceremonies are then accepted from any `https` origin on that
-tenant's RP ID or a subdomain of it. To pin a tenant to particular origins,
-give `origin` a per-tenant function too:
+tenant's RP ID or a subdomain of it (see
+[Relying party and origin](#relying-party-and-origin)). To pin a tenant to
+particular origins, give `origin` a per-tenant function too. Returning `nil`
+for a tenant leaves that tenant on the default:
 
 ```elixir
 origin {MyApp.WebAuthn, :origins_for_tenant, []}
@@ -356,31 +509,9 @@ the request, which the strategy doesn't do: the RP ID scopes every credential
 and must be a fixed property of the relying party, not of whichever host a
 request happened to arrive on.
 
-> ### Origins, ports and proxies {: .info}
->
-> The WebAuthn origin is scheme + host + port. The browser signs it into
-> every ceremony and the server must check it — but what the server checks
-> it *against* comes from configuration, never from the request that minted
-> the challenge. Behind a TLS-terminating proxy or load balancer that
-> request says `http://10.0.0.5:4000` while the browser truthfully reports
-> `https://app.example.com`; a check built on the request would reject
-> every ceremony, so none is made.
->
-> - **`origin` not set** (the default): accept any `https` origin whose host
->   is the `rp_id` or a subdomain of it, on any port. That is exactly the set
->   of origins a browser lets use that RP ID, so nothing is granted the browser
->   hadn't already — and the RP ID hash in the signed authenticator data is
->   checked separately. `http://localhost[:port]` is accepted too when the
->   `rp_id` is `"localhost"`. Development on a non-standard port needs no
->   configuration.
-> - **`origin` set**: an allowlist of exact origins, port included. Use it to
->   restrict ceremonies to specific hosts or ports: a string, a list, a
->   per-tenant function or MFA returning either, or an
->   `AshAuthentication.Secret`.
->
-> No `Plug.RewriteOn` is needed for WebAuthn's sake, and the `Actions`
-> challenge functions take no `origin:` option (they raise if given one).
-> See `AshAuthentication.Strategy.WebAuthn.Origin`.
+Code driving the ceremonies through `AshAuthentication.Strategy.WebAuthn.Actions`
+instead of the plug passes no origin either: the challenge functions take no
+`origin:` option, and raise if given one.
 
 ## Cross-device sign-in (QR code / hybrid transport)
 
@@ -412,6 +543,16 @@ webauthn do
   timeout 300_000
 end
 ```
+
+`mix ash_authentication.add_strategy.webauthn --cross-device` sets this up:
+`hints [:hybrid, :security_key]`, `timeout 180_000`, and
+`allow_hint_override? true` for a dedicated phone button (see
+[Per-ceremony hints](#per-ceremony-hints)).
+
+Without any of this, browsers still offer "use a phone or tablet" as one choice
+in their picker. `hints` only makes it the first choice, and the longer
+timeout keeps it from expiring. So cross-device sign-in is a matter of
+emphasis and time, not a separate mode.
 
 `hints` orders the kinds of authenticator the browser should lead with:
 `:hybrid` (another device, via QR), `:security_key` (removable USB/NFC), and
