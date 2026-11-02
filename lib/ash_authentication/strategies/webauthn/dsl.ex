@@ -142,10 +142,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
 
               origin {MyApp.WebAuthn, :origins_for_tenant, []}
 
-          **Application-environment-driven** — an `AshAuthentication.Secret`
+          **Per environment** (what the generator sets up) — an
+          `AshAuthentication.Secret` reading the application environment and
           returning `{:ok, origin}` or `{:ok, [origin, ...]}`:
 
               origin MyApp.Secrets
+
+          A dynamic value that comes back `nil`, `""` or `[]` (or a Secret
+          answering `:error`) counts as not set, so an environment that leaves
+          `:webauthn_origin` out of its config gets the default policy. See
+          "Relying party and origin" in the WebAuthn guide.
           """,
           required: false
         ],
