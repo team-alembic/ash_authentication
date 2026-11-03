@@ -331,6 +331,27 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert reloaded.hashed_password == other.hashed_password
     end
 
+    test "the reset action validates against an unsaved record, as a reset form does" do
+      user = build_user()
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      assert {:ok, token} = Password.reset_token_for(strategy, user)
+
+      new_password = password()
+
+      # AshAuthenticationPhoenix builds its reset form on the bare resource, so
+      # the token's subject has no record to be compared against yet.
+      changeset =
+        Example.User
+        |> struct()
+        |> Ash.Changeset.for_update(strategy.resettable.password_reset_action_name, %{
+          "reset_token" => token,
+          "password" => new_password,
+          "password_confirmation" => new_password
+        })
+
+      assert changeset.valid?
+    end
+
     test "the token can only be used once" do
       user = build_user()
       {:ok, strategy} = Info.strategy(Example.User, :password)
