@@ -164,6 +164,7 @@ defmodule AshAuthentication.Strategy.OAuth2.Transformer do
        when is_falsy(strategy.identity_resource),
        do: :ok
 
+  # sobelow_skip ["DOS.ModuleConcat"]
   defp maybe_validate_action_has_identity_change(action, %module{}) when module != OAuth2 do
     # Allow strategies built on top of OAuth2 (e.g. DynamicOidc) to register
     # their own identity-change variants without falling back to the OAuth2

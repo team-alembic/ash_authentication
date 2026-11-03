@@ -334,6 +334,7 @@ if Code.ensure_loaded?(Igniter) do
         MyApp.Accounts
     """
     @spec parent_module(module()) :: module()
+    # sobelow_skip ["DOS.ModuleConcat"]
     def parent_module(module) do
       module |> Module.split() |> :lists.droplast() |> Module.concat()
     end
