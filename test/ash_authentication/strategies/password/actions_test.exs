@@ -13,9 +13,99 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
     Errors.InvalidToken,
     Info,
     Jwt,
+    Strategy,
     Strategy.Password,
     Strategy.Password.Actions
   }
+
+  defmodule TokensDisabledDomain do
+    @moduledoc false
+    use Ash.Domain, validate_config_inclusion?: false
+
+    resources do
+      allow_unregistered? true
+    end
+  end
+
+  # Authentication tokens are disabled by default; the password strategy
+  # supports that when `sign_in_tokens_enabled?` is false.
+  defmodule UserWithTokensDisabled do
+    @moduledoc false
+    use Ash.Resource,
+      data_layer: Ash.DataLayer.Ets,
+      extensions: [AshAuthentication],
+      domain: TokensDisabledDomain
+
+    attributes do
+      uuid_primary_key :id, writable?: true
+      attribute :email, :ci_string, allow_nil?: false, public?: true
+      attribute :hashed_password, :string, allow_nil?: true, sensitive?: true, public?: false
+    end
+
+    actions do
+      defaults [:read]
+    end
+
+    authentication do
+      strategies do
+        password do
+          identity_field :email
+          sign_in_tokens_enabled? false
+        end
+      end
+    end
+
+    identities do
+      identity :unique_email, [:email], pre_check_with: TokensDisabledDomain
+    end
+  end
+
+  describe "sign_in/2 with authentication tokens disabled" do
+    test "signs the user in without minting a token" do
+      refute Info.authentication_tokens_enabled?(UserWithTokensDisabled)
+      {user, password} = build_user_with_tokens_disabled()
+      {:ok, strategy} = Info.strategy(UserWithTokensDisabled, :password)
+
+      assert {:ok, signed_in} =
+               Actions.sign_in(strategy, %{"email" => user.email, "password" => password}, [])
+
+      refute Map.has_key?(signed_in.__metadata__, :token)
+      assert signed_in.__metadata__[:authentication_strategies] == [:password]
+    end
+
+    test "returns an authentication error when the password is wrong" do
+      {user, _password} = build_user_with_tokens_disabled()
+      {:ok, strategy} = Info.strategy(UserWithTokensDisabled, :password)
+
+      assert {:error, %AuthenticationFailed{}} =
+               Actions.sign_in(strategy, %{"email" => user.email, "password" => "wrong"}, [])
+    end
+
+    test "Strategy.action/4 signs the user in" do
+      {user, password} = build_user_with_tokens_disabled()
+      strategy = Info.strategy!(UserWithTokensDisabled, :password)
+
+      assert {:ok, signed_in} =
+               Strategy.action(strategy, :sign_in, %{email: user.email, password: password}, [])
+
+      refute Map.has_key?(signed_in.__metadata__, :token)
+    end
+  end
+
+  defp build_user_with_tokens_disabled do
+    password = password()
+
+    user =
+      UserWithTokensDisabled
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: "user_#{System.unique_integer([:positive])}@example.com",
+        password: password,
+        password_confirmation: password
+      })
+      |> Ash.create!()
+
+    {user, password}
+  end
 
   describe "sign_in/2" do
     test "it signs the user in when the username and password are correct" do
