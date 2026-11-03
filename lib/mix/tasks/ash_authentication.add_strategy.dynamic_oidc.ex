@@ -191,13 +191,15 @@ if Code.ensure_loaded?(Igniter) do
           "--extend",
           extensions
         ])
+        # A second `use Ash.Resource` would reset the DSL `ash.gen.resource`
+        # wrote, so the extension joins the existing one.
+        |> Igniter.compose_task("ash.extend", [
+          inspect(connection_resource),
+          "AshAuthentication.OidcConnection"
+        ])
         |> Igniter.Project.Module.find_and_update_module!(connection_resource, fn zipper ->
           {:ok,
            Igniter.Code.Common.add_code(zipper, """
-
-           use Ash.Resource,
-             extensions: [AshAuthentication.OidcConnection]
-
            oidc_connection do
              domain #{inspect(options[:accounts])}
            end
