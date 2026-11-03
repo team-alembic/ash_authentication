@@ -308,6 +308,31 @@ defmodule DataCase do
     end)
   end
 
+  @doc "User with authentication tokens disabled factory"
+  @spec build_user_with_tokens_disabled(keyword) ::
+          Example.UserWithTokensDisabled.t() | no_return
+  def build_user_with_tokens_disabled(attrs \\ []) do
+    password = password()
+
+    attrs =
+      attrs
+      |> Map.new()
+      |> Map.put_new(:email, "user_#{System.unique_integer([:positive])}@example.com")
+      |> Map.put_new(:password, password)
+      |> Map.put_new(:password_confirmation, password)
+
+    user =
+      Example.UserWithTokensDisabled
+      |> Ash.Changeset.new()
+      |> Ash.Changeset.for_create(:register_with_password, attrs)
+      |> Ash.create!()
+
+    attrs
+    |> Enum.reduce(user, fn {field, value}, user ->
+      Ash.Resource.put_metadata(user, field, value)
+    end)
+  end
+
   @doc "User with excluded actions factory"
   @spec build_user_with_excluded_actions(keyword) ::
           Example.UserWithExcludedActions.t() | no_return
