@@ -339,6 +339,29 @@ defmodule AshAuthentication.AddOn.AuditLog.Auditor do
 
     attributes
     |> Map.merge(arguments)
+    |> Map.new(fn {name, value} -> {name, serialise_value(value)} end)
+  end
+
+  # Params are stored as JSON, which a record cannot be: `log_out_everywhere`,
+  # for one, takes the user as an argument. A record of an authenticated
+  # resource is stored as its subject; any other as its resource and primary
+  # key.
+  defp serialise_value(%resource{} = record) do
+    if Ash.Resource.Info.resource?(resource), do: serialise_record(record), else: record
+  end
+
+  defp serialise_value(values) when is_list(values), do: Enum.map(values, &serialise_value/1)
+  defp serialise_value(value), do: value
+
+  defp serialise_record(%resource{} = record) do
+    if AshAuthentication in Spark.extensions(resource) do
+      AshAuthentication.user_to_subject(record)
+    else
+      resource
+      |> Ash.Resource.Info.primary_key()
+      |> then(&Map.take(record, &1))
+      |> Map.put(:resource, inspect(resource))
+    end
   end
 
   defp get_named_arguments(input, argument_names), do: Map.take(input.arguments, argument_names)

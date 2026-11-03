@@ -40,6 +40,10 @@ defmodule Example.UserWithTokenRequired do
       log_out_everywhere do
         apply_on_password_change?(true)
       end
+
+      audit_log do
+        audit_log_resource(Example.AuditLog)
+      end
     end
 
     strategies do

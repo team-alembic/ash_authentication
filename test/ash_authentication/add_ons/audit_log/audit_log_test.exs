@@ -413,6 +413,21 @@ defmodule AshAuthentication.AddOn.AuditLogTest do
       assert Map.has_key?(log.extra_data["params"], "email")
     end
 
+    test "it records an action whose argument is a record, by the record's subject" do
+      user = build_user_with_token_required()
+      strategy = Info.strategy!(Example.UserWithTokenRequired, :log_out_everywhere)
+
+      assert :ok = Strategy.action(strategy, :log_out_everywhere, %{user: user}, [])
+      Batcher.flush()
+
+      subject = AshAuthentication.user_to_subject(user)
+
+      assert [%{status: :success, extra_data: %{"params" => %{"user" => ^subject}}}] =
+               Example.AuditLog
+               |> Ash.Query.filter(action_name == :log_out_everywhere)
+               |> Ash.read!(authorize?: false)
+    end
+
     test "it captures logged_at timestamp" do
       user = build_user_with_audit_log()
       before_time = DateTime.utc_now()
