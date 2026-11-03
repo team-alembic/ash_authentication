@@ -11,6 +11,43 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.16](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.15...v5.0.0-rc.16) (2026-11-03)
+
+
+
+
+### Bug Fixes:
+
+* [security] require assent ~> 0.3.2, which fixes [EEF-CVE-2026-117656](https://osv.dev/vulnerability/EEF-CVE-2026-117656) in Sign in with Apple, and update jose to 1.11.13 by Zach Daniel
+
+* use Ash.Resource.Record.t() in the Jwt.subject_matches_record?/2 spec by Zach Daniel
+
+* authorize stored-token lookups for revocation instead of skipping authorization by smellyboy55
+
+* don't rewrite an anonymous session in retrieve_from_session (#1236) by Onni Hakala
+
+* oauth2: don't warn about unverified emails when registration is disabled (#1250) by Vasilis Spilka
+
+* audit_log: store record arguments by subject, so their events can be written (#1246) by azmaveth
+
+* dynamic_oidc: generate an OidcConnection resource that compiles (#1248) by azmaveth
+
+* accept a reset token when validating against an unsaved record by Zach Daniel
+
+* order AshAuthentication's transformers after SetPrimaryActions by Zach Daniel
+
+* otp: accept IdentityBruteForcePreparation on a hand-written OTP sign-in by Zach Daniel
+
+* [security] totp: bind confirm_setup to its setup token's user, and let policies govern the setup actions ([CVE-2026-119215](https://cna.erlef.org/cves/CVE-2026-119215.html), [GHSA-gx67-694c-655c](https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-gx67-694c-655c)) by Zach Daniel
+
+* [security] log_out_everywhere: revoke tokens on every password change, and let resets succeed ([CVE-2026-110826](https://cna.erlef.org/cves/CVE-2026-110826.html), [GHSA-j6f8-qcj9-gh4r](https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-j6f8-qcj9-gh4r)) by azmaveth
+
+* [security] refuse a preparation-based OTP brute_force_strategy with registration ([CVE-2026-118505](https://cna.erlef.org/cves/CVE-2026-118505.html), [GHSA-55gf-3263-4r39](https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-55gf-3263-4r39)) by Zach Daniel
+
+* [security] refuse a brute_force_strategy whose actions lack its preparation ([CVE-2026-118505](https://cna.erlef.org/cves/CVE-2026-118505.html), [GHSA-55gf-3263-4r39](https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-55gf-3263-4r39)) by azmaveth
+
+* update transformer ordering by Zach Daniel
+
 ## [v5.0.0-rc.15](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.14...v5.0.0-rc.15) (2026-10-16)
 ### Breaking Changes:
 
