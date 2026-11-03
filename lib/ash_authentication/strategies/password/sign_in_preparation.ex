@@ -156,7 +156,7 @@ defmodule AshAuthentication.Strategy.Password.SignInPreparation do
     if AshAuthentication.Info.authentication_tokens_enabled?(record.__struct__) do
       generate_token(purpose, record, strategy, extra_claims, opts)
     else
-      maybe_add_authentication_metadata(purpose, record)
+      {:ok, maybe_add_authentication_metadata(purpose, record)}
     end
   end
 

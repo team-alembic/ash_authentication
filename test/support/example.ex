@@ -34,6 +34,7 @@ defmodule Example do
     resource Example.UserWithRenamedAuditLog
     resource Example.UserWithSelectiveStrategyIncludes
     resource Example.UserWithTokenRequired
+    resource Example.UserWithTokensDisabled
     resource Example.UserWithUnselectedConfirmation
     resource Example.UserWithTotp
     resource Example.UserWithTotpConfirmSetup
