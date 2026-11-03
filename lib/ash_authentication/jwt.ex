@@ -279,7 +279,7 @@ defmodule AshAuthentication.Jwt do
   a second read only adds a query which a customised `get_by_subject` action
   could answer with a different record.
   """
-  @spec subject_matches_record?(String.t() | nil, Ash.Resource.record()) :: boolean
+  @spec subject_matches_record?(String.t() | nil, Ash.Resource.Record.t()) :: boolean
   def subject_matches_record?(subject, %resource{} = record) when is_binary(subject) do
     subject_name =
       resource
