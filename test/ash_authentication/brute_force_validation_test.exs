@@ -363,5 +363,69 @@ defmodule AshAuthentication.BruteForceValidationTest do
       assert output =~ ~r/registration_enabled\?.*sign-in attempts would not be limited/s
       assert output =~ "Use `:rate_limit`"
     end
+
+    test "a hand-written sign-in action with the identity preparation is accepted" do
+      output =
+        capture_io(:stderr, fn ->
+          defmodule OtpSignInWithIdentityCheck do
+            @moduledoc false
+            use Ash.Resource,
+              data_layer: Ash.DataLayer.Ets,
+              extensions: [AshAuthentication],
+              domain: TestDomain
+
+            attributes do
+              uuid_primary_key :id
+              attribute :email, :ci_string, allow_nil?: false, public?: true
+            end
+
+            actions do
+              defaults [:read, :create]
+
+              read :sign_in_with_otp do
+                get? true
+                argument :email, :ci_string, allow_nil?: false
+                argument :otp, :string, allow_nil?: false, sensitive?: true
+
+                prepare {AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation,
+                         action_name: :sign_in_with_otp}
+
+                prepare AshAuthentication.Strategy.Otp.SignInPreparation
+              end
+            end
+
+            authentication do
+              session_identifier :jti
+
+              tokens do
+                enabled? true
+                token_resource Example.Token
+                signing_secret "test_secret_at_least_64_characters_long_for_proper_security"
+              end
+
+              add_ons do
+                audit_log do
+                  audit_log_resource TestAuditLog
+                end
+              end
+
+              strategies do
+                otp do
+                  identity_field :email
+                  sender fn _user, _otp, _opts -> :ok end
+                  brute_force_strategy {:audit_log, :audit_log}
+                end
+              end
+            end
+
+            identities do
+              identity :unique_email, [:email], pre_check_with: TestDomain
+            end
+          end
+        end)
+
+      refute output =~ "would not be limited"
+      refute output =~ "DslError"
+    end
   end
 end

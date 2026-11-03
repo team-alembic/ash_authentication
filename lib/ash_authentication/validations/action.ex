@@ -223,50 +223,53 @@ defmodule AshAuthentication.Validations.Action do
   for it, so without this check a configured `brute_force_strategy` would
   protect nothing.
 
-  `audit_log_preparation` is the preparation the strategy uses for
-  `brute_force_strategy {:audit_log, name}`.
+  `audit_log_preparations` is the preparation the strategy uses for
+  `brute_force_strategy {:audit_log, name}`, or a list of preparations any one
+  of which protects the action. The first is the one the error suggests.
   """
-  @spec validate_brute_force_preparation(Actions.action(), map, module) ::
+  @spec validate_brute_force_preparation(Actions.action(), map, module | [module, ...]) ::
           :ok | {:error, Exception.t()}
-  def validate_brute_force_preparation(action, strategy, audit_log_preparation) do
+  def validate_brute_force_preparation(action, strategy, audit_log_preparations) do
     case Map.get(strategy, :brute_force_strategy) do
       {:audit_log, _audit_log_name} ->
+        [suggested | _] = preparations = List.wrap(audit_log_preparations)
+
         require_brute_force_preparation(
           action,
           strategy,
-          audit_log_preparation,
-          "{#{inspect(audit_log_preparation)}, action_name: #{inspect(action.name)}}"
+          preparations,
+          "{#{inspect(suggested)}, action_name: #{inspect(action.name)}}"
         )
 
       {:preparation, preparation} ->
-        require_brute_force_preparation(action, strategy, preparation, inspect(preparation))
+        require_brute_force_preparation(action, strategy, [preparation], inspect(preparation))
 
       _ ->
         :ok
     end
   end
 
-  defp require_brute_force_preparation(action, strategy, preparation, prepare_line) do
-    case validate_action_has_preparation(action, preparation) do
-      :ok ->
-        :ok
+  defp require_brute_force_preparation(action, strategy, preparations, prepare_line) do
+    if Enum.any?(preparations, &(validate_action_has_preparation(action, &1) == :ok)) do
+      :ok
+    else
+      [suggested | _] = preparations
 
-      {:error, _} ->
-        {:error,
-         DslError.exception(
-           path: [:actions, action.name],
-           message: """
-           The `brute_force_strategy` of the #{inspect(strategy.name)} strategy applies to the
-           action `#{inspect(action.name)}`, but that action is defined without the
-           `#{inspect(preparation)}` preparation, so attempts on it would not be limited.
+      {:error,
+       DslError.exception(
+         path: [:actions, action.name],
+         message: """
+         The `brute_force_strategy` of the #{inspect(strategy.name)} strategy applies to the
+         action `#{inspect(action.name)}`, but that action is defined without the
+         `#{inspect(suggested)}` preparation, so attempts on it would not be limited.
 
-           Add this to the action:
+         Add this to the action:
 
-               prepare #{prepare_line}
+             prepare #{prepare_line}
 
-           or remove the action definition to use the one the strategy generates.
-           """
-         )}
+         or remove the action definition to use the one the strategy generates.
+         """
+       )}
     end
   end
 

@@ -252,14 +252,18 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
   # by hand, or by `mix ash_authentication.add_strategy.otp`, has only the
   # preparations written for it. Both preparation-based strategies refuse
   # `registration_enabled? true`, so the sign-in action here is always a read.
+  #
+  # The generated sign-in uses `BruteForcePreparation`, which counts failures by
+  # the resolved user. `IdentityBruteForcePreparation` counts them by the
+  # submitted identity, which the audit log records for OTP sign-ins too, so it
+  # protects a hand-written sign-in equally well.
   defp validate_brute_force_preparations(dsl_state, strategy) do
     with {:ok, sign_in} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
          :ok <-
-           validate_brute_force_preparation(
-             sign_in,
-             strategy,
-             AshAuthentication.AddOn.AuditLog.BruteForcePreparation
-           ),
+           validate_brute_force_preparation(sign_in, strategy, [
+             AshAuthentication.AddOn.AuditLog.BruteForcePreparation,
+             AshAuthentication.AddOn.AuditLog.IdentityBruteForcePreparation
+           ]),
          {:ok, request} <- validate_action_exists(dsl_state, strategy.request_action_name) do
       validate_brute_force_preparation(
         request,
