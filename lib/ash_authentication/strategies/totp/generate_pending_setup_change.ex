@@ -36,9 +36,12 @@ defmodule AshAuthentication.Strategy.Totp.GeneratePendingSetupChange do
     end
   end
 
+  # This change does not mark the changeset as an AshAuthentication
+  # interaction. `AshAuthentication.Strategy.Totp.Actions.setup/3` does, for
+  # the record it was given; a direct call to the action is left to the
+  # resource's policies, which decide whose setup token and secret it returns.
   defp do_change(changeset, strategy, context) do
     changeset
-    |> Changeset.set_context(%{private: %{ash_authentication?: true}})
     |> Changeset.after_action(fn _changeset, user ->
       with {:ok, secret, totp_url} <- generate_secret_and_url(user, strategy),
            {:ok, setup_token} <-

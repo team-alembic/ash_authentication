@@ -60,7 +60,7 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
          true <-
            to_string(strategy.confirm_action_name) == action,
          true <-
-           subject_matches_record?(changeset, subject),
+           Jwt.subject_matches_record?(subject, changeset.data),
          {:ok, token_resource} <-
            Info.authentication_tokens_token_resource(changeset.resource),
          {:ok, changes} <- Actions.get_changes(strategy, jti, opts) do
@@ -80,33 +80,6 @@ defmodule AshAuthentication.AddOn.Confirmation.ConfirmChange do
           changeset,
           InvalidArgument.exception(field: :confirm, message: "is not valid")
         )
-    end
-  end
-
-  # The token names the record it was issued for in its `sub` claim. Without
-  # this comparison the stored changes for one user are applied to whichever
-  # record the caller points the action at.
-  #
-  # The primary key is compared against `changeset.data` rather than resolved
-  # with `AshAuthentication.subject_to_user/3`: the record is already loaded,
-  # so a second read only adds a query which a customised `get_by_subject`
-  # action could answer with a different record.
-  defp subject_matches_record?(changeset, subject) do
-    subject_name =
-      changeset.resource
-      |> Info.authentication_subject_name!()
-      |> to_string()
-
-    with %URI{path: ^subject_name, query: query} when is_binary(query) <- URI.parse(subject),
-         [_ | _] = primary_key <- Ash.Resource.Info.primary_key(changeset.resource) do
-      token_primary_key = URI.decode_query(query)
-
-      Enum.all?(primary_key, fn field ->
-        Map.get(token_primary_key, to_string(field)) ==
-          to_string(Map.get(changeset.data, field))
-      end)
-    else
-      _ -> false
     end
   end
 

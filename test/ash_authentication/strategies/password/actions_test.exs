@@ -308,6 +308,29 @@ defmodule AshAuthentication.Strategy.Password.ActionsTest do
       assert strategy.hash_provider.valid?(new_password, updated_user.hashed_password)
     end
 
+    test "the reset action refuses a reset token issued to another user" do
+      user = build_user()
+      other = build_user()
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      assert {:ok, token} = Password.reset_token_for(strategy, user)
+
+      new_password = password()
+
+      # Called on the action directly, without authorization, so that only the
+      # token validation stands between the token and the other user's record.
+      assert {:error, _} =
+               other
+               |> Ash.Changeset.for_update(strategy.resettable.password_reset_action_name, %{
+                 "reset_token" => token,
+                 "password" => new_password,
+                 "password_confirmation" => new_password
+               })
+               |> Ash.update(authorize?: false)
+
+      reloaded = Ash.get!(Example.User, other.id, authorize?: false)
+      assert reloaded.hashed_password == other.hashed_password
+    end
+
     test "the token can only be used once" do
       user = build_user()
       {:ok, strategy} = Info.strategy(Example.User, :password)

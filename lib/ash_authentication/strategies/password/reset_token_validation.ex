@@ -14,11 +14,15 @@ defmodule AshAuthentication.Strategy.Password.ResetTokenValidation do
   @doc false
   @impl true
   @spec validate(Changeset.t(), keyword, Validation.Context.t()) :: :ok | {:error, Exception.t()}
+  # The reset token names the user it was issued to in its `sub` claim. Without
+  # comparing it to the record, a token issued to one user would reset the
+  # password of whichever record the caller points the action at.
   def validate(changeset, _, context) do
     with {:ok, strategy} <- Info.strategy_for_action(changeset.resource, changeset.action.name),
          token when is_binary(token) <- Changeset.get_argument(changeset, :reset_token),
-         {:ok, %{"act" => token_action}, _} <-
+         {:ok, %{"act" => token_action, "sub" => subject}, _} <-
            Jwt.verify(token, changeset.resource, Ash.Context.to_opts(context)),
+         true <- Jwt.subject_matches_record?(subject, changeset.data),
          {:ok, resettable} <- Map.fetch(strategy, :resettable),
          true <- to_string(resettable.password_reset_action_name) == token_action do
       :ok

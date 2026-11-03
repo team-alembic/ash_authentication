@@ -40,15 +40,19 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
     end
   end
 
+  # This change does not mark the changeset as an AshAuthentication
+  # interaction. `AshAuthentication.Strategy.Totp.Actions.confirm_setup/3`
+  # does, for the record it was given; a direct call to the action is left to
+  # the resource's policies.
   defp do_change(changeset, strategy, context) do
     changeset
-    |> Changeset.set_context(%{private: %{ash_authentication?: true}})
     |> Changeset.before_action(fn changeset ->
       setup_token = Changeset.get_argument(changeset, :setup_token)
       code = Changeset.get_argument(changeset, :code)
 
       with :ok <- validate_code_format(code, strategy),
-           {:ok, secret} <- verify_token_and_get_secret(setup_token, strategy, context),
+           {:ok, secret} <-
+             verify_token_and_get_secret(setup_token, changeset.data, strategy, context),
            :ok <- verify_code(secret, code, strategy) do
         changeset
         |> Changeset.force_change_attribute(strategy.secret_field, secret)
@@ -83,9 +87,13 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
     end
   end
 
-  defp verify_token_and_get_secret(setup_token, strategy, context) do
-    with {:ok, %{"jti" => jti}, _resource} <-
+  # The setup token names the user it was issued to in its `sub` claim. Without
+  # comparing it to the record, a token issued to one user installs its pending
+  # secret on whichever record the caller points the action at.
+  defp verify_token_and_get_secret(setup_token, record, strategy, context) do
+    with {:ok, %{"jti" => jti, "sub" => subject}, _resource} <-
            Jwt.verify(setup_token, strategy.resource, Ash.Context.to_opts(context), context),
+         {:subject, true} <- {:subject, Jwt.subject_matches_record?(subject, record)},
          {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource),
          {:ok, [token_record]} <-
            TokenResource.Actions.get_token(
@@ -99,6 +107,9 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
         :error -> {:error, invalid_token_error(strategy, "Invalid secret encoding")}
       end
     else
+      {:subject, false} ->
+        {:error, invalid_token_error(strategy, "Setup token was not issued for this user")}
+
       {:ok, []} ->
         {:error, invalid_token_error(strategy, "Setup token not found or expired")}
 
@@ -113,6 +124,9 @@ defmodule AshAuthentication.Strategy.Totp.ConfirmSetupChange do
 
       {:error, reason} ->
         {:error, invalid_token_error(strategy, "Token verification failed: #{inspect(reason)}")}
+
+      _ ->
+        {:error, invalid_token_error(strategy, "Invalid setup token")}
     end
   end
 

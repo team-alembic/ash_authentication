@@ -28,9 +28,12 @@ defmodule AshAuthentication.Strategy.Totp.GenerateSecretChange do
     end
   end
 
+  # This change does not mark the changeset as an AshAuthentication
+  # interaction. `AshAuthentication.Strategy.Totp.Actions.setup/3` does, for
+  # the record it was given; a direct call to the action is left to the
+  # resource's policies.
   defp do_change(changeset, strategy) do
     changeset
-    |> Changeset.set_context(%{private: %{ash_authentication?: true}})
     |> Changeset.before_action(fn changeset ->
       changeset
       |> Changeset.force_change_attribute(

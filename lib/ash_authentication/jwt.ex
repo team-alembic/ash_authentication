@@ -268,6 +268,38 @@ defmodule AshAuthentication.Jwt do
     end
   end
 
+  @doc """
+  Returns `true` when a token's `sub` claim names the given record.
+
+  Use it wherever a verified token authorises a change to a record the caller
+  chose, rather than one looked up from the token itself.
+
+  The primary key is compared against the record directly rather than resolved
+  with `AshAuthentication.subject_to_user/3`: the record is already loaded, so
+  a second read only adds a query which a customised `get_by_subject` action
+  could answer with a different record.
+  """
+  @spec subject_matches_record?(String.t() | nil, Ash.Resource.record()) :: boolean
+  def subject_matches_record?(subject, %resource{} = record) when is_binary(subject) do
+    subject_name =
+      resource
+      |> Info.authentication_subject_name!()
+      |> to_string()
+
+    with %URI{path: ^subject_name, query: query} when is_binary(query) <- URI.parse(subject),
+         [_ | _] = primary_key <- Ash.Resource.Info.primary_key(resource) do
+      token_primary_key = URI.decode_query(query)
+
+      Enum.all?(primary_key, fn field ->
+        Map.get(token_primary_key, to_string(field)) == to_string(Map.get(record, field))
+      end)
+    else
+      _ -> false
+    end
+  end
+
+  def subject_matches_record?(_subject, _record), do: false
+
   defp verify_for_resource(token, resource, opts, context) do
     with signer <- Config.token_signer(resource, [], context),
          {:ok, claims} <- Joken.verify(token, signer),
