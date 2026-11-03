@@ -240,7 +240,7 @@ defmodule AshAuthentication.Plug.Helpers do
     Conn.assign(conn, current_subject_name, user)
   end
 
-  defp handle_session_auth_result(conn, :error, resource, options, _session, opts) do
+  defp handle_session_auth_result(conn, :error, resource, options, session, opts) do
     current_subject_name = current_subject_name(options.subject_name)
     session_key = subject_session_key(resource, options.subject_name)
 
@@ -252,8 +252,18 @@ defmodule AshAuthentication.Plug.Helpers do
       # valid and must leave it alone rather than signing the user out.
       conn
     else
-      Conn.delete_session(conn, session_key)
+      delete_session_key(conn, session, session_key)
     end
+  end
+
+  # Deleting marks the session as written, so Plug sends the session cookie. For a key the
+  # session never held, that turns every anonymous response into a cookie write, and a response
+  # to a request sent before a sign-in but answered after it replaces the new session with the
+  # old one.
+  defp delete_session_key(conn, session, session_key) do
+    if Map.has_key?(session, session_key),
+      do: Conn.delete_session(conn, session_key),
+      else: conn
   end
 
   defp tenant_required?(resource, opts) do

@@ -89,6 +89,23 @@ defmodule AshAuthentication.Plug.HelpersTest do
   end
 
   describe "retrieve_from_session/3" do
+    test "an anonymous session is not rewritten", %{conn: conn} do
+      conn = Helpers.retrieve_from_session(conn, :ash_authentication)
+
+      refute conn.assigns.current_user
+      refute conn.private[:plug_session_info] == :write
+    end
+
+    test "a session whose subject fails to load drops the stale key", %{conn: conn} do
+      conn =
+        conn
+        |> Conn.put_session("user", "jti:not-a-real-subject")
+        |> Helpers.retrieve_from_session(:ash_authentication)
+
+      refute conn.assigns.current_user
+      refute Map.has_key?(Conn.get_session(conn), "user")
+    end
+
     test "when token presence is not required it loads any subjects stored in the session", %{
       conn: conn
     } do
