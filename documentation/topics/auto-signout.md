@@ -43,13 +43,24 @@ defmodule MyApp.Accounts.Token do
 
   token do
     endpoints [MyAppWeb.Endpoint]
-    live_socket_id_template fn %{jti: jti} -> "users_sessions:#{jti}" end
+    live_socket_id_template &"users_sessions:#{&1["jti"]}"
   end
 end
 ```
 
 - `endpoints` - List of Phoenix endpoints to notify when tokens are revoked
-- `live_socket_id_template` - Function that generates the live socket ID from a map containing `%{jti: jti}`. Additional keys may be added in future versions.
+- `live_socket_id_template` - Function that generates the live socket ID. It runs at sign-in and when the token is revoked, and both times it receives a map with the token's JWT ID under both `"jti"` and `:jti`, so `&1["jti"]` and `fn %{jti: jti} -> ... end` both work. Additional keys may be added in future versions.
+
+> #### Older versions of AshAuthentication.Phoenix {: .warning}
+>
+> Up to `ash_authentication_phoenix` 3.0.0-rc.11 the template received string keys at sign-in and atom keys at revocation, so a template reading only one key style did not disconnect anything. On those versions, accept both:
+>
+> ```elixir
+> live_socket_id_template &__MODULE__.live_socket_id/1
+>
+> def live_socket_id(%{"jti" => jti}), do: "users_sessions:#{jti}"
+> def live_socket_id(%{jti: jti}), do: "users_sessions:#{jti}"
+> ```
 
 ### Step 2: Add the Notifier (AshAuthentication.Phoenix)
 
@@ -71,16 +82,16 @@ The notifier broadcasts disconnect messages through your configured endpoints wh
 
 ### Step 3: Set Live Socket ID on Sign-in (AshAuthentication.Phoenix)
 
-In your authentication controller, call `set_live_socket_id/2` after successful sign-in to store the socket ID in the session:
+In your authentication controller, call `set_live_socket_id/2` with the token after successful sign-in to store the socket ID in the session:
 
 ```elixir
 defmodule MyAppWeb.AuthController do
   use MyAppWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
-  def success(conn, _activity, user, _token) do
+  def success(conn, _activity, user, token) do
     conn
-    |> set_live_socket_id(user)
+    |> set_live_socket_id(token)
     |> store_in_session(user)
     |> assign(:current_user, user)
     |> redirect(to: ~p"/")
@@ -94,7 +105,7 @@ defmodule MyAppWeb.AuthController do
 
   def sign_out(conn, _params) do
     conn
-    |> clear_session()
+    |> clear_session(:my_app)
     |> redirect(to: ~p"/")
   end
 end
@@ -127,7 +138,7 @@ defmodule MyApp.Accounts.Token do
 
   token do
     endpoints [MyAppWeb.Endpoint]
-    live_socket_id_template fn %{jti: jti} -> "users_sessions:#{jti}" end
+    live_socket_id_template &"users_sessions:#{&1["jti"]}"
   end
 end
 ```
@@ -172,9 +183,9 @@ defmodule MyAppWeb.AuthController do
   use MyAppWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
-  def success(conn, _activity, user, _token) do
+  def success(conn, _activity, user, token) do
     conn
-    |> set_live_socket_id(user)
+    |> set_live_socket_id(token)
     |> store_in_session(user)
     |> assign(:current_user, user)
     |> redirect(to: ~p"/")
@@ -188,7 +199,7 @@ defmodule MyAppWeb.AuthController do
 
   def sign_out(conn, _params) do
     conn
-    |> clear_session()
+    |> clear_session(:my_app)
     |> redirect(to: ~p"/")
   end
 end

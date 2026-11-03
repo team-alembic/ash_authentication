@@ -75,7 +75,7 @@ Configuration options for this token resource
 | [`store_token_action_name`](#token-store_token_action_name){: #token-store_token_action_name } | `atom` | `:store_token` | The name of the action to use to store a token, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
 | [`get_token_action_name`](#token-get_token_action_name){: #token-get_token_action_name } | `atom` | `:get_token` | The name of the action used to retrieve tokens from the store, if `require_tokens_for_authentication?` is enabled in your authentication resource. |
 | [`endpoints`](#token-endpoints){: #token-endpoints } | `module \| list(module)` | `[]` | The list of the endpoints where we will propagate the disconnect notification, when the user logs out or triggers log out from all devices. |
-| [`live_socket_id_template`](#token-live_socket_id_template){: #token-live_socket_id_template } | `(any -> any)` |  | A function that receives a map containing `%{jti: jti}` and returns the live socket ID string. Additional keys may be added in future versions. |
+| [`live_socket_id_template`](#token-live_socket_id_template){: #token-live_socket_id_template } | `(any -> any)` |  | A function that receives a map containing the token's JWT ID under both `"jti"` and `:jti`, and returns the live socket ID string. It is called at sign-in and when the token is revoked, and must return the same ID both times. Additional keys may be added in future versions. |
 
 
 ### token.revocation
