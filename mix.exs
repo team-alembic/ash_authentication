@@ -269,7 +269,7 @@ defmodule AshAuthentication.MixProject do
     [
       {:argon2_elixir, "~> 4.0", optional: true},
       {:ash, ash_version("~> 3.7")},
-      {:assent, "~> 0.3.0"},
+      {:assent, "~> 0.3.2"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},
       {:finch, "~> 0.19"},
