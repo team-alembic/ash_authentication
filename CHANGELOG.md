@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v4.15.1](https://github.com/team-alembic/ash_authentication/compare/v4.15.0...v4.15.1) (2026-11-03)
+
+
+
+
+### Bug Fixes:
+
+* [security] log_out_everywhere: revoke tokens on every password change ([CVE-2026-110826](https://cna.erlef.org/cves/CVE-2026-110826.html), [GHSA-j6f8-qcj9-gh4r](https://github.com/team-alembic/ash_authentication/security/advisories/GHSA-j6f8-qcj9-gh4r)) by azmaveth
+
 ## [v4.15.0](https://github.com/team-alembic/ash_authentication/compare/v4.14.2...v4.15.0) (2026-09-17)
 ### Breaking Changes:
 
