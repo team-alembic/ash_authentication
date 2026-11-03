@@ -21,6 +21,9 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   @doc false
   @impl true
   @spec after?(any) :: boolean()
+  # Actions declared with `defaults` only exist once SetPrimaryActions has run,
+  # and the actions this transformer builds or validates may be among them.
+  def after?(Resource.Transformers.SetPrimaryActions), do: true
   def after?(_), do: false
 
   @doc false
@@ -28,9 +31,9 @@ defmodule AshAuthentication.UserIdentity.Transformer do
   @spec before?(any) :: boolean
   def before?(Resource.Transformers.CachePrimaryKey), do: true
   def before?(Resource.Transformers.DefaultAccept), do: true
-  def before?(Resource.Transformers.SetPrimaryActions), do: true
   def before?(Resource.Transformers.ValidateRelationshipAttributes), do: true
   def before?(Resource.Transformers.BelongsToAttribute), do: true
+  def before?(Resource.Transformers.SetRelationshipSource), do: true
   def before?(_), do: false
 
   @doc false

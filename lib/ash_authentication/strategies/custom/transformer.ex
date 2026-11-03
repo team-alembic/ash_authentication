@@ -24,7 +24,7 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
   @doc false
   @impl true
   @spec before?(module) :: boolean
-  def before?(Resource.Transformers.DefaultAccept), do: true
+  def before?(Ash.Resource.Transformers.DefaultAccept), do: true
   # Strategy transformers add auto-generated `get_by_<identity_field>` read
   # actions (password, magic_link). Ash's GetByReadActions transformer is what
   # turns their `get_by:` option into an actual filter — so it must run *after*
@@ -32,6 +32,9 @@ defmodule AshAuthentication.Strategy.Custom.Transformer do
   # stay unfiltered and `Ash.read_one` raises MultipleResults once more than
   # one row exists.
   def before?(Ash.Resource.Transformers.GetByReadActions), do: true
+  # Strategy transformers (OAuth2's `identities`) add relationships, which need
+  # SetRelationshipSource to fill in their source.
+  def before?(Ash.Resource.Transformers.SetRelationshipSource), do: true
   def before?(_), do: false
 
   @doc false

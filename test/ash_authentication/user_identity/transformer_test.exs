@@ -51,6 +51,97 @@ defmodule AshAuthentication.UserIdentity.TransformerTest do
     end
   end
 
+  describe "actions declared with `defaults`" do
+    defmodule DefaultsDomain do
+      @moduledoc false
+      use Ash.Domain, validate_config_inclusion?: false
+
+      resources do
+        allow_unregistered? true
+      end
+    end
+
+    test "a default read action is accepted" do
+      defmodule DefaultReadIdentity do
+        @moduledoc false
+        use Ash.Resource,
+          data_layer: AshPostgres.DataLayer,
+          domain: DefaultsDomain,
+          extensions: [AshAuthentication.UserIdentity]
+
+        actions do
+          defaults [:read]
+        end
+
+        user_identity do
+          user_resource Example.User
+        end
+
+        postgres do
+          table "user_identities"
+          repo(Example.Repo)
+        end
+      end
+
+      assert %{type: :read, primary?: true} = Info.action(DefaultReadIdentity, :read)
+    end
+
+    test "default read and destroy actions are accepted" do
+      defmodule DefaultReadDestroyIdentity do
+        @moduledoc false
+        use Ash.Resource,
+          data_layer: AshPostgres.DataLayer,
+          domain: DefaultsDomain,
+          extensions: [AshAuthentication.UserIdentity]
+
+        actions do
+          defaults [:read, :destroy]
+        end
+
+        user_identity do
+          user_resource Example.User
+        end
+
+        postgres do
+          table "user_identities"
+          repo(Example.Repo)
+        end
+      end
+
+      assert %{type: :read, primary?: true} = Info.action(DefaultReadDestroyIdentity, :read)
+      assert %{type: :destroy, primary?: true} = Info.action(DefaultReadDestroyIdentity, :destroy)
+    end
+
+    test "a default read action which will not be primary is rejected" do
+      assert_raise RuntimeError, ~r/`:primary\?` to equal `true`/, fn ->
+        defmodule NonPrimaryDefaultReadIdentity do
+          @moduledoc false
+          use Ash.Resource,
+            data_layer: AshPostgres.DataLayer,
+            domain: DefaultsDomain,
+            extensions: [AshAuthentication.UserIdentity]
+
+          actions do
+            defaults [:read]
+
+            read :list do
+              primary? true
+            end
+          end
+
+          user_identity do
+            user_resource Example.User
+          end
+
+          postgres do
+            table "user_identities"
+            repo(Example.Repo)
+          end
+        end
+      end
+    end
+  end
+
   describe "reading the tokens back" do
     setup do
       user = build_user()

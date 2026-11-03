@@ -19,6 +19,9 @@ defmodule AshAuthentication.AuditLogResource.Transformer do
   @doc false
   @impl true
   @spec after?(any) :: boolean()
+  # Actions declared with `defaults` only exist once SetPrimaryActions has run,
+  # and the actions this transformer builds or validates may be among them.
+  def after?(Resource.Transformers.SetPrimaryActions), do: true
   def after?(_), do: false
 
   @doc false
