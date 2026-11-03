@@ -6,7 +6,7 @@ defmodule Example.UserWithRegisterOtp do
   @moduledoc false
   use Ash.Resource,
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshAuthentication],
+    extensions: [AshAuthentication, AshRateLimiter],
     domain: Example
 
   require Logger
@@ -43,7 +43,7 @@ defmodule Example.UserWithRegisterOtp do
     strategies do
       otp do
         identity_field :email
-        brute_force_strategy({:preparation, Example.TotpNoopPreparation})
+        brute_force_strategy :rate_limit
         registration_enabled? true
         otp_lifetime {10, :minutes}
         otp_length 6
@@ -61,6 +61,21 @@ defmodule Example.UserWithRegisterOtp do
         end
       end
     end
+  end
+
+  # With `registration_enabled? true` the OTP strategy only accepts `:rate_limit`.
+  rate_limit do
+    backend(Example.Hammer)
+
+    action :request_otp,
+      limit: 1000,
+      per: :timer.minutes(1),
+      key: fn input, _context -> "otp:request:#{input.arguments[:email]}" end
+
+    action :sign_in_with_otp,
+      limit: 1000,
+      per: :timer.minutes(1),
+      key: fn changeset, _context -> "otp:sign_in:#{changeset.arguments[:email]}" end
   end
 
   identities do

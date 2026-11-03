@@ -228,7 +228,7 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
          dsl_state,
          %{brute_force_strategy: {:audit_log, audit_log_name}} = strategy
        ) do
-    with :ok <- validate_audit_log_with_registration(dsl_state, strategy),
+    with :ok <- validate_not_registering(dsl_state, strategy),
          {:ok, audit_log} <- validate_audit_log_exists(dsl_state, strategy, audit_log_name),
          :ok <-
            reduce_action_validations(strategy, fn action_name ->
@@ -242,18 +242,24 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
          dsl_state,
          %{brute_force_strategy: {:preparation, module}} = strategy
        ) do
-    with :ok <- validate_preparation_supports_query(dsl_state, strategy, module) do
+    with :ok <- validate_not_registering(dsl_state, strategy),
+         :ok <- validate_preparation_supports_query(dsl_state, strategy, module) do
       validate_brute_force_preparations(dsl_state, strategy)
     end
   end
 
   # The check has to be on each action, not only configured: an action written
   # by hand, or by `mix ash_authentication.add_strategy.otp`, has only the
-  # preparations written for it. A sign-in that registers is a create action,
-  # which takes no preparations, so only a read sign-in is checked.
+  # preparations written for it. Both preparation-based strategies refuse
+  # `registration_enabled? true`, so the sign-in action here is always a read.
   defp validate_brute_force_preparations(dsl_state, strategy) do
     with {:ok, sign_in} <- validate_action_exists(dsl_state, strategy.sign_in_action_name),
-         :ok <- validate_sign_in_brute_force_preparation(sign_in, strategy),
+         :ok <-
+           validate_brute_force_preparation(
+             sign_in,
+             strategy,
+             AshAuthentication.AddOn.AuditLog.BruteForcePreparation
+           ),
          {:ok, request} <- validate_action_exists(dsl_state, strategy.request_action_name) do
       validate_brute_force_preparation(
         request,
@@ -262,16 +268,6 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
       )
     end
   end
-
-  defp validate_sign_in_brute_force_preparation(%{type: :read} = sign_in, strategy) do
-    validate_brute_force_preparation(
-      sign_in,
-      strategy,
-      AshAuthentication.AddOn.AuditLog.BruteForcePreparation
-    )
-  end
-
-  defp validate_sign_in_brute_force_preparation(_sign_in, _strategy), do: :ok
 
   defp actions_to_protect(strategy),
     do: [strategy.sign_in_action_name, strategy.request_action_name]
@@ -329,7 +325,9 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
     end
   end
 
-  defp validate_audit_log_with_registration(dsl_state, %{registration_enabled?: true} = strategy) do
+  # `{:audit_log, _}` and `{:preparation, _}` are enforced by preparations, and
+  # a registering sign-in is a create action, which preparations do not run on.
+  defp validate_not_registering(dsl_state, %{registration_enabled?: true} = strategy) do
     module = Verifier.get_persisted(dsl_state, :module)
 
     {:error,
@@ -337,14 +335,14 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
        module: module,
        path: [:authentication, :strategies, strategy.name, :brute_force_strategy],
        message: """
-       The `{:audit_log, _}` brute force strategy is not supported when `registration_enabled?` is `true`.
+       The `#{inspect(strategy.brute_force_strategy)}` brute force strategy is not supported when `registration_enabled?` is `true`.
 
-       Audit log protection requires an existing user record, but a registration sign-in may run before the user exists. Use `:rate_limit` (with `AshRateLimiter`) or `{:preparation, MyModule}` instead.
+       With registration enabled, the sign-in action is a `:create` action. This brute force strategy is enforced by a preparation, and preparations do not run on create actions, so sign-in attempts would not be limited. Use `:rate_limit` (with `AshRateLimiter`) instead.
        """
      )}
   end
 
-  defp validate_audit_log_with_registration(_dsl_state, _strategy), do: :ok
+  defp validate_not_registering(_dsl_state, _strategy), do: :ok
 
   defp validate_audit_log_exists(dsl_state, strategy, audit_log_name) do
     module = Verifier.get_persisted(dsl_state, :module)
@@ -399,7 +397,7 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
 
   defp validate_preparation_supports_query(dsl_state, strategy, module) do
     supported_subjects = get_preparation_supports(module)
-    required = required_preparation_subjects(strategy)
+    required = [Ash.Query, Ash.ActionInput]
     missing = required -- supported_subjects
 
     if missing == [] do
@@ -414,7 +412,7 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
          message: """
          The brute force preparation `#{inspect(module)}` does not support: #{inspect(missing)}.
 
-         OTP applies the brute-force preparation to the request action (an `Ash.ActionInput`) #{sign_in_subject_description(strategy)}.
+         OTP applies the brute-force preparation to the request action (an `Ash.ActionInput`) and to the sign-in action (an `Ash.Query`).
 
          The preparation currently supports: #{inspect(supported_subjects)}
 
@@ -426,15 +424,6 @@ defmodule AshAuthentication.Strategy.Otp.Verifier do
        )}
     end
   end
-
-  defp required_preparation_subjects(%{registration_enabled?: true}), do: [Ash.ActionInput]
-  defp required_preparation_subjects(_strategy), do: [Ash.Query, Ash.ActionInput]
-
-  defp sign_in_subject_description(%{registration_enabled?: true}),
-    do: "(the sign-in action is a `:create` action and is not protected by this preparation)"
-
-  defp sign_in_subject_description(_strategy),
-    do: "and to the sign-in action (an `Ash.Query`)"
 
   defp get_preparation_supports(module) when is_atom(module), do: module.supports([])
 

@@ -32,7 +32,8 @@ defmodule AshAuthentication.Strategy.Otp.Dsl do
                {:tuple, [{:literal, :audit_log}, :atom]},
                {:tuple, [{:literal, :preparation}, {:behaviour, Ash.Resource.Preparation}]}
              ]},
-          doc: "How you are mitigating brute-force OTP checks.",
+          doc:
+            "How you are mitigating brute-force OTP checks. With `registration_enabled? true`, only `:rate_limit` is supported.",
           required: true
         ],
         identity_field: [

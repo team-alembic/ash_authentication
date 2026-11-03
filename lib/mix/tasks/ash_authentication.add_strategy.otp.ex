@@ -82,12 +82,10 @@ if Code.ensure_loaded?(Igniter) do
         Mix.shell().error("""
         `--registration` is not supported by this task.
 
-        When `registration_enabled?` is true, the OTP strategy cannot use the
-        `:audit_log` brute-force strategy (the verifier rejects it). The
-        alternatives are `:rate_limit` (requires the AshRateLimiter extension
-        and a backend) or `{:preparation, MyMod}` (requires you to write a
-        preparation module). Both need decisions this generator can't make
-        safely on your behalf.
+        When `registration_enabled?` is true, the OTP strategy can only use
+        the `:rate_limit` brute-force strategy (the verifier rejects the
+        others). That requires the AshRateLimiter extension and a backend,
+        which need decisions this generator can't make safely on your behalf.
 
         Add the OTP strategy by hand and follow the OTP tutorial:
         https://hexdocs.pm/ash_authentication/otp.html

@@ -251,6 +251,7 @@ By default, the OTP strategy only allows existing users to sign in. To allow new
 otp do
   identity_field :email
   registration_enabled? true
+  brute_force_strategy :rate_limit
   sender MyApp.Accounts.User.Senders.SendOtp
 end
 ```
@@ -259,7 +260,7 @@ When registration is enabled:
 
 - The **request** action sends an OTP code even if no user with that email exists yet.
 - The **sign-in** action becomes a `:create` action with `upsert? true`. If the user doesn't exist, they are created; if they do, they are matched by their identity.
-- `{:audit_log, ...}` is **not** a valid `brute_force_strategy` in this mode, because audit log mitigation requires an existing user record. Use `:rate_limit` or `{:preparation, MyModule}` instead.
+- `:rate_limit` is the only valid `brute_force_strategy` in this mode. `{:audit_log, ...}` and `{:preparation, MyModule}` are enforced by preparations, which do not run on the `:create` sign-in action, so the verifier rejects them.
 - The sender receives the email address as a string (instead of a user record) when the user doesn't exist yet. Handle both cases in your sender:
 
 ```elixir

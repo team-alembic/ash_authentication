@@ -102,7 +102,7 @@ Strategy for authenticating using a one-time password sent to the user
 
 | Name | Type | Default | Docs |
 |------|------|---------|------|
-| [`brute_force_strategy`](#authentication-strategies-otp-brute_force_strategy){: #authentication-strategies-otp-brute_force_strategy .spark-required} | `:rate_limit \| {:audit_log, atom} \| {:preparation, module}` |  | How you are mitigating brute-force OTP checks. |
+| [`brute_force_strategy`](#authentication-strategies-otp-brute_force_strategy){: #authentication-strategies-otp-brute_force_strategy .spark-required} | `:rate_limit \| {:audit_log, atom} \| {:preparation, module}` |  | How you are mitigating brute-force OTP checks. With `registration_enabled? true`, only `:rate_limit` is supported. |
 | [`sender`](#authentication-strategies-otp-sender){: #authentication-strategies-otp-sender .spark-required} | `(any, any, any -> any) \| module` |  | How to send the OTP code to the user. |
 | [`identity_field`](#authentication-strategies-otp-identity_field){: #authentication-strategies-otp-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user, usually something like `username` or `email_address`. |
 | [`otp_lifetime`](#authentication-strategies-otp-otp_lifetime){: #authentication-strategies-otp-otp_lifetime } | `pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` | `{10, :minutes}` | How long the OTP code is valid. If no unit is provided, then `minutes` is assumed. |

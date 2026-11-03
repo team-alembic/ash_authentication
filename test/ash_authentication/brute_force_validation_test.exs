@@ -315,5 +315,53 @@ defmodule AshAuthentication.BruteForceValidationTest do
       assert output =~ ~r/sign_in_with_otp.*would not be limited/s
       assert output =~ "BruteForcePreparation"
     end
+
+    test "a preparation strategy with registration enabled is reported" do
+      output =
+        capture_io(:stderr, fn ->
+          defmodule OtpRegistrationWithPreparation do
+            @moduledoc false
+            use Ash.Resource,
+              data_layer: Ash.DataLayer.Ets,
+              extensions: [AshAuthentication],
+              domain: TestDomain
+
+            attributes do
+              uuid_primary_key :id
+              attribute :email, :ci_string, allow_nil?: false, public?: true
+            end
+
+            actions do
+              defaults [:read, :create]
+            end
+
+            authentication do
+              session_identifier :jti
+
+              tokens do
+                enabled? true
+                token_resource Example.Token
+                signing_secret "test_secret_at_least_64_characters_long_for_proper_security"
+              end
+
+              strategies do
+                otp do
+                  identity_field :email
+                  registration_enabled? true
+                  sender fn _user, _otp, _opts -> :ok end
+                  brute_force_strategy {:preparation, Example.TotpNoopPreparation}
+                end
+              end
+            end
+
+            identities do
+              identity :unique_email, [:email], pre_check_with: TestDomain
+            end
+          end
+        end)
+
+      assert output =~ ~r/registration_enabled\?.*sign-in attempts would not be limited/s
+      assert output =~ "Use `:rate_limit`"
+    end
   end
 end
