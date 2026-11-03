@@ -62,7 +62,7 @@ defmodule AshAuthentication.TokenResource do
         live_socket_id_template: [
           type: {:fun, 1},
           doc:
-            "A function that receives a map containing `%{jti: jti}` and returns the live socket ID string. Additional keys may be added in future versions."
+            "A function that receives a map containing the token's JWT ID under both `\"jti\"` and `:jti`, and returns the live socket ID string. It is called at sign-in and when the token is revoked, and must return the same ID both times. Additional keys may be added in future versions."
         ]
       ],
       sections: [
