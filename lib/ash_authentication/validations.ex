@@ -292,10 +292,11 @@ defmodule AshAuthentication.Validations do
       stably identify an end-user, and the identity resource is where those are
       persisted. This will become a hard requirement in a future release.
 
-    * The provider's `email_verified` claim is not trusted
-      (`trust_email_verified?` is `false`) and no confirmation add-on is
-      configured. Accounts created via this strategy would carry an unverified
-      email address with no way to verify ownership.
+    * The strategy registers users (`registration_enabled?` is `true`), the
+      provider's `email_verified` claim is not trusted (`trust_email_verified?`
+      is `false`) and no confirmation add-on is configured. Accounts created via
+      this strategy would carry an unverified email address with no way to
+      verify ownership.
   """
   @spec oauth2_strategy_warnings(struct, Dsl.t() | map) :: :ok | {:warn, [String.t()]}
   def oauth2_strategy_warnings(strategy, dsl_state) do
@@ -329,6 +330,8 @@ defmodule AshAuthentication.Validations do
   end
 
   defp identity_resource_warning(_strategy), do: nil
+
+  defp email_verification_warning(%{registration_enabled?: false}, _dsl_state), do: nil
 
   defp email_verification_warning(%{trust_email_verified?: false} = strategy, dsl_state) do
     unless has_confirmation_add_on?(dsl_state) do

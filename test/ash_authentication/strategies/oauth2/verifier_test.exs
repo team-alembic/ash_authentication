@@ -188,6 +188,11 @@ defmodule AshAuthentication.Strategy.OAuth2.VerifierTest do
       monitor_fields: [:email],
       registration_enabled?: false
     ],
+    sign_in_only_without_confirmation: [
+      upsert_identity: :unique_email,
+      confirmation?: false,
+      registration_enabled?: false
+    ],
     no_registering_password_strategy: [
       upsert_identity: :unique_username,
       monitor_fields: [:email]
@@ -294,6 +299,18 @@ defmodule AshAuthentication.Strategy.OAuth2.VerifierTest do
     test "stays silent when no password strategy registers users" do
       refute diagnostics(:no_registering_password_strategy, :no_password_strategy) =~
                @any_hijack_diagnostic
+    end
+  end
+
+  describe "oauth2_strategy_warnings/2" do
+    @email_warning "does not trust the provider's `email_verified` claim"
+
+    test "warns about unverified emails when the strategy registers users" do
+      assert diagnostics(:no_confirmation, :email_first) =~ @email_warning
+    end
+
+    test "stays silent about unverified emails when registration is disabled" do
+      refute diagnostics(:sign_in_only_without_confirmation, :email_first) =~ @email_warning
     end
   end
 end
