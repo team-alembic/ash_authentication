@@ -9,6 +9,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.CoseKey do
   COSE keys are the standard format for WebAuthn credential public keys.
   They are stored as CBOR-encoded binary in the database and decoded to
   Elixir maps at runtime.
+
+  The codec is the optional `cbor` dependency. COSE keys are CBOR by
+  specification (RFC 9052), so the type needs it whichever adapter verifies
+  the ceremonies; it has no dependency on the default adapter's `wax_` (which
+  itself depends on `cbor`, so a project using the default adapter already
+  has it). Without the codec every cast and dump fails with `:error`; the
+  credential extension reports the missing dependency at compile time.
   """
 
   use Ash.Type

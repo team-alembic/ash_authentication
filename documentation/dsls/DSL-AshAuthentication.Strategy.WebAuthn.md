@@ -28,9 +28,10 @@ The strategy can be configured for two roles via the `registration_enabled?`,
   `verify_enabled? true`) — passkeys are only used as a second factor on top
   of another primary credential (e.g. password). The strategy doesn't
   register or sign in users directly; it only verifies an assertion against
-  the *currently authenticated* user. On successful verification, a
-  `webauthn_verified_at` claim is added to the user's authentication token
-  so protected routes can require it.
+  the *currently authenticated* user. A successful verification answers
+  with a short-lived sign-in token carrying a `webauthn_verified_at` claim;
+  exchanging it through `sign_in_with_token` (kept for this mode) yields a
+  session token with that claim, so protected routes can require it.
 
 See the
 [Passkeys as 2FA](https://hexdocs.pm/ash_authentication_phoenix/webauthn-2fa.html)
@@ -61,14 +62,10 @@ defmodule MyApp.Accounts.User do
         credential_resource MyApp.Accounts.Credential
         rp_id "example.com"
         rp_name "My App"
-        origin "https://example.com"
         identity_field :email
+        require_identity? true
       end
     end
-  end
-
-  relationships do
-    has_many :webauthn_credentials, MyApp.Accounts.Credential
   end
 
   identities do
@@ -79,51 +76,71 @@ end
 
 ## Origin Configuration
 
-The **origin** is the full URL the browser sends during WebAuthn ceremonies
-(scheme + domain + port). The **rp_id** is the domain name only. These are
-related but distinct:
+The **origin** is the full URL the browser signs into every WebAuthn
+ceremony (scheme + host + port). The **rp_id** is the domain name only.
+These are related but distinct:
 
 | Setting   | Example                    | What it is                       |
 |-----------|----------------------------|----------------------------------|
 | `rp_id`   | `"example.com"`            | Domain only (Relying Party ID)   |
 | `origin`  | `"https://example.com"`    | Full URL including scheme + port |
 
-If `origin` is not set, it defaults to `"https://{rp_id}"`. This works for
-production on standard port 443, but **breaks in development** because the
-browser includes the port in the origin and `Wax` will reject the mismatch.
+Which origins a ceremony is accepted from is decided from configuration
+alone — never from the request that minted the challenge, whose scheme,
+host and port describe the proxy in front of the app as often as the
+browser's address bar. See `AshAuthentication.Strategy.WebAuthn.Origin`.
 
-### Production
+**`origin` not set** (the default): any `https` origin whose host is the
+`rp_id` or a subdomain of it, on any port — the same set of origins a
+browser lets use that RP ID. With `rp_id "example.com"`,
+`https://example.com`, `https://app.example.com` and
+`https://app.example.com:4001` are accepted; `http://app.example.com` and
+`https://evil.com` are not. `http://localhost[:port]` is also accepted
+when the `rp_id` is `"localhost"`. The signed RP ID hash is still checked
+separately, so phishing protection does not rest on the origin alone.
 
-    origin "https://example.com"
+**`origin` set**: an allowlist. The browser's origin must match one of the
+configured origins exactly, port included.
 
-### Development (non-standard port)
+### Narrowing to specific hosts
 
-    origin "https://localhost:4001"
+    origin "https://app.example.com"
+    origin ["https://app.example.com", "https://admin.example.com"]
+
+### Development on a non-standard port
+
+Nothing to configure: `https://localhost:4001` is under `rp_id "localhost"`,
+and so is `http://localhost:4000`.
 
 ### Multi-tenant (dynamic per tenant)
 
-    origin {MyApp.WebAuthn, :origin_for_tenant, []}
+    origin {MyApp.WebAuthn, :origins_for_tenant, []}
+
+Behind a TLS-terminating proxy nothing needs rewriting: the connection's
+own scheme, host and port play no part.
 
 ## Credential Resource
 
-You must define a separate Ash resource to store WebAuthn credentials. It needs:
-
-- `credential_id` (`:binary`) - the raw credential ID from the authenticator
-- `public_key` (`AshAuthentication.Strategy.WebAuthn.CoseKey`) - the COSE public key
-- `sign_count` (`:integer`) - replay attack counter
-- `label` (`:string`) - user-facing name for the credential
-- `last_used_at` (`:utc_datetime_usec`, optional) - tracks last authentication time
-- A `belongs_to` relationship to your user resource
-- A policy bypass for `AshAuthentication.Checks.AshAuthenticationInteraction`
-
-### Full Example
+You must define a separate Ash resource to store WebAuthn credentials. Add the
+`AshAuthentication.WebAuthnCredential` extension and it will automatically scaffold
+the required attributes (`credential_id`, `public_key`, `sign_count`, `label`,
+`last_used_at`), the `belongs_to` relationship back to the user resource, the
+unique identity on `credential_id`, and all four CRUD actions. The matching
+`has_many :webauthn_credentials` relationship on the user resource is scaffolded
+by the `webauthn` strategy itself. Either relationship can still be declared by
+hand if you need non-default options — whatever you don't declare is built for you.
 
 ```elixir
 defmodule MyApp.Accounts.Credential do
   use Ash.Resource,
     domain: MyApp.Accounts,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshAuthentication.WebAuthnCredential]
+
+  webauthn_credential do
+    user_resource MyApp.Accounts.User
+  end
 
   postgres do
     table "webauthn_credentials"
@@ -142,38 +159,8 @@ defmodule MyApp.Accounts.Credential do
 
   attributes do
     uuid_primary_key :id
-    attribute :credential_id, :binary, allow_nil?: false, public?: true
-
-    attribute :public_key, AshAuthentication.Strategy.WebAuthn.CoseKey,
-      allow_nil?: false, public?: true
-
-    attribute :sign_count, :integer, default: 0, allow_nil?: false, public?: true
-    attribute :label, :string, default: "Security Key", public?: true
-    attribute :last_used_at, :utc_datetime_usec, public?: true
     create_timestamp :inserted_at
     update_timestamp :updated_at
-  end
-
-  relationships do
-    belongs_to :user, MyApp.Accounts.User, allow_nil?: false, public?: true
-  end
-
-  identities do
-    identity :unique_credential_id, [:credential_id]
-  end
-
-  actions do
-    defaults [:read, :destroy]
-
-    create :create do
-      primary? true
-      accept [:credential_id, :public_key, :sign_count, :label, :user_id]
-    end
-
-    update :update do
-      primary? true
-      accept [:sign_count, :label, :last_used_at]
-    end
   end
 end
 ```
@@ -195,17 +182,23 @@ end
 
 ## Adding Credentials to Existing Users
 
-The built-in `register` action creates a **new user** with a credential. To add
-a passkey to an already-authenticated user, you need a custom controller that:
+The `register` action creates a **new user** with a credential. To add a
+passkey to an already-authenticated user, use the `add_credential_challenge`
+(GET) and `add_credential` (POST) phases, or
+`AshAuthentication.Strategy.WebAuthn.Actions.add_credential/3` directly.
+Both require an authenticated actor; the challenge reuses the user handle of
+the actor's existing passkeys and lists them in `excludeCredentials`, so the
+same authenticator can't be enrolled twice.
 
-1. Generates a registration challenge (via `Wax.new_registration_challenge/1`)
-2. Sends it to the browser
-3. Receives the attestation response
-4. Calls `Wax.register/3` to verify it
-5. Stores the credential directly on the credential resource
+These phases are independent of `registration_enabled?`, `sign_in_enabled?`
+and `verify_enabled?`. They are controlled by their own options:
 
-This is intentional -- the strategy's register flow is for new user sign-up,
-not for adding keys to existing accounts.
+- `add_credential_enabled? false` removes them.
+- `add_credential_max_authentication_age` (e.g. `{5, :minutes}`) requires the
+  actor to have authenticated within that window: signed in, completed a
+  second factor, or presented a bearer token issued in it. See
+  `AshAuthentication.Strategy.WebAuthn.RecentAuthentication`. Unset by
+  default; set it so a stolen or long-lived session can't plant a passkey.
 
 ## Accessing the User After Authentication
 
@@ -234,8 +227,8 @@ webauthn :webauthn do
   credential_resource MyApp.Accounts.Credential
   rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []}
   rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []}
-  origin {MyApp.WebAuthn, :origin_for_tenant, []}
   identity_field :email
+  require_identity? true
 end
 ```
 
@@ -245,27 +238,172 @@ Then implement the callbacks:
 defmodule MyApp.WebAuthn do
   def rp_id_for_tenant(tenant), do: "#{tenant}.example.com"
   def rp_name_for_tenant(tenant), do: "MyApp - #{tenant}"
-  def origin_for_tenant(tenant), do: "https://#{tenant}.example.com"
 end
 ```
 
+With no `origin` configured, each tenant's ceremonies are accepted from
+any `https` origin on that tenant's `rp_id` or a subdomain of it. To pin
+a tenant to particular origins, add a per-tenant allowlist:
+
+```elixir
+origin {MyApp.WebAuthn, :origins_for_tenant, []}
+
+def origins_for_tenant(tenant), do: ["https://#{tenant}.example.com"]
+```
+
+The RP ID is the only per-tenant input; a request-derived `rp_id` (serving
+unrelated domains without tenancy) is not supported.
+
+## Passkey-First (No Identity) Flow
+
+By default the strategy requires an `identity_field` attribute (e.g. `:email`)
+on the user resource. For passkey-only systems — internal admin apps, or apps
+where the user resource has no email-style column at all — set
+`require_identity? false` and the requirement is lifted entirely:
+
+```elixir
+defmodule MyApp.Accounts.User do
+  use Ash.Resource,
+    extensions: [AshAuthentication],
+    domain: MyApp.Accounts
+
+  attributes do
+    uuid_primary_key :id
+  end
+
+  authentication do
+    tokens do
+      enabled? true
+      token_resource MyApp.Accounts.Token
+      signing_secret fn _, _ -> {:ok, Application.get_env(:my_app, :token_secret)} end
+    end
+
+    strategies do
+      webauthn :webauthn do
+        credential_resource MyApp.Accounts.Credential
+        rp_id "example.com"
+        rp_name "My App"
+        require_identity? false
+      end
+    end
+  end
+end
+```
+
+No `:email` attribute, no unique identity. The browser surfaces a
+discoverable credential (passkey), and at verification time the credential
+id alone resolves the user.
+
+Sign-in works that way in identity mode too: the authentication challenge
+endpoint is public, so it never lists a user's credentials in
+`allowCredentials` (that would disclose them to anyone who submits the
+identity). Every sign-in therefore needs a discoverable credential, which is
+what `resident_key: :required` (the default) asks the authenticator to
+create; the strategy warns at compile time if a strategy that signs users in
+relaxes it. `require_identity?` only controls whether the user resource must
+expose an identity column.
+
+The companion package `ash_authentication_phoenix` needs to skip the email
+input in its sign-in components for this mode — see its documentation.
+
+**Gotcha:** registration creates a user with no identity, so this mode is
+unsuitable when paired with strategies that need an email on the same
+resource (e.g. password with resettable, magic link, or confirmation).
+
+## Discoverable and Non-Discoverable Credentials
+
+A **discoverable** credential (a "resident key"; what "passkey" usually
+means) is stored on the authenticator, which keeps a record per site with
+the private key, the relying party ID and the user handle. Asked for a
+credential without being told which, the authenticator offers the ones it
+holds for the site. All synced passkeys are discoverable.
+
+A **non-discoverable** credential (a "server-side credential") is not
+stored. On a typical security key the credential ID *is* the private key,
+encrypted with a secret that never leaves the key. The server must send
+that ID back in `allowCredentials` before the key can use it.
+
+The sign-in challenge never lists credentials, so **only discoverable
+credentials can sign in**; the second-factor `verify_challenge`, whose
+caller is authenticated, lists the user's credentials and works with
+both. `resident_key` decides which kind registration asks for:
+
+- `:required` (default): discoverable, or registration fails.
+- `:preferred`: usually discoverable, but the authenticator may fall back
+  to non-discoverable (e.g. a security key whose storage is full).
+- `:discouraged`: usually non-discoverable.
+
+Keep `:required` for any strategy that signs users in; the strategy warns
+at compile time otherwise. The credential's `discoverable` attribute
+records what the browser reported at registration (`true`, `false`, or
+`nil` when it didn't say). See the WebAuthn guide for more.
+
+## Cross-Device (Hybrid) Passkeys
+
+Hybrid transport -- "use your phone or tablet", the option that shows a QR
+code -- is implemented entirely by the browser and the phone's operating
+system. The QR code, the Bluetooth proximity check and the tunnel back to the
+browser are none of this library's business: a hybrid-signed assertion is
+indistinguishable from a USB-key one and verifies through exactly the same
+path. The server's only job is to say that the option should be offered:
+
+    webauthn do
+      # ...
+      hints [:hybrid, :security_key]
+      timeout 300_000
+    end
+
+That yields the two-option dialog ("use your phone or tablet" / "use your
+security key") on both sign-in and registration, so a machine with no
+authenticator of its own can enrol and then use a passkey held on a phone.
+Raise `timeout` well above the default when doing this -- a QR scan plus a
+prompt on the second device easily exceeds a minute.
+
+Set `allow_hint_override? true` to let a UI request one specific kind per
+ceremony (`GET .../authentication_challenge?hints=hybrid`), which is how a
+dedicated "sign in with a phone" button skips straight to the QR code.
+
+`hints` is a presentation preference and cannot relax verification; browsers
+which do not implement it ignore it and show their default picker.
+
 ## Gotchas
 
-- **Origin must include the port** for non-standard ports (e.g., `"https://localhost:4001"`).
-  The default derivation from `rp_id` produces `"https://{rp_id}"` which omits the port.
+- **A configured `origin` is an exact-match allowlist**, port included: with
+  `origin "https://example.com"` a ceremony from `https://app.example.com` or
+  `https://example.com:4001` is rejected. Leave it unset to accept every `https`
+  origin on the `rp_id` or a subdomain of it, or list every origin you serve.
+- **The request's scheme, host and port are never consulted**, so a proxy needs no
+  `Plug.RewriteOn` for WebAuthn's sake, and callers of the `Actions` challenge
+  functions must not pass `origin:` (they raise if one does).
 - **Signing secret must return `{:ok, value}`**, not a raw string. A common mistake
   is `fn _, _ -> "my_secret" end` -- it must be `fn _, _ -> {:ok, "my_secret"} end`.
-- **Challenge data is stored in the session as plain maps**, not `Wax.Challenge` structs,
-  because cookie session stores cannot serialize arbitrary Elixir structs. The plug
-  reconstructs the struct before passing it to Wax.
-- **`add_credential` (adding a key to an existing user) is not built-in.** The `register`
-  action creates a new user. See "Adding Credentials to Existing Users" above.
-- **`origin_verify_fun`** is hardcoded to `{Wax, :origins_match?, []}` when
-  reconstructing challenges from the session. If you need custom origin verification,
-  you'll need to override the plug.
+- **Challenge data is stored in the session as plain maps**, not the adapter's own
+  challenge structs, because cookie session stores cannot serialize arbitrary Elixir
+  structs. The adapter serializes the challenge — origin policy included — and
+  rebuilds it, re-applying the strategy's settings, before verification.
 - **Token generation happens in `Actions.sign_in`** via `Jwt.token_for_user/3`, not in
-  an Ash preparation like the Password strategy. This is because Wax verification
-  happens outside the Ash action pipeline.
+  an Ash preparation like the Password strategy. This is because the adapter verifies
+  the ceremony outside the Ash action pipeline.
+- **Only the default adapter needs `wax_`.** The strategy, its plugs and the credential
+  extension have no dependency on it; a custom `adapter` brings its own backend. The
+  credential extension does need the `cbor` codec for the stored COSE keys, which
+  `wax_` depends on — add `{:cbor, "~> 1.0"}` yourself when `wax_` isn't there.
+
+## Credential resource configuration
+
+Since 5.0 the credential resource must use the
+`AshAuthentication.WebAuthnCredential` extension. The names of its
+attributes, and of its `belongs_to` to the user resource, are declared once
+on its own `webauthn_credential` section -- not on this strategy. The
+accessors in this module read them back off `credential_resource`, so they
+always reflect what that resource actually declares:
+
+    strategy = AshAuthentication.Info.strategy!(MyApp.Accounts.User, :webauthn)
+    AshAuthentication.Strategy.WebAuthn.credential_id_field(strategy)
+    #=> :credential_id
+
+If you have the credential resource module rather than the strategy, call
+`AshAuthentication.WebAuthnCredential.Info` directly instead.
 
 
 
@@ -287,6 +425,7 @@ webauthn :webauthn do
   rp_id "example.com"
   rp_name "My App"
   identity_field :email
+  require_identity? true
 end
 
 ```
@@ -301,33 +440,31 @@ end
 | [`credential_resource`](#authentication-strategies-webauthn-credential_resource){: #authentication-strategies-webauthn-credential_resource .spark-required} | `atom \| module` |  | The Ash resource used to store WebAuthn credentials. Must have `credential_id` (binary), `public_key` (binary), and `sign_count` (integer) attributes, plus a `belongs_to` relationship to the user resource. |
 | [`rp_id`](#authentication-strategies-webauthn-rp_id){: #authentication-strategies-webauthn-rp_id .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party ID - your domain name (e.g. "example.com"). For multi-tenant setups, pass an MFA tuple or 1-arity function that receives the tenant and returns the domain string:     rp_id {MyApp.WebAuthn, :rp_id_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_id MyApp.Secrets |
 | [`rp_name`](#authentication-strategies-webauthn-rp_name){: #authentication-strategies-webauthn-rp_name .spark-required} | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | Relying Party display name shown to the user during registration. For multi-tenant setups, pass an MFA tuple or 1-arity function:     rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []} For application-environment-driven configuration, point at a module implementing `AshAuthentication.Secret`:     rp_name MyApp.Secrets |
-| [`origin`](#authentication-strategies-webauthn-origin){: #authentication-strategies-webauthn-origin } | `String.t \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | The expected origin for WebAuthn ceremonies. In WebAuthn, the **origin** is the scheme + domain + port that the browser reports during registration and authentication. It is distinct from `rp_id`: - `rp_id` = domain only (e.g. `"example.com"`) - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`) If not set, defaults to `"https://{rp_id}"`. This default **omits the port**, which works for production on port 443 but will cause Wax to reject ceremonies in development where the port is non-standard. **Production:**     origin "https://example.com" **Development (non-standard port):**     origin "https://localhost:4001" **Dynamic (multi-tenant):**     origin {MyApp.WebAuthn, :origin_for_tenant, []} **Application-environment-driven:**     origin MyApp.Secrets |
-| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. |
+| [`adapter`](#authentication-strategies-webauthn-adapter){: #authentication-strategies-webauthn-adapter } | `module` | `AshAuthentication.Strategy.WebAuthn.Adapters.Wax` | The ceremony backend adapter — handles challenge generation, verification, and challenge (de)serialization, and brings its own dependencies: the default needs the optional `wax_` package, a custom adapter does not. See `AshAuthentication.Strategy.WebAuthn.Adapter`. |
+| [`origin`](#authentication-strategies-webauthn-origin){: #authentication-strategies-webauthn-origin } | `String.t \| list(String.t) \| (any -> any) \| mfa \| (any, any -> any) \| module` |  | The origins WebAuthn ceremonies are accepted from — an allowlist. In WebAuthn, the **origin** is the scheme + host + port the browser reports (and signs) during registration and authentication. It is distinct from `rp_id`: - `rp_id` = domain only (e.g. `"example.com"`) - `origin` = full URL (e.g. `"https://example.com"` or `"https://localhost:4001"`) **When set**, the browser's origin must match one of the configured origins exactly, port included. The request that minted the challenge plays no part, so this works unchanged behind a TLS-terminating proxy. **When not set** (the default), an origin is accepted when its scheme is `https` and its host is the `rp_id` or a subdomain of it, on any port — which is exactly the set of origins a browser lets use that RP ID. `http://localhost[:port]` is accepted too when `rp_id` is `"localhost"`. Most deployments, including development on a non-standard port, need no `origin` at all; set it to narrow the policy to specific hosts or ports. **One origin:**     origin "https://app.example.com" **Several:**     origin ["https://app.example.com", "https://admin.example.com"] **Dynamic (multi-tenant)** — a 1-arity function or MFA of the tenant returning a string or list:     origin {MyApp.WebAuthn, :origins_for_tenant, []} **Per environment** (what the generator sets up) — an `AshAuthentication.Secret` reading the application environment and returning `{:ok, origin}` or `{:ok, [origin, ...]}`:     origin MyApp.Secrets A dynamic value that comes back `nil`, `""` or `[]` (or a Secret answering `:error`) counts as not set, so an environment that leaves `:webauthn_origin` out of its config gets the default policy. See "Relying party and origin" in the WebAuthn guide. |
+| [`identity_field`](#authentication-strategies-webauthn-identity_field){: #authentication-strategies-webauthn-identity_field } | `atom` | `:email` | The name of the attribute which uniquely identifies the user (e.g. `:email`). Used for looking up the user during authentication. When `require_identity?` is `false` the user resource needn't have it. |
+| [`require_identity?`](#authentication-strategies-webauthn-require_identity?){: #authentication-strategies-webauthn-require_identity? } | `boolean` | `true` | Defaults to `true` (identity-required mode). Set to `false` for passkey-only mode. When `true` (identity-required mode), the user resource must expose an `identity_field` attribute (default `:email`) that is writable, public, and uniquely constrained. Registration stores the identity. Sign-in uses a discoverable credential, as in passkey-first mode (the challenge endpoint is public, so it never lists a user's credentials); an identity submitted with the sign-in must match the credential's owner. When `false` (passkey-first mode), the user resource needs no identity column, and the register and sign-in actions take none. Users sign in via a discoverable credential only; the credential id resolves the user at verification time. |
 | [`authenticator_attachment`](#authentication-strategies-webauthn-authenticator_attachment){: #authentication-strategies-webauthn-authenticator_attachment } | `nil \| :platform \| :cross_platform` |  | Restricts authenticator type. `nil` allows any, `:platform` limits to built-in (Touch ID, Windows Hello), `:cross_platform` limits to USB/NFC keys (YubiKey). |
+| [`hints`](#authentication-strategies-webauthn-hints){: #authentication-strategies-webauthn-hints } | `list(:security_key \| :client_device \| :hybrid)` | `[]` | Which kinds of authenticator the browser should offer, in order of preference (the WebAuthn Level 3 `hints` member). * `:hybrid` -- another device, reached by scanning a QR code with a   phone or tablet ("use your phone or tablet"). * `:security_key` -- a removable USB/NFC key. * `:client_device` -- the authenticator built in to this device   (Touch ID, Windows Hello). `hints [:hybrid, :security_key]` produces the two-option cross-device dialog. This is a presentation hint only -- it changes which options the browser leads with and never relaxes verification. Clients which do not implement `hints` (currently everything but Chromium >= 128) ignore it and fall back to their default picker. Cross-device ceremonies involve a QR scan, a Bluetooth handshake and a prompt on the second device, so raise `timeout` to at least `120_000` when `:hybrid` is offered. |
+| [`allow_hint_override?`](#authentication-strategies-webauthn-allow_hint_override?){: #authentication-strategies-webauthn-allow_hint_override? } | `boolean` | `false` | Whether a `hints` request parameter on the challenge endpoints overrides the configured `hints`. Lets a UI offer separate entry points ("sign in with a phone", "use a security key") which jump straight to one kind of authenticator, by requesting e.g. `?hints=hybrid`. Values outside the `hints` enum are discarded, and a request which names none of them falls back to the configured value. The parameter only affects the dialog the requesting browser shows itself; every security-relevant option stays server-derived. |
 | [`user_verification`](#authentication-strategies-webauthn-user_verification){: #authentication-strategies-webauthn-user_verification } | `"required" \| "preferred" \| "discouraged"` | `"preferred"` | Whether user verification (PIN/biometric) is required. Use `"required"` for highest security. |
-| [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "direct"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"direct"` requests the authenticator's attestation certificate. |
-| [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. |
-| [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether to require discoverable credentials (passkeys). `:required` enables username-less authentication. |
-| [`credential_id_field`](#authentication-strategies-webauthn-credential_id_field){: #authentication-strategies-webauthn-credential_id_field } | `atom` | `:credential_id` | The name of the credential ID attribute on the credential resource. |
-| [`public_key_field`](#authentication-strategies-webauthn-public_key_field){: #authentication-strategies-webauthn-public_key_field } | `atom` | `:public_key` | The name of the public key attribute on the credential resource. |
-| [`sign_count_field`](#authentication-strategies-webauthn-sign_count_field){: #authentication-strategies-webauthn-sign_count_field } | `atom` | `:sign_count` | The name of the sign count attribute on the credential resource. |
-| [`label_field`](#authentication-strategies-webauthn-label_field){: #authentication-strategies-webauthn-label_field } | `atom` | `:label` | The name of the label attribute on the credential resource. |
-| [`last_used_at_field`](#authentication-strategies-webauthn-last_used_at_field){: #authentication-strategies-webauthn-last_used_at_field } | `atom` | `:last_used_at` | The name of the last_used_at attribute on the credential resource. Set to `nil` to disable tracking. |
-| [`user_relationship_name`](#authentication-strategies-webauthn-user_relationship_name){: #authentication-strategies-webauthn-user_relationship_name } | `atom` | `:user` | The name of the belongs_to relationship on the credential resource pointing to the user. |
+| [`attestation`](#authentication-strategies-webauthn-attestation){: #authentication-strategies-webauthn-attestation } | `"none" \| "indirect" \| "direct" \| "enterprise"` | `"none"` | Attestation conveyance preference. `"none"` is recommended for most use cases. `"indirect"` allows the client to substitute an anonymized attestation, `"direct"` requests the authenticator's attestation statement verbatim, and `"enterprise"` requests individually-identifying attestation (requires browser/authenticator support and policy). Verifying attestation beyond `:none`/`:self` types requires FIDO metadata — see the WebAuthn guide. NOTE: requesting `"direct"` only asks the client to *convey* an attestation statement; it does not verify it. A client may answer any preference with a `"none"` statement (synced passkeys always do); whatever it conveys is verified as such and accepted or refused by `trusted_attestation_types`. Under `"none"`, a statement the client sends anyway is discarded, as the client itself should have done. With the default `trusted_attestation_types` (which accept `:none`/`:uncertain`) and `verify_trust_root?` set to `false`, the statement is not checked against any trust root. To actually enforce attestation you must tighten `trusted_attestation_types`, set `verify_trust_root?` to `true`, and give the adapter FIDO metadata (for the default adapter, configure the `:wax_` application). |
+| [`trusted_attestation_types`](#authentication-strategies-webauthn-trusted_attestation_types){: #authentication-strategies-webauthn-trusted_attestation_types } | `list(:none \| :basic \| :self \| :attca \| :anonca \| :uncertain)` | `[:none, :basic, :self, :uncertain]` | The attestation types accepted at registration, as the adapter classifies the verified statement: `:none` (no statement), `:self` (signed with the credential's own key), `:basic`, `:attca` and `:anonca` (chaining to a known root), or `:uncertain` (a chain the adapter has no metadata to judge). Restrict to e.g. `[:basic, :attca]` to only accept authenticators whose attestation chains to a known root — this requires FIDO metadata (for the default adapter, configured on the `:wax_` application). |
+| [`verify_trust_root?`](#authentication-strategies-webauthn-verify_trust_root?){: #authentication-strategies-webauthn-verify_trust_root? } | `boolean` | `false` | Whether to verify the attestation trust root for `packed` and `u2f` attestation formats (`tpm` is always checked against metadata). Requires FIDO metadata (for the default adapter, configured on the `:wax_` application). |
+| [`timeout`](#authentication-strategies-webauthn-timeout){: #authentication-strategies-webauthn-timeout } | `pos_integer` | `60000` | Timeout for WebAuthn ceremonies in milliseconds. Sent to the browser, and enforced on the server: a challenge answered after it has elapsed (rounded up to whole seconds) is rejected. Cross-device (`:hybrid`) ceremonies need considerably longer than a local one -- at least `120_000`. |
+| [`resident_key`](#authentication-strategies-webauthn-resident_key){: #authentication-strategies-webauthn-resident_key } | `:required \| :preferred \| :discouraged` | `:required` | Whether registration asks for a discoverable credential (a passkey stored on the authenticator, which can be offered without the server naming it) or allows a non-discoverable one (which the authenticator can only use when the server sends its id back). Sign-in only ever uses discoverable credentials (the public challenge endpoint never lists a user's credentials), so keep `:required` for any strategy that signs users in; the strategy warns at compile time otherwise. `:preferred` may still yield a non-discoverable credential (e.g. on a security key whose storage is full), and `:discouraged` usually does; both are only safe with `sign_in_enabled? false`. See "Discoverable and non-discoverable credentials" in the WebAuthn guide. |
+| [`sign_count_policy`](#authentication-strategies-webauthn-sign_count_policy){: #authentication-strategies-webauthn-sign_count_policy } | `:reject \| :log \| :ignore` | `:reject` | How to react when an assertion's sign count has not increased over the stored value — the WebAuthn signal that the authenticator may have been cloned (§6.1.1). The check only fires when the authenticator actually implements a counter: synced passkeys report a constant `0` on both sides and are never flagged. - `:reject` (default) — fail the ceremony with an authentication error. - `:log` — allow the ceremony but log a warning; the stored sign count   is deliberately **not** lowered, so a cloned authenticator keeps   tripping the check. The credential record is left untouched for that   assertion, so `last_used_at` and `backed_up` aren't refreshed either. - `:ignore` — no check; the stored count is simply overwritten. |
 | [`credentials_relationship_name`](#authentication-strategies-webauthn-credentials_relationship_name){: #authentication-strategies-webauthn-credentials_relationship_name } | `atom` | `:webauthn_credentials` | The name of the has_many relationship on the user resource pointing to credentials. |
 | [`registration_enabled?`](#authentication-strategies-webauthn-registration_enabled?){: #authentication-strategies-webauthn-registration_enabled? } | `boolean` | `true` | Whether to allow new user registration via WebAuthn. |
-| [`sign_in_enabled?`](#authentication-strategies-webauthn-sign_in_enabled?){: #authentication-strategies-webauthn-sign_in_enabled? } | `boolean` | `true` | Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor. |
+| [`sign_in_enabled?`](#authentication-strategies-webauthn-sign_in_enabled?){: #authentication-strategies-webauthn-sign_in_enabled? } | `boolean` | `true` | Whether the strategy can sign users in directly (i.e. WebAuthn is the primary credential). Set to `false` when using WebAuthn purely as a second factor. The `sign_in_with_token` exchange stays while `verify_enabled?` is on, since `verify` answers with a sign-in token too. |
 | [`verify_enabled?`](#authentication-strategies-webauthn-verify_enabled?){: #authentication-strategies-webauthn-verify_enabled? } | `boolean` | `true` | Whether the strategy exposes a `:verify` phase that proves possession of a passkey for an already-authenticated user. Used for second-factor and step-up flows. |
+| [`add_credential_enabled?`](#authentication-strategies-webauthn-add_credential_enabled?){: #authentication-strategies-webauthn-add_credential_enabled? } | `boolean` | `true` | Whether an authenticated user can add another passkey to their account (the `add_credential_challenge` and `add_credential` phases). Turn it off when passkeys are enrolled only at registration, or only through your own flow. |
+| [`add_credential_max_authentication_age`](#authentication-strategies-webauthn-add_credential_max_authentication_age){: #authentication-strategies-webauthn-add_credential_max_authentication_age } | `nil \| pos_integer \| {pos_integer, :days \| :hours \| :minutes \| :seconds}` |  | When set, adding a passkey requires the user to have authenticated within this long (seconds, or e.g. `{5, :minutes}`); otherwise both `add_credential` phases fail, and the UI should ask the user to sign in again or complete a second-factor verification first. A new passkey is a lasting way into the account, so this stops a stolen or long-lived session from being used to plant one. What counts as authenticating: signing in (the session token's issue time), a second-factor verification (`webauthn_verified_at`, `totp_verified_at`), or a time the caller passes explicitly. See `AshAuthentication.Strategy.WebAuthn.RecentAuthentication`. Defaults to `nil`: any authenticated user may add a passkey. |
 | [`register_action_name`](#authentication-strategies-webauthn-register_action_name){: #authentication-strategies-webauthn-register_action_name } | `atom` |  | The name of the register action on the user resource. Defaults to `register_with_<strategy_name>`. |
+| [`register_action_accept`](#authentication-strategies-webauthn-register_action_accept){: #authentication-strategies-webauthn-register_action_accept } | `list(atom \| {atom, [secret?: boolean]})` | `[]` | A list of additional writable attributes to be accepted in the register action (e.g. `[:name]`). Their values are validated by the action as usual, so `allow_nil?`, constraints, and any validations on the resource apply. Attributes marked `sensitive?: true` must confirm whether they are secrets via a `{field, secret?: boolean}` entry (e.g. `[given_names: [secret?: false]]`); `secret?: true` renders a masked input, `secret?: false` a regular one. |
 | [`sign_in_action_name`](#authentication-strategies-webauthn-sign_in_action_name){: #authentication-strategies-webauthn-sign_in_action_name } | `atom` |  | The name of the sign-in action on the user resource. Defaults to `sign_in_with_<strategy_name>`. |
-| [`sign_in_with_token_action_name`](#authentication-strategies-webauthn-sign_in_with_token_action_name){: #authentication-strategies-webauthn-sign_in_with_token_action_name } | `atom` |  | The name of the action used to sign in with a short-lived token issued by a successful WebAuthn ceremony. Defaults to `sign_in_with_<strategy_name>_token`. |
+| [`sign_in_with_token_action_name`](#authentication-strategies-webauthn-sign_in_with_token_action_name){: #authentication-strategies-webauthn-sign_in_with_token_action_name } | `atom` |  | The name of the action used to sign in with a short-lived token issued by a successful WebAuthn `sign_in` or `verify`. Built while either of them is enabled. Defaults to `sign_in_with_<strategy_name>_token`. |
 | [`verify_action_name`](#authentication-strategies-webauthn-verify_action_name){: #authentication-strategies-webauthn-verify_action_name } | `atom` |  | The name of the second-factor verify action on the user resource. Defaults to `verify_<strategy_name>`. |
-| [`store_credential_action_name`](#authentication-strategies-webauthn-store_credential_action_name){: #authentication-strategies-webauthn-store_credential_action_name } | `atom` |  | The name of the create action on the credential resource. Defaults to `store_<strategy_name>_credential`. |
-| [`update_sign_count_action_name`](#authentication-strategies-webauthn-update_sign_count_action_name){: #authentication-strategies-webauthn-update_sign_count_action_name } | `atom` |  | The name of the update action for sign_count on the credential resource. Defaults to `update_<strategy_name>_sign_count`. |
-| [`list_credentials_action_name`](#authentication-strategies-webauthn-list_credentials_action_name){: #authentication-strategies-webauthn-list_credentials_action_name } | `atom` |  | The name of the read action to list credentials. Defaults to `list_<strategy_name>_credentials`. |
-| [`delete_credential_action_name`](#authentication-strategies-webauthn-delete_credential_action_name){: #authentication-strategies-webauthn-delete_credential_action_name } | `atom` |  | The name of the destroy action for credentials. Defaults to `delete_<strategy_name>_credential`. |
-| [`update_credential_label_action_name`](#authentication-strategies-webauthn-update_credential_label_action_name){: #authentication-strategies-webauthn-update_credential_label_action_name } | `atom` |  | The name of the update action for credential labels. Defaults to `update_<strategy_name>_credential_label`. |
-| [`add_credential_action_name`](#authentication-strategies-webauthn-add_credential_action_name){: #authentication-strategies-webauthn-add_credential_action_name } | `atom` |  | The name of the action to add a credential to an existing user. Defaults to `add_<strategy_name>_credential`. |
 
 
 
