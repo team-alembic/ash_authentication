@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -14,4 +15,8 @@ Mimic.copy(AshAuthentication.Strategy.Password.Plug)
 Mimic.copy(AshAuthentication.Strategy.RememberMe.Token.Helpers)
 Mimic.copy(AshAuthentication.TokenResource)
 {:ok, _} = Example.Hammer.start_link(clean_period: :timer.minutes(1))
+
+# The cloaked test resource encrypts its tokens through this vault.
+{:ok, _pid} = Example.Vault.start_link()
+
 ExUnit.start(capture_log: true)

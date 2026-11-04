@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -27,7 +28,7 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
   @doc false
   @impl true
   @spec change(Changeset.t(), keyword, Change.context()) :: Changeset.t()
-  def change(changeset, _opts, _context) do
+  def change(changeset, _opts, context) do
     cfg = Info.user_identity_options(changeset.resource)
 
     user_info = Changeset.get_argument(changeset, :user_info)
@@ -39,28 +40,43 @@ defmodule AshAuthentication.UserIdentity.UpsertIdentityChange do
     changeset
     |> Changeset.change_attribute(cfg.user_id_attribute_name, user_id)
     |> Changeset.change_attribute(cfg.uid_attribute_name, uid)
-    |> Changeset.change_attribute(
+    |> change_token(
       cfg.access_token_attribute_name,
-      Map.get(oauth_tokens, "access_token")
+      Map.get(oauth_tokens, "access_token"),
+      context
     )
     |> Changeset.change_attribute(
       cfg.access_token_expires_at_attribute_name,
       expires_at(oauth_tokens, "expires_in")
     )
     |> then(fn changeset ->
-      if Map.get(oauth_tokens, "refresh_token") do
+      if refresh_token = Map.get(oauth_tokens, "refresh_token") do
         # A new non-nil refresh_token is always nice
-        Changeset.change_attribute(
-          changeset,
-          cfg.refresh_token_attribute_name,
-          oauth_tokens["refresh_token"] ||
-            Map.get(oauth_tokens, "refresh_token")
-        )
+        change_token(changeset, cfg.refresh_token_attribute_name, refresh_token, context)
       else
         # Do not overwrite refresh_tokens with a new nil
         changeset
       end
     end)
+  end
+
+  # `AshCloak` replaces an encrypted attribute with a calculation of the same
+  # name, so `change_attribute/3` no longer finds it. Route those fields through
+  # `AshCloak.encrypt_and_set/4` to write the backing `encrypted_*` attribute.
+  if Code.ensure_loaded?(AshCloak) do
+    defp change_token(changeset, field, value, context) do
+      import AshAuthentication.Utils, only: [cloaked_attributes: 1]
+
+      if field in cloaked_attributes(changeset.resource) do
+        AshCloak.encrypt_and_set(changeset, field, value, context)
+      else
+        Changeset.change_attribute(changeset, field, value)
+      end
+    end
+  else
+    defp change_token(changeset, field, value, _context) do
+      Changeset.change_attribute(changeset, field, value)
+    end
   end
 
   defp expires_at(oauth_tokens, field) do

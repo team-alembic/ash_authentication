@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -10,6 +11,7 @@ defmodule Example do
     resource Example.ApiKey
     resource Example.AuditLog
     resource Example.AuditLogNoExpiry
+    resource Example.CloakedUserIdentity
     resource Example.OidcConnection
     resource Example.Token
     resource Example.TokenWithCustomCreateTimestamp

@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2022 Alembic Pty Ltd
+# SPDX-FileCopyrightText: 2026 ash_authentication contributors <https://github.com/team-alembic/ash_authentication/graphs/contributors>
 #
 # SPDX-License-Identifier: MIT
 
@@ -52,3 +53,10 @@ config :ash_authentication,
 config :ash_authentication, extra_strategies: [Example.OnlyMartiesAtTheParty]
 
 config :ash_authentication, suppress_sensitive_field_warnings?: true
+
+config :ash_authentication, Example.Vault,
+  ciphers: [
+    default:
+      {Cloak.Ciphers.AES.GCM,
+       tag: "AES.GCM.V1", key: Base.decode64!("3Jnb0hZiHIzHTOih7t2cTEPEpY98Tu1wvQkPfq/XwqE=")}
+  ]
