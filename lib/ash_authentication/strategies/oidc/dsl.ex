@@ -93,9 +93,9 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
         default: nil
       ],
       openid_default_scope: [
-        type: :string,
+        type: {:or, [:string, nil]},
         doc:
-          "The default scope requested from the OpenID provider. Merged with `authorization_params[:scope]`.",
+          "The default scope requested from the OpenID provider. Merged with `authorization_params[:scope]`. `nil` requests only `authorization_params[:scope]`, as Assent's Apple strategy does.",
         required: false,
         default: "openid"
       ],

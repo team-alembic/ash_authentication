@@ -211,6 +211,17 @@ defmodule Example.User do
       filter expr(username == get_path(^arg(:user_info), [:nickname]))
     end
 
+    create :register_with_apple do
+      argument :user_info, :map, allow_nil?: false
+      argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
+      upsert? true
+      upsert_identity :username
+
+      change AshAuthentication.GenerateTokenChange
+      change Example.GenericOAuth2Change
+      change AshAuthentication.Strategy.OAuth2.IdentityChange
+    end
+
     create :register_with_github do
       argument :user_info, :map, allow_nil?: false
       argument :oauth_tokens, :map, allow_nil?: false, sensitive?: true
@@ -398,6 +409,15 @@ defmodule Example.User do
         redirect_uri &get_config/2
         client_secret &get_config/2
         base_url &get_config/2
+        identity_resource Example.UserIdentity
+      end
+
+      apple do
+        client_id &get_config/2
+        redirect_uri &get_config/2
+        team_id &get_config/2
+        private_key_id &get_config/2
+        private_key_path &get_config/2
         identity_resource Example.UserIdentity
       end
 
