@@ -24,6 +24,13 @@ config :ash,
 config :ash_authentication,
   authentication: [
     strategies: [
+      apple: [
+        client_id: "pretend.services.id",
+        redirect_uri: "http://localhost:4000/auth",
+        team_id: "PRETENDTEAM",
+        private_key_id: "PRETENDKEY",
+        private_key_path: "/nonexistent/AuthKey_PRETENDKEY.p8"
+      ],
       oauth2: [
         client_id: "pretend client id",
         redirect_uri: "http://localhost:4000/auth",
