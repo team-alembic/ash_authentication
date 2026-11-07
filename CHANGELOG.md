@@ -11,6 +11,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.17](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.16...v5.0.0-rc.17) (2026-11-07)
+
+
+
+
+### Bug Fixes:
+
+* apple: accept Assent's `openid_default_scope: nil`, so the strategy compiles (#1258) by Torkild Gundersen Kjevik
+
+* password: return {:ok, record} when authentication tokens are disabled (#1256) by JCSchoeman96
+
 ## [v5.0.0-rc.16](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.15...v5.0.0-rc.16) (2026-11-03)
 
 
