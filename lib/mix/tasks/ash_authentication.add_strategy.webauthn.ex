@@ -60,6 +60,11 @@ if Code.ensure_loaded?(Igniter) do
       phone" button (`?hints=hybrid`). Combines with every mode. Without it,
       browsers still offer cross-device as one choice among others; this
       makes it the first.
+    * `--no-config` - Leaves the application environment alone: no
+      `webauthn_rp_id`/`webauthn_rp_name` in `config/dev.exs` and
+      `config/test.exs`, and no `WEBAUTHN_*` variables in `config/runtime.exs`.
+      The `Secrets` clauses are still added, so the strategy compiles; point
+      them at wherever your project resolves its settings.
     * `--name`, `-n` - The strategy name. Defaults to `webauthn`.
     * `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `primary`.
 
@@ -83,6 +88,7 @@ if Code.ensure_loaded?(Igniter) do
           identity_field: :string,
           passkey_only: :boolean,
           cross_device: :boolean,
+          config: :boolean,
           mode: :string,
           name: :string
         ],
@@ -97,6 +103,7 @@ if Code.ensure_loaded?(Igniter) do
           identity_field: "email",
           passkey_only: false,
           cross_device: false,
+          config: true,
           mode: "primary",
           name: "webauthn"
         ]
@@ -128,6 +135,7 @@ if Code.ensure_loaded?(Igniter) do
           |> add_wax_dependency()
           |> add_credential_resource(secrets_module, options)
           |> add_webauthn_secrets(secrets_module, options)
+          |> maybe_configure_webauthn_env(options)
           |> maybe_note_passkey_only_in_2fa(options)
           |> AshAuthentication.Igniter.codegen_for_strategy(options[:name])
 
@@ -469,10 +477,10 @@ if Code.ensure_loaded?(Igniter) do
       """
     end
 
+    # The strategy reads `rp_id`, `rp_name` and `origin` through the Secrets
+    # module, whatever its clauses end up resolving them from.
     defp add_webauthn_secrets(igniter, secrets_module, options) do
-      otp_app = Igniter.Project.Application.app_name(igniter)
       strategy_name = options[:name]
-      rp_name_default = humanise_app_name(otp_app)
 
       igniter
       |> AshAuthentication.Igniter.add_new_secret_from_env(
@@ -493,6 +501,23 @@ if Code.ensure_loaded?(Igniter) do
         [:authentication, :strategies, strategy_name, :origin],
         :webauthn_origin
       )
+    end
+
+    # The application environment those clauses read from. `--no-config` is
+    # for a project that resolves these settings some other way.
+    defp maybe_configure_webauthn_env(igniter, options) do
+      if options[:config] do
+        configure_webauthn_env(igniter)
+      else
+        igniter
+      end
+    end
+
+    defp configure_webauthn_env(igniter) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+      rp_name_default = humanise_app_name(otp_app)
+
+      igniter
       |> Igniter.Project.Config.configure_new(
         "dev.exs",
         otp_app,
