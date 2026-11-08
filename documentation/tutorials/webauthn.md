@@ -95,10 +95,18 @@ mix ash_authentication.add_strategy.webauthn --mode 2fa         # second factor 
 mix ash_authentication.add_strategy.webauthn --cross-device     # lead with phone / QR code
 ```
 
-The flags combine. The generator creates the credential resource, adds the
-strategy to the user resource, and wires the relying party through your
-`Secrets` module and config. See
+The flags combine. The generator creates the credential resource (table
+`webauthn_credentials`), adds the strategy to the user resource, and wires the
+relying party through your `Secrets` module and config. See
 [Relying party and origin](#relying-party-and-origin).
+
+It ends by running `mix ash.codegen add_webauthn_auth_strategy` for you. Igniter
+runs that step in a subprocess with no terminal attached, so codegen can't ask
+you anything there. It has nothing to ask on a fresh install, but it does when
+a snapshot no longer matches a resource, for example after you rename a table by
+hand and run the generator again: the run then waits on a question you can't
+see or answer. If the generator seems to stall at the codegen step, stop it and
+run `mix ash.codegen add_webauthn_auth_strategy` yourself, where it can ask.
 
 ### How the two resources fit together
 
