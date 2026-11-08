@@ -27,19 +27,35 @@ if Code.ensure_loaded?(Igniter) do
         |> Sourceror.to_string()
 
       Igniter.Project.Module.find_and_update_or_create_module(igniter, module, full, fn zipper ->
-        with {:ok, zipper} <-
-               Igniter.Code.Function.move_to_def(zipper, :secret_for, 4, target: :at),
-             zipper when not is_nil(zipper) <- Sourceror.Zipper.down(zipper),
-             zipper when not is_nil(zipper) <- Sourceror.Zipper.down(zipper),
-             true <- Igniter.Code.Common.nodes_equal?(zipper, path),
-             zipper when not is_nil(zipper) <- Sourceror.Zipper.right(zipper),
-             true <- Igniter.Code.Common.nodes_equal?(zipper, resource) do
+        if secret_clause_exists?(zipper, path, resource) do
           {:ok, zipper}
         else
-          _ ->
-            {:ok, Igniter.Code.Common.add_code(zipper, func)}
+          {:ok, Igniter.Code.Common.add_code(zipper, func)}
         end
       end)
+    end
+
+    # Any `secret_for/4` clause for this path and resource, wherever it is in
+    # the module. Looking at the first clause alone misses every one after it,
+    # and adds the same clause again on each run.
+    defp secret_clause_exists?(zipper, path, resource) do
+      match?(
+        {:ok, _zipper},
+        Igniter.Code.Common.move_to(zipper, &secret_clause?(&1, path, resource))
+      )
+    end
+
+    defp secret_clause?(zipper, path, resource) do
+      with {:def, _, [{:secret_for, _, [_, _, _, _]}, _body]} <- Sourceror.Zipper.node(zipper),
+           zipper when not is_nil(zipper) <- Sourceror.Zipper.down(zipper),
+           zipper when not is_nil(zipper) <- Sourceror.Zipper.down(zipper),
+           true <- Igniter.Code.Common.nodes_equal?(zipper, path),
+           zipper when not is_nil(zipper) <- Sourceror.Zipper.right(zipper),
+           true <- Igniter.Code.Common.nodes_equal?(zipper, resource) do
+        true
+      else
+        _ -> false
+      end
     end
 
     @doc "Adds a secret to a secret module that reads from application env"
