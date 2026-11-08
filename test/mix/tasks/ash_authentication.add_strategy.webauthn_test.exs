@@ -268,6 +268,23 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff =~ ~s|webauthn_origin: System.get_env("WEBAUTHN_ORIGIN")|
   end
 
+  test "`--no-config` adds the Secrets clauses but touches no config file", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", ["--no-config"])
+
+    diff = diff(result, only: "lib/test/secrets.ex")
+    assert diff =~ "[:authentication, :strategies, :webauthn, :rp_id]"
+    assert diff =~ "[:authentication, :strategies, :webauthn, :rp_name]"
+    assert diff =~ "[:authentication, :strategies, :webauthn, :origin]"
+
+    for config <- ["config/dev.exs", "config/test.exs", "config/runtime.exs"] do
+      refute diff(result, only: config) =~ "webauthn"
+    end
+
+    assert diff(result) =~ "rp_id(Test.Secrets)"
+  end
+
   test "drops `allow_nil? false` from hashed_password when password is also installed",
        %{igniter: igniter} do
     igniter

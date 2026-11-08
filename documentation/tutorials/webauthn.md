@@ -256,6 +256,10 @@ An origin that's left out of an environment's config counts as unset, and so
 does `nil`, `""` or `[]`. So `WEBAUTHN_ORIGIN` can simply be left undefined in
 production.
 
+A project that resolves its settings some other way passes `--no-config`: the
+strategy and the `Secrets` clauses are still generated, but no config file is
+touched. Rewrite the clauses to read from wherever the settings live.
+
 ### Setting `origin` explicitly
 
 Set `:webauthn_origin` in an environment's config when that environment should
