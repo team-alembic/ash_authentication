@@ -37,6 +37,13 @@ if Code.ensure_loaded?(Igniter) do
     environment to exact origins. See "Relying party and origin" in the WebAuthn
     guide.
 
+    The task ends by running `mix ash.codegen add_<name>_auth_strategy`. Igniter
+    runs that in a subprocess with no terminal attached, so codegen can't ask
+    anything there; it has nothing to ask on a fresh install, but after a
+    snapshot has diverged from a resource (a table renamed by hand, say) it
+    does, and the run waits on a question nobody can answer. If the task
+    stalls at that step, stop it and run the codegen command yourself.
+
     ## Example
 
     ```bash
@@ -227,6 +234,7 @@ if Code.ensure_loaded?(Igniter) do
         extensions
       ])
       |> fix_credential_resource_file_name(credential_resource)
+      |> fix_credential_resource_table_name(credential_resource)
       |> add_webauthn_credential_section(credential_resource, options[:user])
       |> add_credential_resource_authorizer(credential_resource)
       |> add_credential_resource_timestamps(credential_resource)
@@ -244,6 +252,29 @@ if Code.ensure_loaded?(Igniter) do
       right_path = wrong_path |> Path.dirname() |> Path.join("webauthn_credential.ex")
 
       Igniter.move_file(igniter, wrong_path, right_path, error_if_exists?: false)
+    end
+
+    # The data layer's installer derives the table name the same way
+    # (`Macro.underscore/1`, then pluralised), so the table comes out as
+    # `web_authn_credentials` while the relationship is `webauthn_credentials`
+    # and the guide's resource says `table "webauthn_credentials"`. Set the
+    # table to the one word the rest of the project uses.
+    defp fix_credential_resource_table_name(igniter, credential_resource) do
+      case data_layer_section() do
+        nil ->
+          igniter
+
+        section ->
+          # The default updater keeps a value that is already set, and the
+          # data layer has just set one.
+          Spark.Igniter.set_option(
+            igniter,
+            credential_resource,
+            [section, :table],
+            "webauthn_credentials",
+            &{:ok, Sourceror.Zipper.replace(&1, "webauthn_credentials")}
+          )
+      end
     end
 
     defp add_webauthn_credential_section(igniter, credential_resource, user_resource) do
@@ -574,15 +605,19 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp data_layer_extension do
+      case data_layer_section() do
+        nil -> "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer"
+        section -> "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer,#{section}"
+      end
+    end
+
+    # The DSL section of the data layer the resource is generated with, which
+    # is also the shorthand `ash.gen.resource` takes for it.
+    defp data_layer_section do
       cond do
-        Code.ensure_loaded?(AshPostgres.DataLayer) ->
-          "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer,postgres"
-
-        Code.ensure_loaded?(AshSqlite.DataLayer) ->
-          "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer,sqlite"
-
-        true ->
-          "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer"
+        Code.ensure_loaded?(AshPostgres.DataLayer) -> :postgres
+        Code.ensure_loaded?(AshSqlite.DataLayer) -> :sqlite
+        true -> nil
       end
     end
   end

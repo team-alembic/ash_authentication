@@ -162,6 +162,21 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff(result) =~ "AshAuthentication.Checks.AshAuthenticationInteraction"
   end
 
+  # `ash.gen.resource` lets the data layer derive the table from the module
+  # name, which splits `WebAuthn` into `web_authn`. The relationship, the
+  # file and the guide all spell it as one word.
+  test "credential resource's table is webauthn_credentials, not web_authn_credentials", %{
+    igniter: igniter
+  } do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    diff = diff(result, only: "lib/test/accounts/webauthn_credential.ex")
+    assert diff =~ ~s|table("webauthn_credentials")|
+    refute diff =~ "web_authn_credentials"
+  end
+
   test "credential resource registers Ash.Policy.Authorizer", %{igniter: igniter} do
     result =
       igniter
