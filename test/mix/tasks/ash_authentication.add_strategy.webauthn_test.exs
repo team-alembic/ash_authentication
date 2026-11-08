@@ -207,6 +207,16 @@ defmodule Mix.Tasks.AshAuthentication.AddStrategy.WebauthnTest do
     assert diff =~ "Application.fetch_env(:test, :webauthn_origin)"
   end
 
+  test "running it again adds no second set of Secrets clauses", %{igniter: igniter} do
+    result =
+      igniter
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+      |> apply_igniter!()
+      |> Igniter.compose_task("ash_authentication.add_strategy.webauthn", [])
+
+    refute diff(result, only: "lib/test/secrets.ex") =~ "secret_for"
+  end
+
   test "seeds dev.exs with sensible rp_id and rp_name defaults", %{igniter: igniter} do
     result =
       igniter
