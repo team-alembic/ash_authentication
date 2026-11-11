@@ -78,21 +78,24 @@ defmodule AshAuthentication.Test.WebAuthnMockAdapter do
   def pub_key_cred_params, do: @pub_key_cred_params
 
   @impl Adapter
-  def registration_challenge(strategy, tenant, _opts) do
-    new_challenge(strategy, tenant, :attestation, [])
+  def registration_challenge(strategy, tenant, opts) do
+    new_challenge(strategy, tenant, opts, :attestation, [])
   end
 
   @impl Adapter
-  def authentication_challenge(strategy, allow_credentials, tenant, _opts) do
-    new_challenge(strategy, tenant, :authentication, allow_credentials)
+  def authentication_challenge(strategy, allow_credentials, tenant, opts) do
+    new_challenge(strategy, tenant, opts, :authentication, allow_credentials)
   end
 
-  defp new_challenge(strategy, tenant, type, allow_credentials) do
+  # `opts[:context]` is what a Secret resolving the relying party receives.
+  defp new_challenge(strategy, tenant, opts, type, allow_credentials) do
+    context = Keyword.get(opts, :context, %{})
+
     %Challenge{
       type: type,
       bytes: :crypto.strong_rand_bytes(32),
-      rp_id: Helpers.resolve_rp_id(strategy, tenant),
-      origin_policy: Origin.policy(strategy, tenant),
+      rp_id: Helpers.resolve_rp_id(strategy, tenant, context),
+      origin_policy: Origin.policy(strategy, tenant, context),
       issued_at: System.system_time(:second),
       timeout: Helpers.challenge_timeout_seconds(strategy),
       user_verification: strategy.user_verification,

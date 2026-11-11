@@ -50,8 +50,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
 
   The expected origin is a *policy*, not a value, and it comes from
   configuration rather than from the request:
-  `AshAuthentication.Strategy.WebAuthn.Origin.policy/2` resolves it for the
-  strategy and tenant, and
+  `AshAuthentication.Strategy.WebAuthn.Origin.policy/3` resolves it for the
+  strategy and tenant, in the caller's context (`opts[:context]` of the
+  challenge callbacks), and
   `AshAuthentication.Strategy.WebAuthn.Origin.allowed?/2` decides whether the
   origin the browser signed satisfies it. An adapter must call the latter
   on every verification, and must carry the policy through
@@ -138,8 +139,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
   @doc """
   Generate a registration (attestation) challenge.
 
-  `opts` carries caller-supplied, adapter-specific options; the strategy's
-  own plugs pass none.
+  `opts` carries caller-supplied options. `opts[:context]`, when present,
+  is the context an `AshAuthentication.Secret` resolving `rp_id` or `origin`
+  receives (the strategy's plugs pass the connection in it); hand it to
+  `AshAuthentication.Strategy.WebAuthn.Origin.policy/3` and
+  `AshAuthentication.Strategy.WebAuthn.Helpers.resolve_rp_id/3`, which add
+  the tenant. Any other option is adapter-specific; the strategy's own plugs
+  pass none.
   """
   @callback registration_challenge(WebAuthn.t(), tenant :: any, opts :: keyword) :: challenge
 
@@ -147,6 +153,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Adapter do
   Generate an authentication (assertion) challenge for the given credentials.
 
   An empty `allow_credentials` list means a discoverable-credential flow.
+  `opts` as for `c:registration_challenge/3`.
   """
   @callback authentication_challenge(
               WebAuthn.t(),

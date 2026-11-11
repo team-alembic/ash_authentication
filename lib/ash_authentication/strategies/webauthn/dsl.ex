@@ -72,6 +72,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           implementing `AshAuthentication.Secret`:
 
               rp_id MyApp.Secrets
+
+          The Secret's context carries the tenant under `:tenant`, the
+          `Plug.Conn` under `:conn` when resolved in a plug, and the Ash
+          context the plug or action was given, so it can resolve per tenant
+          or per request too:
+
+              def secret_for([:authentication, :strategies, :webauthn, :rp_id], _resource, _opts, %{
+                    tenant: tenant
+                  }),
+                  do: {:ok, rp_id_for(tenant)}
+
+          Tenants on subdomains of one domain may share that domain as their
+          `rp_id` and differ in `origin`, which is exact.
           """,
           required: true
         ],
@@ -92,7 +105,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
               rp_name {MyApp.WebAuthn, :rp_name_for_tenant, []}
 
           For application-environment-driven configuration, point at a module
-          implementing `AshAuthentication.Secret`:
+          implementing `AshAuthentication.Secret`, which receives the same
+          context as for `rp_id`:
 
               rp_name MyApp.Secrets
           """,
@@ -147,6 +161,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Dsl do
           returning `{:ok, origin}` or `{:ok, [origin, ...]}`:
 
               origin MyApp.Secrets
+
+          The Secret's context carries the tenant under `:tenant`, the
+          `Plug.Conn` under `:conn` when resolved in a plug, and the Ash
+          context the plug or action was given, so a Secret can also answer
+          per tenant: tenants on subdomains of a shared `rp_id` each return
+          their own exact origin(s) here:
+
+              def secret_for([:authentication, :strategies, :webauthn, :origin], _resource, _opts, %{
+                    tenant: tenant
+                  }),
+                  do: {:ok, "https://\#{tenant}.example.com"}
 
           A dynamic value that comes back `nil`, `""` or `[]` (or a Secret
           answering `:error`) counts as not set, so an environment that leaves

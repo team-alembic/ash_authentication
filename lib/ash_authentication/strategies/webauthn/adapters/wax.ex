@@ -51,32 +51,35 @@ if Code.ensure_loaded?(Wax) do
     def pub_key_cred_params, do: @pub_key_cred_params
 
     @impl Adapter
-    def registration_challenge(strategy, tenant, _opts) do
+    def registration_challenge(strategy, tenant, opts) do
       strategy
-      |> challenge_opts(tenant)
+      |> challenge_opts(tenant, secret_context(opts))
       |> Wax.new_registration_challenge()
     end
 
     @impl Adapter
-    def authentication_challenge(strategy, allow_credentials, tenant, _opts) do
+    def authentication_challenge(strategy, allow_credentials, tenant, opts) do
       strategy
-      |> challenge_opts(tenant)
+      |> challenge_opts(tenant, secret_context(opts))
       |> Keyword.put(:allow_credentials, allow_credentials)
       |> Wax.new_authentication_challenge()
     end
 
+    defp secret_context(opts), do: Keyword.get(opts, :context, %{})
+
     # The strategy's settings as Wax challenge options, with the dynamic
-    # relying-party values resolved for the tenant. The DSL's `timeout` is in
-    # milliseconds; Wax counts a challenge's validity in whole seconds.
+    # relying-party values resolved for the tenant, in the caller's context.
+    # The DSL's `timeout` is in milliseconds; Wax counts a challenge's
+    # validity in whole seconds.
     #
     # Wax's `origin` is typed as "a string, a list, or anything" because it
     # only ever hands it to `origin_verify_fun`; the strategy's origin policy
     # goes in as-is and the policy module does the comparison.
-    defp challenge_opts(strategy, tenant) do
+    defp challenge_opts(strategy, tenant, context) do
       [
-        origin: Origin.policy(strategy, tenant),
+        origin: Origin.policy(strategy, tenant, context),
         origin_verify_fun: @origin_verify_fun,
-        rp_id: Helpers.resolve_rp_id(strategy, tenant),
+        rp_id: Helpers.resolve_rp_id(strategy, tenant, context),
         user_verification: strategy.user_verification,
         attestation: strategy.attestation,
         trusted_attestation_types: strategy.trusted_attestation_types,
