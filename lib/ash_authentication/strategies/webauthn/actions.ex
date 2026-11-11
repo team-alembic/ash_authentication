@@ -30,6 +30,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   `AshAuthentication.Strategy.WebAuthn.Origin`), never from the request. An
   `origin:` option is refused rather than ignored, since silently dropping
   it would hide a caller that still expects the request to decide.
+
+  `context:` is the context an `AshAuthentication.Secret` resolving `rp_id`
+  or `origin` receives, with the tenant added (see
+  `AshAuthentication.Strategy.WebAuthn.Helpers`): the strategy's plugs pass
+  the connection in it, and a caller inside an Ash action should pass that
+  action's context. Without it the Secret receives the tenant alone.
   """
   @spec registration_challenge(WebAuthn.t(), any, keyword) :: {:ok, Adapter.challenge()}
   def registration_challenge(strategy, tenant, opts \\ []) do
@@ -40,7 +46,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   Generate an authentication challenge.
 
   `opts` are passed to the adapter; as for `registration_challenge/3`, an
-  `origin:` option is refused.
+  `origin:` option is refused and `context:` is what a Secret receives.
   """
   @spec authentication_challenge(WebAuthn.t(), list, any, keyword) ::
           {:ok, Adapter.challenge()}

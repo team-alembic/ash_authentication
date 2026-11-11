@@ -495,8 +495,10 @@ Multi-tenancy combines with any of the modes above. What it needs:
   resource. Drivers of `Actions` pass `tenant:`.
 - **A relying party per tenant, if tenants have their own domains.** `rp_id`,
   `rp_name` and `origin` each take a 1-arity function or an MFA receiving the
-  tenant. Passkeys are bound to their `rp_id`, so a tenant that changes domain
-  can't use the passkeys registered under the old one.
+  tenant, or an `AshAuthentication.Secret` whose context carries the tenant
+  under `:tenant` (and, in a plug, the connection under `:conn`). Passkeys are
+  bound to their `rp_id`, so a tenant that changes domain can't use the
+  passkeys registered under the old one.
 
 ```elixir
 webauthn do
@@ -517,6 +519,19 @@ for a tenant leaves that tenant on the default:
 origin {MyApp.WebAuthn, :origins_for_tenant, []}
 
 def origins_for_tenant(tenant), do: ["https://#{tenant}.example.com"]
+```
+
+Tenants served on subdomains of one domain (`acme.example.com`,
+`globex.example.com`) can keep `example.com` as their shared `rp_id`, since a
+browser lets a subdomain use its parent domain's RP ID, and be told apart by
+`origin`, which is exact. A Secret module does the same from its context:
+
+```elixir
+def secret_for([:authentication, :strategies, :webauthn, :rp_id], _, _, _),
+  do: {:ok, "example.com"}
+
+def secret_for([:authentication, :strategies, :webauthn, :origin], _, _, %{tenant: tenant}),
+  do: {:ok, "https://#{tenant}.example.com"}
 ```
 
 The RP ID is the one thing that varies per tenant. Serving several unrelated

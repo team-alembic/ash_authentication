@@ -51,11 +51,16 @@ defmodule AshAuthentication.Strategy.WebAuthn.Origin do
 
   An allowlist when the strategy configures `origin` (resolved for the
   tenant), otherwise derived from the resolved `rp_id`.
+
+  `context` is what an `AshAuthentication.Secret` resolving either setting
+  receives, with the tenant added; see
+  `AshAuthentication.Strategy.WebAuthn.Helpers`. The strategy's plugs pass
+  the connection in it.
   """
-  @spec policy(WebAuthn.t(), any) :: policy
-  def policy(strategy, tenant) do
-    case Helpers.resolve_origin(strategy, tenant) do
-      nil -> %{rp_id: Helpers.resolve_rp_id(strategy, tenant)}
+  @spec policy(WebAuthn.t(), any, Helpers.context()) :: policy
+  def policy(strategy, tenant, context \\ %{}) do
+    case Helpers.resolve_origin(strategy, tenant, context) do
+      nil -> %{rp_id: Helpers.resolve_rp_id(strategy, tenant, context)}
       origins -> %{allow: List.wrap(origins)}
     end
   end

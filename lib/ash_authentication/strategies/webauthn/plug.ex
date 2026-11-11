@@ -60,11 +60,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
 
   defp send_registration_challenge(conn, strategy, user_descriptor, exclude_credential_ids) do
     tenant = get_tenant(conn)
+    context = secret_context(conn)
 
-    {:ok, challenge} = WebAuthn.Actions.registration_challenge(strategy, tenant)
+    {:ok, challenge} =
+      WebAuthn.Actions.registration_challenge(strategy, tenant, context: context)
 
-    rp_id = WebAuthn.Helpers.resolve_rp_id(strategy, tenant)
-    rp_name = WebAuthn.Helpers.resolve_rp_name(strategy, tenant)
+    rp_id = WebAuthn.Helpers.resolve_rp_id(strategy, tenant, context)
+    rp_name = WebAuthn.Helpers.resolve_rp_name(strategy, tenant, context)
 
     response =
       %{
@@ -200,7 +202,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
     # exists — to anyone who knows or guesses the identity. The cost is that
     # only discoverable credentials can sign in; the verifier warns when
     # `resident_key` allows any other kind to be created.
-    {:ok, challenge} = WebAuthn.Actions.authentication_challenge(strategy, [], tenant)
+    {:ok, challenge} =
+      WebAuthn.Actions.authentication_challenge(strategy, [], tenant,
+        context: secret_context(conn)
+      )
 
     response = assertion_options(conn, strategy, challenge, [], tenant)
     challenge_data = strategy.adapter.serialize_challenge(challenge)
@@ -254,7 +259,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
         allow_credentials = assertion_allow_credentials(strategy, credentials)
 
         {:ok, challenge} =
-          WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant)
+          WebAuthn.Actions.authentication_challenge(strategy, allow_credentials, tenant,
+            context: secret_context(conn)
+          )
 
         response = assertion_options(conn, strategy, challenge, credentials, tenant)
         challenge_data = strategy.adapter.serialize_challenge(challenge)
@@ -474,13 +481,23 @@ defmodule AshAuthentication.Strategy.WebAuthn.Plug do
     |> Enum.reject(&is_nil(elem(&1, 1)))
   end
 
+  # What a Secret resolving `rp_id`, `rp_name` or `origin` receives from a
+  # plug: the connection, as `AshAuthentication.Secret` promises, over the
+  # Ash context the connection carries. The helpers add the tenant.
+  defp secret_context(conn) do
+    conn
+    |> get_context()
+    |> Kernel.||(%{})
+    |> Map.put(:conn, conn)
+  end
+
   # The `PublicKeyCredentialRequestOptions` sent to the browser. Shared by
   # sign-in and second-factor verification, which differ only in how they
   # arrive at their candidate credentials.
   defp assertion_options(conn, strategy, challenge, credentials, tenant) do
     %{
       challenge: Base.url_encode64(strategy.adapter.challenge_bytes(challenge), padding: false),
-      rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant),
+      rpId: WebAuthn.Helpers.resolve_rp_id(strategy, tenant, secret_context(conn)),
       userVerification: strategy.user_verification,
       timeout: strategy.timeout,
       allowCredentials: allow_credentials_entries(strategy, credentials)

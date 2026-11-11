@@ -32,6 +32,15 @@ defmodule AshAuthentication.Strategy.WebAuthn.OriginTest do
     def secret_for(_, _, _, _), do: :error
   end
 
+  defmodule TenantSecrets do
+    use AshAuthentication.Secret
+
+    def secret_for([:authentication, :strategies, :tenanted, :origin], _, _, context) do
+      send(self(), {:secret_context, context})
+      {:ok, "https://#{context.tenant}.example.com"}
+    end
+  end
+
   defp strategy(overrides) do
     struct!(%WebAuthn{name: :webauthn, resource: __MODULE__, rp_id: "example.com"}, overrides)
   end
@@ -101,6 +110,26 @@ defmodule AshAuthentication.Strategy.WebAuthn.OriginTest do
     test "a tenant function answering nil or \"\" falls back to the rp_id policy" do
       assert Origin.policy(strategy(origin: fn _ -> nil end), "acme") == %{rp_id: "example.com"}
       assert Origin.policy(strategy(origin: fn _ -> "" end), "acme") == %{rp_id: "example.com"}
+    end
+
+    test "a Secret receives the tenant in its context, so it can answer per tenant" do
+      strategy = strategy(name: :tenanted, origin: {TenantSecrets, []})
+
+      assert Origin.policy(strategy, "acme") == %{allow: ["https://acme.example.com"]}
+      assert_received {:secret_context, %{tenant: "acme"}}
+
+      assert Origin.policy(strategy, "globex") == %{allow: ["https://globex.example.com"]}
+      assert_received {:secret_context, %{tenant: "globex"}}
+    end
+
+    test "policy/3 hands a Secret the caller's context, with the tenant added" do
+      strategy = strategy(name: :tenanted, origin: {TenantSecrets, []})
+
+      assert Origin.policy(strategy, "acme", %{conn: %Plug.Conn{}}) ==
+               %{allow: ["https://acme.example.com"]}
+
+      assert_received {:secret_context, context}
+      assert context == %{conn: %Plug.Conn{}, tenant: "acme"}
     end
   end
 

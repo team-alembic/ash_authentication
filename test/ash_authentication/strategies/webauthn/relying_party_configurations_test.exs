@@ -11,6 +11,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.RelyingPartyConfigurationsTest do
     as a function of it, on resources with attribute multitenancy.
   - **Secret module:** `rp_id`, `rp_name` and `origin` read from an
     `AshAuthentication.Secret` module.
+  - **Secret module, per tenant:** a Secret that reads the tenant from its
+    context, on resources with attribute multitenancy: one shared `rp_id`
+    (the apex domain) and each tenant's own exact `origin`.
   - **Passkey-first + verify:** the second-factor ceremony on a strategy
     whose users have no identity.
 
@@ -38,6 +41,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.RelyingPartyConfigurationsTest do
     secret_user = "#{base}.SecretUser#{suffix}"
     secret_credential = "#{base}.SecretCredential#{suffix}"
     secrets = "#{base}.Secrets#{suffix}"
+    tenant_secrets = "#{base}.TenantSecrets#{suffix}"
+    tenant_secret_user = "#{base}.TenantSecretUser#{suffix}"
+    tenant_secret_credential = "#{base}.TenantSecretCredential#{suffix}"
 
     # Each user resource is compiled before its credential resource: the
     # credential extension reads the user's primary key.
@@ -205,9 +211,109 @@ defmodule AshAuthentication.Strategy.WebAuthn.RelyingPartyConfigurationsTest do
     end
     """)
 
+    # The Secret never sees the request's tenant as an argument; it comes in
+    # the context the strategy hands over. Tenants are subdomains of one
+    # apex, so they share its rp_id and differ in origin.
+    Code.compile_string("""
+    defmodule #{tenant_secrets} do
+      @moduledoc false
+      use AshAuthentication.Secret
+
+      def secret_for([:authentication, :strategies, :webauthn, :rp_id], _, _, _),
+        do: {:ok, "example.com"}
+
+      def secret_for([:authentication, :strategies, :webauthn, :rp_name], _, _, %{tenant: tenant}),
+        do: {:ok, "\#{tenant} App"}
+
+      def secret_for([:authentication, :strategies, :webauthn, :origin], _, _, %{tenant: tenant}),
+        do: {:ok, "https://\#{tenant}.example.com"}
+
+      def secret_for(_, _, _, _), do: :error
+    end
+
+    defmodule #{tenant_secret_user} do
+      @moduledoc false
+      use Ash.Resource,
+        domain: AshAuthentication.Test.PermissiveDomain,
+        data_layer: Ash.DataLayer.Ets,
+        extensions: [AshAuthentication]
+
+      ets do
+        private?(true)
+      end
+
+      multitenancy do
+        strategy :attribute
+        attribute :org
+      end
+
+      attributes do
+        uuid_primary_key :id
+        attribute :org, :string, allow_nil?: false, public?: true
+      end
+
+      actions do
+        defaults [:read]
+      end
+
+      relationships do
+        has_many :webauthn_credentials, #{tenant_secret_credential},
+          destination_attribute: :tenant_secret_user#{suffix}_id
+      end
+
+      authentication do
+        session_identifier(:jti)
+
+        tokens do
+          enabled? true
+          store_all_tokens? true
+          token_resource Example.Token
+          signing_secret &Example.User.get_config/2
+        end
+
+        strategies do
+          webauthn :webauthn do
+            credential_resource #{tenant_secret_credential}
+            require_identity? false
+            rp_id #{tenant_secrets}
+            rp_name #{tenant_secrets}
+            origin #{tenant_secrets}
+          end
+        end
+      end
+    end
+
+    defmodule #{tenant_secret_credential} do
+      @moduledoc false
+      use Ash.Resource,
+        domain: AshAuthentication.Test.PermissiveDomain,
+        data_layer: Ash.DataLayer.Ets,
+        extensions: [AshAuthentication.WebAuthnCredential]
+
+      ets do
+        private?(true)
+      end
+
+      multitenancy do
+        strategy :attribute
+        attribute :org
+      end
+
+      attributes do
+        attribute :org, :string, allow_nil?: false, public?: true
+      end
+
+      webauthn_credential do
+        user_resource #{tenant_secret_user}
+        user_relationship_name :tenant_secret_user#{suffix}
+      end
+    end
+    """)
+
     %{
       tenanted: Info.strategy!(Module.concat([tenant_user]), :webauthn),
-      secret: Info.strategy!(Module.concat([secret_user]), :webauthn)
+      secret: Info.strategy!(Module.concat([secret_user]), :webauthn),
+      tenant_secret: Info.strategy!(Module.concat([tenant_secret_user]), :webauthn)
     }
   end
 
@@ -277,6 +383,53 @@ defmodule AshAuthentication.Strategy.WebAuthn.RelyingPartyConfigurationsTest do
       {{:ok, user}, passkey} = WebAuthnCeremony.register(ctx.secret)
       assert {:ok, signed_in} = WebAuthnCeremony.sign_in(ctx.secret, passkey)
       assert signed_in.id == user.id
+    end
+  end
+
+  describe "relying party from a Secret module, per tenant" do
+    test "the Secret reads the tenant from its context", ctx do
+      assert WebAuthnCeremony.relying_party(ctx.tenant_secret, "acme") ==
+               {"example.com", "https://acme.example.com"}
+
+      assert WebAuthnCeremony.relying_party(ctx.tenant_secret, "globex") ==
+               {"example.com", "https://globex.example.com"}
+
+      body = registration_options(ctx.tenant_secret, tenant: "globex")
+      assert body["rp"] == %{"id" => "example.com", "name" => "globex App"}
+    end
+
+    test "the challenge carries the tenant's origin as an exact allowlist", ctx do
+      {:ok, challenge} = Actions.registration_challenge(ctx.tenant_secret, "acme")
+
+      assert challenge.rp_id == "example.com"
+      assert challenge.origin == %{allow: ["https://acme.example.com"]}
+    end
+
+    test "a user registers and signs in within their tenant", ctx do
+      {{:ok, user}, passkey} = WebAuthnCeremony.register(ctx.tenant_secret, %{}, tenant: "acme")
+      assert user.org == "acme"
+
+      assert {:ok, signed_in} =
+               WebAuthnCeremony.sign_in(ctx.tenant_secret, passkey, %{}, tenant: "acme")
+
+      assert signed_in.id == user.id
+    end
+
+    test "an assertion from another tenant's origin is rejected, same rp_id or not", ctx do
+      {{:ok, _user}, passkey} = WebAuthnCeremony.register(ctx.tenant_secret, %{}, tenant: "acme")
+
+      assert {:error, %AuthenticationFailed{}} =
+               WebAuthnCeremony.sign_in(ctx.tenant_secret, passkey, %{},
+                 tenant: "acme",
+                 origin: "https://globex.example.com"
+               )
+    end
+
+    test "a credential doesn't exist in another tenant", ctx do
+      {{:ok, _user}, passkey} = WebAuthnCeremony.register(ctx.tenant_secret, %{}, tenant: "acme")
+
+      assert {:error, %AuthenticationFailed{}} =
+               WebAuthnCeremony.sign_in(ctx.tenant_secret, passkey, %{}, tenant: "globex")
     end
   end
 

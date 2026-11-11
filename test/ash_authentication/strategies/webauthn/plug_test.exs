@@ -17,6 +17,64 @@ defmodule AshAuthentication.Strategy.WebAuthn.PlugTest do
     %{strategy: strategy}
   end
 
+  describe "the context a Secret resolving the relying party receives" do
+    defmodule RecordingSecrets do
+      use AshAuthentication.Secret
+
+      def secret_for([:authentication, :strategies, :webauthn, key], _resource, _opts, context) do
+        send(self(), {:secret_context, key, context})
+
+        case key do
+          :origin -> {:ok, "https://#{context.tenant}.example.com"}
+          _ -> {:ok, "#{context.tenant}.example.com"}
+        end
+      end
+    end
+
+    defp recording_conn(path) do
+      :get
+      |> conn(path, %{})
+      |> SessionPipeline.call([])
+      |> Ash.PlugHelpers.set_tenant("acme")
+      |> Ash.PlugHelpers.set_context(%{request_id: "r1"})
+    end
+
+    test "on a registration challenge: the connection, its Ash context and the tenant", %{
+      strategy: strategy
+    } do
+      strategy = %{strategy | rp_id: {RecordingSecrets, []}, origin: {RecordingSecrets, []}}
+
+      conn =
+        "/user_with_webauthn/webauthn/registration_challenge"
+        |> recording_conn()
+        |> WebAuthn.Plug.registration_challenge(strategy)
+
+      assert conn.status == 200
+      assert Jason.decode!(conn.resp_body)["rp"]["id"] == "acme.example.com"
+
+      assert_received {:secret_context, :rp_id, context}
+      assert %{conn: %Plug.Conn{}, tenant: "acme", request_id: "r1"} = context
+
+      assert_received {:secret_context, :origin, context}
+      assert %{conn: %Plug.Conn{}, tenant: "acme", request_id: "r1"} = context
+    end
+
+    test "on an authentication challenge too", %{strategy: strategy} do
+      strategy = %{strategy | rp_id: {RecordingSecrets, []}, origin: {RecordingSecrets, []}}
+
+      conn =
+        "/user_with_webauthn/webauthn/authentication_challenge"
+        |> recording_conn()
+        |> WebAuthn.Plug.authentication_challenge(strategy)
+
+      assert conn.status == 200
+      assert Jason.decode!(conn.resp_body)["rpId"] == "acme.example.com"
+
+      assert_received {:secret_context, :origin, context}
+      assert %{conn: %Plug.Conn{}, tenant: "acme", request_id: "r1"} = context
+    end
+  end
+
   describe "registration_challenge/2" do
     test "returns challenge as JSON", %{strategy: strategy} do
       conn =

@@ -105,6 +105,93 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
     end
   end
 
+  describe "the context a Secret module receives" do
+    defmodule RecordingSecrets do
+      use AshAuthentication.Secret
+
+      def secret_for([:authentication, :strategies, :webauthn, key], _resource, _opts, context) do
+        send(self(), {:secret_context, key, context})
+
+        case key do
+          :origin -> {:ok, "https://#{context.tenant}.example.com"}
+          _ -> {:ok, "#{context.tenant}.example.com"}
+        end
+      end
+    end
+
+    defp recording_strategy(overrides) do
+      struct!(
+        %WebAuthn{
+          name: :webauthn,
+          resource: __MODULE__,
+          rp_id: {RecordingSecrets, []},
+          origin: {RecordingSecrets, []}
+        },
+        overrides
+      )
+    end
+
+    test "with no context given, the tenant alone" do
+      assert "acme.example.com" = Helpers.resolve_rp_id(recording_strategy([]), "acme")
+      assert_received {:secret_context, :rp_id, context}
+      assert context == %{tenant: "acme"}
+    end
+
+    test "the caller's context with the tenant added, so a plug's conn comes through" do
+      context = %{conn: %Plug.Conn{}, request_id: "r1"}
+
+      assert "https://acme.example.com" =
+               Helpers.resolve_origin(recording_strategy([]), "acme", context)
+
+      assert_received {:secret_context, :origin, received}
+      assert received == %{conn: %Plug.Conn{}, request_id: "r1", tenant: "acme"}
+    end
+
+    test "Ash's private context is dropped" do
+      context = %{private: %{ash_authentication?: true}, actor: :someone}
+
+      Helpers.resolve_rp_id(recording_strategy([]), nil, context)
+
+      assert_received {:secret_context, :rp_id, received}
+      assert received == %{actor: :someone, tenant: nil}
+    end
+
+    test "the tenant argument is the tenant, whatever the context says" do
+      Helpers.resolve_rp_id(recording_strategy([]), "acme", %{tenant: "someone-else"})
+
+      assert_received {:secret_context, :rp_id, %{tenant: "acme"}}
+    end
+
+    test "functions and MFAs still receive the tenant alone" do
+      context = %{conn: %Plug.Conn{}}
+
+      assert "acme.example.com" =
+               Helpers.resolve_rp_id(
+                 recording_strategy(rp_id: fn tenant -> "#{tenant}.example.com" end),
+                 "acme",
+                 context
+               )
+
+      assert "acme.example.com" =
+               Helpers.resolve_rp_id(
+                 recording_strategy(rp_id: {__MODULE__, :rp_id_for_tenant, []}),
+                 "acme",
+                 context
+               )
+
+      refute_received {:secret_context, _, _}
+    end
+
+    test "a static value asks nobody" do
+      assert "example.com" =
+               Helpers.resolve_rp_id(recording_strategy(rp_id: "example.com"), "acme", %{
+                 conn: %Plug.Conn{}
+               })
+
+      refute_received {:secret_context, _, _}
+    end
+  end
+
   describe "resolve_origin/2" do
     test "returns nil when no origin is configured" do
       assert is_nil(Helpers.resolve_origin(%WebAuthn{origin: nil}, nil))
