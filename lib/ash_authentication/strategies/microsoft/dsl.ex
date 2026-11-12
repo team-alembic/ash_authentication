@@ -27,6 +27,9 @@ defmodule AshAuthentication.Strategy.Microsoft.Dsl do
 
           base_url "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
 
+      PKCE (`code_verifier`) is enabled by default, as recommended by Microsoft.
+      Set `code_verifier false` to disable it.
+
       #### More documentation:
       - The [Microsoft OpenID Connect Overview](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)
       - The [Microsoft Tutorial](/documentation/tutorials/microsoft.md)
@@ -39,6 +42,7 @@ defmodule AshAuthentication.Strategy.Microsoft.Dsl do
       auto_set_fields: [icon: :microsoft, assent_strategy: AzureADMultitenant]
     })
     |> Custom.set_defaults(AzureADMultitenant.default_config([]))
+    |> Custom.set_defaults(code_verifier: true)
   end
 
   defp strategy_override_docs(strategy) do

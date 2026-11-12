@@ -52,6 +52,9 @@ sign-in to a specific Azure tenant, override `base_url`:
 
 base_url "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
 
+PKCE (`code_verifier`) is enabled by default, as recommended by Microsoft.
+Set `code_verifier false` to disable it.
+
 ###### More documentation:
 - The [Microsoft OpenID Connect Overview](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)
 - The [Microsoft Tutorial](/documentation/tutorials/microsoft.md)
@@ -88,7 +91,7 @@ The following defaults are applied:
 | [`private_key`](#authentication-strategies-microsoft-private_key){: #authentication-strategies-microsoft-private_key } | `(any, any -> any) \| module \| String.t` |  | The private key to use if `:auth_method` is `:private_key_jwt`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`private_key_id`](#authentication-strategies-microsoft-private_key_id){: #authentication-strategies-microsoft-private_key_id } | `(any, any -> any) \| module \| String.t` |  | The identifier of the private key (sent as `kid` in the JWT header) if `:auth_method` is `:private_key_jwt`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`private_key_path`](#authentication-strategies-microsoft-private_key_path){: #authentication-strategies-microsoft-private_key_path } | `(any, any -> any) \| module \| String.t` |  | Path to the private key PEM file (alternative to `:private_key`) if `:auth_method` is `:private_key_jwt`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
-| [`code_verifier`](#authentication-strategies-microsoft-code_verifier){: #authentication-strategies-microsoft-code_verifier } | `boolean` | `false` | Boolean to generate and use a random 128 byte long url safe code verifier for PKCE flow, optional, defaults to false. When set to true the session params will contain :code_verifier, :code_challenge, and :code_challenge_method params |
+| [`code_verifier`](#authentication-strategies-microsoft-code_verifier){: #authentication-strategies-microsoft-code_verifier } | `boolean` | `true` | Boolean to generate and use a random 128 byte long url safe code verifier for PKCE flow, optional, defaults to false. When set to true the session params will contain :code_verifier, :code_challenge, and :code_challenge_method params |
 | [`authorization_params`](#authentication-strategies-microsoft-authorization_params){: #authentication-strategies-microsoft-authorization_params } | `(any, any -> any) \| module \| keyword \| nil` | `[scope: "email profile"]` | Any additional parameters to encode in the request phase. eg: `authorization_params scope: "openid profile email"` |
 | [`registration_enabled?`](#authentication-strategies-microsoft-registration_enabled?){: #authentication-strategies-microsoft-registration_enabled? } | `boolean` | `true` | If enabled, new users will be able to register for your site when authenticating and not already present. If not, only existing users will be able to authenticate. |
 | [`register_action_name`](#authentication-strategies-microsoft-register_action_name){: #authentication-strategies-microsoft-register_action_name } | `atom` |  | The name of the action to use to register a user, if `registration_enabled?` is `true`. Defaults to `register_with_<name>` See the "Registration and Sign-in" section of the strategy docs for more. |
