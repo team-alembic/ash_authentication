@@ -75,6 +75,20 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       assert new_assigns[:current_user] == :foo
     end
+
+    test "with the resources option it assigns only the listed resources", %{conn: conn} do
+      user = build_user()
+      conn = Helpers.store_in_session(conn, user)
+      session = %{"user" => Plug.Conn.get_session(conn, "user")}
+
+      new_assigns =
+        Helpers.assign_new_resources(%{}, session, &Map.put_new_lazy/3,
+          otp_app: :ash_authentication,
+          resources: [Example.UserWithTokenRequired]
+        )
+
+      assert new_assigns == %{current_user_with_token_required: nil}
+    end
   end
 
   describe "load_subjects/2" do
@@ -85,6 +99,21 @@ defmodule AshAuthentication.Plug.HelpersTest do
       rx_users = Helpers.load_subjects([subject], :ash_authentication)
 
       assert rx_users[:current_user].id == user.id
+    end
+
+    test "with the resources option it loads only the subjects of the listed resources" do
+      user = build_user()
+      subject = AshAuthentication.user_to_subject(user)
+
+      assert %{} ==
+               Helpers.load_subjects([subject], :ash_authentication,
+                 resources: [Example.UserWithTokenRequired]
+               )
+
+      assert %{current_user: loaded} =
+               Helpers.load_subjects([subject], :ash_authentication, resources: [Example.User])
+
+      assert loaded.id == user.id
     end
   end
 
@@ -238,6 +267,23 @@ defmodule AshAuthentication.Plug.HelpersTest do
         |> Helpers.retrieve_from_session(:ash_authentication, load: [:dummy_calc])
 
       assert conn1.assigns.current_user_with_token_required.dummy_calc == "dummy"
+    end
+
+    test "with the resources option it retrieves only the listed resources", %{conn: conn} do
+      user = build_user()
+      user_with_token = build_user_with_token_required()
+
+      conn =
+        conn
+        |> Helpers.store_in_session(user)
+        |> Helpers.store_in_session(user_with_token)
+        |> Helpers.retrieve_from_session(:ash_authentication,
+          resources: [Example.UserWithTokenRequired]
+        )
+
+      assert conn.assigns.current_user_with_token_required.id == user_with_token.id
+      refute Map.has_key?(conn.assigns, :current_user)
+      assert Conn.get_session(conn, "user")
     end
   end
 
@@ -406,6 +452,24 @@ defmodule AshAuthentication.Plug.HelpersTest do
 
       assert conn1.assigns.current_user_with_token_required.dummy_calc == "dummy"
     end
+
+    test "with the resources option it ignores a token of a resource that is not listed", %{
+      conn: conn
+    } do
+      user = build_user()
+      conn = Conn.put_req_header(conn, "authorization", "Bearer #{user.__metadata__.token}")
+
+      unlisted =
+        Helpers.retrieve_from_bearer(conn, :ash_authentication,
+          resources: [Example.UserWithTokenRequired]
+        )
+
+      refute is_map_key(unlisted.assigns, :current_user)
+
+      listed = Helpers.retrieve_from_bearer(conn, :ash_authentication, resources: [Example.User])
+
+      assert listed.assigns.current_user.id == user.id
+    end
   end
 
   describe "revoke_bearer_tokens/2" do
@@ -454,6 +518,24 @@ defmodule AshAuthentication.Plug.HelpersTest do
       |> Helpers.revoke_bearer_tokens(:ash_authentication)
 
       assert :ok = TokenResource.expunge_expired(Example.Token)
+      assert TokenResource.jti_revoked?(Example.Token, jti)
+    end
+
+    test "with the resources option it leaves a token of a resource that is not listed", %{
+      conn: conn
+    } do
+      user = build_user()
+      {:ok, %{"jti" => jti}} = Jwt.peek(user.__metadata__.token)
+      conn = Conn.put_req_header(conn, "authorization", "Bearer #{user.__metadata__.token}")
+
+      Helpers.revoke_bearer_tokens(conn, :ash_authentication,
+        resources: [Example.UserWithTokenRequired]
+      )
+
+      refute TokenResource.jti_revoked?(Example.Token, jti)
+
+      Helpers.revoke_bearer_tokens(conn, :ash_authentication, resources: [Example.User])
+
       assert TokenResource.jti_revoked?(Example.Token, jti)
     end
   end
@@ -540,6 +622,24 @@ defmodule AshAuthentication.Plug.HelpersTest do
         conn
         |> Helpers.revoke_session_tokens(:ash_authentication)
       end
+    end
+
+    test "with the resources option it revokes only the session tokens of the listed resources",
+         %{conn: conn} do
+      user = build_user()
+      user_with_token = build_user_with_token_required()
+      {:ok, %{"jti" => user_jti}} = Jwt.peek(user.__metadata__.token)
+      {:ok, %{"jti" => user_with_token_jti}} = Jwt.peek(user_with_token.__metadata__.token)
+
+      conn
+      |> Helpers.store_in_session(user)
+      |> Helpers.store_in_session(user_with_token)
+      |> Helpers.revoke_session_tokens(:ash_authentication,
+        resources: [Example.UserWithTokenRequired]
+      )
+
+      assert TokenResource.jti_revoked?(Example.Token, user_with_token_jti)
+      refute TokenResource.jti_revoked?(Example.Token, user_jti)
     end
   end
 
@@ -693,6 +793,29 @@ defmodule AshAuthentication.Plug.HelpersTest do
       # A second sign-in mints a fresh token, so an unchanged session proves the
       # guard stopped the remember-me sign-in from running again.
       assert second.private.plug_session == first.private.plug_session
+    end
+
+    test "with the resources option it ignores the cookie of a resource that is not listed" do
+      user = build_user_with_remember_me()
+      {:ok, remember_me_token} = generate_remember_me_token(user)
+
+      conn =
+        :get
+        |> conn("/", %{})
+        |> put_req_cookie("remember_me", remember_me_token)
+        |> SessionPipeline.call([])
+
+      unlisted =
+        Helpers.sign_in_using_remember_me(conn, :ash_authentication, resources: [Example.User])
+
+      refute unlisted.private.plug_session["user_with_remember_me_token"]
+
+      listed =
+        Helpers.sign_in_using_remember_me(conn, :ash_authentication,
+          resources: [Example.UserWithRememberMe]
+        )
+
+      assert listed.private.plug_session["user_with_remember_me_token"]
     end
 
     test "it handles multiple authenticated resources", %{conn: conn} do

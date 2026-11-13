@@ -129,6 +129,13 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
       assert "remember_me" in cookie_names
       assert "remember_me_audit_log" in cookie_names
     end
+
+    test "with the resources option it returns only the cookie names of the listed resources" do
+      assert ["remember_me"] =
+               Helpers.all_remember_me_cookie_names(:ash_authentication,
+                 resources: [UserWithRememberMe]
+               )
+    end
   end
 
   describe "delete_remember_me_cookie/2" do
@@ -207,6 +214,23 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.HelpersTest do
       assert_raise CaseClauseError, fn ->
         Helpers.delete_all_remember_me_cookies(conn, :ash_authentication)
       end
+    end
+
+    test "with the resources option it deletes and revokes only for the listed resources" do
+      user = build_user_with_remember_me()
+      {:ok, token} = generate_remember_me_token(user)
+
+      conn =
+        conn(:get, "/")
+        |> put_req_cookie("remember_me", token)
+        |> put_req_cookie("remember_me_audit_log", token)
+        |> Helpers.delete_all_remember_me_cookies(:ash_authentication,
+          resources: [Example.UserWithAuditLog]
+        )
+
+      assert %{"remember_me_audit_log" => %{max_age: 0}} = conn.resp_cookies
+      refute Map.has_key?(conn.resp_cookies, "remember_me")
+      refute TokenResource.token_revoked?(Example.Token, token)
     end
   end
 

@@ -118,11 +118,19 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
 
   @doc """
   Get all the remember me cookie names for the given otp_app.
+
+  Given the `:resources` option, a list of authenticated resources, only the
+  cookie names of those resources are returned.
   """
-  @spec all_remember_me_cookie_names(atom) :: [String.t()]
-  def all_remember_me_cookie_names(otp_app) do
-    otp_app
-    |> AshAuthentication.authenticated_resources()
+  @spec all_remember_me_cookie_names(atom, keyword) :: [String.t()]
+  def all_remember_me_cookie_names(otp_app, opts \\ []) do
+    resources =
+      case opts[:resources] do
+        nil -> AshAuthentication.authenticated_resources(otp_app)
+        resources -> List.wrap(resources)
+      end
+
+    resources
     |> Enum.flat_map(fn resource ->
       Info.authentication_strategies(resource)
     end)
@@ -140,35 +148,43 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   Each token is revoked before its cookie is deleted. A concurrent revocation of
   the same token is tolerated. Any other revocation failure raises, so that the
   cookie is never removed while the token stays valid.
+
+  Given the `:resources` option, a list of authenticated resources, only the
+  cookies of those resources are deleted, and only a token of one of them is
+  revoked.
   """
-  @spec delete_all_remember_me_cookies(Conn.t(), atom) :: Conn.t()
-  def delete_all_remember_me_cookies(%{cookies: %Plug.Conn.Unfetched{}} = conn, otp_app) do
-    delete_all_remember_me_cookies(Conn.fetch_cookies(conn), otp_app)
+  @spec delete_all_remember_me_cookies(Conn.t(), atom, keyword) :: Conn.t()
+  def delete_all_remember_me_cookies(conn, otp_app, opts \\ [])
+
+  def delete_all_remember_me_cookies(%{cookies: %Plug.Conn.Unfetched{}} = conn, otp_app, opts) do
+    delete_all_remember_me_cookies(Conn.fetch_cookies(conn), otp_app, opts)
   end
 
-  def delete_all_remember_me_cookies(conn, otp_app) do
+  def delete_all_remember_me_cookies(conn, otp_app, opts) do
+    otp_app_or_resources = if opts[:resources], do: List.wrap(opts[:resources]), else: otp_app
+
     otp_app
-    |> all_remember_me_cookie_names()
+    |> all_remember_me_cookie_names(opts)
     |> Enum.reduce(conn, fn cookie_name, conn ->
       token = Plug.Conn.get_cookies(conn) |> Map.get(cookie_name)
 
-      revoke_cookie_token_or_tolerate_race!(conn, token, otp_app)
+      revoke_cookie_token_or_tolerate_race!(conn, token, otp_app_or_resources)
 
       delete_remember_me_cookie(conn, cookie_name)
     end)
   end
 
-  defp revoke_cookie_token_or_tolerate_race!(_conn, nil, _otp_app), do: :ok
+  defp revoke_cookie_token_or_tolerate_race!(_conn, nil, _otp_app_or_resources), do: :ok
 
   # We still want unexpected errors to blow up — only the concurrent
   # revocation race is an expected non-success during logout.
-  defp revoke_cookie_token_or_tolerate_race!(conn, token, otp_app) do
+  defp revoke_cookie_token_or_tolerate_race!(conn, token, otp_app_or_resources) do
     opts =
       []
       |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
       |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
 
-    case revoke_remember_me_token(token, otp_app, opts) do
+    case revoke_remember_me_token(token, otp_app_or_resources, opts) do
       :ok ->
         :ok
 
