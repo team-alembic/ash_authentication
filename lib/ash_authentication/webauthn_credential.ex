@@ -39,7 +39,10 @@ defmodule AshAuthentication.WebAuthnCredential do
     the credential is currently backed up), refreshed on each assertion
   - `discoverable` — boolean, nullable; the client-reported `credProps.rk`
     value (whether the credential is a discoverable/resident key)
-  - `label` — string, defaults to `"Security Key"`
+  - `label` — string, nullable, defaults to `"Security Key"`. A passkey
+    registered or added without a name takes this attribute's default, so a
+    resource that declares `label` itself with another default, or with none
+    (to let the UI show a translated fallback), gets that instead
   - `last_used_at` — UTC datetime, nullable
   - A `belongs_to` relationship to `user_resource` (named `:user` by default),
     with its foreign key attribute
