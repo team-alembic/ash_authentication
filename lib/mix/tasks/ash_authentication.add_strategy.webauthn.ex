@@ -19,10 +19,30 @@ if Code.ensure_loaded?(Igniter) do
     platform authenticators (Touch ID, Windows Hello), or passkeys.
 
     `rp_id`, `rp_name`, and `origin` are wired through your generated
-    `Secrets` module and read from the application environment, so you can
-    configure them per-environment via `config/dev.exs`, `config/test.exs`,
-    and `config/runtime.exs` (which is seeded with `System.get_env/1` reads
-    of `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME`, and `WEBAUTHN_ORIGIN`).
+    `Secrets` module and read from the application environment
+    (`:webauthn_rp_id`, `:webauthn_rp_name`, `:webauthn_origin`), so each
+    environment configures its own:
+
+    * `config/dev.exs` and `config/test.exs` get `rp_id "localhost"` and an
+      `rp_name` from the app name.
+    * `config/runtime.exs` reads `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME` and
+      `WEBAUTHN_ORIGIN` in `:prod`.
+
+    `:webauthn_origin` is left unset everywhere, and an unset `WEBAUTHN_ORIGIN`
+    counts as unset too. Unset is the recommended default: ceremonies are
+    accepted from any `https` origin on the `rp_id` or a subdomain of it (and
+    from `http://localhost` on any port when the `rp_id` is `"localhost"`),
+    which also works behind a TLS-terminating proxy. Set `:webauthn_origin` in
+    an environment's config, as a string or a list, only to restrict that
+    environment to exact origins. See "Relying party and origin" in the WebAuthn
+    guide.
+
+    The task ends by running `mix ash.codegen add_<name>_auth_strategy`. Igniter
+    runs that in a subprocess with no terminal attached, so codegen can't ask
+    anything there; it has nothing to ask on a fresh install, but after a
+    snapshot has diverged from a resource (a table renamed by hand, say) it
+    does, and the run waits on a question nobody can answer. If the task
+    stalls at that step, stop it and run the codegen command yourself.
 
     ## Example
 
@@ -35,6 +55,23 @@ if Code.ensure_loaded?(Igniter) do
     * `--user`, `-u` - The user resource. Defaults to `YourApp.Accounts.User`.
     * `--identity-field`, `-i` - The field on the user resource that
       identifies the user (typically email). Defaults to `email`.
+    * `--passkey-only` - Passkey-first mode: sets `require_identity? false`
+      on the strategy and skips adding the identity attribute and unique
+      identity to the user resource. Users are resolved from the WebAuthn
+      credential id alone, so the user resource needs no email-style column.
+    * `--cross-device` - Lead with signing in (and registering) with a phone
+      or tablet, by scanning a QR code ("hybrid" transport). Sets
+      `hints [:hybrid, :security_key]`, raises `timeout` to 180 seconds so
+      the ceremony survives the scan, Bluetooth check and phone prompt, and
+      sets `allow_hint_override? true` so a UI can offer a dedicated "use a
+      phone" button (`?hints=hybrid`). Combines with every mode. Without it,
+      browsers still offer cross-device as one choice among others; this
+      makes it the first.
+    * `--no-config` - Leaves the application environment alone: no
+      `webauthn_rp_id`/`webauthn_rp_name` in `config/dev.exs` and
+      `config/test.exs`, and no `WEBAUTHN_*` variables in `config/runtime.exs`.
+      The `Secrets` clauses are still added, so the strategy compiles; point
+      them at wherever your project resolves its settings.
     * `--name`, `-n` - The strategy name. Defaults to `webauthn`.
     * `--mode`, `-m` - Either `primary` or `2fa`. Defaults to `primary`.
 
@@ -56,6 +93,9 @@ if Code.ensure_loaded?(Igniter) do
           accounts: :string,
           user: :string,
           identity_field: :string,
+          passkey_only: :boolean,
+          cross_device: :boolean,
+          config: :boolean,
           mode: :string,
           name: :string
         ],
@@ -68,6 +108,9 @@ if Code.ensure_loaded?(Igniter) do
         ],
         defaults: [
           identity_field: "email",
+          passkey_only: false,
+          cross_device: false,
+          config: true,
           mode: "primary",
           name: "webauthn"
         ]
@@ -99,6 +142,8 @@ if Code.ensure_loaded?(Igniter) do
           |> add_wax_dependency()
           |> add_credential_resource(secrets_module, options)
           |> add_webauthn_secrets(secrets_module, options)
+          |> maybe_configure_webauthn_env(options)
+          |> maybe_note_passkey_only_in_2fa(options)
           |> AshAuthentication.Igniter.codegen_for_strategy(options[:name])
 
         {false, igniter} ->
@@ -126,6 +171,24 @@ if Code.ensure_loaded?(Igniter) do
       |> Keyword.update(:name, :webauthn, &String.to_atom/1)
       |> Keyword.update!(:accounts, &AshAuthentication.Igniter.maybe_parse_module/1)
       |> Keyword.update!(:user, &AshAuthentication.Igniter.maybe_parse_module/1)
+    end
+
+    # `require_identity?` only shapes WebAuthn's own registration and sign-in,
+    # and `--mode 2fa` turns both off, so the combination is valid but the
+    # flag changes nothing. Say so rather than leave it looking meaningful.
+    defp maybe_note_passkey_only_in_2fa(igniter, options) do
+      if options[:passkey_only] and options[:mode] == :"2fa" do
+        Igniter.add_notice(igniter, """
+        `--passkey-only` has no effect with `--mode 2fa`.
+
+        `require_identity? false` only changes WebAuthn's own registration and
+        sign-in, which second-factor mode disables: users register and sign in
+        through your primary strategy, and WebAuthn only verifies and enrols
+        passkeys for them. The generated strategy sets it anyway, as asked.
+        """)
+      else
+        igniter
+      end
     end
 
     defp add_wax_dependency(igniter) do
@@ -167,44 +230,94 @@ if Code.ensure_loaded?(Igniter) do
         inspect(credential_resource),
         "--uuid-primary-key",
         "id",
-        "--default-actions",
-        "read,destroy",
-        "--attribute",
-        "credential_id:binary:required",
-        "--attribute",
-        "sign_count:integer",
-        "--attribute",
-        "label:string",
-        "--attribute",
-        "last_used_at:utc_datetime_usec",
-        "--relationship",
-        "belongs_to:user:#{inspect(options[:user])}:required",
         "--extend",
         extensions
       ])
-      |> Ash.Resource.Igniter.add_new_attribute(credential_resource, :public_key, """
-      attribute :public_key, AshAuthentication.Strategy.WebAuthn.CoseKey do
-        allow_nil? false
-        public? true
-      end
-      """)
-      |> Ash.Resource.Igniter.add_new_action(credential_resource, :create, """
-      create :create do
-        primary? true
-        accept [:credential_id, :public_key, :sign_count, :label, :user_id]
-      end
-      """)
-      |> Ash.Resource.Igniter.add_new_action(credential_resource, :update, """
-      update :update do
-        primary? true
-        accept [:sign_count, :label, :last_used_at]
-      end
-      """)
+      |> fix_credential_resource_file_name(credential_resource)
+      |> fix_credential_resource_table_name(credential_resource)
+      |> add_webauthn_credential_section(credential_resource, options[:user])
       |> add_credential_resource_authorizer(credential_resource)
       |> add_credential_resource_timestamps(credential_resource)
-      |> Ash.Resource.Igniter.add_new_identity(credential_resource, :unique_credential_id, """
-      identity :unique_credential_id, [:credential_id]
-      """)
+    end
+
+    # `ash.gen.resource` derives the file path from the module name via
+    # `Macro.underscore/1`, which doesn't know `WebAuthn` is meant to stay
+    # one word — it splits `WebAuthnCredential` into `web_authn_credential`
+    # (three words), giving `web_authn_credential.ex`. Every other WebAuthn
+    # file in this project (`webauthn_credential.ex`, `webauthn.ex`,
+    # `webauthn/dsl.ex`, ...) is named without that split, so move the
+    # freshly generated file to match.
+    defp fix_credential_resource_file_name(igniter, credential_resource) do
+      wrong_path = Igniter.Project.Module.proper_location(igniter, credential_resource)
+      right_path = wrong_path |> Path.dirname() |> Path.join("webauthn_credential.ex")
+
+      Igniter.move_file(igniter, wrong_path, right_path, error_if_exists?: false)
+    end
+
+    # The data layer's installer derives the table name the same way
+    # (`Macro.underscore/1`, then pluralised), so the table comes out as
+    # `web_authn_credentials` while the relationship is `webauthn_credentials`
+    # and the guide's resource says `table "webauthn_credentials"`. Set the
+    # table to the one word the rest of the project uses.
+    defp fix_credential_resource_table_name(igniter, credential_resource) do
+      case data_layer_section() do
+        nil ->
+          igniter
+
+        section ->
+          # The default updater keeps a value that is already set, and the
+          # data layer has just set one.
+          Spark.Igniter.set_option(
+            igniter,
+            credential_resource,
+            [section, :table],
+            "webauthn_credentials",
+            &{:ok, Sourceror.Zipper.replace(&1, "webauthn_credentials")}
+          )
+      end
+    end
+
+    defp add_webauthn_credential_section(igniter, credential_resource, user_resource) do
+      igniter =
+        Spark.Igniter.set_option(
+          igniter,
+          credential_resource,
+          [:webauthn_credential, :user_resource],
+          user_resource
+        )
+
+      relationship_name = user_relationship_name(user_resource)
+
+      if relationship_name == :user do
+        igniter
+      else
+        Spark.Igniter.set_option(
+          igniter,
+          credential_resource,
+          [:webauthn_credential, :user_relationship_name],
+          relationship_name
+        )
+      end
+    end
+
+    # Names the belongs_to relationship (and, by Ash's own `<name>_id`
+    # convention, its foreign key) after the user resource's own module name
+    # rather than hardcoding `:user` — so a user resource called `Account`
+    # gets a relationship named `:account` with an `:account_id` foreign
+    # key, instead of a `:user`/`:user_id` pair that doesn't match anything
+    # the resource is actually called. Only stamped when it differs from
+    # `:user`, the DSL's own default.
+    #
+    # Stamped into the credential resource only: the strategy reads the name
+    # back off the credential resource's DSL, and the `has_many` it builds on
+    # the user resource derives the same `<name>_id` from that resource's
+    # module name. Both ends therefore follow from this one value.
+    defp user_relationship_name(user_resource) do
+      user_resource
+      |> Module.split()
+      |> List.last()
+      |> Macro.underscore()
+      |> String.to_atom()
     end
 
     defp add_credential_resource_timestamps(igniter, credential_resource) do
@@ -216,10 +329,9 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp ensure_timestamps(zipper) do
-      with {:ok, do_zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-           {:ok, attrs_zipper} <-
+      with {:ok, attrs_zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(
-               do_zipper,
+               zipper,
                :attributes,
                1
              ),
@@ -250,39 +362,30 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp ensure_authorizer_bypass(zipper) do
-      with {:ok, do_zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-           :error <-
-             Igniter.Code.Function.move_to_function_call_in_current_scope(
-               do_zipper,
-               :policies,
-               1
-             ) do
-        {:ok,
-         Igniter.Code.Common.add_code(do_zipper, """
-         policies do
-           bypass AshAuthentication.Checks.AshAuthenticationInteraction do
-             authorize_if always()
+      case Igniter.Code.Function.move_to_function_call_in_current_scope(
+             zipper,
+             :policies,
+             1
+           ) do
+        :error ->
+          {:ok,
+           Igniter.Code.Common.add_code(zipper, """
+           policies do
+             bypass AshAuthentication.Checks.AshAuthenticationInteraction do
+               authorize_if always()
+             end
            end
-         end
-         """)}
-      else
-        {:ok, _} -> {:ok, zipper}
-        :error -> {:ok, zipper}
+           """)}
+
+        {:ok, _} ->
+          {:ok, zipper}
       end
     end
 
     defp add_user_attributes_and_relationship(igniter, credential_resource, options) do
-      identity_field = options[:identity_field]
-
       igniter
-      |> Ash.Resource.Igniter.add_new_attribute(options[:user], identity_field, """
-      attribute #{inspect(identity_field)}, :ci_string do
-        allow_nil? false
-        public? true
-      end
-      """)
+      |> maybe_add_identity_attribute(options)
       |> make_hashed_password_optional(options)
-      |> AshAuthentication.Igniter.ensure_identity(options[:user], identity_field)
       |> Ash.Resource.Igniter.add_new_relationship(
         options[:user],
         :webauthn_credentials,
@@ -290,6 +393,25 @@ if Code.ensure_loaded?(Igniter) do
         has_many :webauthn_credentials, #{inspect(credential_resource)}
         """
       )
+    end
+
+    # In passkey-only mode the user resource needs no identity column at all —
+    # users are resolved from the WebAuthn credential id.
+    defp maybe_add_identity_attribute(igniter, options) do
+      if options[:passkey_only] do
+        igniter
+      else
+        identity_field = options[:identity_field]
+
+        igniter
+        |> Ash.Resource.Igniter.add_new_attribute(options[:user], identity_field, """
+        attribute #{inspect(identity_field)}, :ci_string do
+          allow_nil? false
+          public? true
+        end
+        """)
+        |> AshAuthentication.Igniter.ensure_identity(options[:user], identity_field)
+      end
     end
 
     # WebAuthn registration creates users without a password. If the password
@@ -351,21 +473,45 @@ if Code.ensure_loaded?(Igniter) do
             ""
         end
 
+      identity_lines =
+        if options[:passkey_only] do
+          """
+            require_identity? false
+          """
+        else
+          """
+            identity_field #{inspect(options[:identity_field])}
+            require_identity? true
+          """
+        end
+
+      # The timeout covers a QR scan, the Bluetooth proximity check and the
+      # prompt on the phone; the strategy warns below 120 seconds.
+      cross_device_lines =
+        if options[:cross_device] do
+          """
+            hints [:hybrid, :security_key]
+            timeout 180_000
+            allow_hint_override? true
+          """
+        else
+          ""
+        end
+
       """
       webauthn #{inspect(options[:name])} do
         credential_resource #{inspect(credential_resource)}
         rp_id #{inspect(secrets_module)}
         rp_name #{inspect(secrets_module)}
         origin #{inspect(secrets_module)}
-        identity_field #{inspect(options[:identity_field])}
-      #{mode_lines}end
+      #{identity_lines}#{mode_lines}#{cross_device_lines}end
       """
     end
 
+    # The strategy reads `rp_id`, `rp_name` and `origin` through the Secrets
+    # module, whatever its clauses end up resolving them from.
     defp add_webauthn_secrets(igniter, secrets_module, options) do
-      otp_app = Igniter.Project.Application.app_name(igniter)
       strategy_name = options[:name]
-      rp_name_default = humanise_app_name(otp_app)
 
       igniter
       |> AshAuthentication.Igniter.add_new_secret_from_env(
@@ -386,6 +532,23 @@ if Code.ensure_loaded?(Igniter) do
         [:authentication, :strategies, strategy_name, :origin],
         :webauthn_origin
       )
+    end
+
+    # The application environment those clauses read from. `--no-config` is
+    # for a project that resolves these settings some other way.
+    defp maybe_configure_webauthn_env(igniter, options) do
+      if options[:config] do
+        configure_webauthn_env(igniter)
+      else
+        igniter
+      end
+    end
+
+    defp configure_webauthn_env(igniter) do
+      otp_app = Igniter.Project.Application.app_name(igniter)
+      rp_name_default = humanise_app_name(otp_app)
+
+      igniter
       |> Igniter.Project.Config.configure_new(
         "dev.exs",
         otp_app,
@@ -442,10 +605,19 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp data_layer_extension do
+      case data_layer_section() do
+        nil -> "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer"
+        section -> "AshAuthentication.WebAuthnCredential,Ash.Policy.Authorizer,#{section}"
+      end
+    end
+
+    # The DSL section of the data layer the resource is generated with, which
+    # is also the shorthand `ash.gen.resource` takes for it.
+    defp data_layer_section do
       cond do
-        Code.ensure_loaded?(AshPostgres.DataLayer) -> "Ash.Policy.Authorizer,postgres"
-        Code.ensure_loaded?(AshSqlite.DataLayer) -> "Ash.Policy.Authorizer,sqlite"
-        true -> "Ash.Policy.Authorizer"
+        Code.ensure_loaded?(AshPostgres.DataLayer) -> :postgres
+        Code.ensure_loaded?(AshSqlite.DataLayer) -> :sqlite
+        true -> nil
       end
     end
   end
