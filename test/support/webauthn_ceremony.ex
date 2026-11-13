@@ -39,7 +39,7 @@ defmodule AshAuthentication.Test.WebAuthnCeremony do
 
   @doc """
   Register a new user. `params` are merged into the register params (e.g. an
-  identity); `opts` takes `:tenant`.
+  identity); `opts` takes `:tenant` and `:context`, passed on to the action.
   """
   def register(strategy, params \\ %{}, opts \\ []) do
     tenant = opts[:tenant]
@@ -47,26 +47,27 @@ defmodule AshAuthentication.Test.WebAuthnCeremony do
     passkey = new_passkey(strategy, challenge, tenant)
 
     result =
-      Actions.register(strategy, Map.merge(registration_params(passkey), params),
-        challenge: challenge,
-        tenant: tenant
+      Actions.register(
+        strategy,
+        Map.merge(registration_params(passkey), params),
+        [challenge: challenge] ++ action_opts(opts)
       )
 
     {result, passkey}
   end
 
-  @doc "Add a passkey to `user`'s account. `opts` takes `:tenant`."
+  @doc "Add a passkey to `user`'s account. `opts` takes `:tenant` and `:context`."
   def add_credential(strategy, user, opts \\ []) do
     tenant = opts[:tenant]
     {:ok, challenge} = Actions.registration_challenge(strategy, tenant)
     passkey = new_passkey(strategy, challenge, tenant)
 
     result =
-      Actions.add_credential(strategy, registration_params(passkey),
-        challenge: challenge,
-        user: user,
-        tenant: tenant,
-        authenticated_at: DateTime.utc_now()
+      Actions.add_credential(
+        strategy,
+        registration_params(passkey),
+        [challenge: challenge, user: user, authenticated_at: DateTime.utc_now()] ++
+          action_opts(opts)
       )
 
     {result, passkey}
@@ -74,17 +75,18 @@ defmodule AshAuthentication.Test.WebAuthnCeremony do
 
   @doc """
   Sign in with `passkey`. `params` are merged into the assertion params (e.g.
-  an identity). `opts` takes `:tenant`, and `:rp_id`/`:origin` to sign the
-  assertion for a different relying party than the strategy's own.
+  an identity). `opts` takes `:tenant` and `:context`, and `:rp_id`/`:origin`
+  to sign the assertion for a different relying party than the strategy's own.
   """
   def sign_in(strategy, passkey, params \\ %{}, opts \\ []) do
     tenant = opts[:tenant]
     {:ok, challenge} = Actions.authentication_challenge(strategy, [], tenant)
     assertion = assertion(strategy, passkey, challenge, opts)
 
-    Actions.sign_in(strategy, Map.merge(assertion_params(assertion), params),
-      challenge: challenge,
-      tenant: tenant
+    Actions.sign_in(
+      strategy,
+      Map.merge(assertion_params(assertion), params),
+      [challenge: challenge] ++ action_opts(opts)
     )
   end
 
@@ -101,11 +103,17 @@ defmodule AshAuthentication.Test.WebAuthnCeremony do
 
     assertion = assertion(strategy, passkey, challenge, opts)
 
-    Actions.verify(strategy, assertion_params(assertion),
-      challenge: challenge,
-      actor: actor,
-      tenant: tenant
+    Actions.verify(
+      strategy,
+      assertion_params(assertion),
+      [challenge: challenge, actor: actor] ++ action_opts(opts)
     )
+  end
+
+  # The options that go on to the action itself. `tenant: nil` is passed as
+  # before; `context:` only when given.
+  defp action_opts(opts) do
+    [tenant: opts[:tenant]] ++ Keyword.take(opts, [:context])
   end
 
   defp new_passkey(strategy, challenge, tenant) do
