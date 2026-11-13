@@ -10,6 +10,22 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   `AshAuthentication.Strategy.WebAuthn.Adapter`) and coordinates with Ash to
   persist users and credentials. Nothing here depends on any particular
   adapter's backend.
+
+  ## The caller's context
+
+  Every function here takes a `context:` option, the Ash context the caller
+  carries: what `Ash.PlugHelpers.set_context/2` put on the connection when
+  the caller is one of the strategy's plugs, or the calling action's own
+  context. It reaches the Ash action the phase runs (`register`, `sign_in`,
+  `sign_in_with_token`, `verify`, `add_credential` and the credential
+  management actions), so a `change`, `validation` or `preparation` declared
+  on the resource can read it from `changeset.context` or `query.context`,
+  as it can on the Password strategy's actions. It goes under the strategy's
+  own context: a caller-supplied `private` (and `shared.private`) is dropped,
+  so nothing in it can claim the `ash_authentication?` flag or the user the
+  ceremony proved. The same option is what an `AshAuthentication.Secret`
+  resolving the relying party receives on `registration_challenge/3` and
+  `authentication_challenge/4`.
   """
 
   alias Ash.{Changeset, Query}
@@ -117,6 +133,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   end
 
   defp exchange_sign_in_token(strategy, params, opts) do
+    # Popped rather than left for `for_read/4`, which would merge it over the
+    # strategy's own context instead of under it.
+    {context, opts} = Keyword.pop(opts, :context)
+
     opts =
       opts
       |> Keyword.put_new_lazy(:domain, fn -> Info.domain!(strategy.resource) end)
@@ -124,7 +144,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     strategy.resource
     |> Query.new()
-    |> Query.set_context(%{private: %{ash_authentication?: true}})
+    |> Query.set_context(action_context(context, %{private: %{ash_authentication?: true}}))
     |> Query.for_read(strategy.sign_in_with_token_action_name, params, opts)
     |> Ash.read()
     |> case do
@@ -184,7 +204,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
              strategy.sign_in_action_name,
              sign_in_arguments(strategy, user),
              user,
-             tenant
+             opts
            ) do
       maybe_generate_token(user, strategy, opts)
     end
@@ -230,7 +250,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
              strategy.verify_action_name,
              Map.take(params, ~w[raw_id authenticator_data signature client_data_json]),
              actor,
-             tenant,
+             opts,
              %{webauthn_verified_at: verified_at}
            ) do
       maybe_generate_verified_token(user, strategy, opts, verified_at)
@@ -246,7 +266,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
          action_name,
          arguments,
          user,
-         tenant,
+         opts,
          extra_context \\ %{}
        ) do
     private =
@@ -257,9 +277,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     strategy.resource
     |> Query.new()
-    |> Query.set_context(%{private: private})
+    |> Query.set_context(action_context(opts[:context], %{private: private}))
     |> Query.for_read(action_name, arguments)
-    |> Ash.read_one(lookup_ash_opts(strategy, tenant))
+    |> Ash.read_one(lookup_ash_opts(strategy, Keyword.get(opts, :tenant)))
     |> case do
       # A user-declared action might not constrain the query to the ceremony
       # user, so the record it returns has to be checked against them.
@@ -470,7 +490,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     strategy.credential_resource
     |> Query.new()
-    |> Query.set_context(auth_context())
+    |> Query.set_context(action_context(opts[:context], auth_context()))
     |> Query.for_read(action, %{}, ash_opts)
     |> Query.filter(^ref(foreign_key) == ^user_id)
     |> sort_credentials(strategy, Keyword.get(opts, :sort))
@@ -508,7 +528,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     with {:ok, credential} <- Ash.get(strategy.credential_resource, credential_id, ash_opts) do
       credential
       |> Changeset.new()
-      |> Changeset.set_context(auth_context())
+      |> Changeset.set_context(action_context(opts[:context], auth_context()))
       |> Changeset.for_update(action, %{WebAuthn.label_field(strategy) => new_label}, ash_opts)
       |> Ash.update()
     end
@@ -544,7 +564,6 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   def add_credential(strategy, params, opts \\ []) do
     challenge = Keyword.fetch!(opts, :challenge)
     user = Keyword.fetch!(opts, :user)
-    tenant = Keyword.get(opts, :tenant)
 
     with :ok <- WebAuthn.RecentAuthentication.check(strategy, user, opts),
          {:ok, attestation_object} <- safe_url_decode64(params["attestation_object"]),
@@ -564,7 +583,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         |> credential_attrs(registration, params, Keyword.get(opts, :user_handle))
         |> Map.put(foreign_key, user_id)
 
-      store_credential(strategy, attrs, tenant)
+      store_credential(strategy, attrs, opts)
     else
       :error -> base64_error(strategy, :add_credential)
       {:error, error} -> {:error, error}
@@ -635,10 +654,11 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       |> put_accepted_fields_in_params(strategy, params)
 
     ash_opts = build_ash_opts(strategy, opts, tenant)
+    context = action_context(opts[:context], Map.put(auth_context(), :token_type, :sign_in))
 
     strategy.resource
     |> Changeset.new()
-    |> Changeset.set_context(Map.put(auth_context(), :token_type, :sign_in))
+    |> Changeset.set_context(context)
     |> Changeset.for_create(strategy.register_action_name, action_params, ash_opts)
     |> Ash.create()
   end
@@ -792,11 +812,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
     credential
     |> Changeset.new()
-    |> Changeset.set_context(auth_context())
+    |> Changeset.set_context(action_context(opts[:context], auth_context()))
     |> Changeset.for_destroy(action, %{}, ash_opts)
     |> Ash.destroy()
   end
 
+  # The `:context` option is left out on purpose: it goes through
+  # `action_context/2`, under the strategy's own, where `for_create/4`
+  # would merge it over.
   defp build_ash_opts(strategy, opts, tenant) do
     ash_opts =
       opts
@@ -817,6 +840,39 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       private: %{ash_authentication?: true},
       shared: %{private: %{ash_authentication?: true}}
     }
+
+  # The context the action runs with: the caller's (`context:`, a map or
+  # keyword list, or nothing) under the strategy's `own`. The caller's
+  # `private` is dropped, and so is `shared.private`, which
+  # `Ash.Changeset.set_context/2` copies into `private`: `ash_authentication?`,
+  # `token_type` and the ceremony user are the strategy's to set.
+  defp action_context(caller, own) do
+    caller
+    |> Kernel.||(%{})
+    |> Map.new()
+    |> without_private()
+    |> deep_merge(own)
+  end
+
+  defp without_private(context) do
+    case Map.delete(context, :private) do
+      %{shared: %{} = shared} = context when not is_struct(shared) ->
+        %{context | shared: Map.delete(shared, :private)}
+
+      context ->
+        context
+    end
+  end
+
+  defp deep_merge(left, right) do
+    Map.merge(left, right, fn
+      _key, %{} = left, %{} = right when not is_struct(left) and not is_struct(right) ->
+        deep_merge(left, right)
+
+      _key, _left, right ->
+        right
+    end)
+  end
 
   # A disabled phase has no action to finish on. Refusing up front keeps a
   # direct call from running the ceremony (and bumping the credential's sign
@@ -862,13 +918,13 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     {:error, auth_failed(strategy, action, "Invalid base64 encoding in request parameters")}
   end
 
-  defp store_credential(strategy, attrs, tenant) do
-    ash_opts = internal_ash_opts(tenant)
+  defp store_credential(strategy, attrs, opts) do
+    ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
     action = credential_action_name(strategy.credential_resource, :create_action_name)
 
     strategy.credential_resource
     |> Changeset.new()
-    |> Changeset.set_context(auth_context())
+    |> Changeset.set_context(action_context(opts[:context], auth_context()))
     |> Changeset.for_create(action, attrs, ash_opts)
     |> Ash.create()
   end

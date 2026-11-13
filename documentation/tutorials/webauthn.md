@@ -755,6 +755,47 @@ credential has a stored `user_handle` and the client sends one, they must
 match (WebAuthn §7.2). Clients should always send it; a non-discoverable
 credential returns none, which is accepted.
 
+### The application's Ash context reaches the strategy's actions
+
+Whatever the application puts in the Ash context before a ceremony's POST,
+with `Ash.PlugHelpers.set_context/2` in a plug or as the `context:` option of
+`AshAuthentication.Strategy.WebAuthn.Actions`, is on the changeset or query
+of the action the phase runs: `register`, `sign_in`, `sign_in_with_token`,
+`verify` and `add_credential`. A `change`, `validation` or `preparation` on
+that action can read it, as it can on the Password strategy's actions. An
+invitation-only registration, for instance, has a plug put the invitation
+token in the context and a change on the register action consume it:
+
+```elixir
+# a plug, before the WebAuthn routes
+conn
+|> Ash.PlugHelpers.set_context(%{invitation_token: conn.params["invitation"]})
+
+# on the user resource
+create :register_with_webauthn do
+  # ... the arguments and changes the strategy generates ...
+  change MyApp.Accounts.User.Changes.ConsumeInvitation
+end
+
+defmodule MyApp.Accounts.User.Changes.ConsumeInvitation do
+  use Ash.Resource.Change
+
+  def change(changeset, _opts, _context) do
+    case changeset.context[:invitation_token] do
+      nil -> Ash.Changeset.add_error(changeset, field: :invitation, message: "is required")
+      # look the invitation up, refuse a used one, mark it used after the create
+      token -> MyApp.Invitations.claim(changeset, token)
+    end
+  end
+end
+```
+
+The application's context goes under the strategy's own: a `private` key in
+it is dropped, so it can't claim `ash_authentication?` or the user the
+ceremony proved. The same context is what an `AshAuthentication.Secret`
+resolving `rp_id`, `rp_name` or `origin` receives, with the tenant and, in a
+plug, the connection added.
+
 ### Adding passkeys to an existing account
 
 A passkey is a lasting way into an account, so who may add one deserves
