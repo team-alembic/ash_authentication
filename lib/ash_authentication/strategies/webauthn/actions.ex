@@ -693,14 +693,23 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       WebAuthn.credential_id_field(strategy) => registration.credential_id,
       WebAuthn.public_key_field(strategy) => registration.public_key,
       WebAuthn.sign_count_field(strategy) => registration.sign_count,
-      WebAuthn.label_field(strategy) => params["label"] || "Security Key",
       WebAuthn.backup_eligible_field(strategy) => registration.backup_eligible,
       WebAuthn.backed_up_field(strategy) => registration.backed_up
     }
+    |> maybe_put_label(strategy, params["label"])
     |> maybe_put_transports(strategy, params["transports"])
     |> maybe_put_discoverable(strategy, params["cred_props"])
     |> maybe_put_user_handle(strategy, user_handle)
   end
+
+  # An unnamed passkey takes the label attribute's own default: the
+  # extension's `"Security Key"` on a resource that doesn't declare `label`,
+  # the resource's own (or none, for a UI that translates the fallback)
+  # otherwise. Forcing a literal here would overrule both.
+  defp maybe_put_label(attrs, _strategy, label) when label in [nil, ""], do: attrs
+
+  defp maybe_put_label(attrs, strategy, label),
+    do: Map.put(attrs, WebAuthn.label_field(strategy), label)
 
   # The `credProps` client extension result, passed by the client as it
   # came from `getClientExtensionResults()`. Client-reported (not
