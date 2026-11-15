@@ -90,5 +90,10 @@ defmodule AshAuthentication.Plug.Dispatcher do
     Ash.PlugHelpers.set_context(conn, Map.merge(existing_context, request_context))
   end
 
-  defp format_ip(ip), do: ip |> :inet.ntoa() |> to_string()
+  defp format_ip(ip) do
+    case :inet.ntoa(ip) do
+      {:error, :einval} -> nil
+      formatted -> to_string(formatted)
+    end
+  end
 end
