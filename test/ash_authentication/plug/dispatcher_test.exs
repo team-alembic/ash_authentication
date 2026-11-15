@@ -35,6 +35,17 @@ defmodule AshAuthentication.Plug.DispatcherTest do
 
       assert context.ash_authentication_request.remote_ip == "203.0.113.56"
     end
+
+    test "sets remote_ip to nil for a unix socket peer", %{conn: conn} do
+      context =
+        conn
+        |> Map.put(:remote_ip, {:local, "/tmp/app.sock"})
+        |> put_peer_data(%{address: {:local, "/tmp/app.sock"}, port: 0})
+        |> dispatch()
+        |> Ash.PlugHelpers.get_context()
+
+      assert context.ash_authentication_request.remote_ip == nil
+    end
   end
 
   defp dispatch(conn) do
