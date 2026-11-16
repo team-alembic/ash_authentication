@@ -256,15 +256,32 @@ defmodule AshAuthentication.Jwt do
 
   @doc """
   Given a token, verify it's signature and validate it's claims.
+
+  The second argument is the resource the token is for, or an otp app. Given an
+  otp app, the token is verified as a token of the authenticated resource of the
+  otp app which its subject names. A token whose subject names none of them does
+  not verify.
+
+  ## Options
+
+  - `:resources` - given an otp app, a list of authenticated resources to verify
+    the token against, in place of every authenticated resource of the otp app.
+    A token whose subject names a resource which is not listed does not verify.
   """
   @spec verify(token, Resource.t() | atom, opts :: Keyword.t(), context :: map()) ::
           {:ok, claims, Resource.t()} | :error
   def verify(token, otp_app_or_resource, opts \\ [], context \\ %{}) do
-    if function_exported?(otp_app_or_resource, :spark_is, 0) &&
+    {resources, opts} = Keyword.pop(opts, :resources)
+
+    if is_atom(otp_app_or_resource) && function_exported?(otp_app_or_resource, :spark_is, 0) &&
          otp_app_or_resource.spark_is() == Resource do
       verify_for_resource(token, otp_app_or_resource, opts, context)
     else
-      verify_for_otp_app(token, otp_app_or_resource, opts, context)
+      resources = resources || AshAuthentication.authenticated_resources(otp_app_or_resource)
+
+      with {:ok, resource} <- token_to_listed_resource(token, List.wrap(resources)) do
+        verify_for_resource(token, resource, opts, context)
+      end
     end
   end
 
@@ -311,18 +328,6 @@ defmodule AshAuthentication.Jwt do
     end
   end
 
-  defp verify_for_otp_app(token, otp_app, opts, context) do
-    with {:ok, resource} <- token_to_resource(token, otp_app),
-         signer <- Config.token_signer(resource, [], context),
-         {:ok, claims} <- Joken.verify(token, signer),
-         defaults <- Config.default_claims(resource, opts),
-         {:ok, claims} <- Joken.validate(defaults, claims, resource) do
-      {:ok, normalize_null(claims), resource}
-    else
-      _ -> :error
-    end
-  end
-
   @doc """
   Given a token, find a matching resource configuration.
 
@@ -333,18 +338,20 @@ defmodule AshAuthentication.Jwt do
   """
   @spec token_to_resource(token, module) :: {:ok, Resource.t()} | :error
   def token_to_resource(token, otp_app) do
+    token_to_listed_resource(token, AshAuthentication.authenticated_resources(otp_app))
+  end
+
+  defp token_to_listed_resource(token, resources) do
     with {:ok, %{"sub" => subject}} <- peek(token),
          %URI{path: subject_name} <- URI.parse(subject) do
-      resource_for_subject_name(subject_name, otp_app)
+      resource_for_subject_name(subject_name, resources)
     else
       _ -> :error
     end
   end
 
-  defp resource_for_subject_name(subject_name, otp_app) do
-    otp_app
-    |> AshAuthentication.authenticated_resources()
-    |> Enum.find_value(:error, fn resource ->
+  defp resource_for_subject_name(subject_name, resources) do
+    Enum.find_value(resources, :error, fn resource ->
       with {:ok, resource_subject_name} <- Info.authentication_subject_name(resource),
            true <- subject_name == to_string(resource_subject_name),
            do: {:ok, resource}

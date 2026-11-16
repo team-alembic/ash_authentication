@@ -13,6 +13,9 @@ defmodule AshAuthentication.Strategy.RememberMe.Token.Helpers do
 
   Returns `:error` when the token does not verify, or when it maps to no
   authentication resource.
+
+  Given the `:resources` option, a list of authenticated resources, only a token
+  of one of them is revoked.
   """
   @spec revoke_remember_me_token(String.t(), atom, keyword) :: :ok | :error | {:error, any}
   def revoke_remember_me_token(token, otp_app, opts \\ [])
@@ -22,7 +25,11 @@ defmodule AshAuthentication.Strategy.RememberMe.Token.Helpers do
     with {:ok, _claims, resource} <- Jwt.verify(to_string(token), otp_app, opts),
          {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
       store_all_tokens? = Info.authentication_tokens_store_all_tokens?(resource)
-      opts = Keyword.put(opts, :store_all_tokens?, store_all_tokens?)
+
+      opts =
+        opts
+        |> Keyword.delete(:resources)
+        |> Keyword.put(:store_all_tokens?, store_all_tokens?)
 
       TokenResource.Actions.revoke(token_resource, token, opts)
     else
