@@ -161,30 +161,29 @@ defmodule AshAuthentication.Strategy.RememberMe.Plug.Helpers do
   end
 
   def delete_all_remember_me_cookies(conn, otp_app, opts) do
-    otp_app_or_resources = if opts[:resources], do: List.wrap(opts[:resources]), else: otp_app
-
     otp_app
     |> all_remember_me_cookie_names(opts)
     |> Enum.reduce(conn, fn cookie_name, conn ->
       token = Plug.Conn.get_cookies(conn) |> Map.get(cookie_name)
 
-      revoke_cookie_token_or_tolerate_race!(conn, token, otp_app_or_resources)
+      revoke_cookie_token_or_tolerate_race!(conn, token, otp_app, opts)
 
       delete_remember_me_cookie(conn, cookie_name)
     end)
   end
 
-  defp revoke_cookie_token_or_tolerate_race!(_conn, nil, _otp_app_or_resources), do: :ok
+  defp revoke_cookie_token_or_tolerate_race!(_conn, nil, _otp_app, _opts), do: :ok
 
   # We still want unexpected errors to blow up — only the concurrent
   # revocation race is an expected non-success during logout.
-  defp revoke_cookie_token_or_tolerate_race!(conn, token, otp_app_or_resources) do
+  defp revoke_cookie_token_or_tolerate_race!(conn, token, otp_app, opts) do
     opts =
-      []
+      opts
+      |> Keyword.take([:resources])
       |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
       |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
 
-    case revoke_remember_me_token(token, otp_app_or_resources, opts) do
+    case revoke_remember_me_token(token, otp_app, opts) do
       :ok ->
         :ok
 
