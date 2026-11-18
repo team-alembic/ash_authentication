@@ -11,6 +11,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v5.0.0-rc.18](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.17...v5.0.0-rc.18) (2026-11-18)
+
+
+
+
+### Bug Fixes:
+
+* use prepend?: true for revoke/reset by Zach Daniel
+
+* set remote_ip to nil when the peer is a unix socket (#1262) by Sai Asish Y
+
 ## [v5.0.0-rc.17](https://github.com/team-alembic/ash_authentication/compare/v5.0.0-rc.16...v5.0.0-rc.17) (2026-11-07)
 
 
