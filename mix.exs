@@ -268,7 +268,7 @@ defmodule AshAuthentication.MixProject do
   defp deps do
     [
       {:argon2_elixir, "~> 4.0", optional: true},
-      {:ash, ash_version("~> 3.7")},
+      {:ash, ash_version("~> 3.37 and >= 3.37.7")},
       {:assent, "~> 0.3.2"},
       {:bcrypt_elixir, "~> 3.0"},
       {:castore, "~> 1.0"},

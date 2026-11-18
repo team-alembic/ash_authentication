@@ -19,13 +19,17 @@ defmodule AshAuthentication.AddOn.LogOutEverywhere.OnPasswordChange do
 
   @impl true
   def change(changeset, opts, context) do
-    Ash.Changeset.after_action(changeset, fn changeset, result ->
-      if password_changed?(changeset, opts) do
-        log_out_everywhere(changeset, result, context)
-      else
-        {:ok, result}
-      end
-    end)
+    Ash.Changeset.after_action(
+      changeset,
+      fn changeset, result ->
+        if password_changed?(changeset, opts) do
+          log_out_everywhere(changeset, result, context)
+        else
+          {:ok, result}
+        end
+      end,
+      prepend?: true
+    )
   end
 
   defp password_changed?(changeset, opts) do

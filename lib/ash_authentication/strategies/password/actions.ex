@@ -302,7 +302,9 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         }
       })
       |> Changeset.for_update(resettable.password_reset_action_name, params, options)
-      |> Changeset.before_action(&revoke_reset_token(&1, resource, token, revoke_opts))
+      |> Changeset.after_action(&revoke_reset_token(&1, &2, resource, token, revoke_opts),
+        prepend?: true
+      )
       |> Ash.update()
     else
       {:error, %Changeset{} = changeset} -> {:error, changeset}
@@ -313,17 +315,12 @@ defmodule AshAuthentication.Strategy.Password.Actions do
   def reset(strategy, _params, _options) when is_struct(strategy, Password),
     do: {:error, NoSuchAction.exception(resource: strategy.resource, action: :reset, type: :read)}
 
-  # The reset token is spent before the update, inside its transaction, so a
-  # failed reset leaves it usable and two concurrent resets cannot both use it.
-  # Spending it first also means `log_out_everywhere`, which revokes the user's
-  # stored tokens once the password changes, finds it already revoked rather
-  # than revoking it before the reset could.
-  defp revoke_reset_token(changeset, resource, token, opts) do
+  defp revoke_reset_token(_changeset, record, resource, token, opts) do
     token_resource = Info.authentication_tokens_token_resource!(resource)
 
     case TokenResource.revoke(token_resource, token, opts) do
-      :ok -> changeset
-      {:error, reason} -> Changeset.add_error(changeset, reason)
+      :ok -> {:ok, record}
+      {:error, reason} -> {:error, reason}
     end
   end
 

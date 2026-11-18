@@ -59,14 +59,15 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
       end
     end
 
-    test "a password reset succeeds and revokes the user's existing tokens" do
+    test "a password reset succeeds, revokes the user's existing tokens, and keeps the session it signs in" do
       user = build_user_with_token_required()
+      user_id = user.id
       strategy = Info.strategy!(Example.UserWithTokenRequired, :password)
       jtis = issue_tokens(user, 3)
 
       {:ok, reset_token} = Password.reset_token_for(strategy, user)
 
-      assert {:ok, _user} =
+      assert {:ok, reset_user} =
                Strategy.action(
                  strategy,
                  :reset,
@@ -83,6 +84,12 @@ defmodule AshAuthentication.AddOns.LogOutEverywhereTest do
       end
 
       assert TokenResource.token_revoked?(Example.Token, reset_token)
+
+      session_token = reset_user.__metadata__.token
+      refute TokenResource.token_revoked?(Example.Token, session_token)
+
+      assert {:ok, %{id: ^user_id}} =
+               authenticate_session(%{"user_with_token_required_token" => session_token})
     end
 
     for action <- [:change_password_atomic, :change_password_nonatomic] do

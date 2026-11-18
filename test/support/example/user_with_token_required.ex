@@ -51,6 +51,8 @@ defmodule Example.UserWithTokenRequired do
         identity_field :email
 
         resettable do
+          password_reset_action_name :reset_password_with_token
+
           sender fn user, token, _opts ->
             Logger.debug(
               "Password reset request for user #{user.username}, token #{inspect(token)}"
@@ -86,6 +88,31 @@ defmodule Example.UserWithTokenRequired do
       accept []
       argument :password, :string, allow_nil?: false, sensitive?: true
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+    end
+
+    # Written as `mix ash_authentication.add_strategy password` generates it,
+    # so it is atomic, unlike the reset action the transformer would build.
+    update :reset_password_with_token do
+      argument :reset_token, :string do
+        allow_nil? false
+        sensitive? true
+      end
+
+      argument :password, :string do
+        allow_nil? false
+        constraints min_length: 8
+        sensitive? true
+      end
+
+      argument :password_confirmation, :string do
+        allow_nil? false
+        sensitive? true
+      end
+
+      validate AshAuthentication.Strategy.Password.ResetTokenValidation
+      validate AshAuthentication.Strategy.Password.PasswordConfirmationValidation
+      change AshAuthentication.Strategy.Password.HashPasswordChange
+      change AshAuthentication.GenerateTokenChange
     end
   end
 
