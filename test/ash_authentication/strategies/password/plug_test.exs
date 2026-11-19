@@ -10,6 +10,7 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
 
   alias AshAuthentication.{
     Errors.AuthenticationFailed,
+    Errors.InvalidToken,
     Errors.UnconfirmedUser,
     Info,
     Plug.Helpers,
@@ -99,6 +100,20 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
                |> Helpers.get_authentication_result()
 
       assert Exception.message(error) =~ ~r/authentication failed/i
+    end
+
+    test "it returns an error when the subject params are not a map" do
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+
+      for params <- [%{"user" => "x"}, %{"user" => nil}] do
+        assert {_conn, {:error, error}} =
+                 :post
+                 |> conn("/", params)
+                 |> Plug.sign_in(strategy)
+                 |> Helpers.get_authentication_result()
+
+        assert Exception.message(error) =~ ~r/authentication failed/i
+      end
     end
 
     test "it returns an error when the password is incorrect" do
@@ -275,6 +290,25 @@ defmodule AshAuthentication.Strategy.Password.PlugTest do
       assert user.id == updated_user.id
       assert user.hashed_password != updated_user.hashed_password
       assert strategy.hash_provider.valid?(new_password, updated_user.hashed_password)
+    end
+
+    test "it returns an error when the reset token is not a string" do
+      {:ok, strategy} = Info.strategy(Example.User, :password)
+      new_password = password()
+
+      params = %{
+        "user" => %{
+          "reset_token" => %{"x" => "y"},
+          "password" => new_password,
+          "password_confirmation" => new_password
+        }
+      }
+
+      assert {_conn, {:error, %InvalidToken{}}} =
+               :post
+               |> conn("/", params)
+               |> Plug.reset(strategy)
+               |> Helpers.get_authentication_result()
     end
   end
 end
