@@ -57,7 +57,9 @@ end
 
 By default the strategy uses the `common` tenant endpoint, which allows any Microsoft
 account (personal, work, or school). To restrict sign-in to a specific Azure tenant,
-override `base_url`:
+override `base_url` with the tenant's directory (tenant) ID, which is a UUID. A
+verified domain such as `contoso.onmicrosoft.com` is rejected, because it would not
+restrict sign-in to your tenant:
 
 ```elixir
 microsoft do

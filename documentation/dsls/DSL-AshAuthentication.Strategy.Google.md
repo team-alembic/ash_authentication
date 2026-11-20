@@ -45,9 +45,9 @@ retrieves configuration from Google's discovery endpoint.
 
 The following defaults are applied:
 
-* `:base_url` is set to `"https://accounts.google.com/"`.
+* `:base_url` is set to `"https://accounts.google.com"`.
 * `:authorization_params` is set to `[scope: "email profile"]`.
-* `:client_authentication_method` is set to `"client_secret_post"`.
+* `:client_authentication_method` is set to `:client_secret_post`.
 
 
 
@@ -66,7 +66,7 @@ The following defaults are applied:
 |------|------|---------|------|
 | [`client_id`](#authentication-strategies-google-client_id){: #authentication-strategies-google-client_id .spark-required} | `(any, any -> any) \| module \| String.t` |  | The OAuth2 client ID.  Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`redirect_uri`](#authentication-strategies-google-redirect_uri){: #authentication-strategies-google-redirect_uri .spark-required} | `(any, any -> any) \| module \| String.t` |  | The callback URI *base*. Not the whole URI back to the callback endpoint, but the URI to your `AuthPlug`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
-| [`base_url`](#authentication-strategies-google-base_url){: #authentication-strategies-google-base_url } | `(any, any -> any) \| module \| String.t` | `"https://accounts.google.com/"` | The base URL of the OAuth2 server - including the leading protocol (ie `https://`).  Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
+| [`base_url`](#authentication-strategies-google-base_url){: #authentication-strategies-google-base_url } | `(any, any -> any) \| module \| String.t` | `"https://accounts.google.com"` | The base URL of the OAuth2 server - including the leading protocol (ie `https://`).  Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`site`](#authentication-strategies-google-site){: #authentication-strategies-google-site } | `(any, any -> any) \| module \| String.t` |  | Deprecated: Use `base_url` instead. |
 | [`prevent_hijacking?`](#authentication-strategies-google-prevent_hijacking?){: #authentication-strategies-google-prevent_hijacking? } | `boolean` | `true` | Requires a confirmation add_on to be present if the password strategy is used with the same identity_field. |
 | [`private_key`](#authentication-strategies-google-private_key){: #authentication-strategies-google-private_key } | `(any, any -> any) \| module \| String.t` |  | The private key to use if `:auth_method` is `:private_key_jwt`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
@@ -87,7 +87,7 @@ The following defaults are applied:
 | [`identity_relationship_user_id_attribute`](#authentication-strategies-google-identity_relationship_user_id_attribute){: #authentication-strategies-google-identity_relationship_user_id_attribute } | `atom` | `:user_id` | The name of the destination (user_id) attribute on your provider identity resource. Only necessary if you've changed the `user_id_attribute_name` option of the provider identity. |
 | [`client_secret`](#authentication-strategies-google-client_secret){: #authentication-strategies-google-client_secret } | `(any, any -> any) \| module \| String.t` |  | The OAuth2 client secret. Required if `:client_authentication_method` is `"client_secret_basic"`, `"client_secret_post"` or `"client_secret_jwt"`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`openid_configuration_uri`](#authentication-strategies-google-openid_configuration_uri){: #authentication-strategies-google-openid_configuration_uri } | `(any, any -> any) \| module \| String.t` | `"/.well-known/openid-configuration"` | The URI for the OpenID provider |
-| [`client_authentication_method`](#authentication-strategies-google-client_authentication_method){: #authentication-strategies-google-client_authentication_method } | `"client_secret_basic" \| "client_secret_post" \| "client_secret_jwt" \| "private_key_jwt" \| "none"` | `"client_secret_post"` | The client authentication method to use. |
+| [`client_authentication_method`](#authentication-strategies-google-client_authentication_method){: #authentication-strategies-google-client_authentication_method } | `:client_secret_basic \| :client_secret_post \| :client_secret_jwt \| :private_key_jwt \| :none \| "client_secret_basic" \| "client_secret_post" \| "client_secret_jwt" \| "private_key_jwt" \| "none"` | `:client_secret_post` | The client authentication method to use. Legacy string values are also accepted and normalized to atoms before calling Assent. |
 | [`openid_configuration`](#authentication-strategies-google-openid_configuration){: #authentication-strategies-google-openid_configuration } | `nil \| %{optional(String.t) => any}` |  | The OpenID configuration.  If not set, the configuration will be retrieved from `openid_configuration_uri`. |
 | [`id_token_signed_response_alg`](#authentication-strategies-google-id_token_signed_response_alg){: #authentication-strategies-google-id_token_signed_response_alg } | `"HS256" \| "HS384" \| "HS512" \| "RS256" \| "RS384" \| "RS512" \| "ES256" \| "ES384" \| "ES512" \| "PS256" \| "PS384" \| "PS512" \| "Ed25519" \| "Ed25519ph" \| "Ed448" \| "Ed448ph" \| "EdDSA"` | `"RS256"` | The `id_token_signed_response_alg` parameter sent by the Client during Registration. |
 | [`id_token_ttl_seconds`](#authentication-strategies-google-id_token_ttl_seconds){: #authentication-strategies-google-id_token_ttl_seconds } | `nil \| pos_integer` |  | The number of seconds from `iat` that an ID Token will be considered valid. |

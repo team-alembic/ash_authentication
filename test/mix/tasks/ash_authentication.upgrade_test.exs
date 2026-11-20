@@ -980,6 +980,43 @@ defmodule Mix.Tasks.AshAuthentication.UpgradeTest do
     end
   end
 
+  describe "warn_about_finch_http_adapter/2" do
+    test "names each config file that still configures the removed Finch adapter" do
+      test_project(
+        files: %{
+          "config/runtime.exs" => """
+          import Config
+
+          if config_env() == :prod do
+            config :ash_authentication, :http_adapter,
+              {Assent.HTTPAdapter.Finch, supervisor: MyApp.Finch}
+          end
+          """
+        }
+      )
+      |> Upgrade.warn_about_finch_http_adapter([])
+      |> assert_has_notice(
+        &(String.contains?(&1, "config/runtime.exs") and
+            String.contains?(&1, "Assent.HTTPAdapter.Req"))
+      )
+    end
+
+    test "adds no notice when the Finch adapter is not configured" do
+      igniter =
+        test_project(
+          files: %{
+            "config/config.exs" => """
+            import Config
+            config :ash_authentication, :http_adapter, Assent.HTTPAdapter.Req
+            """
+          }
+        )
+        |> Upgrade.warn_about_finch_http_adapter([])
+
+      assert igniter.notices == []
+    end
+  end
+
   describe "move_audit_log_ip_salt/2" do
     test "moves a string salt into the consuming application" do
       test_project(

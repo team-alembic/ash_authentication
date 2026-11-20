@@ -39,13 +39,13 @@ configuration options should you need them.
 
 The following defaults are applied:
 
+* `:auth_method` is set to `:client_secret_post`.
 * `:base_url` is set to `"https://api.github.com"`.
 * `:authorize_url` is set to `"https://github.com/login/oauth/authorize"`.
 * `:token_url` is set to `"https://github.com/login/oauth/access_token"`.
 * `:user_url` is set to `"/user"`.
 * `:user_emails_url` is set to `"/user/emails"`.
 * `:authorization_params` is set to `[scope: "read:user,user:email"]`.
-* `:auth_method` is set to `:client_secret_post`.
 
 
 

@@ -24,10 +24,10 @@ defmodule AshAuthentication.Strategy.Microsoft do
 
   By default the strategy uses the `common` tenant endpoint, which allows any
   Microsoft account (personal, work, or school). Multi-tenant issuer validation
-  is handled automatically — the `{tenantid}` template in Microsoft's discovery
-  document is resolved from the ID token's `tid` claim before validation.
+  is handled by Assent using tenant-specific discovery and ID token verification.
 
-  To restrict sign-in to a specific Azure tenant, override `base_url`:
+  To restrict sign-in to a specific Azure tenant, use its directory UUID in
+  `base_url`. Verified tenant domains are not supported:
 
       base_url "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
 
@@ -37,10 +37,34 @@ defmodule AshAuthentication.Strategy.Microsoft do
   - The [OIDC documentation](`AshAuthentication.Strategy.Oidc`)
   """
 
-  alias AshAuthentication.Strategy.{Custom, Oidc}
+  alias AshAuthentication.Strategy.{Custom, Microsoft.AzureADMultitenant, Oidc}
+  alias Spark.Error.DslError
 
   use Custom, entity: Dsl.dsl()
 
   defdelegate transform(strategy, dsl_state), to: Oidc
-  defdelegate verify(strategy, dsl_state), to: Oidc
+
+  @doc false
+  def verify(strategy, dsl_state) do
+    with :ok <- verify_base_url(strategy), do: Oidc.verify(strategy, dsl_state)
+  end
+
+  # A literal base_url can be checked at compile time. Secrets are checked when
+  # the request and callback phases resolve them.
+  defp verify_base_url(%{base_url: base_url} = strategy) when is_binary(base_url) do
+    case AzureADMultitenant.canonical_base_url(base_url) do
+      {:ok, _base_url} ->
+        :ok
+
+      {:error, error} ->
+        {:error,
+         DslError.exception(
+           path: [:authentication, :strategies, strategy.name, :base_url],
+           message: Exception.message(error),
+           module: strategy.resource
+         )}
+    end
+  end
+
+  defp verify_base_url(_strategy), do: :ok
 end
