@@ -97,7 +97,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
             authorization_params: [],
             authorize_url: nil,
             base_url: nil,
-            client_authentication_method: "client_secret_basic",
+            client_authentication_method: :client_secret_basic,
             client_id: nil,
             client_secret: nil,
             code_verifier: false,
@@ -150,7 +150,7 @@ defmodule AshAuthentication.Strategy.DynamicOidc do
   @type t :: %__MODULE__{
           assent_strategy: module,
           authorization_params: keyword | {module, keyword},
-          client_authentication_method: nil | binary,
+          client_authentication_method: nil | atom | binary,
           connection_resource: module,
           email_field: atom,
           icon: atom,

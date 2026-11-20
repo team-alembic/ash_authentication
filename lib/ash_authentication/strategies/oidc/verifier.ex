@@ -26,11 +26,11 @@ defmodule AshAuthentication.Strategy.Oidc.Verifier do
     end
   end
 
-  # `Assent.Strategy.OIDC.callback/3` derives `:auth_method` from
-  # `client_authentication_method` and overwrites whatever it was given, so
-  # that is the only setting which decides whether a private key is needed.
-  defp validate_private_key(%{client_authentication_method: "private_key_jwt"} = strategy),
-    do: validate_exclusive_secret(strategy, [:private_key, :private_key_path])
+  # The Assent boundary gives the OIDC client_authentication_method precedence
+  # over the inherited OAuth2 auth_method, so validate the effective method.
+  defp validate_private_key(%{client_authentication_method: method} = strategy)
+       when method in [:private_key_jwt, "private_key_jwt"],
+       do: validate_exclusive_secret(strategy, [:private_key, :private_key_path])
 
   defp validate_private_key(_strategy), do: :ok
 end

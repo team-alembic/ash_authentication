@@ -12,7 +12,85 @@ Version 5.0.0 includes several breaking changes related to action types and the 
 
 ### Dependencies
 
-This version requires Assent ~> 0.3.0 (updated from ~> 0.2.9) and adds `nimble_totp` as a dependency for the new TOTP strategy. Run `mix deps.get` after updating your `ash_authentication` version.
+This version requires **Elixir 1.18 / OTP 26 or later** and **Assent ~> 0.4.0**.
+It also adds `nimble_totp` for the TOTP strategy. Run `mix deps.get` after updating
+`ash_authentication`. The Assent changes below also apply when upgrading from an
+earlier 5.0 release candidate.
+
+#### OAuth/OIDC changes in Assent 0.4
+
+The default HTTP adapter is now `Assent.HTTPAdapter.Req`. Assent removed its Finch
+adapter, and AshAuthentication no longer starts `AshAuthentication.Finch`.
+Applications using the default adapter need no configuration change. If you use a
+custom pool, keep that pool in your application's supervision tree and change:
+
+```elixir
+# Before
+config :ash_authentication, :http_adapter,
+  {Assent.HTTPAdapter.Finch, supervisor: MyApp.CustomFinch}
+
+# After
+config :ash_authentication, :http_adapter,
+  {Assent.HTTPAdapter.Req, finch: MyApp.CustomFinch}
+```
+
+Req options replace Finch-adapter options. Custom adapter modules remain supported;
+check their compatibility with Assent 0.4's HTTP request/response types. Redirects
+are now disabled by default, including redirects from token endpoints.
+
+OIDC `client_authentication_method` defaults are now atoms. Existing DSL string
+values remain accepted and are normalized before reaching Assent. For example,
+`client_authentication_method "private_key_jwt"` continues to work; prefer
+`client_authentication_method :private_key_jwt` for new configuration. The
+`auth_method` option of the `oauth2` and `github` strategies is still accepted and
+translated the same way.
+
+If you wrote a custom strategy on top of `AshAuthentication.Strategy.OAuth2` and
+copy an Assent strategy's `default_config/1` into its DSL defaults, note that
+Assent 0.4 defaults set `client_authentication_method` instead of `auth_method`.
+`client_authentication_method` wins when both are set, so a user's `auth_method`
+would then be ignored. Expose `client_authentication_method` instead, or map the
+default to `auth_method` as the `github` strategy does.
+
+Assent now rejects a dynamically fetched discovery document whose `issuer` differs
+from the configured `base_url`. If you set `base_url` yourself on any OIDC-based
+strategy (`oidc`, `dynamic_oidc`, `okta`, or an override on `google`, `apple` or
+`slack`), make sure it is exactly the issuer your provider publishes, including
+any trailing slash. For example, Google's issuer is `https://accounts.google.com`
+without a slash. Verify signing algorithms before upgrading as well. Two providers
+are handled for you:
+
+- `auth0`: Auth0 publishes its issuer with a trailing slash
+  (`https://YOUR_DOMAIN/`). A `base_url` without a path gets the slash added, so
+  both `https://YOUR_DOMAIN` and `https://YOUR_DOMAIN/` work.
+- `microsoft`: `base_url` is normalized to `https://HOST/TENANT/v2.0`, so a
+  missing `/v2.0` or a trailing slash is fine. The `common`, `organizations` and
+  `consumers` authorities use Assent's tenant-specific discovery and token
+  verification, and a directory (tenant) UUID still restricts sign-in to that
+  tenant. A verified domain such as `contoso.onmicrosoft.com` is no longer
+  accepted, because Assent 0.4 treats every non-UUID authority as multi-tenant and
+  the tenant restriction would be lost. Replace it with the directory UUID. Paths
+  other than `/TENANT` or `/TENANT/v2.0`, such as Azure AD B2C policy URLs, are
+  rejected too; use the `oidc` strategy for B2C. A literal `base_url` is checked
+  at compile time; one supplied by a secret fails on every sign-in request.
+
+For applications that inspect Assent errors or implement custom adapters:
+
+- The default JSON library is Elixir's `JSON`. Configure Assent's `:json_library`
+  if your application needs to retain a different supported JSON library.
+- Strategies return exceptions instead of error strings: `Assent.MissingParamError`
+  for missing parameters and `ArgumentError` for configuration errors.
+  `Assent.CastClaimsError` is now `Assent.Strategy.CastError`. Check any code that
+  pattern-matches on the reason passed to your `AuthController.failure/3`.
+- Callback errors moved to `Assent.Strategy.CallbackError` and
+  `Assent.Strategy.CallbackCSRFError`; `CallbackError` now carries `params`.
+- HTTP errors moved under `Assent.HTTPAdapter`, and OIDC errors under
+  `Assent.Strategy.OIDC`. `HTTPResponse.request` replaces `request_url`.
+- Sensitive fields are omitted from default exception/response `Inspect` output.
+
+See the [Assent 0.4 release notes](https://github.com/pow-auth/assent/releases/tag/v0.4.0)
+for the complete list. Test your configured providers in staging and retain the
+previous application release, configuration and lockfile together for rollback.
 
 ### Automated Upgrade
 

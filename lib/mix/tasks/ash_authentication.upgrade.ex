@@ -56,7 +56,8 @@ if Code.ensure_loaded?(Igniter) do
             &add_brute_force_protection/2,
             &require_identity_resource/2,
             &move_audit_log_ip_salt/2,
-            &strip_dead_oidc_options/2
+            &strip_dead_oidc_options/2,
+            &warn_about_finch_http_adapter/2
           ]
         }
 
@@ -596,9 +597,10 @@ if Code.ensure_loaded?(Igniter) do
           `auth_method` was removed from every OIDC strategy. Assent derives the
           method from `client_authentication_method` and overwrites
           `auth_method` before the token request, so setting it had no effect.
-          Set `client_authentication_method` instead. Note the values are
-          strings, not atoms, and the default is "client_secret_basic" rather
-          than :client_secret_post.
+          Set `client_authentication_method` instead. Atoms such as
+          :client_secret_basic are preferred, and the string spellings are still
+          accepted. The OIDC default is :client_secret_basic rather than
+          :client_secret_post.
 
           `trusted_audiences` was removed from `oauth2` and `github`. Assent
           reads it only when validating an ID token, which neither strategy
@@ -611,6 +613,46 @@ if Code.ensure_loaded?(Igniter) do
           `client_authentication_method` is now settable. Both follow the OIDC
           defaults the other providers already use.
           """)
+      end
+    end
+
+    @doc """
+    Points out a configured `Assent.HTTPAdapter.Finch`, which Assent 0.4 removed.
+
+    The adapter configuration has several shapes, so it is reported rather than
+    rewritten. Without a change the first OAuth2 request would fail at runtime.
+    """
+    def warn_about_finch_http_adapter(igniter, _opts) do
+      case Enum.filter(@config_files, &file_mentions_finch_adapter?(igniter, &1)) do
+        [] ->
+          igniter
+
+        files ->
+          Igniter.add_notice(igniter, """
+          Assent 0.4 removed `Assent.HTTPAdapter.Finch`, which is configured in:
+          #{Enum.map_join(files, "\n", &"  * config/#{&1}")}
+
+          AshAuthentication now uses `Assent.HTTPAdapter.Req` by default, and no
+          longer starts `AshAuthentication.Finch`. Remove the setting to use the
+          default, or point Req at your own Finch pool:
+
+              config :ash_authentication, :http_adapter,
+                {Assent.HTTPAdapter.Req, finch: MyApp.CustomFinch}
+          """)
+      end
+    end
+
+    defp file_mentions_finch_adapter?(igniter, file_name) do
+      path = Path.join("config", file_name)
+
+      with true <- Igniter.exists?(igniter, path),
+           included <- Igniter.include_existing_file(igniter, path),
+           {:ok, source} <- Rewrite.source(included.rewrite, path) do
+        source
+        |> Rewrite.Source.get(:content)
+        |> String.contains?("Assent.HTTPAdapter.Finch")
+      else
+        _ -> false
       end
     end
 

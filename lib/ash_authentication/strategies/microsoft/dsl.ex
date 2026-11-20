@@ -19,11 +19,12 @@ defmodule AshAuthentication.Strategy.Microsoft.Dsl do
       Provides a pre-configured authentication strategy for [Microsoft](https://microsoft.com/).
 
       This strategy is built using the `:oidc` strategy, and automatically
-      retrieves configuration from Microsoft's discovery endpoint
-      (`https://login.microsoftonline.com/{tenant|common}/v2.0/.well-known/openid-configuration`).
+      validates tokens using Microsoft's tenant-specific discovery endpoint
+      (`https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration`).
 
       By default the strategy uses the `common` tenant endpoint. To restrict
-      sign-in to a specific Azure tenant, override `base_url`:
+      sign-in to a specific Azure tenant, use its directory UUID in `base_url`.
+      Verified tenant domains are not supported:
 
           base_url "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
 
@@ -37,18 +38,24 @@ defmodule AshAuthentication.Strategy.Microsoft.Dsl do
 
       #### Strategy defaults:
 
-      #{strategy_override_docs(AzureADMultitenant)}
+      #{strategy_override_docs()}
       """,
       auto_set_fields: [icon: :microsoft, assent_strategy: AzureADMultitenant]
     })
-    |> Custom.set_defaults(AzureADMultitenant.default_config([]))
+    |> Custom.set_defaults(dsl_defaults())
     |> Custom.set_defaults(code_verifier: true)
   end
 
-  defp strategy_override_docs(strategy) do
+  # Tenant-specific runtime defaults are derived from the configured base_url,
+  # not frozen to the common tenant when Spark builds the strategy.
+  defp dsl_defaults do
+    AzureADMultitenant.default_config([])
+    |> Keyword.drop([:tenant_id, :openid_configuration])
+  end
+
+  defp strategy_override_docs do
     defaults =
-      []
-      |> strategy.default_config()
+      dsl_defaults()
       |> Enum.map_join(
         ".\n",
         fn {key, value} ->

@@ -442,6 +442,14 @@ defmodule Example.User do
         end
       end
 
+      microsoft do
+        register_action_name :register_with_oidc
+        client_id "microsoft-client"
+        client_secret "microsoft-secret"
+        redirect_uri "http://localhost:4000/auth"
+        identity_resource Example.UserIdentity
+      end
+
       oidc do
         authorization_params scope: "openid profile email phone address"
         client_id &get_config/2

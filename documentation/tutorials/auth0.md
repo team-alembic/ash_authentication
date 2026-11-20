@@ -103,7 +103,7 @@ The values for this configuration should be:
 - `client_id` - the client ID copied from the Auth0 settings page.
 - `redirect_uri` - the URL to the generated auth routes in your application (eg `http://localhost:4000/auth`).
 - `client_secret` the client secret copied from the Auth0 settings page.
-- `base_url` - the "domain" value copied from the Auth0 settings page prefixed with `https://` (eg `https://dev-yu30yo5y4tg2hg0y.us.auth0.com`).
+- `base_url` - the "domain" value copied from the Auth0 settings page prefixed with `https://` (eg `https://dev-yu30yo5y4tg2hg0y.us.auth0.com`). Auth0's issuer ends with a slash; AshAuthentication adds it if you leave it out.
 
 Lastly, we need to add a register action to your user resource. This is defined as an upsert so that it can register new users, or update information for returning users. The default name of the action is `register_with_` followed by the strategy name. In our case that is `register_with_auth0`.
 

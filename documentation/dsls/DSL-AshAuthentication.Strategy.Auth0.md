@@ -45,7 +45,7 @@ retrieves configuration from Auth0's discovery endpoint.
 The following defaults are applied:
 
 * `:authorization_params` is set to `[scope: "email profile"]`.
-* `:client_authentication_method` is set to `"client_secret_post"`.
+* `:client_authentication_method` is set to `:client_secret_post`.
 
 
 
@@ -85,7 +85,7 @@ The following defaults are applied:
 | [`identity_relationship_user_id_attribute`](#authentication-strategies-auth0-identity_relationship_user_id_attribute){: #authentication-strategies-auth0-identity_relationship_user_id_attribute } | `atom` | `:user_id` | The name of the destination (user_id) attribute on your provider identity resource. Only necessary if you've changed the `user_id_attribute_name` option of the provider identity. |
 | [`client_secret`](#authentication-strategies-auth0-client_secret){: #authentication-strategies-auth0-client_secret } | `(any, any -> any) \| module \| String.t` |  | The OAuth2 client secret. Required if `:client_authentication_method` is `"client_secret_basic"`, `"client_secret_post"` or `"client_secret_jwt"`. Takes either a module which implements the `AshAuthentication.Secret` behaviour, a 2 arity anonymous function or a string. |
 | [`openid_configuration_uri`](#authentication-strategies-auth0-openid_configuration_uri){: #authentication-strategies-auth0-openid_configuration_uri } | `(any, any -> any) \| module \| String.t` | `"/.well-known/openid-configuration"` | The URI for the OpenID provider |
-| [`client_authentication_method`](#authentication-strategies-auth0-client_authentication_method){: #authentication-strategies-auth0-client_authentication_method } | `"client_secret_basic" \| "client_secret_post" \| "client_secret_jwt" \| "private_key_jwt" \| "none"` | `"client_secret_post"` | The client authentication method to use. |
+| [`client_authentication_method`](#authentication-strategies-auth0-client_authentication_method){: #authentication-strategies-auth0-client_authentication_method } | `:client_secret_basic \| :client_secret_post \| :client_secret_jwt \| :private_key_jwt \| :none \| "client_secret_basic" \| "client_secret_post" \| "client_secret_jwt" \| "private_key_jwt" \| "none"` | `:client_secret_post` | The client authentication method to use. Legacy string values are also accepted and normalized to atoms before calling Assent. |
 | [`openid_configuration`](#authentication-strategies-auth0-openid_configuration){: #authentication-strategies-auth0-openid_configuration } | `nil \| %{optional(String.t) => any}` |  | The OpenID configuration.  If not set, the configuration will be retrieved from `openid_configuration_uri`. |
 | [`id_token_signed_response_alg`](#authentication-strategies-auth0-id_token_signed_response_alg){: #authentication-strategies-auth0-id_token_signed_response_alg } | `"HS256" \| "HS384" \| "HS512" \| "RS256" \| "RS384" \| "RS512" \| "ES256" \| "ES384" \| "ES512" \| "PS256" \| "PS384" \| "PS512" \| "Ed25519" \| "Ed25519ph" \| "Ed448" \| "Ed448ph" \| "EdDSA"` | `"RS256"` | The `id_token_signed_response_alg` parameter sent by the Client during Registration. |
 | [`id_token_ttl_seconds`](#authentication-strategies-auth0-id_token_ttl_seconds){: #authentication-strategies-auth0-id_token_ttl_seconds } | `nil \| pos_integer` |  | The number of seconds from `iat` that an ID Token will be considered valid. |

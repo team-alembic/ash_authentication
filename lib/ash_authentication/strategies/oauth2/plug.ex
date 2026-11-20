@@ -9,14 +9,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
 
   alias Ash.Error.Framework.AssumptionFailed
   alias AshAuthentication.{Errors, Info, Strategy, Strategy.OAuth2}
-  alias Assent.HTTPAdapter.Finch
+  alias Assent.HTTPAdapter
   alias Plug.Conn
   import Ash.PlugHelpers, only: [get_actor: 1, get_tenant: 1, get_context: 1]
   import AshAuthentication.Plug.Helpers, only: [store_authentication_result: 2]
   import Plug.Conn
 
   @raw_config_attrs [
-    :auth_method,
     :client_authentication_method,
     :id_token_signed_response_alg,
     :id_token_ttl_seconds,
@@ -268,7 +267,13 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
       config =
         config
         |> Map.put(:redirect_uri, redirect_uri)
-        |> Map.update(:client_authentication_method, nil, &to_string/1)
+        |> normalize_auth0_base_url(strategy)
+        |> Map.put(
+          :client_authentication_method,
+          normalize_client_authentication_method(
+            strategy.client_authentication_method || strategy.auth_method
+          )
+        )
         |> Enum.reject(&is_nil(elem(&1, 1)))
 
       {:ok, config}
@@ -393,12 +398,38 @@ defmodule AshAuthentication.Strategy.OAuth2.Plug do
     end
   end
 
+  # Auth0 publishes its issuer as `https://DOMAIN/`, and Assent 0.4 requires
+  # `base_url` to equal the discovered issuer exactly. Accept the bare domain
+  # that the Auth0 dashboard shows and the Auth0 tutorial documents.
+  defp normalize_auth0_base_url(
+         %{base_url: base_url} = config,
+         %{assent_strategy: Assent.Strategy.Auth0}
+       )
+       when is_binary(base_url) do
+    uri = URI.parse(base_url)
+
+    if uri.path in [nil, ""] and is_nil(uri.query) and is_nil(uri.fragment),
+      do: Map.put(config, :base_url, base_url <> "/"),
+      else: config
+  end
+
+  defp normalize_auth0_base_url(config, _strategy), do: config
+
+  # The DSL accepts the legacy strings as well as Assent 0.4's atoms. Never create
+  # atoms from configuration: only these five documented methods are normalized.
+  defp normalize_client_authentication_method("client_secret_basic"), do: :client_secret_basic
+  defp normalize_client_authentication_method("client_secret_post"), do: :client_secret_post
+  defp normalize_client_authentication_method("client_secret_jwt"), do: :client_secret_jwt
+  defp normalize_client_authentication_method("private_key_jwt"), do: :private_key_jwt
+  defp normalize_client_authentication_method("none"), do: :none
+  defp normalize_client_authentication_method(method), do: method
+
   defp add_http_adapter(config) do
     http_adapter =
       Application.get_env(
         :ash_authentication,
         :http_adapter,
-        {Finch, supervisor: AshAuthentication.Finch}
+        HTTPAdapter.Req
       )
 
     {:ok, Map.put(config, :http_adapter, http_adapter)}
