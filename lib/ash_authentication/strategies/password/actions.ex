@@ -280,7 +280,7 @@ defmodule AshAuthentication.Strategy.Password.Actions do
         params,
         options
       ) do
-    with {:ok, token} <- Map.fetch(params, "reset_token"),
+    with {:ok, token} when is_binary(token) <- Map.fetch(params, "reset_token"),
          {:ok, %{"sub" => subject}, resource} <- Jwt.verify(token, strategy.resource, options),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, resource, options) do
       options =

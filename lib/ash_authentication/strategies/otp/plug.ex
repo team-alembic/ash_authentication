@@ -52,7 +52,10 @@ defmodule AshAuthentication.Strategy.Otp.Plug do
       |> Info.authentication_subject_name!()
       |> to_string()
 
-    Map.get(conn.params, subject_name, %{})
+    case Map.get(conn.params, subject_name) do
+      params when is_map(params) and not is_struct(params) -> params
+      _ -> %{}
+    end
   end
 
   defp opts(conn) do

@@ -30,7 +30,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Actions do
   """
   @spec confirm(Confirmation.t(), map, keyword) :: {:ok, Resource.Record.t()} | {:error, any}
   def confirm(strategy, params, opts \\ []) do
-    with {:ok, token} <- Map.fetch(params, "confirm"),
+    with {:ok, token} when is_binary(token) <- Map.fetch(params, "confirm"),
          {:ok, %{"sub" => subject}, _} <- Jwt.verify(token, strategy.resource, opts),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, strategy.resource, opts),
          {:ok, token_resource} <- Info.authentication_tokens_token_resource(strategy.resource) do
