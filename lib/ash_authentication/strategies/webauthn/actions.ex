@@ -507,14 +507,35 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
   end
 
-  @doc "Delete a credential, refusing to delete the last one."
+  @doc """
+  Delete one of `user`'s credentials, refusing to delete the last one.
+
+  `credential_id` is the credential's primary key. The destroy is filtered
+  by it and by `user` in the data layer, so a credential that isn't
+  `user`'s is "not found".
+
+  Where the data layer supports it, the check and the destroy run in one
+  transaction that locks `user`'s credentials (`FOR UPDATE`), so two
+  concurrent deletes can't both see a second credential and leave none.
+  """
   @spec delete_credential(WebAuthn.t(), Ash.Resource.Record.t(), any, keyword) ::
           :ok | {:error, any}
   def delete_credential(strategy, user, credential_id, opts) do
-    with {:ok, credentials} <- list_credentials(strategy, user, opts),
-         :ok <- ensure_not_last_credential(strategy, credentials),
-         {:ok, credential} <- find_credential(strategy, credentials, credential_id) do
-      destroy_credential(strategy, credential, opts)
+    ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+
+    strategy.credential_resource
+    |> Ash.transaction(
+      fn ->
+        with {:ok, count} <- count_credentials_locked(strategy, user, opts),
+             :ok <- ensure_not_last_credential(strategy, count) do
+          destroy_user_credential(strategy, user, credential_id, opts)
+        end
+      end,
+      Keyword.take(ash_opts, [:tenant])
+    )
+    |> case do
+      {:ok, result} -> result
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -823,37 +844,71 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     :ok
   end
 
-  defp ensure_not_last_credential(strategy, credentials) do
-    if length(credentials) <= 1 do
+  defp ensure_not_last_credential(strategy, count) do
+    if count <= 1 do
       {:error, auth_failed(strategy, :delete_credential, "Cannot delete the last credential")}
     else
       :ok
     end
   end
 
-  # `credential_id` is the record's primary key, as `update_credential_label/5`
-  # takes it — not necessarily an attribute called `:id`.
-  defp find_credential(strategy, credentials, credential_id) do
-    primary_key = Ash.Resource.Info.primary_key(strategy.credential_resource)
+  # How many credentials `user` has, read with their rows locked where the
+  # data layer can lock: a concurrent delete waits here until this one
+  # commits, then counts what is left. Without locking (e.g. ETS) the count
+  # is a plain read and concurrent deletes are not guarded.
+  defp count_credentials_locked(strategy, user, opts) do
+    ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+    action = credential_action_name(strategy.credential_resource, :read_action_name)
+    {foreign_key, user_id} = user_reference(strategy, user)
 
-    case Enum.find(credentials, &(primary_key_value(&1, primary_key) == credential_id)) do
-      nil -> {:error, auth_failed(strategy, :delete_credential, "Credential not found")}
-      credential -> {:ok, credential}
+    strategy.credential_resource
+    |> Query.new()
+    |> Query.set_context(action_context(opts[:context], auth_context()))
+    |> Query.for_read(action, %{}, ash_opts)
+    |> Query.filter(^ref(foreign_key) == ^user_id)
+    |> maybe_lock(strategy.credential_resource)
+    |> Ash.read()
+    |> case do
+      {:ok, credentials} -> {:ok, length(credentials)}
+      {:error, error} -> {:error, error}
     end
   end
 
-  defp primary_key_value(record, [field]), do: Map.get(record, field)
-  defp primary_key_value(record, fields), do: Map.take(record, fields)
+  defp maybe_lock(query, resource) do
+    if Ash.DataLayer.data_layer_can?(resource, {:lock, :for_update}),
+      do: Query.lock(query, :for_update),
+      else: query
+  end
 
-  defp destroy_credential(strategy, credential, opts) do
+  defp destroy_user_credential(strategy, user, credential_id, opts) do
     ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
     action = credential_action_name(strategy.credential_resource, :destroy_action_name)
+    context = action_context(opts[:context], auth_context())
 
-    credential
-    |> Changeset.new()
-    |> Changeset.set_context(action_context(opts[:context], auth_context()))
-    |> Changeset.for_destroy(action, %{}, ash_opts)
-    |> Ash.destroy()
+    strategy
+    |> user_credential_query(user, credential_id, context, ash_opts)
+    |> Ash.bulk_destroy(
+      action,
+      %{},
+      ash_opts ++
+        [
+          context: context,
+          strategy: [:atomic, :atomic_batches, :stream],
+          return_records?: true,
+          return_errors?: true,
+          notify?: true
+        ]
+    )
+    |> case do
+      %Ash.BulkResult{status: :success, records: [_credential]} ->
+        :ok
+
+      %Ash.BulkResult{status: :success, records: []} ->
+        {:error, credential_not_found(strategy, :delete_credential)}
+
+      %Ash.BulkResult{errors: errors} ->
+        {:error, Ash.Error.to_ash_error(errors)}
+    end
   end
 
   # The credential with primary key `credential_id`, if it belongs to

@@ -68,6 +68,20 @@ defmodule AshAuthentication.Strategy.WebAuthn.ManagementTest do
       :ok = Actions.delete_credential(strategy, user, cred1.id, [])
       assert {:error, _} = Actions.delete_credential(strategy, user, cred2.id, [])
     end
+
+    test "treats another user's credential as not found and leaves it", %{
+      strategy: strategy,
+      user: user,
+      cred1: cred1
+    } do
+      other = other_user_with_credentials(2)
+
+      assert {:error, %AuthenticationFailed{caused_by: %{message: "Credential not found"}}} =
+               Actions.delete_credential(strategy, other, cred1.id, [])
+
+      {:ok, credentials} = Actions.list_credentials(strategy, user, [])
+      assert length(credentials) == 2
+    end
   end
 
   describe "update_credential_label/5" do
