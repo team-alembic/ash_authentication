@@ -507,6 +507,24 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   def sign_in_with_token_enabled?(strategy),
     do: strategy.sign_in_enabled? || strategy.verify_enabled?
 
+  @credential_claim "webauthn_credential_id"
+
+  @doc """
+  The token claim naming the passkey a token was issued for.
+
+  Every token a passkey ceremony issues carries it: `register`, `sign_in`,
+  `verify`, and the session token `sign_in_with_token` exchanges theirs for.
+  Its value is the WebAuthn credential id, base64url-encoded without padding,
+  as clients send it in `raw_id`. The credential id is not a secret: the
+  browser sends it with every assertion.
+
+  With `store_all_tokens? true` the claim is also stored in the token's
+  `extra_data`, so the tokens issued for a passkey can be found, for example
+  to revoke them when it is deleted.
+  """
+  @spec credential_claim() :: String.t()
+  def credential_claim, do: @credential_claim
+
   @doc "The attribute on the credential resource which stores the WebAuthn credential ID."
   @spec credential_id_field(t()) :: atom
   def credential_id_field(strategy),

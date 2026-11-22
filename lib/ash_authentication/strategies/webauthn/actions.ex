@@ -208,7 +208,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
              user,
              opts
            ) do
-      maybe_generate_token(user, strategy, opts)
+      maybe_generate_token(user, strategy, opts, credential)
     end
   end
 
@@ -235,7 +235,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     tenant = Keyword.get(opts, :tenant)
 
     with :ok <- ensure_enabled(strategy, :verify),
-         {:ok, _credential, _user} <-
+         {:ok, credential, _user} <-
            run_assertion_ceremony(
              strategy,
              :verify,
@@ -255,7 +255,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
              opts,
              %{webauthn_verified_at: verified_at}
            ) do
-      maybe_generate_verified_token(user, strategy, opts, verified_at)
+      maybe_generate_verified_token(user, strategy, opts, verified_at, credential)
     end
   end
 
@@ -748,7 +748,17 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       |> put_accepted_fields_in_params(strategy, params)
 
     ash_opts = build_ash_opts(strategy, opts, tenant)
-    context = action_context(opts[:context], Map.put(auth_context(), :token_type, :sign_in))
+
+    # `GenerateTokenChange` adds `extra_token_claims` to the token the register
+    # action issues. The new credential's record doesn't exist yet, but its
+    # credential id does.
+    context =
+      action_context(
+        opts[:context],
+        auth_context()
+        |> Map.put(:token_type, :sign_in)
+        |> Map.put(:extra_token_claims, credential_claims(strategy, registration.credential_id))
+      )
 
     strategy.resource
     |> Changeset.new()
@@ -1194,29 +1204,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     do:
       AshAuthentication.WebAuthnCredential.Info.webauthn_credential_destroy_action_name(resource)
 
-  defp maybe_generate_token(user, strategy, opts) do
+  defp maybe_generate_token(user, strategy, opts, credential) do
     if Info.authentication_tokens_enabled?(strategy.resource) do
-      case Jwt.token_for_user(user, %{"purpose" => "sign_in"}, Keyword.take(opts, [:tenant])) do
-        {:ok, token, _claims} ->
-          {:ok, Ash.Resource.put_metadata(user, :token, token)}
-
-        {:error, error} ->
-          {:error, error}
-      end
-    else
-      {:ok, user}
-    end
-  end
-
-  # Like `maybe_generate_token/3`, but bakes the verification timestamp into
-  # the token's claims so headless / API clients can prove second-factor
-  # status without relying on session metadata.
-  defp maybe_generate_verified_token(user, strategy, opts, verified_at) do
-    if Info.authentication_tokens_enabled?(strategy.resource) do
-      claims = %{
-        "purpose" => "sign_in",
-        "webauthn_verified_at" => DateTime.to_iso8601(verified_at)
-      }
+      claims =
+        strategy
+        |> credential_claims(credential)
+        |> Map.put("purpose", "sign_in")
 
       case Jwt.token_for_user(user, claims, Keyword.take(opts, [:tenant])) do
         {:ok, token, _claims} ->
@@ -1229,6 +1222,41 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
       {:ok, user}
     end
   end
+
+  # Like `maybe_generate_token/4`, but bakes the verification timestamp into
+  # the token's claims so headless / API clients can prove second-factor
+  # status without relying on session metadata.
+  defp maybe_generate_verified_token(user, strategy, opts, verified_at, credential) do
+    if Info.authentication_tokens_enabled?(strategy.resource) do
+      claims =
+        strategy
+        |> credential_claims(credential)
+        |> Map.merge(%{
+          "purpose" => "sign_in",
+          "webauthn_verified_at" => DateTime.to_iso8601(verified_at)
+        })
+
+      case Jwt.token_for_user(user, claims, Keyword.take(opts, [:tenant])) do
+        {:ok, token, _claims} ->
+          {:ok, Ash.Resource.put_metadata(user, :token, token)}
+
+        {:error, error} ->
+          {:error, error}
+      end
+    else
+      {:ok, user}
+    end
+  end
+
+  # The claim naming the passkey a token is issued for (see
+  # `WebAuthn.credential_claim/0`), from a stored credential or from the raw
+  # credential id of one being registered.
+  defp credential_claims(strategy, %{} = credential),
+    do:
+      credential_claims(strategy, Map.fetch!(credential, WebAuthn.credential_id_field(strategy)))
+
+  defp credential_claims(_strategy, raw_credential_id) when is_binary(raw_credential_id),
+    do: %{WebAuthn.credential_claim() => Base.url_encode64(raw_credential_id, padding: false)}
 
   defp safe_url_decode64(nil), do: :error
 

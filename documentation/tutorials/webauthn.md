@@ -755,6 +755,20 @@ credential has a stored `user_handle` and the client sends one, they must
 match (WebAuthn §7.2). Clients should always send it; a non-discoverable
 credential returns none, which is accepted.
 
+### Tokens name the passkey they came from
+
+Every token a passkey ceremony issues carries a `webauthn_credential_id`
+claim (`AshAuthentication.Strategy.WebAuthn.credential_claim/0`): the tokens
+from `register`, `sign_in` and `verify`, and the session token
+`sign_in_with_token` exchanges theirs for. Its value is the WebAuthn
+credential id, base64url-encoded as clients send it in `raw_id`. The
+credential id isn't a secret: the browser sends it with every assertion.
+
+With `store_all_tokens? true` the claim is also kept in the stored token's
+`extra_data`, so the tokens issued for one passkey can be found, for example
+to end the sessions a deleted passkey started. The strategy records the
+claim but doesn't act on it yet.
+
 ### The application's Ash context reaches the strategy's actions
 
 Whatever the application puts in the Ash context before a ceremony's POST,
