@@ -1003,6 +1003,36 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
   end
 
+  @doc """
+  Whether `user` has a credential with the WebAuthn credential id
+  `raw_credential_id` (raw bytes, not base64url).
+
+  One read of the strategy's credential resource, filtered by `user` and the
+  credential id. See `AshAuthentication.Strategy.WebAuthn.token_credential_present?/3`,
+  which checks a token's passkey with it. `opts` takes `:tenant` and
+  `:context`.
+  """
+  @spec credential_exists?(WebAuthn.t(), Ash.Resource.Record.t(), binary, keyword) ::
+          {:ok, boolean} | {:error, any}
+  def credential_exists?(strategy, user, raw_credential_id, opts) do
+    {foreign_key, user_id} = user_reference(strategy, user)
+    id_field = WebAuthn.credential_id_field(strategy)
+    action = credential_action_name(strategy.credential_resource, :read_action_name)
+
+    strategy.credential_resource
+    |> Query.new()
+    |> Query.set_context(action_context(opts[:context], auth_context()))
+    |> Query.for_read(action, %{}, internal_ash_opts(Keyword.get(opts, :tenant)))
+    |> Query.filter(^ref(foreign_key) == ^user_id and ^ref(id_field) == ^raw_credential_id)
+    |> Query.limit(1)
+    |> Ash.read()
+    |> case do
+      {:ok, [_credential]} -> {:ok, true}
+      {:ok, []} -> {:ok, false}
+      {:error, error} -> {:error, error}
+    end
+  end
+
   # The token resource joins the delete's transaction only when the
   # revocation will write to it.
   defp delete_transaction_resources(strategy) do
