@@ -203,7 +203,9 @@ defmodule AshAuthentication.Strategy.WebAuthn.FullyRenamedCredentialTest do
 
     {:ok, [first, second]} = Actions.list_credentials(ctx.strategy, user, [])
 
-    assert {:ok, renamed} = Actions.update_credential_label(ctx.strategy, first.id, "Laptop", [])
+    assert {:ok, renamed} =
+             Actions.update_credential_label(ctx.strategy, user, first.id, "Laptop", [])
+
     assert renamed.nickname == "Laptop"
 
     assert :ok = Actions.delete_credential(ctx.strategy, user, second.id, [])

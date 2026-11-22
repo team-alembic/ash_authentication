@@ -46,8 +46,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.ListCredentialsTest do
     {{:ok, _}, _} = WebAuthnCeremony.add_credential(strategy, user)
 
     {:ok, [first, second]} = Actions.list_credentials(strategy, user, [])
-    {:ok, _} = Actions.update_credential_label(strategy, first.id, "b", [])
-    {:ok, _} = Actions.update_credential_label(strategy, second.id, "a", [])
+    {:ok, _} = Actions.update_credential_label(strategy, user, first.id, "b", [])
+    {:ok, _} = Actions.update_credential_label(strategy, user, second.id, "a", [])
 
     {:ok, by_label} = Actions.list_credentials(strategy, user, sort: [label: :asc])
     assert Enum.map(by_label, & &1.label) == ["a", "b"]

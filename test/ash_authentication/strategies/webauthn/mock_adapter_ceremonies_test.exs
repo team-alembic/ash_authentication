@@ -380,7 +380,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.MockAdapterCeremoniesTest do
       assert second_stored.credential_id == second.credential_id
 
       assert {:ok, relabelled} =
-               Actions.update_credential_label(strategy, second_stored.id, "Renamed", [])
+               Actions.update_credential_label(strategy, user, second_stored.id, "Renamed", [])
 
       assert relabelled.label == "Renamed"
 

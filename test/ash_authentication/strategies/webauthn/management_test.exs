@@ -5,7 +5,7 @@
 defmodule AshAuthentication.Strategy.WebAuthn.ManagementTest do
   use DataCase, async: false
 
-  alias AshAuthentication.{Info, Strategy.WebAuthn.Actions}
+  alias AshAuthentication.{Errors.AuthenticationFailed, Info, Strategy.WebAuthn.Actions}
   alias AshAuthentication.Test.WebAuthnFixtures
 
   @moduletag feature: :webauthn
@@ -70,12 +70,46 @@ defmodule AshAuthentication.Strategy.WebAuthn.ManagementTest do
     end
   end
 
-  describe "update_credential_label/4" do
-    test "renames a credential", %{strategy: strategy, cred1: cred1} do
+  describe "update_credential_label/5" do
+    test "renames a credential", %{strategy: strategy, user: user, cred1: cred1} do
       assert {:ok, updated} =
-               Actions.update_credential_label(strategy, cred1.id, "New Name", [])
+               Actions.update_credential_label(strategy, user, cred1.id, "New Name", [])
 
       assert updated.label == "New Name"
     end
+
+    test "treats another user's credential as not found and leaves it", %{
+      strategy: strategy,
+      user: user,
+      cred1: cred1
+    } do
+      other = other_user_with_credentials(1)
+
+      assert {:error, %AuthenticationFailed{caused_by: %{message: "Credential not found"}}} =
+               Actions.update_credential_label(strategy, other, cred1.id, "Hijacked", [])
+
+      {:ok, credentials} = Actions.list_credentials(strategy, user, [])
+      assert Enum.find(credentials, &(&1.id == cred1.id)).label == "YubiKey Blue"
+    end
+  end
+
+  defp other_user_with_credentials(count) do
+    other =
+      Example.UserWithWebAuthn
+      |> Ash.Changeset.for_create(:create, %{
+        email: "manage-other-#{System.unique_integer()}@example.com"
+      })
+      |> Ash.create!()
+
+    for _ <- 1..count do
+      fixture = WebAuthnFixtures.generate_registration()
+
+      build_webauthn_credential(other, %{
+        credential_id: fixture.credential_id,
+        public_key: fixture.cose_key
+      })
+    end
+
+    other
   end
 end

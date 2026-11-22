@@ -518,19 +518,49 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
   end
 
-  @doc "Update the label of a credential."
-  @spec update_credential_label(WebAuthn.t(), any, String.t(), keyword) ::
+  @doc """
+  Update the label of one of `user`'s credentials.
+
+  `credential_id` is the credential's primary key. The update is filtered
+  by it and by `user` in the data layer, so a credential that isn't
+  `user`'s is "not found".
+  """
+  @spec update_credential_label(
+          WebAuthn.t(),
+          Ash.Resource.Record.t(),
+          any,
+          String.t(),
+          keyword
+        ) ::
           {:ok, Ash.Resource.Record.t()} | {:error, any}
-  def update_credential_label(strategy, credential_id, new_label, opts) do
+  def update_credential_label(strategy, user, credential_id, new_label, opts) do
     ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
     action = credential_action_name(strategy.credential_resource, :update_action_name)
+    context = action_context(opts[:context], auth_context())
 
-    with {:ok, credential} <- Ash.get(strategy.credential_resource, credential_id, ash_opts) do
-      credential
-      |> Changeset.new()
-      |> Changeset.set_context(action_context(opts[:context], auth_context()))
-      |> Changeset.for_update(action, %{WebAuthn.label_field(strategy) => new_label}, ash_opts)
-      |> Ash.update()
+    strategy
+    |> user_credential_query(user, credential_id, context, ash_opts)
+    |> Ash.bulk_update(
+      action,
+      %{WebAuthn.label_field(strategy) => new_label},
+      ash_opts ++
+        [
+          context: context,
+          strategy: [:atomic, :atomic_batches, :stream],
+          return_records?: true,
+          return_errors?: true,
+          notify?: true
+        ]
+    )
+    |> case do
+      %Ash.BulkResult{status: :success, records: [credential]} ->
+        {:ok, credential}
+
+      %Ash.BulkResult{status: :success, records: []} ->
+        {:error, credential_not_found(strategy, :update_credential_label)}
+
+      %Ash.BulkResult{errors: errors} ->
+        {:error, Ash.Error.to_ash_error(errors)}
     end
   end
 
@@ -801,7 +831,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     end
   end
 
-  # `credential_id` is the record's primary key, as `update_credential_label/4`
+  # `credential_id` is the record's primary key, as `update_credential_label/5`
   # takes it — not necessarily an attribute called `:id`.
   defp find_credential(strategy, credentials, credential_id) do
     primary_key = Ash.Resource.Info.primary_key(strategy.credential_resource)
@@ -825,6 +855,34 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     |> Changeset.for_destroy(action, %{}, ash_opts)
     |> Ash.destroy()
   end
+
+  # The credential with primary key `credential_id`, if it belongs to
+  # `user`: both conditions are in the filter, so ownership is decided by
+  # the data layer. `credential_id` is the record's primary key (a map of
+  # its fields for a composite key), not necessarily an attribute called
+  # `:id`.
+  defp user_credential_query(strategy, user, credential_id, context, ash_opts) do
+    {foreign_key, user_id} = user_reference(strategy, user)
+    action = credential_action_name(strategy.credential_resource, :read_action_name)
+
+    strategy.credential_resource
+    |> Query.new()
+    |> Query.set_context(context)
+    |> Query.for_read(action, %{}, ash_opts)
+    |> Query.filter(^primary_key_filter(strategy.credential_resource, credential_id))
+    |> Query.filter(^ref(foreign_key) == ^user_id)
+  end
+
+  defp primary_key_filter(resource, credential_id) do
+    case Ash.Resource.Info.primary_key(resource) do
+      [field] -> [{field, credential_id}]
+      fields when is_map(credential_id) -> Enum.map(fields, &{&1, Map.get(credential_id, &1)})
+      fields -> Enum.map(fields, &{&1, nil})
+    end
+  end
+
+  defp credential_not_found(strategy, action_name),
+    do: auth_failed(strategy, action_name, "Credential not found")
 
   # The `:context` option is left out on purpose: it goes through
   # `action_context/2`, under the strategy's own, where `for_create/4`

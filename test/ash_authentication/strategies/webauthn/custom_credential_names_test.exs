@@ -145,12 +145,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.CustomCredentialNamesTest do
     assert credentials |> Enum.map(& &1.nickname) |> Enum.sort() == ["First key", "Second key"]
   end
 
-  test "update_credential_label/4 writes the configured label field", %{
+  test "update_credential_label/5 writes the configured label field", %{
     strategy: strategy,
+    user: user,
     credentials: [credential | _]
   } do
     assert {:ok, updated} =
-             Actions.update_credential_label(strategy, credential.credential_key, "Renamed", [])
+             Actions.update_credential_label(
+               strategy,
+               user,
+               credential.credential_key,
+               "Renamed",
+               []
+             )
 
     assert updated.nickname == "Renamed"
   end
