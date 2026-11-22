@@ -33,6 +33,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   alias AshAuthentication.{Info, Jwt, Strategy.WebAuthn}
   alias AshAuthentication.Strategy.CustomFields
   alias AshAuthentication.Strategy.WebAuthn.Adapter
+  alias AshAuthentication.TokenResource.Info, as: TokenResourceInfo
   import Ash.Expr, only: [ref: 1, ref: 2]
   require Ash.Expr
   require Ash.Query
@@ -559,18 +560,31 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   - `:not_found`: `user` has no credential with that primary key, for
     example because it was deleted elsewhere since it was listed. This takes
     precedence, so a stale list never reads as "the last one".
+
+  With `store_all_tokens? true`, the same transaction revokes every
+  unexpired token the passkey's ceremonies issued, found by the
+  `WebAuthn.credential_claim/0` in their stored `extra_data`, through the
+  token resource's `revoke_all_stored_for_subject` action. The sessions the
+  passkey started end at their next request, and the revocations notify
+  as `log_out_everywhere`'s do. Deleting the passkey the current session
+  came from ends that session too. If the revocation fails, the delete is
+  rolled back.
   """
   @spec delete_credential(WebAuthn.t(), Ash.Resource.Record.t(), any, keyword) ::
           :ok | {:error, any}
   def delete_credential(strategy, user, credential_id, opts) do
     ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
 
-    strategy.credential_resource
+    strategy
+    |> delete_transaction_resources()
     |> Ash.transaction(
       fn ->
         with {:ok, count} <- count_credentials_locked(strategy, user, opts),
-             :ok <- ensure_not_last_credential(strategy, user, credential_id, count, opts) do
-          destroy_user_credential(strategy, user, credential_id, opts)
+             :ok <- ensure_not_last_credential(strategy, user, credential_id, count, opts),
+             {:ok, credential} <- destroy_user_credential(strategy, user, credential_id, opts) do
+          strategy
+          |> revoke_credential_tokens(user, credential, opts)
+          |> rollback_on_error(strategy.credential_resource)
         end
       end,
       Keyword.take(ash_opts, [:tenant])
@@ -978,8 +992,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         ]
     )
     |> case do
-      %Ash.BulkResult{status: :success, records: [_credential]} ->
-        :ok
+      %Ash.BulkResult{status: :success, records: [credential]} ->
+        {:ok, credential}
 
       %Ash.BulkResult{status: :success, records: []} ->
         {:error, credential_not_found(strategy, :delete_credential)}
@@ -988,6 +1002,78 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         {:error, Ash.Error.to_ash_error(errors)}
     end
   end
+
+  # The token resource joins the delete's transaction only when the
+  # revocation will write to it.
+  defp delete_transaction_resources(strategy) do
+    case stored_token_resource(strategy) do
+      {:ok, token_resource} -> [strategy.credential_resource, token_resource]
+      :error -> strategy.credential_resource
+    end
+  end
+
+  defp stored_token_resource(strategy) do
+    with true <- Info.authentication_tokens_store_all_tokens?(strategy.resource),
+         {:ok, token_resource} when not is_nil(token_resource) <-
+           Info.authentication_tokens_token_resource(strategy.resource) do
+      {:ok, token_resource}
+    else
+      _ -> :error
+    end
+  end
+
+  # With `store_all_tokens?`, every token one of the passkey's ceremonies
+  # issued has a row whose `extra_data` carries its credential claim, the
+  # session tokens `sign_in_with_token` gave for them included. Revoking
+  # those rows ends the sessions at their next request. Without stored
+  # tokens there are no rows to find, and nothing is revoked here.
+  defp revoke_credential_tokens(strategy, user, credential, opts) do
+    with {:ok, token_resource} <- stored_token_resource(strategy),
+         {:ok, action} <-
+           TokenResourceInfo.token_revocation_revoke_all_stored_for_subject_action_name(
+             token_resource
+           ) do
+      claim = WebAuthn.credential_claim()
+      %{^claim => value} = credential_claims(strategy, credential)
+
+      token_resource
+      |> Query.filter(
+        purpose != "revocation" and expires_at > now() and
+          get_path(extra_data, ^[claim]) == ^value
+      )
+      |> Ash.bulk_update(
+        action,
+        %{subject: AshAuthentication.user_to_subject(user)},
+        internal_ash_opts(Keyword.get(opts, :tenant)) ++
+          [
+            context: action_context(opts[:context], auth_context()),
+            strategy: [:atomic, :atomic_batches, :stream],
+            notify?: true,
+            return_errors?: true,
+            stop_on_error?: true
+          ]
+      )
+      |> case do
+        %Ash.BulkResult{status: :success} -> :ok
+        %Ash.BulkResult{errors: errors} -> {:error, Ash.Error.to_ash_error(errors)}
+      end
+    else
+      _ -> :ok
+    end
+  end
+
+  # Returning an error from the transaction's function doesn't undo what it
+  # already wrote, so a failed revocation rolls the destroy back. A data
+  # layer without transactions has nothing to roll back.
+  defp rollback_on_error({:error, error}, resource) do
+    if Ash.DataLayer.in_transaction?(resource) do
+      Ash.DataLayer.rollback(resource, error)
+    else
+      {:error, error}
+    end
+  end
+
+  defp rollback_on_error(result, _resource), do: result
 
   # The credential with primary key `credential_id`, if it belongs to
   # `user`: both conditions are in the filter, so ownership is decided by

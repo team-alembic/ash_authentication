@@ -765,9 +765,24 @@ credential id, base64url-encoded as clients send it in `raw_id`. The
 credential id isn't a secret: the browser sends it with every assertion.
 
 With `store_all_tokens? true` the claim is also kept in the stored token's
-`extra_data`, so the tokens issued for one passkey can be found, for example
-to end the sessions a deleted passkey started. The strategy records the
-claim but doesn't act on it yet.
+`extra_data`, so the tokens issued for one passkey can be found.
+
+### Deleting a passkey ends its sessions
+
+With `store_all_tokens? true`, `delete_credential` revokes every unexpired
+token the deleted passkey's ceremonies issued, in the same transaction as
+the delete. It finds them by the claim in their `extra_data` and revokes
+them through the token resource's `revoke_all_stored_for_subject` action,
+the one `log_out_everywhere` uses. Each session ends at its next request,
+and the revocations notify as `log_out_everywhere`'s do, so
+`AshAuthentication.Phoenix.TokenRevocationNotifier` disconnects the
+LiveViews running on them. That covers a password session the passkey
+verified as a second factor, too, and the session the delete is made from
+when it came from that passkey: deleting the passkey you signed in with
+signs you out.
+
+Without stored tokens there are no rows to find, and the delete revokes
+nothing.
 
 ### The application's Ash context reaches the strategy's actions
 
