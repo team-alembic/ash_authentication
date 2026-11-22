@@ -156,6 +156,27 @@ defmodule AshAuthentication.Strategy.WebAuthn.MockAdapterCeremoniesTest do
       assert {:ok, _} = sign_in(strategy, second, "add@example.com")
     end
 
+    test "a submitted email matches the owner under its type, in any case", %{
+      strategy: strategy
+    } do
+      {user, credential} = register(strategy, "Mixed.Case@example.com")
+
+      assert {:ok, signed_in} = sign_in(strategy, credential, "mixed.case@EXAMPLE.com")
+      assert signed_in.id == user.id
+    end
+
+    test "another user's email doesn't sign in with this passkey", %{strategy: strategy} do
+      {_owner, credential} = register(strategy, "owner@example.com")
+      {_other, _} = register(strategy, "someone-else@example.com")
+
+      # Refused only once the signature has verified: the email is compared
+      # in the lookup query but acted on after the ceremony.
+      assert {:error,
+              %AuthenticationFailed{
+                caused_by: %{message: "Identity does not match credential owner"}
+              }} = sign_in(strategy, credential, "someone-else@example.com")
+    end
+
     test "a challenge can be answered once", %{strategy: strategy} do
       email = "single-use@example.com"
       {_user, credential} = register(strategy, email)

@@ -33,7 +33,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   alias AshAuthentication.{Info, Jwt, Strategy.WebAuthn}
   alias AshAuthentication.Strategy.CustomFields
   alias AshAuthentication.Strategy.WebAuthn.Adapter
-  import Ash.Expr, only: [ref: 1]
+  import Ash.Expr, only: [ref: 1, ref: 2]
+  require Ash.Expr
   require Ash.Query
   require Logger
 
@@ -185,18 +186,19 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   def sign_in(strategy, params, opts \\ []) do
     challenge = Keyword.fetch!(opts, :challenge)
     tenant = Keyword.get(opts, :tenant)
+    identity = submitted_identity(strategy, params)
 
     with :ok <- ensure_enabled(strategy, :sign_in),
-         {:ok, _credential, user} <-
+         {:ok, credential, user} <-
            run_assertion_ceremony(
              strategy,
              :sign_in,
              params,
              challenge,
              tenant,
-             &lookup_credential_and_user(strategy, &1, tenant)
+             &lookup_credential_and_user(strategy, &1, identity, tenant)
            ),
-         :ok <- verify_identity_matches(strategy, :sign_in, params, user),
+         :ok <- ensure_owner_identity_matches(strategy, credential, identity),
          {:ok, user} <-
            run_ceremony_action(
              strategy,
@@ -373,18 +375,26 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   # a token for the right user without needing the identity field to be
   # supplied (passwordless / discoverable flow).
   #
+  # When the client submitted an identity, the same query also computes
+  # whether the credential's owner has it, compared by the data layer under
+  # the attribute's type (a `:ci_string` email matches in any case). It is a
+  # calculation rather than a filter so the answer is only acted on after the
+  # signature verifies: a wrong identity can't be told apart from a wrong
+  # signature, by result or by timing, without the credential's private key.
+  #
   # Uses `authorize?: false` (rather than relying on the
   # `AshAuthenticationInteraction` policy bypass) because the loaded `:user`
   # relationship triggers a separate `Ash.Query` for the user resource that
   # doesn't inherit our context, and the WebAuthn ceremony has already
   # established the caller's identity by virtue of the assertion signature.
-  defp lookup_credential_and_user(strategy, raw_id, tenant) do
+  defp lookup_credential_and_user(strategy, raw_id, identity, tenant) do
     ash_opts = lookup_ash_opts(strategy, tenant)
 
     strategy.credential_resource
     |> Query.new()
     |> Query.set_context(auth_context())
     |> Query.filter(^ref(WebAuthn.credential_id_field(strategy)) == ^raw_id)
+    |> calculate_owner_identity_match(strategy, identity)
     |> Query.load(WebAuthn.user_relationship_name(strategy))
     |> Ash.read_one(ash_opts)
     |> case do
@@ -449,22 +459,46 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     {relationship.source_attribute, Map.fetch!(user, relationship.destination_attribute)}
   end
 
-  # If the caller supplied an identity value (i.e. the form's identity field
-  # was filled in), make sure the credential we resolved actually belongs to
-  # that user. For the fully-discoverable flow (no identity submitted) we
-  # trust the credential's own ownership.
-  defp verify_identity_matches(strategy, action_name, params, user) do
-    identity_value = params[to_string(strategy.identity_field)]
+  # The identity the client submitted with the assertion, if any. For the
+  # fully-discoverable flow (no identity submitted) the credential's own
+  # ownership decides the user.
+  defp submitted_identity(%{identity_field: nil}, _params), do: nil
 
-    cond do
-      is_nil(identity_value) or identity_value == "" ->
-        :ok
+  defp submitted_identity(strategy, params) do
+    case params[to_string(strategy.identity_field)] do
+      value when value in [nil, ""] -> nil
+      value -> value
+    end
+  end
 
-      Map.get(user, strategy.identity_field) |> to_string() == to_string(identity_value) ->
-        :ok
+  defp calculate_owner_identity_match(query, _strategy, nil), do: query
 
-      true ->
-        {:error, auth_failed(strategy, action_name, "Identity does not match credential owner")}
+  defp calculate_owner_identity_match(query, strategy, identity) do
+    # Without an identity attribute on the user resource nothing is
+    # calculated, and `ensure_owner_identity_matches/3` refuses the
+    # submitted identity: it can't match anyone.
+    if Ash.Resource.Info.attribute(strategy.resource, strategy.identity_field) do
+      Query.calculate(
+        query,
+        :owner_identity_matches?,
+        :boolean,
+        Ash.Expr.expr(
+          ^ref([WebAuthn.user_relationship_name(strategy)], strategy.identity_field) ==
+            ^identity
+        )
+      )
+    else
+      query
+    end
+  end
+
+  defp ensure_owner_identity_matches(_strategy, _credential, nil), do: :ok
+
+  defp ensure_owner_identity_matches(strategy, credential, _identity) do
+    if Map.get(credential.calculations, :owner_identity_matches?) == true do
+      :ok
+    else
+      {:error, auth_failed(strategy, :sign_in, "Identity does not match credential owner")}
     end
   end
 
