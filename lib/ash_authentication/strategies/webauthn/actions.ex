@@ -551,6 +551,14 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   Where the data layer supports it, the check and the destroy run in one
   transaction that locks `user`'s credentials (`FOR UPDATE`), so two
   concurrent deletes can't both see a second credential and leave none.
+
+  A refusal is an `AshAuthentication.Errors.AuthenticationFailed` whose
+  `caused_by.reason` says why:
+
+  - `:last_credential`: it is `user`'s only credential.
+  - `:not_found`: `user` has no credential with that primary key, for
+    example because it was deleted elsewhere since it was listed. This takes
+    precedence, so a stale list never reads as "the last one".
   """
   @spec delete_credential(WebAuthn.t(), Ash.Resource.Record.t(), any, keyword) ::
           :ok | {:error, any}
@@ -561,7 +569,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     |> Ash.transaction(
       fn ->
         with {:ok, count} <- count_credentials_locked(strategy, user, opts),
-             :ok <- ensure_not_last_credential(strategy, count) do
+             :ok <- ensure_not_last_credential(strategy, user, credential_id, count, opts) do
           destroy_user_credential(strategy, user, credential_id, opts)
         end
       end,
@@ -578,7 +586,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
 
   `credential_id` is the credential's primary key. The update is filtered
   by it and by `user` in the data layer, so a credential that isn't
-  `user`'s is "not found".
+  `user`'s is "not found": an `AshAuthentication.Errors.AuthenticationFailed`
+  whose `caused_by.reason` is `:not_found`.
   """
   @spec update_credential_label(
           WebAuthn.t(),
@@ -878,11 +887,36 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
     :ok
   end
 
-  defp ensure_not_last_credential(strategy, count) do
-    if count <= 1 do
-      {:error, auth_failed(strategy, :delete_credential, "Cannot delete the last credential")}
-    else
-      :ok
+  defp ensure_not_last_credential(_strategy, _user, _credential_id, count, _opts)
+       when count > 1,
+       do: :ok
+
+  # One credential or none left: refuse, and say whether it's because this is
+  # the last one or because the one asked for isn't the user's (e.g. deleted
+  # from another tab while this one still listed it).
+  defp ensure_not_last_credential(strategy, user, credential_id, _count, opts) do
+    ash_opts = internal_ash_opts(Keyword.get(opts, :tenant))
+    context = action_context(opts[:context], auth_context())
+
+    strategy
+    |> user_credential_query(user, credential_id, context, ash_opts)
+    |> Query.limit(1)
+    |> Ash.read()
+    |> case do
+      {:ok, [_credential]} ->
+        {:error,
+         auth_failed(
+           strategy,
+           :delete_credential,
+           :last_credential,
+           "Cannot delete the last credential"
+         )}
+
+      {:ok, []} ->
+        {:error, credential_not_found(strategy, :delete_credential)}
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 
@@ -971,7 +1005,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
   end
 
   defp credential_not_found(strategy, action_name),
-    do: auth_failed(strategy, action_name, "Credential not found")
+    do: auth_failed(strategy, action_name, :not_found, "Credential not found")
 
   # The `:context` option is left out on purpose: it goes through
   # `action_context/2`, under the strategy's own, where `for_create/4`
@@ -1065,6 +1099,21 @@ defmodule AshAuthentication.Strategy.WebAuthn.Actions do
         module: __MODULE__,
         strategy: strategy,
         action: action,
+        message: message
+      }
+    )
+  end
+
+  # A refusal a UI may want to tell apart, with `caused_by.reason` saying
+  # which, as `RecentAuthentication`'s refusals do.
+  defp auth_failed(strategy, action, reason, message) do
+    AuthenticationFailed.exception(
+      strategy: strategy,
+      caused_by: %{
+        module: __MODULE__,
+        strategy: strategy,
+        action: action,
+        reason: reason,
         message: message
       }
     )

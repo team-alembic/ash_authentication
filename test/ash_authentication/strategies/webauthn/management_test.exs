@@ -66,7 +66,30 @@ defmodule AshAuthentication.Strategy.WebAuthn.ManagementTest do
       cred2: cred2
     } do
       :ok = Actions.delete_credential(strategy, user, cred1.id, [])
-      assert {:error, _} = Actions.delete_credential(strategy, user, cred2.id, [])
+
+      assert {:error,
+              %AuthenticationFailed{
+                caused_by: %{
+                  reason: :last_credential,
+                  message: "Cannot delete the last credential"
+                }
+              }} = Actions.delete_credential(strategy, user, cred2.id, [])
+    end
+
+    # A panel opened before the passkey was deleted elsewhere still lists
+    # it. With one credential left, the refusal must say "not found", not
+    # "the last one", or the UI warns about a lock-out that isn't there.
+    test "a credential already deleted is not found, even with one left", %{
+      strategy: strategy,
+      user: user,
+      cred2: cred2
+    } do
+      :ok = Actions.delete_credential(strategy, user, cred2.id, [])
+
+      assert {:error,
+              %AuthenticationFailed{
+                caused_by: %{reason: :not_found, message: "Credential not found"}
+              }} = Actions.delete_credential(strategy, user, cred2.id, [])
     end
 
     test "treats another user's credential as not found and leaves it", %{
@@ -76,7 +99,23 @@ defmodule AshAuthentication.Strategy.WebAuthn.ManagementTest do
     } do
       other = other_user_with_credentials(2)
 
-      assert {:error, %AuthenticationFailed{caused_by: %{message: "Credential not found"}}} =
+      assert {:error,
+              %AuthenticationFailed{
+                caused_by: %{reason: :not_found, message: "Credential not found"}
+              }} = Actions.delete_credential(strategy, other, cred1.id, [])
+
+      {:ok, credentials} = Actions.list_credentials(strategy, user, [])
+      assert length(credentials) == 2
+    end
+
+    test "another user's credential is not found when the caller has only one", %{
+      strategy: strategy,
+      user: user,
+      cred1: cred1
+    } do
+      other = other_user_with_credentials(1)
+
+      assert {:error, %AuthenticationFailed{caused_by: %{reason: :not_found}}} =
                Actions.delete_credential(strategy, other, cred1.id, [])
 
       {:ok, credentials} = Actions.list_credentials(strategy, user, [])
@@ -99,8 +138,10 @@ defmodule AshAuthentication.Strategy.WebAuthn.ManagementTest do
     } do
       other = other_user_with_credentials(1)
 
-      assert {:error, %AuthenticationFailed{caused_by: %{message: "Credential not found"}}} =
-               Actions.update_credential_label(strategy, other, cred1.id, "Hijacked", [])
+      assert {:error,
+              %AuthenticationFailed{
+                caused_by: %{reason: :not_found, message: "Credential not found"}
+              }} = Actions.update_credential_label(strategy, other, cred1.id, "Hijacked", [])
 
       {:ok, credentials} = Actions.list_credentials(strategy, user, [])
       assert Enum.find(credentials, &(&1.id == cred1.id)).label == "YubiKey Blue"
