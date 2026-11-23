@@ -8,15 +8,7 @@ defmodule AshAuthentication.Plug.Helpers do
   """
 
   alias Ash.{PlugHelpers, Resource}
-
-  alias AshAuthentication.{
-    Info,
-    Jwt,
-    Strategy.RememberMe.Plug.Helpers,
-    Strategy.WebAuthn,
-    TokenResource
-  }
-
+  alias AshAuthentication.{Info, Jwt, Strategy.RememberMe.Plug.Helpers, TokenResource}
   alias Plug.Conn
 
   @doc """
@@ -198,13 +190,7 @@ defmodule AshAuthentication.Plug.Helpers do
            {:ok, jti, subject} <- split_identifier(subject, resource),
            :ok <- validate_session_jti(resource, jti, opts),
            {:ok, user} <-
-             AshAuthentication.subject_to_user(subject, resource, opts),
-           true <-
-             WebAuthn.token_credential_present?(
-               user,
-               session_metadata_token(session, options.subject_name),
-               opts
-             ) do
+             AshAuthentication.subject_to_user(subject, resource, opts) do
         {:ok, user}
       else
         _ -> :error
@@ -284,15 +270,6 @@ defmodule AshAuthentication.Plug.Helpers do
     is_nil(Keyword.get(opts, :tenant)) and
       not is_nil(Resource.Info.multitenancy_strategy(resource)) and
       not Resource.Info.multitenancy_global?(resource)
-  end
-
-  # The session's token, kept in its metadata by `store_in_session/2` whatever
-  # the session identifier, is what names the passkey a session came from.
-  defp session_metadata_token(session, subject_name) do
-    case Map.get(session, metadata_key(subject_name)) do
-      %{token: token} when is_binary(token) -> token
-      _ -> nil
-    end
   end
 
   defp restore_metadata_from_session(user, subject_name, session) do
@@ -379,7 +356,6 @@ defmodule AshAuthentication.Plug.Helpers do
                resource,
                opts
              ),
-           true <- WebAuthn.token_credential_present?(user, claims, opts),
            {:ok, subject_name} <- Info.authentication_subject_name(resource),
            current_subject_name <- current_subject_name(subject_name) do
         user = maybe_add_token_claims(user, token_record)

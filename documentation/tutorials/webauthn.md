@@ -781,17 +781,8 @@ verified as a second factor, too, and the session the delete is made from
 when it came from that passkey: deleting the passkey you signed in with
 signs you out.
 
-Without stored tokens there are no rows to find, so the check moves to each
-request instead. `AshAuthentication.Plug.Helpers` (`retrieve_from_session`
-and `retrieve_from_bearer`, so `load_from_session` and `load_from_bearer`
-too) looks up the passkey a token names with
-`AshAuthentication.Strategy.WebAuthn.token_credential_present?/3`, and
-refuses the token once the passkey is gone. A cookie session is signed out.
-A session's token is in its metadata whatever `session_identifier` is, so
-this works with `:jti` and `:unsafe` alike. It costs one indexed read of the
-credential resource per request authenticated by a passkey's token. Tokens
-without the claim, from other strategies, are not looked up. A LiveView
-already mounted isn't told; it finds out on its next mount.
+Without stored tokens there are no rows to find, and the delete revokes
+nothing.
 
 ### The application's Ash context reaches the strategy's actions
 

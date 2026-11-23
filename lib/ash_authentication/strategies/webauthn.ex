@@ -525,64 +525,6 @@ defmodule AshAuthentication.Strategy.WebAuthn do
   @spec credential_claim() :: String.t()
   def credential_claim, do: @credential_claim
 
-  @doc """
-  Whether a token's passkey, if it names one, is still one of `user`'s
-  credentials.
-
-  Without `store_all_tokens?`, deleting a passkey can't find the tokens it
-  issued to revoke them, so their sessions are checked on each request
-  instead: `AshAuthentication.Plug.Helpers` calls this for every session and
-  bearer token it authenticates, and refuses the token when it returns
-  `false`. With `store_all_tokens? true` the delete revokes them (see
-  `AshAuthentication.Strategy.WebAuthn.Actions.delete_credential/4`), and this
-  returns `true` without a query.
-
-  `token_or_claims` is the token, its claims, or `nil`. A token without the
-  claim, or no token at all, has no passkey to check, and so does a user
-  resource without a WebAuthn strategy. Otherwise it is one read of the
-  credential resources of `user`'s WebAuthn strategies, filtered by `user`
-  and the credential id; a failed read counts as not found. `opts` takes
-  `:tenant` and `:context`.
-  """
-  @spec token_credential_present?(Ash.Resource.Record.t(), String.t() | map | nil, keyword) ::
-          boolean
-  def token_credential_present?(user, token_or_claims, opts \\ [])
-
-  def token_credential_present?(_user, nil, _opts), do: true
-
-  def token_credential_present?(user, token, opts) when is_binary(token) do
-    case AshAuthentication.Jwt.peek(token) do
-      {:ok, claims} -> token_credential_present?(user, claims, opts)
-      _ -> true
-    end
-  end
-
-  def token_credential_present?(%resource{} = user, %{} = claims, opts) do
-    with {:ok, encoded} <- Map.fetch(claims, @credential_claim),
-         false <- AshAuthentication.Info.authentication_tokens_store_all_tokens?(resource),
-         [_ | _] = strategies <- webauthn_strategies(resource) do
-      case is_binary(encoded) && Base.url_decode64(encoded, padding: false) do
-        {:ok, raw_credential_id} ->
-          Enum.any?(
-            strategies,
-            &(WebAuthn.Actions.credential_exists?(&1, user, raw_credential_id, opts) ==
-                {:ok, true})
-          )
-
-        _ ->
-          false
-      end
-    else
-      _ -> true
-    end
-  end
-
-  defp webauthn_strategies(resource) do
-    resource
-    |> AshAuthentication.Info.authentication_strategies()
-    |> Enum.filter(&is_struct(&1, WebAuthn))
-  end
-
   @doc "The attribute on the credential resource which stores the WebAuthn credential ID."
   @spec credential_id_field(t()) :: atom
   def credential_id_field(strategy),
