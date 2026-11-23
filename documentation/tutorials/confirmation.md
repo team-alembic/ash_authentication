@@ -89,7 +89,22 @@ end
 
 ## Confirming newly registered users
 
-First we start by adding the confirmation add-on to your existing authentication DSL:
+If you use [Igniter](https://hexdocs.pm/igniter), you can add the add-on and a sender with:
+
+```bash
+mix ash_authentication.add_add_on confirmation
+mix ash.codegen add_confirmation
+```
+
+If you also use `AshAuthenticationPhoenix`, run its task as well, which upgrades the sender to use Swoosh and verified routes if it finds a Swoosh mailer:
+
+```bash
+mix ash_authentication_phoenix.add_add_on.confirmation
+```
+
+Your router also needs the `confirm_route` described [below](#adding-the-confirmation-page-to-your-router).
+
+To set it up by hand, first add the confirmation add-on to your existing authentication DSL:
 
 ```elixir
 defmodule MyApp.Accounts.User do
@@ -189,6 +204,26 @@ end
 ```
 
 Provided you have your authentication routes hooked up either via `AshAuthentication.Plug` or [`AshAuthentication.Phoenix.Router`](https://hexdocs.pm/ash_authentication_phoenix/AshAuthentication.Phoenix.Router.html) then the user will be confirmed when the token is submitted.
+
+### Adding the confirmation page to your router
+
+Because `require_interaction?` is `true`, following the link in the email does not confirm the user straight away. It opens a page with a button, and pressing the button submits the token. This stops email scanners that prefetch links from confirming accounts on the user's behalf.
+
+If you use `AshAuthenticationPhoenix`, add a `confirm_route` to your router to serve that page, next to your `auth_routes`:
+
+```elixir
+scope "/", MyAppWeb do
+  pipe_through :browser
+
+  auth_routes AuthController, MyApp.Accounts.User, path: "/auth"
+
+  confirm_route MyApp.Accounts.User, :confirm_new_user, auth_routes_prefix: "/auth"
+end
+```
+
+* The second argument is the name of the confirmation add-on, `:confirm_new_user` in this example.
+* `auth_routes_prefix` must match the `path` you gave to `auth_routes`. The confirmation page submits its form there.
+* By default the page is mounted at `/<add-on name>/:token`, i.e. `/confirm_new_user/:token`, which is the URL the sender above links to. If you change the path with the `path` option, update the sender to match.
 
 ## Blocking unconfirmed users from logging in
 

@@ -32,8 +32,9 @@ defmodule MyApp.Accounts.User do
 
   authentication do
     add_ons do
-      confirmation :confirm do
+      confirmation :confirm_new_user do
         monitor_fields [:email]
+        require_interaction? true
         sender MyApp.ConfirmationSender
       end
     end
@@ -74,11 +75,12 @@ so via the `AshAuthentication.Strategy` protocol.
 
 If you are using `AshAuthenticationPhoenix`, and have `require_interaction?` set to `true`,
 which you very much should, then you will need to add a `confirm_route` to your router. This
-is placed in the same location as `auth_routes`, and should be provided the user and the
-strategy name. For example:
+is placed in the same location as `auth_routes`, and takes the user resource and the name of
+the confirmation add-on. For example:
 
 ```elixir
-# Remove this if you do not want to use the confirmation strategy
+auth_routes AuthController, MyApp.Accounts.User, path: "/auth"
+
 confirm_route(
   MyApp.Accounts.User,
   :confirm_new_user,
@@ -86,6 +88,9 @@ confirm_route(
   overrides: [MyApp.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
 )
 ```
+
+`auth_routes_prefix` must match the `path` given to `auth_routes`, because the
+confirmation page submits its form there.
 
 ## Plugs
 
