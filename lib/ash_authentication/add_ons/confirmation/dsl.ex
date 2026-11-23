@@ -55,7 +55,7 @@ defmodule AshAuthentication.AddOn.Confirmation.Dsl do
           type: :boolean,
           default: true,
           doc:
-            "Whether or not to prevent upserts over unconfirmed uers. See [the confirmation guide](/documentation/topics/confirmation.md) for more."
+            "Whether or not to prevent upserts over unconfirmed users. See [the confirmation guide](/documentation/topics/confirmation.md) for more."
         ],
         require_interaction?: [
           type: :boolean,
