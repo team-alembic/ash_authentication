@@ -781,6 +781,13 @@ verified as a second factor, too, and the session the delete is made from
 when it came from that passkey: deleting the passkey you signed in with
 signs you out.
 
+A revoked token is refused wherever a request's token is checked against
+revocation: bearer tokens, and cookie sessions with
+`require_token_presence_for_authentication? true` or `session_identifier
+:jti`. A cookie session with `session_identifier :unsafe` holds only the
+user's subject and is never checked, so it outlives the passkey, as it
+outlives `log_out_everywhere`.
+
 Without stored tokens there are no rows to find, and the delete revokes
 nothing.
 
