@@ -22,7 +22,7 @@ defmodule AshAuthentication.Strategy.DynamicOidcTest do
     test "OIDC defaults are inherited" do
       {:ok, strategy} = Info.strategy(Example.User, :sso)
 
-      assert strategy.client_authentication_method == "client_secret_basic"
+      assert strategy.client_authentication_method == :client_secret_basic
       assert strategy.id_token_signed_response_alg == "RS256"
       assert strategy.openid_configuration_uri == "/.well-known/openid-configuration"
       # `nonce: true` is rewritten by the transformer to the default generator.

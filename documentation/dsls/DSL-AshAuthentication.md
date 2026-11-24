@@ -76,10 +76,14 @@ Currently supported strategies:
 
 Most of the authentication strategies based on `OAuth2` wrap the [`assent`](https://hex.pm/packages/assent) package.
 
-If you needs to customize the behavior of the http client used by `assent`, define a custom `http_adapter` in the
-application settings:
+The default adapter is `Assent.HTTPAdapter.Req`. To customize its options or
+supply a different adapter, configure `http_adapter` in the application settings:
 
-`config :ash_authentication, :http_adapter, {Assent.HTTPAdapter.Finch, supervisor: MyApp.CustomFinch}`
+    config :ash_authentication, :http_adapter,
+      {Assent.HTTPAdapter.Req, finch: MyApp.CustomFinch}
+
+Start a custom Finch pool in your own supervision tree if you configure one.
+Otherwise Req manages its default pool. Redirects are not followed by default.
 
 See [`assent's documentation`](https://hexdocs.pm/assent/README.html#http-client) for more details on the supported
 http clients and their configuration.

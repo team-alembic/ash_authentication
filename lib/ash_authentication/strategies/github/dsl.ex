@@ -27,18 +27,23 @@ defmodule AshAuthentication.Strategy.Github.Dsl do
 
       #### Strategy defaults:
 
-      #{strategy_override_docs(Github)}
+      #{strategy_override_docs()}
       """,
       auto_set_fields: [icon: :github, assent_strategy: Github]
     })
-    |> Custom.set_defaults(Github.default_config([]))
+    |> Custom.set_defaults(dsl_defaults())
     |> Custom.set_defaults(trust_email_verified?: true)
   end
 
-  defp strategy_override_docs(strategy) do
+  # Keep the public OAuth2 auth_method option overridable by applications.
+  defp dsl_defaults do
+    {method, defaults} = Keyword.pop(Github.default_config([]), :client_authentication_method)
+    Keyword.put(defaults, :auth_method, method)
+  end
+
+  defp strategy_override_docs do
     defaults =
-      []
-      |> strategy.default_config()
+      dsl_defaults()
       |> Enum.map_join(
         ".\n",
         fn {key, value} ->

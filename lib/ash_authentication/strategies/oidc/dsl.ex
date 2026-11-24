@@ -59,14 +59,20 @@ defmodule AshAuthentication.Strategy.Oidc.Dsl do
         type:
           {:in,
            [
+             :client_secret_basic,
+             :client_secret_post,
+             :client_secret_jwt,
+             :private_key_jwt,
+             :none,
              "client_secret_basic",
              "client_secret_post",
              "client_secret_jwt",
              "private_key_jwt",
              "none"
            ]},
-        default: "client_secret_basic",
-        doc: "The client authentication method to use.",
+        default: :client_secret_basic,
+        doc:
+          "The client authentication method to use. Legacy string values are also accepted and normalized to atoms before calling Assent.",
         required: false
       ],
       openid_configuration: [

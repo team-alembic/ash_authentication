@@ -26,7 +26,7 @@ defmodule AshAuthentication.Strategy.Auth0Test do
     test "`client_authentication_method` is a schema default, not a fixed field", %{
       strategy: strategy
     } do
-      assert strategy.client_authentication_method == "client_secret_post"
+      assert strategy.client_authentication_method == :client_secret_post
       refute Keyword.has_key?(Auth0.Dsl.dsl().auto_set_fields, :client_authentication_method)
       assert Keyword.has_key?(Auth0.Dsl.dsl().schema, :client_authentication_method)
     end
