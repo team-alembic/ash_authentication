@@ -5,7 +5,9 @@
 defmodule AshAuthentication.Strategy.WebAuthn.MultiTenantTest do
   use DataCase, async: false
 
-  alias AshAuthentication.{Info, Strategy.WebAuthn.Helpers}
+  alias AshAuthentication.{Info, Strategy.WebAuthn.Actions, Strategy.WebAuthn.Helpers}
+
+  @moduletag feature: :webauthn
 
   describe "multi-tenant rp_id resolution" do
     test "resolves dynamic rp_id via MFA" do
@@ -19,11 +21,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.MultiTenantTest do
       assert "acme App" = Helpers.resolve_rp_name(strategy, "acme")
     end
 
-    test "wax_opts builds correct origin for tenant" do
+    test "the challenge carries the tenant's relying party" do
       strategy = Info.strategy!(Example.MultiTenantUserWithWebAuthn, :webauthn)
-      opts = Helpers.wax_opts(strategy, "acme")
-      assert opts[:origin] == "https://acme.example.com"
-      assert opts[:rp_id] == "acme.example.com"
+      {:ok, challenge} = Actions.registration_challenge(strategy, "acme")
+      assert challenge.rp_id == "acme.example.com"
+      # No origin configured: any https origin on the tenant's rp_id
+      assert challenge.origin == %{rp_id: "acme.example.com"}
     end
   end
 end

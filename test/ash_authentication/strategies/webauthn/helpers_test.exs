@@ -8,6 +8,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
   alias AshAuthentication.Strategy.WebAuthn
   alias AshAuthentication.Strategy.WebAuthn.Helpers
 
+  @moduletag feature: :webauthn
+
   describe "resolve_rp_id/2" do
     test "returns static string directly" do
       strategy = %WebAuthn{rp_id: "example.com"}
@@ -50,6 +52,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       def secret_for([:authentication, :strategies, :webauthn, :origin], _, _, _),
         do: {:ok, "https://secret.example.com:4001"}
 
+      def secret_for([:authentication, :strategies, :several, :origin], _, _, _),
+        do: {:ok, ["https://a.example.com", "https://b.example.com"]}
+
+      def secret_for([:authentication, :strategies, :bad_origin, :origin], _, _, _),
+        do: {:ok, :not_an_origin}
+
       def secret_for(_, _, _, _), do: :error
     end
 
@@ -68,6 +76,21 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
       assert "https://secret.example.com:4001" = Helpers.resolve_origin(strategy, nil)
     end
 
+    test "resolve_origin accepts a list of origins from a Secret module" do
+      strategy = %WebAuthn{name: :several, resource: __MODULE__, origin: {TestSecrets, []}}
+
+      assert ["https://a.example.com", "https://b.example.com"] =
+               Helpers.resolve_origin(strategy, nil)
+    end
+
+    test "resolve_origin raises when a Secret module returns something else" do
+      strategy = %WebAuthn{name: :bad_origin, resource: __MODULE__, origin: {TestSecrets, []}}
+
+      assert_raise RuntimeError, ~r/to return `\{:ok, binary\}`/, fn ->
+        Helpers.resolve_origin(strategy, nil)
+      end
+    end
+
     test "resolve_origin returns nil when the Secret module returns `:error`" do
       strategy = %WebAuthn{name: :other, resource: __MODULE__, origin: {TestSecrets, []}}
       assert is_nil(Helpers.resolve_origin(strategy, nil))
@@ -82,70 +105,133 @@ defmodule AshAuthentication.Strategy.WebAuthn.HelpersTest do
     end
   end
 
-  describe "wax_opts/3" do
-    test "builds Wax options from strategy" do
-      strategy = %WebAuthn{
-        rp_id: "example.com",
-        user_verification: "required",
-        attestation: "none"
-      }
+  describe "the context a Secret module receives" do
+    defmodule RecordingSecrets do
+      use AshAuthentication.Secret
 
-      opts = Helpers.wax_opts(strategy, nil)
-      assert opts[:origin] == "https://example.com"
-      assert opts[:rp_id] == "example.com"
-      assert opts[:user_verification] == "required"
-      assert opts[:attestation] == "none"
+      def secret_for([:authentication, :strategies, :webauthn, key], _resource, _opts, context) do
+        send(self(), {:secret_context, key, context})
+
+        case key do
+          :origin -> {:ok, "https://#{context.tenant}.example.com"}
+          _ -> {:ok, "#{context.tenant}.example.com"}
+        end
+      end
     end
 
-    test "resolves dynamic rp_id for tenant" do
-      strategy = %WebAuthn{
-        rp_id: {__MODULE__, :rp_id_for_tenant, []},
-        user_verification: "preferred",
-        attestation: "none"
-      }
-
-      opts = Helpers.wax_opts(strategy, "tenant1")
-      assert opts[:origin] == "https://tenant1.example.com"
-      assert opts[:rp_id] == "tenant1.example.com"
+    defp recording_strategy(overrides) do
+      struct!(
+        %WebAuthn{
+          name: :webauthn,
+          resource: __MODULE__,
+          rp_id: {RecordingSecrets, []},
+          origin: {RecordingSecrets, []}
+        },
+        overrides
+      )
     end
 
-    test "configured origin wins over the runtime fallback" do
-      strategy = %WebAuthn{
-        rp_id: "example.com",
-        origin: "https://example.com:8443",
-        user_verification: "preferred",
-        attestation: "none"
-      }
-
-      opts = Helpers.wax_opts(strategy, nil, origin: "http://localhost:4001")
-      assert opts[:origin] == "https://example.com:8443"
+    test "with no context given, the tenant alone" do
+      assert "acme.example.com" = Helpers.resolve_rp_id(recording_strategy([]), "acme")
+      assert_received {:secret_context, :rp_id, context}
+      assert context == %{tenant: "acme"}
     end
 
-    test "uses opts[:origin] when the strategy has no configured origin" do
-      strategy = %WebAuthn{
-        rp_id: "example.com",
-        origin: nil,
-        user_verification: "preferred",
-        attestation: "none"
-      }
+    test "the caller's context with the tenant added, so a plug's conn comes through" do
+      context = %{conn: %Plug.Conn{}, request_id: "r1"}
 
-      opts = Helpers.wax_opts(strategy, nil, origin: "http://localhost:4001")
-      assert opts[:origin] == "http://localhost:4001"
+      assert "https://acme.example.com" =
+               Helpers.resolve_origin(recording_strategy([]), "acme", context)
+
+      assert_received {:secret_context, :origin, received}
+      assert received == %{conn: %Plug.Conn{}, request_id: "r1", tenant: "acme"}
     end
 
-    test "falls back to https://rp_id when neither configured nor runtime origin is supplied" do
-      strategy = %WebAuthn{
-        rp_id: "example.com",
-        origin: nil,
-        user_verification: "preferred",
-        attestation: "none"
-      }
+    test "Ash's private context is dropped" do
+      context = %{private: %{ash_authentication?: true}, actor: :someone}
 
-      assert Helpers.wax_opts(strategy, nil)[:origin] == "https://example.com"
+      Helpers.resolve_rp_id(recording_strategy([]), nil, context)
+
+      assert_received {:secret_context, :rp_id, received}
+      assert received == %{actor: :someone, tenant: nil}
+    end
+
+    test "the tenant argument is the tenant, whatever the context says" do
+      Helpers.resolve_rp_id(recording_strategy([]), "acme", %{tenant: "someone-else"})
+
+      assert_received {:secret_context, :rp_id, %{tenant: "acme"}}
+    end
+
+    test "functions and MFAs still receive the tenant alone" do
+      context = %{conn: %Plug.Conn{}}
+
+      assert "acme.example.com" =
+               Helpers.resolve_rp_id(
+                 recording_strategy(rp_id: fn tenant -> "#{tenant}.example.com" end),
+                 "acme",
+                 context
+               )
+
+      assert "acme.example.com" =
+               Helpers.resolve_rp_id(
+                 recording_strategy(rp_id: {__MODULE__, :rp_id_for_tenant, []}),
+                 "acme",
+                 context
+               )
+
+      refute_received {:secret_context, _, _}
+    end
+
+    test "a static value asks nobody" do
+      assert "example.com" =
+               Helpers.resolve_rp_id(recording_strategy(rp_id: "example.com"), "acme", %{
+                 conn: %Plug.Conn{}
+               })
+
+      refute_received {:secret_context, _, _}
+    end
+  end
+
+  describe "resolve_origin/2" do
+    test "returns nil when no origin is configured" do
+      assert is_nil(Helpers.resolve_origin(%WebAuthn{origin: nil}, nil))
+    end
+
+    test "returns a configured string or list as is" do
+      assert "https://example.com" =
+               Helpers.resolve_origin(%WebAuthn{origin: "https://example.com"}, nil)
+
+      assert ["https://a.example.com"] =
+               Helpers.resolve_origin(%WebAuthn{origin: ["https://a.example.com"]}, nil)
+    end
+
+    test "calls a function or MFA with the tenant, which may return a list" do
+      assert ["https://acme.example.com"] =
+               Helpers.resolve_origin(
+                 %WebAuthn{origin: fn t -> ["https://#{t}.example.com"] end},
+                 "acme"
+               )
+
+      assert "https://acme.example.com" =
+               Helpers.resolve_origin(
+                 %WebAuthn{origin: {__MODULE__, :origin_for_tenant, []}},
+                 "acme"
+               )
+    end
+  end
+
+  describe "challenge_timeout_seconds/1" do
+    test "converts the DSL's milliseconds to whole seconds" do
+      assert Helpers.challenge_timeout_seconds(%WebAuthn{timeout: 60_000}) == 60
+    end
+
+    test "rounds a sub-second remainder up, so the server outlives the browser dialog" do
+      assert Helpers.challenge_timeout_seconds(%WebAuthn{timeout: 120_001}) == 121
     end
   end
 
   # Test helper functions for MFA resolution
   def rp_id_for_tenant(tenant), do: "#{tenant}.example.com"
   def rp_name_for_tenant(tenant), do: "#{String.capitalize(tenant)} App"
+  def origin_for_tenant(tenant), do: "https://#{tenant}.example.com"
 end

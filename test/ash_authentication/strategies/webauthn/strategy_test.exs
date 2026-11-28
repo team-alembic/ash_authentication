@@ -8,6 +8,8 @@ defmodule AshAuthentication.Strategy.WebAuthn.StrategyTest do
   alias AshAuthentication.Strategy
   alias AshAuthentication.Strategy.WebAuthn
 
+  @moduletag feature: :webauthn
+
   setup do
     strategy = %WebAuthn{
       name: :webauthn,
@@ -18,13 +20,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.StrategyTest do
       identity_field: :email,
       registration_enabled?: true,
       register_action_name: :register_with_webauthn,
-      sign_in_action_name: :sign_in_with_webauthn,
-      store_credential_action_name: :store_webauthn_credential,
-      update_sign_count_action_name: :update_webauthn_sign_count,
-      list_credentials_action_name: :list_webauthn_credentials,
-      delete_credential_action_name: :delete_webauthn_credential,
-      update_credential_label_action_name: :update_webauthn_credential_label,
-      add_credential_action_name: :add_webauthn_credential
+      sign_in_action_name: :sign_in_with_webauthn
     }
 
     %{strategy: strategy}

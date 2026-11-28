@@ -14,6 +14,7 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInWithTokenPreparation do
   use Ash.Resource.Preparation
   alias Ash.{Query, Resource, Resource.Preparation}
   alias AshAuthentication.{Errors.AuthenticationFailed, Info, Jwt, TokenResource}
+  alias AshAuthentication.Strategy.WebAuthn
   require Ash.Query
 
   @doc false
@@ -105,10 +106,12 @@ defmodule AshAuthentication.Strategy.WebAuthn.SignInWithTokenPreparation do
   defp verify_result(query, [user], _strategy, context) do
     extra_claims = query.context[:extra_token_claims] || %{}
 
+    # The session token keeps what the sign-in token said about the
+    # ceremony: when a second factor was verified, and with which passkey.
     inherited =
       query.context
       |> Map.get(:token_claims, %{})
-      |> Map.take(["tenant", "webauthn_verified_at"])
+      |> Map.take(["tenant", "webauthn_verified_at", WebAuthn.credential_claim()])
 
     claims = Map.merge(inherited, extra_claims)
 
