@@ -5,6 +5,21 @@
 defmodule AshAuthentication.Plug.Helpers do
   @moduledoc """
   Authentication helpers for use in your router, etc.
+
+  ## Limiting the helpers to some resources
+
+  The helpers which take an `otp_app` work on every authenticated resource of
+  that otp app. They also accept a `:resources` option, a list of authenticated
+  resources to work on instead. A resource which is not listed is then never
+  loaded, assigned or revoked, and a token whose subject names it does not
+  verify.
+
+  This is for an application whose authenticated resources are served apart,
+  for example by two Phoenix endpoints with their own session cookies:
+
+  ```elixir
+  plug :load_from_session, resources: [MyApp.Accounts.User]
+  ```
   """
 
   alias Ash.{PlugHelpers, Resource}
@@ -88,13 +103,15 @@ defmodule AshAuthentication.Plug.Helpers do
   @doc """
   Given a list of subjects, turn as many as possible into users.
 
-  Opts are forwarded to `AshAuthentication.subject_to_user/2`
+  Accepts the `:resources` option (see the module documentation). Other opts
+  are forwarded to `AshAuthentication.subject_to_user/2`
   """
   @spec load_subjects([AshAuthentication.subject()], module, opts :: Keyword.t()) :: map
   def load_subjects(subjects, otp_app, opts \\ []) when is_list(subjects) do
+    {resources, opts} = pop_resources(otp_app, opts)
+
     resources =
-      otp_app
-      |> AshAuthentication.authenticated_resources()
+      resources
       |> Stream.map(&{to_string(Info.authentication_subject_name!(&1)), &1})
       |> Map.new()
 
@@ -120,17 +137,19 @@ defmodule AshAuthentication.Plug.Helpers do
   using the RememberMe strategy if not already signed in. You can limited it to
   specific strategies using the `strategy` opt.
 
-  Opts are forwarded to `AshAuthentication.Strategies.RememberMe.Plug.sign_in_resource_with_remember_me/3`
+  Accepts the `:resources` option (see the module documentation). Other opts
+  are forwarded to `AshAuthentication.Strategies.RememberMe.Plug.sign_in_resource_with_remember_me/3`
   """
   @spec sign_in_using_remember_me(Conn.t(), module, keyword) :: Conn.t()
   def sign_in_using_remember_me(conn, otp_app, opts \\ []) do
+    {resources, opts} = pop_resources(otp_app, opts)
+
     opts =
       opts
       |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
       |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
 
-    otp_app
-    |> AshAuthentication.authenticated_resources()
+    resources
     |> Stream.map(&{&1, Info.authentication_options(&1)})
     |> Enum.reduce(conn, fn {resource, options}, conn ->
       session_key = subject_session_key(resource, options.subject_name)
@@ -157,9 +176,14 @@ defmodule AshAuthentication.Plug.Helpers do
   end
 
   @doc false
-  @spec authenticate_resource_from_session(Resource.t(), map(), atom(), keyword()) ::
+  @spec authenticate_resource_from_session(
+          Resource.t(),
+          map(),
+          atom() | [Resource.t()],
+          keyword()
+        ) ::
           {:ok, Resource.Record.t()} | :error
-  def authenticate_resource_from_session(resource, session, otp_app, opts) do
+  def authenticate_resource_from_session(resource, session, otp_app_or_resources, opts) do
     options = Info.authentication_options(resource)
 
     require_token? =
@@ -172,7 +196,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
       with token when is_binary(token) <- Map.get(session, session_key),
            {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
-           when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
+           when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app_or_resources, opts),
            {:ok, [token_record]} <-
              TokenResource.Actions.get_token(
                token_resource,
@@ -206,9 +230,14 @@ defmodule AshAuthentication.Plug.Helpers do
   assigns under their subject name (with the prefix `current_`).
 
   If there is no user present for a resource then the assign is set to `nil`.
+
+  Accepts the `:resources` option (see the module documentation), in which case
+  only the listed resources are retrieved and assigned.
   """
   @spec retrieve_from_session(Conn.t(), module, keyword) :: Conn.t()
   def retrieve_from_session(conn, otp_app, opts \\ []) do
+    {resources, opts} = pop_resources(otp_app, opts)
+
     opts =
       opts
       |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
@@ -216,13 +245,12 @@ defmodule AshAuthentication.Plug.Helpers do
 
     session = conn |> Conn.fetch_session() |> Map.get(:private) |> Map.get(:plug_session, %{})
 
-    otp_app
-    |> AshAuthentication.authenticated_resources()
+    resources
     |> Stream.map(&{&1, Info.authentication_options(&1)})
     |> Enum.reduce(conn, fn {resource, options}, conn ->
       handle_session_auth_result(
         conn,
-        authenticate_resource_from_session(resource, session, otp_app, opts),
+        authenticate_resource_from_session(resource, session, resources, opts),
         resource,
         options,
         session,
@@ -292,26 +320,29 @@ defmodule AshAuthentication.Plug.Helpers do
 
   This is meant to used via `AshAuthenticationPhoenix` for nested liveviews.
   See `AshAuthenticationPhoenix.LiveSession.assign_new_resources/3` for more.
+
+  Accepts the `:resources` option (see the module documentation), in which case
+  only the listed resources are assigned.
   """
   def assign_new_resources(socket, session, assign_new, opts) do
     opts = Keyword.put_new(opts, :tenant, session["tenant"])
 
     {otp_app, opts} = Keyword.pop(opts, :otp_app)
+    {resources, opts} = pop_resources(otp_app, opts)
 
-    otp_app
-    |> AshAuthentication.authenticated_resources()
+    resources
     |> Stream.map(&{&1, Info.authentication_options(&1)})
     |> Enum.reduce(socket, fn {resource, options}, socket ->
       current_subject_name = current_subject_name(options.subject_name)
 
       assign_new.(socket, current_subject_name, fn ->
-        load_user_from_session(resource, session, options.subject_name, otp_app, opts)
+        load_user_from_session(resource, session, options.subject_name, resources, opts)
       end)
     end)
   end
 
-  defp load_user_from_session(resource, session, subject_name, otp_app, opts) do
-    case authenticate_resource_from_session(resource, session, otp_app, opts) do
+  defp load_user_from_session(resource, session, subject_name, resources, opts) do
+    case authenticate_resource_from_session(resource, session, resources, opts) do
       {:ok, user} ->
         # Restore authentication metadata from the session onto the user
         restore_metadata_from_session(user, subject_name, session)
@@ -332,9 +363,14 @@ defmodule AshAuthentication.Plug.Helpers do
   loaded into the assigns using `current_\#{subject_name}_token_record`
 
   If there is no user present for a resource then the assign is set to `nil`.
+
+  Accepts the `:resources` option (see the module documentation), in which case
+  only a token of one of the listed resources is accepted.
   """
   @spec retrieve_from_bearer(Conn.t(), module, keyword) :: Conn.t()
   def retrieve_from_bearer(conn, otp_app, opts \\ []) do
+    {resources, opts} = pop_resources(otp_app, opts)
+
     opts =
       opts
       |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
@@ -346,7 +382,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
-           when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app, opts),
+           when not is_map_key(claims, "act") <- Jwt.verify(token, resources, opts),
            true <- usable_as_bearer_token?(claims),
            {:ok, token_record} <-
              validate_token(resource, jti, opts),
@@ -433,9 +469,14 @@ defmodule AshAuthentication.Plug.Helpers do
 
   Any bearer-style authorization headers will have their tokens revoked.  A
   header which does not hold a verifiable token is ignored.
+
+  Accepts the `:resources` option (see the module documentation), in which case
+  only a token of one of the listed resources is revoked.
   """
   @spec revoke_bearer_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
   def revoke_bearer_tokens(conn, otp_app, opts \\ []) do
+    {resources, opts} = pop_resources(otp_app, opts)
+
     opts =
       opts
       |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
@@ -446,7 +487,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, _claims, resource} <- Jwt.verify(token, otp_app, opts),
+      with {:ok, _claims, resource} <- Jwt.verify(token, resources, opts),
            {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
         revoke_opts =
           Keyword.put(
@@ -481,16 +522,20 @@ defmodule AshAuthentication.Plug.Helpers do
 
   @doc """
   Revoke all tokens in the session.
+
+  Accepts the `:resources` option (see the module documentation), in which case
+  only the session tokens of the listed resources are revoked.
   """
   @spec revoke_session_tokens(Conn.t(), atom, opts :: Keyword.t()) :: Conn.t()
   def revoke_session_tokens(conn, otp_app, opts \\ []) do
+    {resources, opts} = pop_resources(otp_app, opts)
+
     opts =
       opts
       |> Keyword.put_new(:tenant, Ash.PlugHelpers.get_tenant(conn))
       |> Keyword.put_new(:context, Ash.PlugHelpers.get_context(conn) || %{})
 
-    otp_app
-    |> AshAuthentication.authenticated_resources()
+    resources
     |> Stream.map(
       &{&1, Info.authentication_options(&1),
        Info.authentication_tokens_require_token_presence_for_authentication?(&1)}
@@ -606,6 +651,15 @@ defmodule AshAuthentication.Plug.Helpers do
     do: {conn, result}
 
   def get_authentication_result(conn), do: conn
+
+  # The `:resources` option, or every authenticated resource of the otp app. The
+  # option is removed because the remaining opts are passed on to Ash.
+  defp pop_resources(otp_app, opts) do
+    case Keyword.pop(opts, :resources) do
+      {nil, opts} -> {AshAuthentication.authenticated_resources(otp_app), opts}
+      {resources, opts} -> {List.wrap(resources), opts}
+    end
+  end
 
   # Dynamically generated atoms are generally frowned upon, but in this case
   # the `subject_name` is a statically configured atom, so should be fine.
