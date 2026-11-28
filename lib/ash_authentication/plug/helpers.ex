@@ -176,10 +176,14 @@ defmodule AshAuthentication.Plug.Helpers do
   end
 
   @doc false
-  @spec authenticate_resource_from_session(Resource.t(), map(), atom(), keyword()) ::
+  @spec authenticate_resource_from_session(
+          Resource.t(),
+          map(),
+          atom() | [Resource.t()],
+          keyword()
+        ) ::
           {:ok, Resource.Record.t()} | :error
-  def authenticate_resource_from_session(resource, session, otp_app, opts) do
-    {resources, opts} = Keyword.pop(opts, :resources)
+  def authenticate_resource_from_session(resource, session, otp_app_or_resources, opts) do
     options = Info.authentication_options(resource)
 
     require_token? =
@@ -192,8 +196,7 @@ defmodule AshAuthentication.Plug.Helpers do
 
       with token when is_binary(token) <- Map.get(session, session_key),
            {:ok, %{"sub" => subject, "jti" => jti} = claims, _}
-           when not is_map_key(claims, "act") <-
-             Jwt.verify(token, otp_app, Keyword.put(opts, :resources, resources)),
+           when not is_map_key(claims, "act") <- Jwt.verify(token, otp_app_or_resources, opts),
            {:ok, [token_record]} <-
              TokenResource.Actions.get_token(
                token_resource,
@@ -247,12 +250,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Enum.reduce(conn, fn {resource, options}, conn ->
       handle_session_auth_result(
         conn,
-        authenticate_resource_from_session(
-          resource,
-          session,
-          otp_app,
-          Keyword.put(opts, :resources, resources)
-        ),
+        authenticate_resource_from_session(resource, session, resources, opts),
         resource,
         options,
         session,
@@ -338,19 +336,13 @@ defmodule AshAuthentication.Plug.Helpers do
       current_subject_name = current_subject_name(options.subject_name)
 
       assign_new.(socket, current_subject_name, fn ->
-        load_user_from_session(
-          resource,
-          session,
-          options.subject_name,
-          otp_app,
-          Keyword.put(opts, :resources, resources)
-        )
+        load_user_from_session(resource, session, options.subject_name, resources, opts)
       end)
     end)
   end
 
-  defp load_user_from_session(resource, session, subject_name, otp_app, opts) do
-    case authenticate_resource_from_session(resource, session, otp_app, opts) do
+  defp load_user_from_session(resource, session, subject_name, resources, opts) do
+    case authenticate_resource_from_session(resource, session, resources, opts) do
       {:ok, user} ->
         # Restore authentication metadata from the session onto the user
         restore_metadata_from_session(user, subject_name, session)
@@ -390,8 +382,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
       with {:ok, %{"sub" => subject, "jti" => jti} = claims, resource}
-           when not is_map_key(claims, "act") <-
-             Jwt.verify(token, otp_app, Keyword.put(opts, :resources, resources)),
+           when not is_map_key(claims, "act") <- Jwt.verify(token, resources, opts),
            true <- usable_as_bearer_token?(claims),
            {:ok, token_record} <-
              validate_token(resource, jti, opts),
@@ -496,8 +487,7 @@ defmodule AshAuthentication.Plug.Helpers do
     |> Stream.filter(&String.starts_with?(&1, "Bearer "))
     |> Stream.map(&String.replace_leading(&1, "Bearer ", ""))
     |> Enum.reduce(conn, fn token, conn ->
-      with {:ok, _claims, resource} <-
-             Jwt.verify(token, otp_app, Keyword.put(opts, :resources, resources)),
+      with {:ok, _claims, resource} <- Jwt.verify(token, resources, opts),
            {:ok, token_resource} <- Info.authentication_tokens_token_resource(resource) do
         revoke_opts =
           Keyword.put(
@@ -663,8 +653,7 @@ defmodule AshAuthentication.Plug.Helpers do
   def get_authentication_result(conn), do: conn
 
   # The `:resources` option, or every authenticated resource of the otp app. The
-  # option is removed because the remaining opts are passed on to Ash, and is
-  # only put back for `Jwt.verify/3`.
+  # option is removed because the remaining opts are passed on to Ash.
   defp pop_resources(otp_app, opts) do
     case Keyword.pop(opts, :resources) do
       {nil, opts} -> {AshAuthentication.authenticated_resources(otp_app), opts}

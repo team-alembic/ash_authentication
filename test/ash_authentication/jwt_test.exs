@@ -128,24 +128,20 @@ defmodule AshAuthentication.JwtTest do
       assert :error = Jwt.verify("aaaa.bbbb.cccc", :ash_authentication)
     end
 
-    test "it is successful when given a valid token and the resources option holds its resource" do
+    test "it is successful when given a valid token and a list holding its resource" do
       {:ok, token, actual_claims} = build_user() |> Jwt.token_for_user()
 
       assert {:ok, validated_claims, Example.User} =
-               Jwt.verify(token, :ash_authentication,
-                 resources: [Example.UserWithTokenRequired, Example.User]
-               )
+               Jwt.verify(token, [Example.UserWithTokenRequired, Example.User])
 
       assert validated_claims == actual_claims
     end
 
-    test "it is unsuccessful when its subject names a resource the resources option does not hold" do
+    test "it is unsuccessful when its subject names a resource the list does not hold" do
       {:ok, token, _} = build_user() |> Jwt.token_for_user()
 
-      assert :error =
-               Jwt.verify(token, :ash_authentication, resources: [Example.UserWithTokenRequired])
-
-      assert :error = Jwt.verify(token, :ash_authentication, resources: [])
+      assert :error = Jwt.verify(token, [Example.UserWithTokenRequired])
+      assert :error = Jwt.verify(token, [])
     end
   end
 end

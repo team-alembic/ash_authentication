@@ -257,31 +257,28 @@ defmodule AshAuthentication.Jwt do
   @doc """
   Given a token, verify it's signature and validate it's claims.
 
-  The second argument is the resource the token is for, or an otp app. Given an
-  otp app, the token is verified as a token of the authenticated resource of the
-  otp app which its subject names. A token whose subject names none of them does
-  not verify.
-
-  ## Options
-
-  - `:resources` - given an otp app, a list of authenticated resources to verify
-    the token against, in place of every authenticated resource of the otp app.
-    A token whose subject names a resource which is not listed does not verify.
+  The second argument is the resource the token is for, an otp app, or a list
+  of resources. Given an otp app or a list of resources, the token is verified
+  as a token of the one its subject names, among the authenticated resources
+  of the otp app or among the listed resources. A token whose subject names
+  none of them does not verify.
   """
-  @spec verify(token, Resource.t() | atom, opts :: Keyword.t(), context :: map()) ::
+  @spec verify(token, Resource.t() | atom | [Resource.t()], opts :: Keyword.t(), context :: map()) ::
           {:ok, claims, Resource.t()} | :error
-  def verify(token, otp_app_or_resource, opts \\ [], context \\ %{}) do
-    {resources, opts} = Keyword.pop(opts, :resources)
+  def verify(token, otp_app_or_resources, opts \\ [], context \\ %{})
 
-    if is_atom(otp_app_or_resource) && function_exported?(otp_app_or_resource, :spark_is, 0) &&
+  def verify(token, resources, opts, context) when is_list(resources) do
+    with {:ok, resource} <- token_to_listed_resource(token, resources) do
+      verify_for_resource(token, resource, opts, context)
+    end
+  end
+
+  def verify(token, otp_app_or_resource, opts, context) do
+    if function_exported?(otp_app_or_resource, :spark_is, 0) &&
          otp_app_or_resource.spark_is() == Resource do
       verify_for_resource(token, otp_app_or_resource, opts, context)
     else
-      resources = resources || AshAuthentication.authenticated_resources(otp_app_or_resource)
-
-      with {:ok, resource} <- token_to_listed_resource(token, List.wrap(resources)) do
-        verify_for_resource(token, resource, opts, context)
-      end
+      verify(token, AshAuthentication.authenticated_resources(otp_app_or_resource), opts, context)
     end
   end
 
